@@ -2,8 +2,10 @@
 
 import os
 import configparser
-from .inputmodule import InputModule, InputModuleError
+from .inputmodule import InputModule
+from .errors import DaemonError, ConfigError
 import logging
+import time
 
 class Daemon(object):
     log = logging.getLogger(__name__)
@@ -32,18 +34,14 @@ class Daemon(object):
         module = InputModule()
         try:
             module.initialize(config)
-        except InputModuleError as e:
+        except DaemonError as e:
             self.log.error("Cannot initialize module [%s]: %s"%(module_config,e))
         self.input_modules.append(module)
 
     def run(self):
-        pass
-
-class DaemonError(Exception):
-    """Base class for exceptions in this module"""
-    pass
-
-class ConfigError(DaemonError):
-    def __init__(self,message):
-        self.message = "Error in config file: %s"%message
-        
+        for module in self.input_modules:
+            module.start()
+        while(True):
+            for module in self.input_modules:
+                module.poll()
+            time.sleep(0.1)

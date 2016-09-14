@@ -4,7 +4,6 @@ import tempfile
 import unittest
 from unittest import mock
 
-NOTHING = "test"
 class TestConfigFile(unittest.TestCase):
     def setUp(self):
         self.daemon = Daemon()
