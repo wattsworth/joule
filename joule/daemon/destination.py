@@ -2,12 +2,29 @@ import collections
 import re
 from .errors import ConfigError
 
-Destination = collections.namedtuple('DbFile',
+"""
+Destination = collections.namedtuple('Destination',
                                      ['path',
                                       'datatype',
                                       'keep_us',
                                       'decimate'])
+"""
+class Destination(object):
+    def __init__(self,path,datatype,keep_us,decimate):
+        self.path = path
+        self.datatype = datatype
+        self.keep_us = keep_us
+        self.decimate = decimate
+        #initialize empty stream array
+        self.streams = []
 
+    def add_stream(self,new_stream):
+        #make sure the stream name is unique
+        for stream in self.streams:
+            if(stream.name==new_stream.name):
+                raise ConfigError("the name setting for each stream must be unique")
+        self.streams.append(new_stream)
+            
 class Parser(object):
     def run(self,configs):
         #1.) Configure the destination

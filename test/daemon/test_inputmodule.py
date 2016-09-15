@@ -1,17 +1,21 @@
 from joule.daemon.inputmodule import InputModule
 from joule.daemon.errors import DaemonError
-import configparser
+import test.util as util
 import unittest
 
 class TestConfigFile(unittest.TestCase):
     def setUp(self):
         self.module = InputModule()
-        self.base_config = self.parse_configs(
-            """[Destination]
+        self.base_config = util.parse_configs(
+            """[Main]
+                 name = module name
+                 description = optional
+               [Destination]
                  path = /simple/demo
                  datatype = float32
                  keep = 1w
-               [Stream]
+               [Stream1]
+                 name = stream1
             """)
     def test_parses_base_config(self):
         us_in_week = 7*24*60*60*1e6
@@ -21,25 +25,20 @@ class TestConfigFile(unittest.TestCase):
         self.base_config.remove_section("Destination")
         with self.assertRaises(DaemonError):
             self.module.initialize(self.base_config)
-    def test_errors_on_bad_path(self):
-        """path must be of form /dir/subdir/../file"""
-        bad_paths=["","bad name","/tooshort","/*bad&symb()ls"]
-        self.evaluate_bad_values("path",bad_paths)
-    def test_errors_on_bad_keep(self):
-        """keep is # and timeunit (eg 1w, 30h, 2y) or False"""
-        bad_keeps=["0w","3","w","something random","-2h"]
-        self.evaluate_bad_values("keep",bad_keeps)
-    def test_errors_on_bad_datatype(self):
-        bad_datatypes=["","intz","0"]
-        self.evaluate_bad_values("datatype",bad_datatypes)
-    @unittest.skip("TODO")
-    def test_allows_no_keep(self):
-        pass
-    
-    def parse_configs(self,config_str):
-        config = configparser.ConfigParser()
-        config.read_string(config_str)
-        return config
+    def test_errors_on_missing_name(self):
+        self.base_config.remove_section("Main")
+        with self.assertRaises(DaemonError):
+            self.module.initialize(self.base_config)        
+    def test_errors_on_blank_name(self):
+        self.base_config['Main']['name']=""
+        with self.assertRaisesRegex(DaemonError,"name"):
+            self.module.initialize(self.base_config)        
+        
+    def test_errors_on_missing_stream_sections(self):
+        """Must have at least one stream"""
+        self.base_config.remove_section("Stream1")
+        with self.assertRaises(DaemonError):
+            self.module.initialize(self.base_config)
     def evaluate_bad_values(self,setting_name,bad_settings):
         for setting in bad_settings:
             with self.subTest(setting=setting):

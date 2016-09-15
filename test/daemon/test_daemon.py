@@ -29,12 +29,13 @@ class TestConfigFile(unittest.TestCase):
         MODULE_COUNT = 4
         with tempfile.TemporaryDirectory() as dir:
             for i in range(MODULE_COUNT):
+                #create a stub module configuration (needed for configparser)
                 with tempfile.NamedTemporaryFile(dir=dir,delete=False) as f:
                     f.write(b'[Main]\n')
             config = self.parse_configs("""
             [Main]
             """)
-            config.set("Main","InputModuleDir",dir)
+            config["Main"]["InputModuleDir"]= dir
             self.daemon.initialize(config)
             self.assertEqual(MODULE_COUNT,len(self.daemon.input_modules))
     def parse_configs(self,config_str):
