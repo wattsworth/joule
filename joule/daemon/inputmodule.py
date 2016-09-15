@@ -32,6 +32,7 @@ default_min  = 0.0
 import logging
 from .errors import ConfigError
 from . import destination
+from . import stream
 
 class InputModule(object):
     log = logging.getLogger(__name__)
@@ -41,8 +42,13 @@ class InputModule(object):
     
     def initialize(self,configs):
         dest_parser = destination.Parser()
+        stream_parser = stream.Parser()
         try:
             self.destination = dest_parser.run(configs['Destination'])
+            for key,config in configs['Stream']:
+                new_stream = stream_parser.run(config)
+                self.destination.add_stream(new_stream)
+        
         except KeyError as e:
             raise ConfigError("missing [%s] section"%e.args[0]) from e
         

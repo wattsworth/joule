@@ -11,7 +11,7 @@ class TestConfigFile(unittest.TestCase):
                  path = /simple/demo
                  datatype = float32
                  keep = 1w
-               [Source]
+               [Stream]
             """)
     def test_parses_base_config(self):
         us_in_week = 7*24*60*60*1e6
