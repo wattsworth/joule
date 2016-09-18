@@ -20,5 +20,5 @@ class DaemonCmd(Command):
     def take_action(self, parsed_args):
         config = configparser.ConfigParser()
         config.read(parsed_args.config)
-        self.daemon.initialize(configs)
+        self.daemon.initialize(config)
         

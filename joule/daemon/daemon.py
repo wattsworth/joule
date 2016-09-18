@@ -4,7 +4,7 @@ import os
 import configparser
 from .inputmodule import InputModule
 from .errors import DaemonError, ConfigError
-import joule.procdb as procdb
+from joule.procdb import client as procdb_client
 import logging
 import time
 
@@ -19,6 +19,8 @@ class Daemon(object):
         try:
             module_dir = config["Main"]["InputModuleDir"]
             for module_config in os.listdir(module_dir):
+                if(not module_config.endswith(".conf")):
+                    continue
                 config_path = os.path.join(module_dir,module_config)
                 self._build_module(config_path)
         except KeyError as e:
@@ -36,9 +38,9 @@ class Daemon(object):
         module = InputModule()
         try:
             module.initialize(config)
-            procdb.client.register_input_module(module)
-        except DaemonError as e:
-            self.log.error("Cannot load module [%s]: %s"%(module_config,e))
+            procdb_client.register_input_module(module)
+        except (DaemonError, procdb_client.ConfigError) as e:
+            self.log.error("Cannot load module [%s]: \n\t%s"%(module_config,e))
             return
         self.input_modules.append(module)
 

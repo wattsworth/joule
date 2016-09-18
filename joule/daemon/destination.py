@@ -39,8 +39,13 @@ class Parser(object):
         return path
     
     def _validate_datatype(self,datatype):
-        if(not(datatype in ["float32","uint8","int"])):
-            raise ConfigError("invalid [Destination] datatype")
+        valid_datatypes = ["uint%d"%x for x in [8,16,32,64]]+\
+                          ["int%d"%x for x in [8,16,32,64]]+\
+                          ["float%d"%x for x in [32,64]]
+        if(not(datatype in valid_datatypes)):
+            raise ConfigError("invalid [Destination] datatype "+
+                              "[%s], choose from [%s]"%
+                              (datatype,",".join(valid_datatypes)))
         return datatype
     
     def _validate_keep(self,keep):

@@ -41,7 +41,7 @@ setup(
                         'joule = joule.main:main'
                         ],
                 'joule.commands' : [
-                        'daemon = joule.daemon:DaemonCmd',
+                        'daemon = joule.daemon.cmd:DaemonCmd',
                         ],
                 },
         zip_safe = False,

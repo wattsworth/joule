@@ -2,6 +2,7 @@ from joule.daemon.daemon import Daemon, DaemonError
 import configparser
 import tempfile
 import unittest
+import os
 from unittest import mock
 
 class TestConfigFile(unittest.TestCase):
@@ -24,15 +25,16 @@ class TestConfigFile(unittest.TestCase):
             self.daemon.initialize(config)
 
     @mock.patch("joule.daemon.daemon.InputModule",autospec=True)
-    @mock.patch("joule.daemon.daemon.procdb.client",autospec=True)
-    def test_it_creates_modules(self,mock_module,mock_procdb):
-        """creates a module for every config file"""
-        MODULE_COUNT = 4
+    @mock.patch("joule.daemon.daemon.procdb_client",autospec=True)
+    def test_it_creates_modules(self,mock_procdb,mock_module):
+        """creates a module for every *.conf file (ignores others"""
+        module_names = ['module1.conf','ignored','temp.conf~','module2.conf']
+        MODULE_COUNT = 2
         with tempfile.TemporaryDirectory() as dir:
-            for i in range(MODULE_COUNT):
+            for name in module_names:
                 #create a stub module configuration (needed for configparser)
-                with tempfile.NamedTemporaryFile(dir=dir,delete=False) as f:
-                    f.write(b'[Main]\n')
+                with open(os.path.join(dir,name),'w') as f:
+                    f.write('[Main]\n')
             config = self.parse_configs("""
             [Main]
             """)
