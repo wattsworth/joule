@@ -1,4 +1,5 @@
 import joule.daemon.destination as destination
+import joule.daemon.stream as stream
 from joule.daemon.errors import DaemonError
 import test.util as util
 import unittest
@@ -28,6 +29,12 @@ class TestConfigFile(unittest.TestCase):
     def test_errors_on_bad_datatype(self):
         bad_datatypes=["","intz","0"]
         self.evaluate_bad_values("datatype",bad_datatypes)
+    def test_computes_data_format(self):
+        """data_format returns float32_4 for example"""
+        dest = util.stub_destination(datatype="float32")
+        for i in range(4):
+            dest.add_stream(stream.build_stream(name="%d"%i))
+        self.assertEqual(dest.data_format,"float32_4")
     @unittest.skip("TODO")
     def test_allows_no_keep(self):
         pass

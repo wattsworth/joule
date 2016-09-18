@@ -24,7 +24,8 @@ class TestConfigFile(unittest.TestCase):
             self.daemon.initialize(config)
 
     @mock.patch("joule.daemon.daemon.InputModule",autospec=True)
-    def test_it_creates_modules(self,mock_module):
+    @mock.patch("joule.daemon.daemon.procdb.client",autospec=True)
+    def test_it_creates_modules(self,mock_module,mock_procdb):
         """creates a module for every config file"""
         MODULE_COUNT = 4
         with tempfile.TemporaryDirectory() as dir:
@@ -38,6 +39,7 @@ class TestConfigFile(unittest.TestCase):
             config["Main"]["InputModuleDir"]= dir
             self.daemon.initialize(config)
             self.assertEqual(MODULE_COUNT,len(self.daemon.input_modules))
+
     def parse_configs(self,config_str):
         config = configparser.ConfigParser()
         config.read_string(config_str)

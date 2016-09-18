@@ -9,6 +9,12 @@ Stream = collections.namedtuple("Stream",["name",
                                           "scale_factor",
                                           "default_max",
                                           "default_min"])
+def build_stream(name,plottable=True,discrete=False,
+                 offset=0,scale_factor=0,default_max=0,
+                 default_min=0):
+    """Builds a stream with default values"""
+    return Stream(name,plottable,discrete,offset,scale_factor,
+                  default_max, default_min)
 """
 
 class Stream(object):

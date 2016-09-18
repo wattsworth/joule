@@ -39,13 +39,17 @@ from .errors import ConfigError
 from . import destination
 from . import stream
 
+STATUS_LOADED = 'loaded'
+STATUS_ERROR = 'error'
+STATUS_RUNNING = 'running'
+
 class InputModule(object):
     log = logging.getLogger(__name__)
 
-    def __init__(self):
-        self.name = ""
-        self.description = ""
-        self.destination = None
+    def __init__(self, name ="", description="", destination=None):
+        self.name = name
+        self.description = description
+        self.destination = destination
     
     def initialize(self,config):
         try:

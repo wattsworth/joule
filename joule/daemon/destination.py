@@ -1,14 +1,6 @@
-import collections
 import re
 from .errors import ConfigError
 
-"""
-Destination = collections.namedtuple('Destination',
-                                     ['path',
-                                      'datatype',
-                                      'keep_us',
-                                      'decimate'])
-"""
 class Destination(object):
     def __init__(self,path,datatype,keep_us,decimate):
         self.path = path
@@ -24,10 +16,13 @@ class Destination(object):
             if(stream.name==new_stream.name):
                 raise ConfigError("the name setting for each stream must be unique")
         self.streams.append(new_stream)
-            
+
+    @property
+    def data_format(self):
+        return "%s_%d"%(self.datatype,len(self.streams))
+    
 class Parser(object):
     def run(self,configs):
-        #1.) Configure the destination
         try:
             path = self._validate_path(configs["path"])
             datatype = self._validate_datatype(configs["datatype"])
