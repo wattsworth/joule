@@ -30,7 +30,12 @@ def register_input_module(input_module):
                                      inputmodule.STATUS_LOADED)
     _insert_db_input_module(db_module)
 
-
+def clear_input_modules():
+    """remove all registered input modules"""
+    with _procdb_cursor() as c:
+        #use string substitution to escape db_input_module insert
+        c.execute("DELETE FROM DbInputModules")
+    
 def input_modules():
     """returns an array of all the DbInputModule objects"""
     pass

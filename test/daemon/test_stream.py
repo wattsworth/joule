@@ -45,7 +45,9 @@ class TestStreamParsing(unittest.TestCase):
     def test_errors_on_bad_default_max(self):
         bad_values=['a','*','0y']
         self.evaluate_bad_values("default_max",bad_values)
-        
+    def test_errors_on_bad_bool(self):
+        bad_values=['asdf','not_valid']
+        self.evaluate_bad_values("plottable",bad_values)
     
     def evaluate_bad_values(self,setting_name,bad_settings):
         for setting in bad_settings:

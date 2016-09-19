@@ -16,6 +16,7 @@ class Daemon(object):
         
 
     def initialize(self,config):
+        procdb_client.clear_input_modules()
         try:
             module_dir = config["Main"]["InputModuleDir"]
             for module_config in os.listdir(module_dir):
