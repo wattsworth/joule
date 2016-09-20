@@ -20,7 +20,8 @@ class TestClient(unittest.TestCase):
 
   @mock.patch("joule.procdb.client.nilmtools.filter",autospec=True)
   def test_register_input_module_1(self,mock_filter):
-    """Database path is created when module is registered for the first time"""
+    """Database path is created when module is registered for the first time
+       Modules can be retrieved by path or as a group"""
     #the stream doesn't exist in the proc database
     mock_filter.get_stream_info = mock.MagicMock(return_value = None)
     module = self.build_input_module("test","/test/path",
@@ -33,8 +34,16 @@ class TestClient(unittest.TestCase):
     #the path should be set up in the nilmdb database
     mock_np_client.stream_create.assert_called_with("/test/path","float32_3")
     #the db module should exist in the procdb
+    #retrieve it directly
     stored_module = client._get_module_by_dest_path("/test/path")
     self.assertEqual(stored_module.name,"test")
+    #add another module and get both back
+    module2 = self.build_input_module("test2","/test/path2",
+                                     datatype="float32",stream_count=3)
+    client.register_input_module(module2)
+    db_input_modules = client.input_modules()
+    self.assertEqual(db_input_modules[0].name,"test")
+    self.assertEqual(db_input_modules[1].name,"test2")
     
   @mock.patch("joule.procdb.client.nilmtools.filter",autospec=True)
   def test_register_input_module_2(self,mock_filter):

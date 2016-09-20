@@ -7,6 +7,7 @@ from .errors import DaemonError, ConfigError
 from joule.procdb import client as procdb_client
 import logging
 import time
+import argparse
 
 class Daemon(object):
     log = logging.getLogger(__name__)
@@ -52,3 +53,21 @@ class Daemon(object):
             for module in self.input_modules:
                 module.poll()
             time.sleep(0.1)
+
+
+def main():
+    parser = argparse.ArgumentParser("Joule Daemon")
+    parser.add_argument("--config",default="/etc/joule/joule.conf")
+    args = parser.parse_args()
+    daemon = Daemon()
+    config = configparser.ConfigParser()
+    if(not os.path.isfile(args.config)):
+        print("Error, cannot load configuration file [%s], specify with --config"%args.config)
+        return -1
+    
+    config.read(args.config)
+    try:
+        daemon.initialize(config)
+    except DaemonError as e:
+        print(e)
+        print("cannot recover, exiting")

@@ -37,8 +37,12 @@ def clear_input_modules():
         c.execute("DELETE FROM DbInputModules")
     
 def input_modules():
-    """returns an array of all the DbInputModule objects"""
-    pass
+    modules = []
+    with _procdb_cursor() as c:
+        c.execute("SELECT * FROM DbInputModules")
+        for row in c.fetchall():
+            modules.append(models.DbInputModule(*row[1:]))
+    return modules    
 
 @contextlib.contextmanager
 def _procdb_cursor():
@@ -46,6 +50,7 @@ def _procdb_cursor():
     if (not os.path.isfile(PROC_DB)):
         _initialize_procdb()
     conn = sqlite3.connect(PROC_DB)
+    #conn.row_factory = sqlite3.Row
     c = conn.cursor()
     yield c
     conn.commit()
@@ -81,8 +86,7 @@ def _create_destination_path(destination):
 
 def _get_module_by_dest_path(path):
     with _procdb_cursor() as c:
-        c.execute("SELECT * FROM DbInputModules WHERE destination_path ='{path}'".
-                  format(path=path))
+        c.execute("SELECT * FROM DbInputModules WHERE destination_path =?",(path,))
         module_tuple = c.fetchone()
     if module_tuple is None:
         return None

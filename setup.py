@@ -38,10 +38,12 @@ setup(
 
         entry_points={
                 'console_scripts': [
-                        'joule = joule.main:main'
+                        'joule = joule.main:main',
+                        'jouled = joule.daemon.daemon:main'
                         ],
                 'joule.commands' : [
-                        'daemon = joule.daemon.cmd:DaemonCmd',
+#                        'daemon = joule.daemon.cmd:DaemonCmd',
+                        'status = joule.cmds.status:StatusCmd'
                         ],
                 },
         zip_safe = False,
