@@ -10,6 +10,7 @@ import time
 import argparse
 import collections
 import multiprocessing as mp
+import signal
 
 class Daemon(object):
     log = logging.getLogger(__name__)
@@ -56,24 +57,38 @@ class Daemon(object):
             procdb_client.update_module(module)
             worker = Worker(module,p,q_out)
             self.workers.append(worker)
-        something_alive = True
-        while(something_alive):
-            something_alive = False
+        self.run_flag = True
+        while(self.run_flag):
             for worker in self.workers:
                 if(not worker.q_out.empty):
                     pass #write to database
                 if(not worker.process.is_alive()):
                     print("worker %d finished with exit code: ",worker.module.pid,worker.process.exitcode)
-                else:
-                    something_alive = True
-                    
+                    print("restarting worker")
+            time.sleep(1)
+        #stop requested, shut down workers
+        for worker in self.workers:
+            if(worker.process.is_alive()):
+                worker.process.terminate()
+        print("stopped")
+        
+    def stop(self):
+        self.run_flag = False
+        print("stopping...")
+        
 Worker = collections.namedtuple("Worker",["module","process","q_out"])
 
+daemon = Daemon()
+
+def handler(signum, frame):
+    print("handler called with signum: ",signum)
+    daemon.stop()
+    
 def main():
     parser = argparse.ArgumentParser("Joule Daemon")
     parser.add_argument("--config",default="/etc/joule/joule.conf")
     args = parser.parse_args()
-    daemon = Daemon()
+
     config = configparser.ConfigParser()
     if(not os.path.isfile(args.config)):
         print("Error, cannot load configuration file [%s], specify with --config"%args.config)
@@ -82,7 +97,10 @@ def main():
     config.read(args.config)
     try:
         daemon.initialize(config)
-        daemon.run()
     except DaemonError as e:
         print(e)
         print("cannot recover, exiting")
+
+    signal.signal(signal.SIGINT, handler)
+    daemon.run()
+    
