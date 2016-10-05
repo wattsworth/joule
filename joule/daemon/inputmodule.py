@@ -35,6 +35,8 @@ default_min  = 0.0
 
 import logging
 import re
+import multiprocessing as mp
+import configparser
 from .errors import ConfigError
 from . import destination
 from . import stream
@@ -42,16 +44,33 @@ from . import stream
 STATUS_LOADED = 'loaded'
 STATUS_ERROR = 'error'
 STATUS_RUNNING = 'running'
+STATUS_UNKNOWN = 'unknown'
 
 class InputModule(object):
     log = logging.getLogger(__name__)
 
-    def __init__(self, name ="", description="", destination=None):
-        self.name = name
-        self.description = description
-        self.destination = destination
-    
+    def __init__(self,
+                 status = STATUS_UNKNOWN,
+                 pid = None, id = None,
+                 config_file = ""):
+        #persistent configuration info (can be restored from procdb)
+        self.name = ""
+        self.description = ""
+        self.destination = None
+        self.pid = pid
+        self.id = id
+        self.status = status
+        #runtime structures, cannot be restored from procdb
+        self.queue_in = None
+        self.queue_out = None
+        #if a config file is specified, parse it and initialize
+        if(config_file != ""):
+            config = configparser.ConfigParser()
+            config.read(config_file)
+            self.initialize(config)
+            
     def initialize(self,config):
+        #initialize the module from the config file
         try:
             self.name = config['Main']['name']
             if(self.name==''):
@@ -76,4 +95,14 @@ class InputModule(object):
             raise ConfigError("missing stream configurations, must have at least one")
         
 
-
+    def start(self, queue_in = None, queue_out = None):
+        self.queue_in = queue_in
+        self.queue_out = queue_out
+        p = mp.Process(target=self._run)
+        p.start()
+        self.pid = p.pid
+        return p
+    
+    def _run(self):
+        #import code from module
+        pass #module.run(queue)

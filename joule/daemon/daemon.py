@@ -8,13 +8,15 @@ from joule.procdb import client as procdb_client
 import logging
 import time
 import argparse
+import collections
+import multiprocessing as mp
 
 class Daemon(object):
     log = logging.getLogger(__name__)
     
     def __init__(self):
         self.input_modules = []
-        
+        self.workers = []
 
     def initialize(self,config):
         procdb_client.clear_input_modules()
@@ -40,20 +42,32 @@ class Daemon(object):
         module = InputModule()
         try:
             module.initialize(config)
-            procdb_client.register_input_module(module)
+            procdb_client.register_input_module(module,module_config)
         except (DaemonError, procdb_client.ConfigError) as e:
             self.log.error("Cannot load module [%s]: \n\t%s"%(module_config,e))
             return
         self.input_modules.append(module)
 
     def run(self):
+        #start each module and store runtime structures in a worker
         for module in self.input_modules:
-            module.start()
-        while(True):
-            for module in self.input_modules:
-                module.poll()
-            time.sleep(0.1)
-
+            q_out = mp.Queue()
+            p = module.start(queue_out = q_out)
+            procdb_client.update_module(module)
+            worker = Worker(module,p,q_out)
+            self.workers.append(worker)
+        something_alive = True
+        while(something_alive):
+            something_alive = False
+            for worker in self.workers:
+                if(not worker.q_out.empty):
+                    pass #write to database
+                if(not worker.process.is_alive()):
+                    print("worker %d finished with exit code: ",worker.module.pid,worker.process.exitcode)
+                else:
+                    something_alive = True
+                    
+Worker = collections.namedtuple("Worker",["module","process","q_out"])
 
 def main():
     parser = argparse.ArgumentParser("Joule Daemon")
@@ -68,6 +82,7 @@ def main():
     config.read(args.config)
     try:
         daemon.initialize(config)
+        daemon.run()
     except DaemonError as e:
         print(e)
         print("cannot recover, exiting")
