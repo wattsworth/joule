@@ -1,4 +1,5 @@
 from joule.daemon.daemon import Daemon, DaemonError
+from joule.daemon import defaults
 import configparser
 import tempfile
 import unittest
@@ -44,5 +45,6 @@ class TestConfigFile(unittest.TestCase):
 
     def parse_configs(self,config_str):
         config = configparser.ConfigParser()
+        config.read_dict(defaults.config)
         config.read_string(config_str)
         return config

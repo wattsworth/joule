@@ -9,8 +9,10 @@ import logging
 import time
 import argparse
 import collections
-import multiprocessing as mp
+import threading
 import signal
+import nilmdb.client
+from . import defaults, inserter
 
 class Daemon(object):
     log = logging.getLogger(__name__)
@@ -21,7 +23,13 @@ class Daemon(object):
 
     def initialize(self,config):
         procdb_client.clear_input_modules()
+        
         try:
+            #Build a NilmDB client
+            nilmdb_url = config["Main"]["NilmdbURL"]
+            self.nilmdb_client = nilmdb.client.numpyclient.\
+                                 NumpyClient(nilmdb_url)
+            #Set up the input modules
             module_dir = config["Main"]["InputModuleDir"]
             for module_config in os.listdir(module_dir):
                 if(not module_config.endswith(".conf")):
@@ -50,33 +58,50 @@ class Daemon(object):
         self.input_modules.append(module)
 
     def run(self):
+        self.run_flag = True        
         #start each module and store runtime structures in a worker
         for module in self.input_modules:
-            q_out = mp.Queue()
-            p = module.start(queue_out = q_out)
-            procdb_client.update_module(module)
-            worker = Worker(module,p,q_out)
-            self.workers.append(worker)
-        self.run_flag = True
+            self._start_worker(module)
+
+        #start the inserter thread
+        inserter_thread = threading.Thread(self._run_inserters)
+        inserter_thread.start()
+
         while(self.run_flag):
-            for worker in self.workers:
-                if(not worker.q_out.empty):
-                    pass #write to database
-                if(not worker.process.is_alive()):
-                    print("worker %d finished with exit code: ",worker.module.pid,worker.process.exitcode)
-                    print("restarting worker")
             time.sleep(1)
+
         #stop requested, shut down workers
         for worker in self.workers:
-            if(worker.process.is_alive()):
-                worker.process.terminate()
+            worker.join()
+        for inserter in self.inserters:
+            inserter.finalize()
+        inserter_thread.join()
+
         print("stopped")
         
     def stop(self):
         self.run_flag = False
+        for worker in self.workers:
+            worker.stop()
         print("stopping...")
+
+
+    def _start_worker(self,module):
+        worker = Worker(module)
+        if(module.keep_data):
+            inserter = inserters.NilmDbInserter(self.client,
+                            module.destination.path,
+                            decimate = module.destination.decimate)
+            worker.subscribe(inserter.queue)
+            self.inserters.append(inserter)
+        self.workers.append(worker)
+
+    def _run_inserters(self):
+        for inserter in self.inserters:
+            inserter.process_data()
+        time.sleep(5)
         
-Worker = collections.namedtuple("Worker",["module","process","q_out"])
+Worker = collections.namedtuple("Worker",["module","process","q_out","db_inserter"])
 
 daemon = Daemon()
 
@@ -86,14 +111,16 @@ def handler(signum, frame):
     
 def main():
     parser = argparse.ArgumentParser("Joule Daemon")
-    parser.add_argument("--config",default="/etc/joule/joule.conf")
+    parser.add_argument("--config")
     args = parser.parse_args()
 
     config = configparser.ConfigParser()
     if(not os.path.isfile(args.config)):
         print("Error, cannot load configuration file [%s], specify with --config"%args.config)
         return -1
-    
+
+
+    config.read_dict(defaults.config)
     config.read(args.config)
     try:
         daemon.initialize(config)
