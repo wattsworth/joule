@@ -106,3 +106,9 @@ class InputModule(object):
     def _run(self):
         #import code from module
         pass #module.run(queue)
+
+    def __str__(self):
+        if(self.name != ""):
+            return self.name
+        else:
+            return "unknown name"
