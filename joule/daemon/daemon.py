@@ -89,7 +89,7 @@ class Daemon(object):
     def _start_worker(self,module):
         worker = Worker(module)
         if(module.keep_data):
-            inserter = inserters.NilmDbInserter(self.client,
+            inserter = inserter.NilmDbInserter(self.client,
                             module.destination.path,
                             decimate = module.destination.decimate)
             worker.subscribe(inserter.queue)
