@@ -20,6 +20,7 @@ class Daemon(object):
     def __init__(self):
         self.input_modules = []
         self.workers = []
+        self.inserters = []
 
     def initialize(self,config):
         procdb_client.clear_input_modules()
@@ -29,6 +30,8 @@ class Daemon(object):
             nilmdb_url = config["Main"]["NilmdbURL"]
             self.nilmdb_client = nilmdb.client.numpyclient.\
                                  NumpyClient(nilmdb_url)
+            #How often to flush local buffers to NilmDB
+            self.insertion_period = config["Main"]["InsertionPeriod"]
             #Set up the input modules
             module_dir = config["Main"]["InputModuleDir"]
             for module_config in os.listdir(module_dir):
@@ -41,7 +44,6 @@ class Daemon(object):
         except FileNotFoundError as e:
             raise ConfigError("InputModuleDir [%s] does not exist"%
                               module_dir) from e
-
         
     def _build_module(self,module_config):
         """ create an input module from config file
@@ -64,42 +66,38 @@ class Daemon(object):
             self._start_worker(module)
 
         #start the inserter thread
-        inserter_thread = threading.Thread(self._run_inserters)
+        inserter_thread = threading.Thread(target = self._run_inserters)
         inserter_thread.start()
 
         while(self.run_flag):
-            time.sleep(1)
+            time.sleep(0.1)
 
         #stop requested, shut down workers
         for worker in self.workers:
             worker.join()
-        for inserter in self.inserters:
-            inserter.finalize()
-        inserter_thread.join()
 
-        print("stopped")
+        inserter_thread.join()
         
     def stop(self):
         self.run_flag = False
         for worker in self.workers:
             worker.stop()
-        print("stopping...")
-
 
     def _start_worker(self,module):
         worker = Worker(module)
         if(module.keep_data):
-            inserter = inserter.NilmDbInserter(self.client,
+            my_inserter = inserter.NilmDbInserter(self.client,
                             module.destination.path,
                             decimate = module.destination.decimate)
-            worker.subscribe(inserter.queue)
-            self.inserters.append(inserter)
+            worker.subscribe(my_inserter.queue)
+            self.inserters.append(my_inserter)
         self.workers.append(worker)
 
     def _run_inserters(self):
-        for inserter in self.inserters:
-            inserter.process_data()
-        time.sleep(5)
+        while(self.run_flag):
+            for x in self.inserters:
+                x.process_data()
+            time.sleep(self.insertion_period)
         
 Worker = collections.namedtuple("Worker",["module","process","q_out","db_inserter"])
 

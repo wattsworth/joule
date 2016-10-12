@@ -7,8 +7,9 @@ class NilmDbInserter:
   def __init__(self,client,path,decimate=True):
     self.decimate = decimate
     self.path = path
-    self.inserter = client.stream_insert_numpy_context(path).__enter__()
     self.queue = queue.Queue()
+    self.client = client
+    self.last_ts = None
     self.buffer = None
     
   def process_data(self):
@@ -16,7 +17,7 @@ class NilmDbInserter:
       data = self.queue.get()
       if(data is None):
         self.flush()
-        self.inserter.finalize()
+        self.finalize()
       elif(self.buffer is None):
         self.buffer = np.array(data)
       else:
@@ -26,12 +27,21 @@ class NilmDbInserter:
   def flush(self):
     if(self.buffer is None or len(self.buffer) == 0):
       return #nothing to flush
-    self.inserter.insert(self.buffer)
+    if(self.last_ts is None):
+      self.last_ts = self.buffer[0,0]
+    start = self.last_ts
+    end = self.buffer[-1,0]
+    self.client.stream_insert_numpy(self.path, self.buffer,
+                                    start=start, 
+                                    end=end)
+    self.last_ts = end+1 #append next buffer to this interval
     if(self.decimate):
       self.decimator.process(self.data)
-
+    self.buffer = None
+    
   def finalize(self):
-    self.inserter.finalize()
+    self.last_ts = None
+    
 
 class NilmDbDecimator:
   def __init__(self,client,source_path,factor=4):

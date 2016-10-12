@@ -12,6 +12,7 @@ class Worker(threading.Thread):
     self.q_out = mp.Queue()
     self.process = None
     self.module = module
+    #if no data comes within module_timeout, check process status
     self.module_timeout = module_timeout
     
   def subscribe(self,queue):

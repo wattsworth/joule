@@ -5,6 +5,8 @@ import tempfile
 import unittest
 import os
 from unittest import mock
+import threading
+import time
 
 class TestConfigFile(unittest.TestCase):
     def setUp(self):
@@ -48,3 +50,23 @@ class TestConfigFile(unittest.TestCase):
         config.read_dict(defaults.config)
         config.read_string(config_str)
         return config
+
+class TestDaemonRun(unittest.TestCase):
+  def setUp(self):
+    pass
+
+  def test_runs_modules_as_workers(self):
+    daemon = Daemon()
+    daemon.insertion_period = 0.1 #speed things up
+    start_worker = mock.Mock()
+    daemon._start_worker = start_worker
+    num_modules = 4
+    daemon.input_modules = [mock.Mock() for x in range(num_modules)]
+    t = threading.Thread(target = daemon.run)
+    t.start()
+    time.sleep(0.1)
+    daemon.stop()
+    t.join()
+    self.assertEqual(start_worker.call_count,num_modules)
+    
+

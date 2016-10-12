@@ -13,26 +13,28 @@ class TestNilmDbInserter(unittest.TestCase):
   @mock.patch("joule.daemon.daemon.nilmdb.client.numpyclient.NumpyClient",autospec=True)
   def test_inserts_continuous_data(self,mock_client):
     my_inserter = inserter.NilmDbInserter(mock_client,"/test/path",decimate=False)
-    mock_db_inserter = mock.Mock()
-    my_inserter.inserter = mock_db_inserter
 
     #generate random data
     length = 100
-    data = self.create_data(length=length)
-
+    interval_start = 500
+    step = 100
+    interval_end = interval_start+(length-1)*step
+    data = self.create_data(length=length,start=interval_start,step=step)
+    
     #insert it by block
     blk_size = 10
     for i in range(int(length/blk_size)):
       my_inserter.queue.put(data[i*blk_size:i*blk_size+blk_size])
-
     #send everything to the database
     my_inserter.process_data()
 
     #check what got inserted
-    res = mock_db_inserter.insert.call_args[0][0]
-    for i in range(len(data)):
-      self.assertEqual(data[i][0],res[i][0])
-      self.assertEqual(data[i][1],res[i][1])
+    call = mock_client.stream_insert_numpy.call_args
+    _,inserted_data = call[0]
+    start,end = (call[1]['start'],call[1]['end'])
+    np.testing.assert_array_equal(inserted_data,data)
+    self.assertEqual(start,interval_start)
+    self.assertEqual(end,interval_end)
 
   @mock.patch("joule.daemon.daemon.nilmdb.client.numpyclient.NumpyClient",autospec=True)      
   def test_finalizes_missing_sections(self,mock_client):
@@ -41,17 +43,22 @@ class TestNilmDbInserter(unittest.TestCase):
     my_inserter.inserter = mock_db_inserter
 
     #missing data between two inserts
-    my_inserter.queue.put(self.create_data())
+    interval1_start = 500; interval2_start = 1000;
+    my_inserter.queue.put(self.create_data(start=interval1_start,step=1))
     my_inserter.queue.put(None)
-    my_inserter.queue.put(self.create_data())
+    my_inserter.queue.put(self.create_data(start=interval2_start,step=1))
+                          
 
     #send everything to the database
     my_inserter.process_data()
 
-    #make sure finalize was called indicating missing data
-    self.assertEqual(mock_db_inserter.insert.call_count,2)
-    self.assertEqual(mock_db_inserter.finalize.call_count,1)
-    
+    #make sure two seperate intervals made it to the database
+    interval1 = mock_client.stream_insert_numpy.call_args_list[0]
+    start = interval1[1]['start']
+    self.assertEqual(start,interval1_start)
+    interval2 = mock_client.stream_insert_numpy.call_args_list[1]
+    start = interval2[1]['start']
+    self.assertEqual(start,interval2_start)
   
   def create_data(self,
                   length=10,
