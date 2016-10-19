@@ -3,12 +3,12 @@
 import os
 import configparser
 from .inputmodule import InputModule
+from .worker import Worker
 from .errors import DaemonError, ConfigError
 from joule.procdb import client as procdb_client
 import logging
 import time
 import argparse
-import collections
 import threading
 import signal
 import nilmdb.client
@@ -31,7 +31,7 @@ class Daemon(object):
             self.nilmdb_client = nilmdb.client.numpyclient.\
                                  NumpyClient(nilmdb_url)
             #How often to flush local buffers to NilmDB
-            self.insertion_period = config["Main"]["InsertionPeriod"]
+            self.insertion_period = config.getint("Main","InsertionPeriod")
             #Set up the input modules
             module_dir = config["Main"]["InputModuleDir"]
             for module_config in os.listdir(module_dir):
@@ -86,20 +86,20 @@ class Daemon(object):
     def _start_worker(self,module):
         worker = Worker(module)
         if(module.keep_data):
-            my_inserter = inserter.NilmDbInserter(self.client,
+            my_inserter = inserter.NilmDbInserter(self.nilmdb_client,
                             module.destination.path,
                             decimate = module.destination.decimate)
             worker.subscribe(my_inserter.queue)
             self.inserters.append(my_inserter)
         self.workers.append(worker)
-
+        worker.start()
+        
     def _run_inserters(self):
         while(self.run_flag):
             for x in self.inserters:
                 x.process_data()
             time.sleep(self.insertion_period)
         
-Worker = collections.namedtuple("Worker",["module","process","q_out","db_inserter"])
 
 daemon = Daemon()
 
@@ -125,7 +125,10 @@ def main():
     except DaemonError as e:
         print(e)
         print("cannot recover, exiting")
-
+        exit(1)
+        
     signal.signal(signal.SIGINT, handler)
     daemon.run()
     
+if __name__=="__main__":
+    main()

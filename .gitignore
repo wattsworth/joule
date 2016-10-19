@@ -7,3 +7,4 @@ dist/*
 *.egg-info
 #*
 .coverage
+test/e2e/nilm*

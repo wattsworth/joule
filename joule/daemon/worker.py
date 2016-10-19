@@ -34,6 +34,5 @@ class Worker(threading.Thread):
         if(self.process.is_alive()==False):
           self.q_out = mp.Queue()
           self.process = self.module.start(self.q_out)
-          logging.error("Module [{module}] restarted".format(module=self.module))
         
       

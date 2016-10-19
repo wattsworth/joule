@@ -35,9 +35,16 @@ class TestConfigFile(unittest.TestCase):
         for i in range(4):
             dest.add_stream(stream.build_stream(name="%d"%i))
         self.assertEqual(dest.data_format,"float32_4")
-    @unittest.skip("TODO")
     def test_allows_no_keep(self):
-        pass
+        config = util.parse_configs(
+            """[Destination]
+                 path = /simple/demo
+                 datatype = float32
+                 keep = None
+            """)
+        destination = self.parser.run(config['Destination'])
+        self.assertEqual(destination.keep_us,0)
+        
 
     def evaluate_bad_values(self,setting_name,bad_settings):
         for setting in bad_settings:

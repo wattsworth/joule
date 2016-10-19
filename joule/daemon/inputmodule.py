@@ -9,6 +9,7 @@ description = module description
 
 [Source]
 # pick exec OR fifo
+generator = /path/to/python args
 exec = /path/to/file --args 
 fifo = /path/to/fifo
 
@@ -76,6 +77,7 @@ class InputModule(object):
             if(self.name==''):
                 raise KeyError
             self.description = config['Main'].get('description','')
+            self.generator = config['Source']['generator']
         except KeyError as e:
             raise ConfigError("module name is missing or blank")
 
@@ -94,18 +96,41 @@ class InputModule(object):
         if(len(self.destination.streams)==0):
             raise ConfigError("missing stream configurations, must have at least one")
         
-
+    def keep_data(self):
+        """True if the destination is recording data (keep!=none)"""
+        return self.destination.keep_us!=0
+    
     def start(self, queue_in = None, queue_out = None):
+        shlex.split(command_line)
         self.queue_in = queue_in
         self.queue_out = queue_out
+        print("starting mp")
         p = mp.Process(target=self._run)
         p.start()
         self.pid = p.pid
         return p
-    
+
+    def get_data(self):
+        try:
+            data = self.rqueue.get
+            return data
+        except Queue.empty:
+            #check if process is still alive
+            if not self.process.alive?:
+                logging.error("Module [{module}] restarted".\
+                              format(module=self))
+                self._start_process()
+        return []
+        
     def _run(self):
         #import code from module
-        pass #module.run(queue)
+        source = open(self.generator,'r')
+#        ctx = None
+        print('G: %s'%self.generator)
+        exec(source.read(),globals(),locals())
+        print("executed module!")
+        for data in ctx():
+            self.queue_in.put(data)
 
     def __str__(self):
         if(self.name != ""):
