@@ -20,6 +20,7 @@ class NumpyPipe:
   @contextlib.contextmanager
   def open(self):
     fcntl.fcntl(self.fd,fcntl.F_SETFL, os.O_NONBLOCK)
+    print("got here!!!")
     self.input = open(self.fd,'rb')
     self.sel = selectors.DefaultSelector()
     self.sel.register(self.input,selectors.EVENT_READ)
@@ -38,7 +39,7 @@ class NumpyPipe:
       self.buffer=s_data[-extra_bytes:]
     else:
       data=np.frombuffer(self.buffer+s_data,dtype='float64')
-      self.buffer = []
+      self.buffer = b''
     data.shape = len(data)//self.cols,self.cols
     return data
 

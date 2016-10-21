@@ -39,6 +39,7 @@ import re
 import configparser
 import shlex
 import subprocess
+import os
 from .errors import ConfigError
 from joule.utils import numpypipe
 from . import destination
@@ -103,9 +104,11 @@ class InputModule(object):
     
     def start(self):
         cmd = shlex.split(self.exec_path)
-        proc = subprocess.Popen(cmd,stdin=None,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        (rpipe, wpipe) = os.pipe()
+        proc = subprocess.Popen(cmd,stdin=None,stdout=wpipe,stderr=subprocess.STDOUT)
+        os.close(wpipe)
         self.process = proc
-        return numpypipe.NumpyPipe(proc.stdout.fileno(),
+        return numpypipe.NumpyPipe(rpipe,
                                    num_streams=len(self.destination.streams))
 
 

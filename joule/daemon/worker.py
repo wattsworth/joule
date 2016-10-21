@@ -27,9 +27,10 @@ class Worker(threading.Thread):
     while(self.run):
       try:
         with pipe.open():
-          block = pipe.get()
-          for out_queue in self.observers:
-            out_queue.put(block)
+          while(self.run):
+            block = pipe.get()
+            for out_queue in self.observers:
+              out_queue.put(block)
       except queue.Empty:
         if(not self.module.is_alive()):
           pipe = self.module.restart()

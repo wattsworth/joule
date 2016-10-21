@@ -15,6 +15,7 @@ class NilmDbInserter:
   def process_data(self):
     while not self.queue.empty():
       data = self.queue.get()
+      print(data.shape)
       if(data is None):
         self.flush()
         self.finalize()
