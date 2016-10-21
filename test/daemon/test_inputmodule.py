@@ -10,6 +10,8 @@ class TestConfigFile(unittest.TestCase):
             """[Main]
                  name = module name
                  description = optional
+               [Source]
+                 exec = /path/to/exec --args
                [Destination]
                  path = /simple/demo
                  datatype = float32

@@ -36,9 +36,11 @@ default_min  = 0.0
 
 import logging
 import re
-import multiprocessing as mp
 import configparser
+import shlex
+import subprocess
 from .errors import ConfigError
+from joule.utils import numpypipe
 from . import destination
 from . import stream
 
@@ -62,8 +64,7 @@ class InputModule(object):
         self.id = id
         self.status = status
         #runtime structures, cannot be restored from procdb
-        self.queue_in = None
-        self.queue_out = None
+        self.process = None
         #if a config file is specified, parse it and initialize
         if(config_file != ""):
             config = configparser.ConfigParser()
@@ -77,7 +78,7 @@ class InputModule(object):
             if(self.name==''):
                 raise KeyError
             self.description = config['Main'].get('description','')
-            self.generator = config['Source']['generator']
+            self.exec_path = config['Source']['exec']
         except KeyError as e:
             raise ConfigError("module name is missing or blank")
 
@@ -100,37 +101,34 @@ class InputModule(object):
         """True if the destination is recording data (keep!=none)"""
         return self.destination.keep_us!=0
     
-    def start(self, queue_in = None, queue_out = None):
-        shlex.split(command_line)
-        self.queue_in = queue_in
-        self.queue_out = queue_out
-        print("starting mp")
-        p = mp.Process(target=self._run)
-        p.start()
-        self.pid = p.pid
-        return p
+    def start(self):
+        cmd = shlex.split(self.exec_path)
+        proc = subprocess.Popen(cmd,stdin=None,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        self.process = proc
+        return numpypipe.NumpyPipe(proc.stdout.fileno(),
+                                   num_streams=len(self.destination.streams))
 
-    def get_data(self):
-        try:
-            data = self.rqueue.get
-            return data
-        except Queue.empty:
-            #check if process is still alive
-            if not self.process.alive?:
-                logging.error("Module [{module}] restarted".\
-                              format(module=self))
-                self._start_process()
-        return []
+
+    def restart(self):
+        self.stop()
+        self.start()
         
-    def _run(self):
-        #import code from module
-        source = open(self.generator,'r')
-#        ctx = None
-        print('G: %s'%self.generator)
-        exec(source.read(),globals(),locals())
-        print("executed module!")
-        for data in ctx():
-            self.queue_in.put(data)
+    def stop(self):
+        if(self.is_alive() == False):
+            return
+        self.process.terminate()
+        try:
+            self.process.wait(4)
+        except subprocess.TimeoutExpired:
+            self.process.kill()
+            
+    def is_alive(self):
+        if(self.process is None):
+            return False
+        self.process.poll()
+        if(self.process.returncode is not None):
+            return False
+        return True
 
     def __str__(self):
         if(self.name != ""):

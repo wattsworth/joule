@@ -1,15 +1,14 @@
 import threading
-import queue
-import multiprocessing as mp
+
 from joule.procdb import client as procdb_client
 import logging
+import queue
 
 class Worker(threading.Thread):
 
   def __init__(self,module,module_timeout=3):
     super().__init__()
     self.observers = []
-    self.q_out = mp.Queue()
     self.process = None
     self.module = module
     #if no data comes within module_timeout, check process status
@@ -20,19 +19,21 @@ class Worker(threading.Thread):
 
   def stop(self):
     self.run = False
-    self.process.terminate()
+    self.module.stop()
   
   def run(self):
-    self.process = self.module.start(self.q_out)
+    pipe = self.module.start()
     procdb_client.update_module(self.module)
     while(self.run):
       try:
-        block = self.q_out.get(timeout=self.module_timeout)
-        for out_queue in self.observers:
-          out_queue.put(block)
+        with pipe.open():
+          block = pipe.get()
+          for out_queue in self.observers:
+            out_queue.put(block)
       except queue.Empty:
-        if(self.process.is_alive()==False):
-          self.q_out = mp.Queue()
-          self.process = self.module.start(self.q_out)
+        if(not self.module.is_alive()):
+          pipe = self.module.restart()
+          logging.error("Restarting failed module: %s"%self.module)
+          
         
       
