@@ -5,6 +5,8 @@ from .errors import DaemonError
 
 class NilmDbInserter:
   def __init__(self,client,path,decimate=True):
+    if(decimate):
+      self.decimator = NilmDbDecimator(client,path)
     self.decimate = decimate
     self.path = path
     self.queue = queue.Queue()
@@ -15,7 +17,6 @@ class NilmDbInserter:
   def process_data(self):
     while not self.queue.empty():
       data = self.queue.get()
-      print(data.shape)
       if(data is None):
         self.flush()
         self.finalize()
@@ -31,13 +32,13 @@ class NilmDbInserter:
     if(self.last_ts is None):
       self.last_ts = self.buffer[0,0]
     start = self.last_ts
-    end = self.buffer[-1,0]
+    end = self.buffer[-1,0]+1
     self.client.stream_insert_numpy(self.path, self.buffer,
                                     start=start, 
                                     end=end)
-    self.last_ts = end+1 #append next buffer to this interval
-    if(self.decimate):
-      self.decimator.process(self.data)
+    self.last_ts = end #append next buffer to this interval
+    if(self.decimator is not None):
+      self.decimator.process(self.buffer)
     self.buffer = None
     
   def finalize(self):

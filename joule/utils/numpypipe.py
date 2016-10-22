@@ -20,7 +20,6 @@ class NumpyPipe:
   @contextlib.contextmanager
   def open(self):
     fcntl.fcntl(self.fd,fcntl.F_SETFL, os.O_NONBLOCK)
-    print("got here!!!")
     self.input = open(self.fd,'rb')
     self.sel = selectors.DefaultSelector()
     self.sel.register(self.input,selectors.EVENT_READ)
