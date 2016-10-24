@@ -34,7 +34,7 @@ class TestNilmDbInserter(unittest.TestCase):
     start,end = (call[1]['start'],call[1]['end'])
     np.testing.assert_array_equal(inserted_data,data)
     self.assertEqual(start,interval_start)
-    self.assertEqual(end,interval_end)
+    self.assertEqual(end,interval_end+1)
 
   @mock.patch("joule.daemon.daemon.nilmdb.client.numpyclient.NumpyClient",autospec=True)      
   def test_finalizes_missing_sections(self,mock_client):

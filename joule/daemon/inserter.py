@@ -7,7 +7,9 @@ class NilmDbInserter:
   def __init__(self,client,path,decimate=True):
     if(decimate):
       self.decimator = NilmDbDecimator(client,path)
-    self.decimate = decimate
+    else:
+      self.decimator = None
+
     self.path = path
     self.queue = queue.Queue()
     self.client = client

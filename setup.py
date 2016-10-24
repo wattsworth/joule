@@ -1,9 +1,10 @@
 #!/usr/bin/env python
+import versioneer 
 
 PROJECT = 'Joule'
 
 # Change docs/sphinx/conf.py too!
-VERSION = '0.1'
+
 
 from setuptools import setup, find_packages
 
@@ -14,8 +15,8 @@ except IOError:
 
 setup(
         name = PROJECT,
-        version = VERSION,
-
+        version = versioneer.get_version(),
+        cmdclass = versioneer.get_cmdclass(),
         description = 'Process manager for embedded systems',
         long_description = long_description,
 

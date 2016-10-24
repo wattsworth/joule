@@ -14,4 +14,4 @@ class StatusCmd(Lister):
     def take_action(self, parsed_args):
         modules = procdb_client.input_modules()
         return (('Module Name','Destination Path','Status'),
-                ((m.name,m.destination.path,m.status,m.config_file) for m in modules))
+                ((m.name,m.destination.path,m.status) for m in modules))

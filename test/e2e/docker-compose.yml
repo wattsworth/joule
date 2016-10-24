@@ -1,0 +1,28 @@
+version: '2'
+volumes:
+  tmp:
+    
+services:
+
+  sut:
+    image:
+      jdonnal/joule:testing
+    entrypoint:
+      [/src/test/e2e/bootstrap_inner.sh]
+    hostname:
+      sut
+    expose:
+      - "80"
+    volumes:
+      - tmp:/tmp
+    
+  testbed:
+    command:
+      /src/test/e2e/test.sh
+    image:
+      jdonnal/joule:testing
+    links:
+      - sut
+    volumes:
+      - tmp:/tmp
+    

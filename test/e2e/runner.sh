@@ -1,8 +1,14 @@
 #!/bin/bash
 
-CODE_DIR=/home/jdonnal/joule
-SOURCE=$CODE_DIR/joule:/joule
-TEST=$CODE_DIR/test/e2e/:/etc/joule
 
-VOLUMES="-v $SOURCE -v $TEST"
-docker run -it --rm $VOLUMES jdonnal/joule:patched_nilmdb /etc/joule/bootstrap_inner.sh
+#Build the docker image
+echo "PRE: building docker image"
+docker build ../.. -f Dockerfile -t jdonnal/joule:testing  >> /dev/null
+
+#docker-compose up --abort-on-container-exit
+docker-compose run  --rm testbed
+echo "POST: removing images and tmp files"
+docker-compose stop -t 1 sut >> /dev/null
+docker rm `docker ps -a -q` >> /dev/null
+docker volume rm `docker volume ls -q -f "dangling=true"` >> /dev/null
+#docker volume rm `docker volume ls -q` >> /dev/null
