@@ -2,6 +2,7 @@ import sys
 from cliff.app import App
 from cliff.commandmanager import CommandManager
 import pkg_resources
+import traceback
 
 class JouleApp(App):
     def __init__(self):
@@ -17,9 +18,10 @@ class JouleApp(App):
     def prepare_to_run_command(self,cmd):
         self.LOG.debug('prepare_to_run_command %s', cmd.__class__.__name__)
 
-    #def clean_up(self, cmd, result, err):
-    #    raise err
-    #    self.LOG.debug('got an error: %s', err)
+    def clean_up(self, cmd, result, err):
+        if(err is not None):
+            traceback.print_exc(file=sys.stdout)
+        self.LOG.debug('got an error: %s', err)
 
         
 def main(argv=sys.argv[1:]):

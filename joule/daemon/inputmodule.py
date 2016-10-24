@@ -108,6 +108,8 @@ class InputModule(object):
         proc = subprocess.Popen(cmd,stdin=None,stdout=wpipe,stderr=subprocess.STDOUT)
         os.close(wpipe)
         self.process = proc
+        self.pid = proc.pid
+        self.status = STATUS_RUNNING
         return numpypipe.NumpyPipe(rpipe,
                                    num_streams=len(self.destination.streams))
 

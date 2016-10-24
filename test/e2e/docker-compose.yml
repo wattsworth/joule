@@ -1,20 +1,20 @@
 version: '2'
-volumes:
-  tmp:
+#volumes:
+#  data:
     
 services:
 
-  sut:
+  nilmdb:
     image:
       jdonnal/joule:testing
-    entrypoint:
-      [/src/test/e2e/bootstrap_inner.sh]
+    command:
+      /src/test/e2e/bootstrap_nilmdb.sh
     hostname:
-      sut
+      nilmdb
     expose:
       - "80"
-    volumes:
-      - tmp:/tmp
+#    volumes:
+#      - data:/opt/data
     
   testbed:
     command:
@@ -22,7 +22,5 @@ services:
     image:
       jdonnal/joule:testing
     links:
-      - sut
-    volumes:
-      - tmp:/tmp
+      - nilmdb
     

@@ -51,7 +51,7 @@ def input_modules():
     with _procdb_cursor() as c:
         c.execute("SELECT * FROM {table}".format(table=schema.modules['table']))
         for row in c.fetchall():
-            module = inputmodule.InputModule(pid = str(row["pid"]),
+            module = inputmodule.InputModule(pid = int(row["pid"]),
                                              status = row["status"],
                                              config_file = row["config_file"])
             modules.append(module)
