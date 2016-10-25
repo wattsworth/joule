@@ -4,7 +4,6 @@ import time
 import sys
 def main():
   p = subprocess.Popen(["jouled","--config","/etc/joule/main.conf"],stdout=sys.stdout)
-
   time.sleep(3)
   subprocess.call(["joule","status"])
   subprocess.call(["joule","logs","Basic Demo"])

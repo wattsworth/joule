@@ -49,7 +49,7 @@ from . import destination
 from . import stream
 
 STATUS_LOADED = 'loaded'
-STATUS_ERROR = 'error'
+STATUS_FAILED = 'failed'
 STATUS_RUNNING = 'running'
 STATUS_UNKNOWN = 'unknown'
 
@@ -69,6 +69,7 @@ class InputModule(object):
         self.status = status
         #runtime structures, cannot be restored from procdb
         self.process = None
+        self.log_thread = None
         #if a config file is specified, parse it and initialize
         if(config_file != ""):
             config = configparser.ConfigParser()
@@ -109,9 +110,16 @@ class InputModule(object):
         cmd = shlex.split(self.exec_path)
         (out_rpipe, out_wpipe) = os.pipe()
         (err_rpipe, err_wpipe) = os.pipe()
-        proc = subprocess.Popen(cmd,stdin=None,stdout=out_wpipe,stderr=err_wpipe)
-        os.close(out_wpipe)
-        os.close(err_wpipe)
+        try:
+            proc = subprocess.Popen(cmd,stdin=None,stdout=out_wpipe,stderr=err_wpipe)
+        except Exception as e:
+            procdb_client.log_to_module("ERROR: cannot start module: \n\t%s"%e,
+                                        self.id)
+            self.status = STATUS_FAILED
+            os.close(out_wpipe)
+            os.close(err_wpipe)
+            return None
+
         self.process = proc
         self.pid = proc.pid
         procdb_client.log_to_module("---starting module---",self.id)

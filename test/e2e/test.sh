@@ -7,4 +7,4 @@ python3 setup.py install > /dev/null
 echo "----TEST START----"
 sleep 1
 exec /src/test/e2e/test.py
-
+#exec jouled --config /etc/joule/main.conf

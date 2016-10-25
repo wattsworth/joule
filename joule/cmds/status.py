@@ -25,11 +25,11 @@ class StatusCmd(Lister):
         modules = procdb_client.input_modules()
         res = []
         for m in modules:
-            if(m.pid is not None):
+            if(m.pid is not None and m.pid != -1):
                 process = psutil.Process(m.pid)
                 cpu = self.print_cpu(process)
                 mem = self.print_mem(process)
             else:
-                cpu = 0; mem = 0;
+                cpu = "--"; mem = "--";
             res.append([m.name,m.destination.path,m.status,cpu,mem])
         return (('Module Name','Destination Path','Status','CPU','mem'),res)

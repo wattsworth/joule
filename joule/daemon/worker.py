@@ -24,6 +24,10 @@ class Worker(threading.Thread):
   def run(self):
     pipe = self.module.start()
     procdb_client.update_module(self.module)
+    if pipe is None:
+      logging.error("Cannot start module [%s]"%self.module)
+      return 
+
     while(self.run):
       try:
         with pipe.open():

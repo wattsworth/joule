@@ -5,7 +5,9 @@
 echo "PRE: building docker image"
 docker build ../.. -f Dockerfile -t jdonnal/joule:testing  >> /dev/null
 
-docker run jdonnal/joule:testing /src/test/e2e/test.sh
+CMD=/src/test/e2e/test.sh
+#CMD="jouled --config /etc/joule/main.conf"
+docker run jdonnal/joule:testing $CMD
 
 #docker-compose up --abort-on-container-exit
 #docker-compose run  --rm testbed

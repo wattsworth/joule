@@ -82,6 +82,7 @@ class Daemon(object):
         self.run_flag = False
         for worker in self.workers:
             worker.stop()
+            worker.join()
 
     def _start_worker(self,module):
         worker = Worker(module)
