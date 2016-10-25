@@ -40,6 +40,9 @@ import configparser
 import shlex
 import subprocess
 import os
+import sys
+import threading
+from joule.procdb import client as procdb_client
 from .errors import ConfigError
 from joule.utils import numpypipe
 from . import destination
@@ -55,7 +58,7 @@ class InputModule(object):
 
     def __init__(self,
                  status = STATUS_UNKNOWN,
-                 pid = None, id = None,
+                 pid = -1, id = None,
                  config_file = ""):
         #persistent configuration info (can be restored from procdb)
         self.name = ""
@@ -104,13 +107,18 @@ class InputModule(object):
     
     def start(self):
         cmd = shlex.split(self.exec_path)
-        (rpipe, wpipe) = os.pipe()
-        proc = subprocess.Popen(cmd,stdin=None,stdout=wpipe,stderr=subprocess.STDOUT)
-        os.close(wpipe)
+        (out_rpipe, out_wpipe) = os.pipe()
+        (err_rpipe, err_wpipe) = os.pipe()
+        proc = subprocess.Popen(cmd,stdin=None,stdout=out_wpipe,stderr=err_wpipe)
+        os.close(out_wpipe)
+        os.close(err_wpipe)
         self.process = proc
         self.pid = proc.pid
+        procdb_client.log_to_module("---starting module---",self.id)
+        self.log_thread = threading.Thread(target=self._logger, args=(err_rpipe,))
+        self.log_thread.start()
         self.status = STATUS_RUNNING
-        return numpypipe.NumpyPipe(rpipe,
+        return numpypipe.NumpyPipe(out_rpipe,
                                    num_streams=len(self.destination.streams))
 
 
@@ -119,13 +127,14 @@ class InputModule(object):
         self.start()
         
     def stop(self):
-        if(self.is_alive() == False):
-            return
-        self.process.terminate()
-        try:
-            self.process.wait(4)
-        except subprocess.TimeoutExpired:
-            self.process.kill()
+        if(self.is_alive() ):
+            self.process.terminate()
+            try:
+                self.process.wait(4)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+        if(self.log_thread is not None):
+            self.log_thread.join()
             
     def is_alive(self):
         if(self.process is None):
@@ -134,6 +143,11 @@ class InputModule(object):
         if(self.process.returncode is not None):
             return False
         return True
+
+    def _logger(self,pipe):
+        with open(pipe,'r') as f:
+            for line in f:
+                procdb_client.log_to_module(line.rstrip(),self.id)
 
     def __str__(self):
         if(self.name != ""):

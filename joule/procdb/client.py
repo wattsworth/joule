@@ -7,6 +7,7 @@ import nilmtools.filter
 import sqlite3
 from . import schema
 import os
+import time
 import contextlib
 from joule.daemon import inputmodule
 
@@ -20,7 +21,7 @@ def register_input_module(input_module,config_file=""):
     #    the existing path matches input_module's datatype
     _create_destination_path(dest)
     #2.) check if any other modules are using this path
-    other_module = _get_module_by_dest_path(dest.path)
+    other_module = _get_module_by_column("destination_path",dest.path)
     if(other_module):
         raise ConfigError("the path [%s] is being used by module [%s]"%
                           (dest.path,other_module.name))
@@ -44,19 +45,48 @@ def update_module(module):
                   format(table = schema.modules['table'],
                          fields = fields),(*data.values(),module.id))
 
+def find_module_by_name(module_name):
+    return _get_module_by_column("name",module_name)
 
-    
+def find_module_by_id(module_id):
+    return _get_module_by_column("id",module_id)
+
+def find_module_by_dest_path(path):
+    return _get_module_by_column("destination_path",path)
+
+def log_to_module(line,module_id):
+    """add a log line to the database associated with module_id"""
+    with _procdb_cursor() as c:
+        data = [None,line,module_id,int(time.time())]
+        c.execute("INSERT INTO {table} VALUES (?,?,?,?)".format(table=schema.logs["table"]),
+                  data)
+
 def input_modules():
     modules = []
     with _procdb_cursor() as c:
         c.execute("SELECT * FROM {table}".format(table=schema.modules['table']))
         for row in c.fetchall():
-            module = inputmodule.InputModule(pid = int(row["pid"]),
+            module = inputmodule.InputModule(pid = row["pid"],
+                                             id = row["id"],
                                              status = row["status"],
                                              config_file = row["config_file"])
             modules.append(module)
     return modules    
-
+    
+def logs(module_id):
+    log_entries = []
+    with _procdb_cursor() as c:
+        c.execute("SELECT * FROM {table} WHERE module_id=?".format(table=schema.logs['table']),
+                  [module_id])
+        for row in c.fetchall():
+            ts = time.localtime(row["timestamp"])
+            
+            log_entries.append("[{timestamp}] {log}".
+                               format(timestamp = time.strftime("%d %b %Y %H:%M:%S",ts),
+                                      log=row["line"]))
+    return log_entries
+                        
+    
 @contextlib.contextmanager
 def _procdb_cursor():
     """opens the procdb sqlite database (creates it if needed)"""
@@ -74,7 +104,7 @@ def _initialize_procdb():
     conn = sqlite3.connect(PROC_DB)
     c = conn.cursor()
     for model in schema.schema:
-        c.execute('CREATE TABLE {tn} (id INTEGER PRIMARY KEY)'.format(tn=schema.modules['table']))
+        c.execute('CREATE TABLE {tn} (id INTEGER PRIMARY KEY)'.format(tn=model['table']))
         for column in model['columns']:
             c_name = column[0]
             if(c_name=='id'): #ignore the id field if present in the schema
@@ -101,15 +131,17 @@ def _create_destination_path(destination):
         client.stream_create(destination.path,"%s_%d"%
                              (destination.datatype,len(destination.streams)))
 
-def _get_module_by_dest_path(path):
+
+def _get_module_by_column(column,value):
     with _procdb_cursor() as c:
-        c.execute("SELECT * FROM {table} WHERE destination_path = ?".
-                  format(table=schema.modules['table']),(path,))
+        c.execute("SELECT * FROM {table} WHERE {column} = ?".
+                  format(table=schema.modules['table'],column=column),(value,))
         row = c.fetchone()
     if row is None:
         return None
 
     module = inputmodule.InputModule(pid=row["pid"],
+                                     id = row["id"],
                                      status=row["status"],
                                      config_file = row["config_file"])
     return module
@@ -117,9 +149,8 @@ def _get_module_by_dest_path(path):
 def _insert_module(module,config_file):
     with _procdb_cursor() as c:
         #use string substitution to escape db_input_module insert
-        data = [None, config_file, module.pid, module.status,module.destination.path]
-
-        c.execute("INSERT INTO {table} VALUES (?,?,?,?,?)".format(table=schema.modules["table"]),
+        data = [None, config_file, module.pid, module.status,module.name,module.destination.path]
+        c.execute("INSERT INTO {table} VALUES (?,?,?,?,?,?)".format(table=schema.modules["table"]),
                   data)
         module.id = c.lastrowid
                   

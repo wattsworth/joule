@@ -1,10 +1,13 @@
 #!/usr/bin/python3
 import subprocess
 import time
+import sys
 def main():
-  p = subprocess.Popen(["jouled","--config","/etc/joule/main.conf"])
-  time.sleep(1)
+  p = subprocess.Popen(["jouled","--config","/etc/joule/main.conf"],stdout=sys.stdout)
+
+  time.sleep(3)
   subprocess.call(["joule","status"])
+  subprocess.call(["joule","logs","Basic Demo"])
   p.terminate()
 
 if __name__=="__main__":

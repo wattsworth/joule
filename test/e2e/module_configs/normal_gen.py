@@ -19,10 +19,12 @@ def main(ts):
     ts.shape = (rows,1)
     ts_data = np.hstack((ts,data))
     os.write(sys.stdout.fileno(),ts_data.tobytes())
-    #print("%d %d"%(top_ts,data_ts))
+    print("added data",file=sys.stderr)
+    sys.stderr.flush()
     data_ts = top_ts
     time.sleep(1/freq)
 
 if __name__=="__main__":
+  print("starting!",file=sys.stderr)
   main(time_now())
   

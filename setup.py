@@ -43,8 +43,8 @@ setup(
                         'jouled = joule.daemon.daemon:main'
                         ],
                 'joule.commands' : [
-#                        'daemon = joule.daemon.cmd:DaemonCmd',
-                        'status = joule.cmds.status:StatusCmd'
+                        'status = joule.cmds.status:StatusCmd',
+                        'logs = joule.cmds.logs:LogsCmd'
                         ],
                 },
         zip_safe = False,

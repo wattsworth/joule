@@ -99,7 +99,6 @@ class Daemon(object):
             for x in self.inserters:
                 x.process_data()
             time.sleep(self.insertion_period)
-        
 
 daemon = Daemon()
 
@@ -111,7 +110,6 @@ def main():
     parser = argparse.ArgumentParser("Joule Daemon")
     parser.add_argument("--config")
     args = parser.parse_args()
-
     config = configparser.ConfigParser()
     if(not os.path.isfile(args.config)):
         print("Error, cannot load configuration file [%s], specify with --config"%args.config)
