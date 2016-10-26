@@ -107,6 +107,8 @@ class InputModule(object):
         return self.destination.keep_us!=0
     
     def start(self):
+        if(self.process is not None):
+            self.stop() #stop and cleanup the current process
         cmd = shlex.split(self.exec_path)
         (out_rpipe, out_wpipe) = os.pipe()
         (err_rpipe, err_wpipe) = os.pipe()
@@ -119,6 +121,9 @@ class InputModule(object):
             os.close(out_wpipe)
             os.close(err_wpipe)
             return None
+
+        os.close(out_wpipe)
+        os.close(err_wpipe)
 
         self.process = proc
         self.pid = proc.pid
@@ -143,7 +148,8 @@ class InputModule(object):
                 self.process.kill()
         if(self.log_thread is not None):
             self.log_thread.join()
-            
+        self.process = None
+        
     def is_alive(self):
         if(self.process is None):
             return False
@@ -156,7 +162,7 @@ class InputModule(object):
         with open(pipe,'r') as f:
             for line in f:
                 procdb_client.log_to_module(line.rstrip(),self.id)
-
+            
     def __str__(self):
         if(self.name != ""):
             return self.name

@@ -3,6 +3,7 @@ import fcntl
 import os
 import contextlib
 import selectors
+import logging
 
 MAX_ROWS=3000 #max array size is 3000 rows
 MAX_WAIT=2 #wait 2 seconds for data 
@@ -27,11 +28,11 @@ class NumpyPipe:
     self.input.close()
     
   def get(self):
-    r = self.sel.select(timeout=MAX_WAIT)
-    if(len(r)==0):
-      print("process hasn't returned data")
-      return []
+    self.sel.select(timeout=MAX_WAIT)
     s_data = self.input.read(MAX_ROWS*self.rowsize)
+    if(len(s_data)==0): #EOF, pipe must be closed
+      raise PipeEmpty
+    
     extra_bytes = (len(s_data)+len(self.buffer))%self.rowsize
     if(extra_bytes>0):
       data=np.frombuffer(self.buffer+s_data[:-extra_bytes],dtype='float64')
@@ -45,3 +46,5 @@ class NumpyPipe:
   def dtype(self):
       return '{cols}float64'.format(cols=self.cols)
 
+class PipeEmpty(Exception):
+  pass
