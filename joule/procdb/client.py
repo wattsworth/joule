@@ -92,7 +92,7 @@ def _procdb_cursor():
     """opens the procdb sqlite database (creates it if needed)"""
     if (not os.path.isfile(PROC_DB)):
         _initialize_procdb()
-    conn = sqlite3.connect(PROC_DB)
+    conn = sqlite3.connect(PROC_DB,timeout=5)
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
     yield c

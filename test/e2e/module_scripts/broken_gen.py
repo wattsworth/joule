@@ -22,7 +22,7 @@ def main(ts):
     ts.shape = (rows,1)
     ts_data = np.hstack((ts,data))
     os.write(sys.stdout.fileno(),ts_data.tobytes())
-    print("added data",file=sys.stderr)
+    print("[%d-%d]"%(data_ts,ts[-1]),file=sys.stderr)
     sys.stderr.flush()
     data_ts = top_ts
     time.sleep(1/freq)

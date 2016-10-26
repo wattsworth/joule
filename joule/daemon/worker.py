@@ -45,6 +45,9 @@ class Worker(threading.Thread):
           logging.error("Restarting failed module: %s"%self.module)
           if(self._start_module()==False):
             return
+          #insert an empty block in observers to indicate end of interval
+          for out_queue in self.observers:
+              out_queue.put(None)
 
           
         
