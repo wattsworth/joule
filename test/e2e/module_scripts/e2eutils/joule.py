@@ -8,6 +8,8 @@ STATUS_STATUS_FIELD="Status"
 STATUS_STATUS_RUNNING="running"
 STATUS_STATUS_FAILED="failed"
 
+LOG_STARTING_STRING="---starting module---"
+
 def status():
   output = _run("joule status -f json")
   assert(output is not None)

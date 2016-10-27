@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 import time
 import sys
+import re
 sys.path.append("/module_scripts") #add e2eutils
 from e2eutils import joule as joule_cmd
 from e2eutils import nilmtool as nilmtool_cmd
@@ -73,8 +74,17 @@ def check_logs():
     Broken: says "starting" and more than one "restarting"
     Misconfigured: no logs
   """
-  assert(False)
-  
+
+  logs = joule_cmd.logs("Normal1")
+  num_starts = len(re.findall(joule_cmd.LOG_STARTING_STRING,logs))
+  assert(num_starts==1)
+  logs = joule_cmd.logs("Normal2")
+  num_starts = len(re.findall(joule_cmd.LOG_STARTING_STRING,logs))
+  assert(num_starts==1)
+  logs = joule_cmd.logs("Broken")
+  num_starts = len(re.findall(joule_cmd.LOG_STARTING_STRING,logs))
+  assert(num_starts>1)
+
 if __name__=="__main__":
   main()
   print("OK")
