@@ -4,6 +4,8 @@ from joule.procdb import client as procdb_client
 from cliff.lister import Lister
 import psutil
 
+PROC_DB = "/tmp/joule-proc-db.sqlite"
+NILMDB_URL = "http://localhost/nilmdb"
 class StatusCmd(Lister):
     "Print the status of the joule daemon"
 
@@ -11,6 +13,7 @@ class StatusCmd(Lister):
     def __init__(self, app, app_args, cmd_name=None):
         super(StatusCmd, self).__init__(app,app_args,cmd_name)
         self.cpu_count = psutil.cpu_count()
+        self.procdb = procdb_client.SQLClient(PROC_DB,NILMDB_URL)
 
     def print_mem(self,process):
         m = process.memory_percent()
@@ -22,7 +25,7 @@ class StatusCmd(Lister):
         return "%d%%"%(c)
     
     def take_action(self, parsed_args):
-        modules = procdb_client.input_modules()
+        modules = self.procdb.input_modules()
         res = []
         for m in modules:
             cpu = "--"; mem = "--";

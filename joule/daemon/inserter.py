@@ -1,5 +1,5 @@
 import numpy as np
-import queue
+import asyncio
 import re
 from .errors import DaemonError
 
@@ -11,28 +11,32 @@ class NilmDbInserter:
       self.decimator = None
 
     self.path = path
-    self.queue = queue.Queue()
     self.client = client
     self.last_ts = None
     self.buffer = None
     
-  def process_data(self):
-    while not self.queue.empty():
-      data = self.queue.get()
-      if(data is None):
-        self.flush()
-        self.finalize()
-      elif(self.buffer is None):
-        self.buffer = np.array(data)
-      else:
-        self.buffer = np.append(self.buffer,data,axis=0)
-    self.flush()
-    
+  async def process(self,queue,run_once=False,loop=None):
+    while(True):
+      await asyncio.sleep(1,loop=loop)
+      while not queue.empty():
+        data = await queue.get()
+        if(data is None):
+          self.flush()
+          self.finalize()
+        elif(self.buffer is None):
+          self.buffer = np.array(data)
+        else:
+          self.buffer = np.append(self.buffer,data,axis=0)
+      self.flush()
+      if run_once:
+        break
+      
   def flush(self):
     if(self.buffer is None or len(self.buffer) == 0):
       return #nothing to flush
     if(self.last_ts is None):
       self.last_ts = self.buffer[0,0]
+
     start = self.last_ts
     end = self.buffer[-1,0]+1
     self.client.stream_insert_numpy(self.path, self.buffer,

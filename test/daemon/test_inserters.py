@@ -5,10 +5,15 @@ import unittest
 from joule.daemon import inserter
 from unittest import mock
 import numpy as np
+import asyncio
 
 class TestNilmDbInserter(unittest.TestCase):
   def setUp(self):
-    pass
+    self.loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(None) #disable default event loop
+
+  def tearDown(self):
+    self.loop.close()
     
   @mock.patch("joule.daemon.daemon.nilmdb.client.numpyclient.NumpyClient",autospec=True)
   def test_inserts_continuous_data(self,mock_client):
@@ -23,11 +28,13 @@ class TestNilmDbInserter(unittest.TestCase):
     
     #insert it by block
     blk_size = 10
+    queue = asyncio.Queue(loop=self.loop)
     for i in range(int(length/blk_size)):
-      my_inserter.queue.put(data[i*blk_size:i*blk_size+blk_size])
+      queue.put_nowait(data[i*blk_size:i*blk_size+blk_size])
     #send everything to the database
-    my_inserter.process_data()
+    self.loop.run_until_complete(my_inserter.process(queue,run_once=True,loop=self.loop))
 
+    
     #check what got inserted
     call = mock_client.stream_insert_numpy.call_args
     _,inserted_data = call[0]
@@ -44,13 +51,14 @@ class TestNilmDbInserter(unittest.TestCase):
 
     #missing data between two inserts
     interval1_start = 500; interval2_start = 1000;
-    my_inserter.queue.put(self.create_data(start=interval1_start,step=1))
-    my_inserter.queue.put(None)
-    my_inserter.queue.put(self.create_data(start=interval2_start,step=1))
+    queue = asyncio.Queue(loop=self.loop)
+    queue.put_nowait(self.create_data(start=interval1_start,step=1))
+    queue.put_nowait(None)
+    queue.put_nowait(self.create_data(start=interval2_start,step=1))
                           
 
     #send everything to the database
-    my_inserter.process_data()
+    self.loop.run_until_complete(my_inserter.process(queue,run_once=True,loop=self.loop))
 
     #make sure two seperate intervals made it to the database
     interval1 = mock_client.stream_insert_numpy.call_args_list[0]

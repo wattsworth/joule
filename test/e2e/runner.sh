@@ -11,6 +11,6 @@ docker run --rm jdonnal/joule:testing $CMD
 EXIT_CODE=$?
 
 echo "POST: removing images and tmp files"
-docker rmi jdonnal/joule:testing >> /dev/null
+#docker rmi jdonnal/joule:testing >> /dev/null
 
 exit $EXIT_CODE

@@ -40,11 +40,9 @@ import configparser
 import shlex
 import subprocess
 import os
-import sys
 import threading
 from joule.procdb import client as procdb_client
 from .errors import ConfigError
-from joule.utils import numpypipe
 from . import destination
 from . import stream
 
@@ -105,8 +103,12 @@ class InputModule(object):
     def keep_data(self):
         """True if the destination is recording data (keep!=none)"""
         return self.destination.keep_us!=0
+
+    def numpy_columns(self):
+        return len(self.destination.streams)+1
     
     def start(self):
+        #---not used---
         if(self.process is not None):
             self.stop() #stop and cleanup the current process
         cmd = shlex.split(self.exec_path)
@@ -131,8 +133,8 @@ class InputModule(object):
         self.log_thread = threading.Thread(target=self._logger, args=(err_rpipe,))
         self.log_thread.start()
         self.status = STATUS_RUNNING
-        return numpypipe.NumpyPipe(out_rpipe,
-                                   num_streams=len(self.destination.streams))
+#        return numpypipe.NumpyPipe(out_rpipe,
+#                                   num_streams=len(self.destination.streams))
 
 
     def restart(self):

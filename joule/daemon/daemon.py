@@ -2,6 +2,7 @@
 
 import os
 import configparser
+import asyncio
 from .inputmodule import InputModule
 from .worker import Worker
 from .errors import DaemonError, ConfigError
@@ -9,10 +10,12 @@ from joule.procdb import client as procdb_client
 import logging
 import time
 import argparse
-import threading
 import signal
 import nilmdb.client
+
 from . import defaults, inserter
+
+PROC_DB = "/tmp/joule-proc-db.sqlite"
 
 class Daemon(object):
     log = logging.getLogger(__name__)
@@ -23,7 +26,7 @@ class Daemon(object):
         self.inserters = []
 
     def initialize(self,config):
-        procdb_client.clear_input_modules()
+
         
         try:
             #Build a NilmDB client
@@ -32,6 +35,11 @@ class Daemon(object):
                                  NumpyClient(nilmdb_url)
             #How often to flush local buffers to NilmDB
             self.insertion_period = config.getint("Main","InsertionPeriod")
+            #Set up the ProcDB
+            self.db_path = PROC_DB
+            self.procdb = procdb_client.SQLClient(self.db_path,nilmdb_url)
+            self.procdb.clear_input_modules()            
+
             #Set up the input modules
             module_dir = config["Main"]["InputModuleDir"]
             for module_config in os.listdir(module_dir):
@@ -53,30 +61,20 @@ class Daemon(object):
         module = InputModule()
         try:
             module.initialize(config)
-            procdb_client.register_input_module(module,module_config)
+            self.procdb.register_input_module(module,module_config)
         except (DaemonError, procdb_client.ConfigError) as e:
             self.log.error("Cannot load module [%s]: \n\t%s"%(module_config,e))
             return
         self.input_modules.append(module)
 
     def run(self):
-        self.run_flag = True        
+        loop = asyncio.get_event_loop()
         #start each module and store runtime structures in a worker
         for module in self.input_modules:
-            self._start_worker(module)
+            asyncio.ensure_future(self._start_worker(module))
 
-        #start the inserter thread
-        inserter_thread = threading.Thread(target = self._run_inserters)
-        inserter_thread.start()
-
-        while(self.run_flag):
-            time.sleep(0.1)
-
-        #stop requested, shut down workers
-        for worker in self.workers:
-            worker.join()
-
-        inserter_thread.join()
+        loop.run_forever()
+        loop.close()
         
     def stop(self):
         self.run_flag = False
@@ -84,16 +82,14 @@ class Daemon(object):
             worker.stop()
             worker.join()
 
-    def _start_worker(self,module):
-        worker = Worker(module)
+    async def _start_worker(self,module):
+        worker = Worker(module,procdb_client=self.procdb)
         if(module.keep_data):
             my_inserter = inserter.NilmDbInserter(self.nilmdb_client,
-                            module.destination.path,
-                            decimate = module.destination.decimate)
-            worker.subscribe(my_inserter.queue)
-            self.inserters.append(my_inserter)
-        self.workers.append(worker)
-        worker.start()
+                                    module.destination.path,
+                                    decimate = module.destination.decimate)
+            asyncio.ensure_future(my_inserter.process(worker.subscribe()))
+        asyncio.ensure_future(worker.run())
         
     def _run_inserters(self):
         while(self.run_flag):

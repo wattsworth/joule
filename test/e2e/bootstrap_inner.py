@@ -24,6 +24,7 @@ def run(cmd,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL):
   return subprocess.run(shlex.split(cmd),stdout=stdout,stderr=stderr)
   
 def main():
+
   prep_system()
   for entry in os.scandir(SCENARIO_DIR):
     if not entry.name.startswith('.') and entry.is_dir():
