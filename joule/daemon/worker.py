@@ -1,4 +1,3 @@
-from joule.procdb import client as procdb_client
 import logging
 import asyncio
 import shlex
@@ -9,10 +8,7 @@ from joule.utils import numpypipe
 class Worker:
 
   def __init__(self,module,procdb_client):
-    super().__init__()
     self.observers = []
-    self.process = None
-    self.pipe = None
     self.module = module
     self.procdb_client = procdb_client
     
@@ -20,13 +16,6 @@ class Worker:
     q = asyncio.Queue(loop=loop)
     self.observers.append(q)
     return q
-
-  def _start_module(self):
-    self.pipe = self.module.start()
-    procdb_client.update_module(self.module)
-    if self.pipe is None:
-      logging.error("Cannot start module [%s]"%self.module)
-      return False
     
   async def run(self,restart=True):
     cmd = shlex.split(self.module.exec_path)
@@ -63,25 +52,3 @@ class Worker:
       bline = await stream.readline()
       line = bline.decode('UTF-8').rstrip()
       self.procdb_client.log_to_module(self.module.id,line)
-"""
-  if(self._start_module()==False):
-      return
-    
-      try:
-        with self.pipe.open():
-          while(self.run):
-            block = self.pipe.get()
-            for out_queue in self.observers:
-              out_queue.put(block)
-      except numpypipe.PipeEmpty:
-        if(not self.module.is_alive()):
-          logging.error("Restarting failed module: %s"%self.module)
-          if(self._start_module()==False):
-            return
-
-          for out_queue in self.observers:
-              out_queue.put(None)
-
-          
- """     
-      

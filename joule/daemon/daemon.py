@@ -44,6 +44,15 @@ class Daemon(object):
                 continue
             config_path = os.path.join(module_dir,module_config)
             self._build_module(config_path)
+
+    async def run(self,loop=None):
+        #start each module and store runtime structures in a worker
+        for module in self.input_modules:
+            asyncio.ensure_future(self._start_worker(module),loop=loop)
+
+    def stop(self):
+        pass
+        #TODO set up for async processing
         
     def _build_module(self,module_config):
         """ create an input module from config file
@@ -59,29 +68,14 @@ class Daemon(object):
             return
         self.input_modules.append(module)
 
-    def run(self):
-        loop = asyncio.get_event_loop()
-        #start each module and store runtime structures in a worker
-        for module in self.input_modules:
-            asyncio.ensure_future(self._start_worker(module))
-
-        loop.run_forever()
-        loop.close()
-        
-    def stop(self):
-        self.run_flag = False
-        for worker in self.workers:
-            worker.stop()
-            worker.join()
-
-    async def _start_worker(self,module):
+    async def _start_worker(self,module,loop=None):
         worker = Worker(module,procdb_client=self.procdb)
         if(module.keep_data):
             my_inserter = inserter.NilmDbInserter(self.nilmdb_client,
                                     module.destination.path,
                                     decimate = module.destination.decimate)
-            asyncio.ensure_future(my_inserter.process(worker.subscribe()))
-        asyncio.ensure_future(worker.run())
+            asyncio.ensure_future(my_inserter.process(worker.subscribe()),loop=loop)
+        asyncio.ensure_future(worker.run(),loop=loop)
         
 
 daemon = Daemon()
@@ -113,7 +107,12 @@ def main():
         exit(1)
         
     signal.signal(signal.SIGINT, handler)
-    daemon.run()
+
+    loop=asyncio.get_event_loop()
+    asyncio.ensure_future(daemon.run())
+    loop.run_forever()
+    loop.close()
+
     
 if __name__=="__main__":
     main()

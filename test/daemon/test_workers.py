@@ -15,7 +15,7 @@ class TestWorkers(unittest.TestCase):
   def setUp(self):
     self.loop = asyncio.new_event_loop()
     asyncio.set_event_loop(None) #disable default event loop
-"""
+    """
     mock_module = mock.create_autospec(InputModule)
     mock_module.is_alive = mock.Mock(return_value = False)
     mock_module.start = mock.Mock(return_value=mock.MagicMock())
@@ -26,24 +26,25 @@ class TestWorkers(unittest.TestCase):
     mock_pipe.get = mock.Mock(side_effect=numpypipe.PipeEmpty)
     mock_module.start = mock.Mock(return_value=mock_pipe)
     self.always_fails_module = mock_module
-"""
+   """
 
-  @mock.patch("joule.daemon.worker.procdb_client",autospec=True)
   def test_passes_data_to_subscribers(self,mock_client):
+    mock_dbclient = mock.MagicMock() #spec against SQLClient
     mock_module = mock.MagicMock()
-    my_worker = worker.Worker(mock_module,module_timeout=0.1)
-    num_queues = 4
-    queues=[]
-    for i in range(num_queues):
-      queues.append(my_worker.subscribe(loop=self.loop))
+    mock_npipe = mock.MagicMock()
+    my_worker = worker.Worker(mock_module,mock_client)
+    num_subscribers = 4
+    subscribers = []
+    for i in range(num_subscribers):
+      subscribers.append(my_worker.subscribe(loop=self.loop))
 
-    my_worker.run()
-    mock_module.inject_data("data")
-    time.sleep(0.2)
-    my_worker.stop()
-    my_worker.join()
-    for q in output_queues:
-      self.assertTrue(q.put.called)
+    async def add_data():
+      mock_npipe.add_block("test")
+      
+    self.loop.run_until_complete(asyncio.gather([ my_worker.run(restart=False),add_data()],loop=self.loop))
+    self.loop.close()
+    for q in subscribers:
+      self.assertEqual(q.qsize,1)
 
   @mock.patch("joule.daemon.worker.procdb_client",autospec=True)
   def test_restarts_failed_module_process(self,mock_client):

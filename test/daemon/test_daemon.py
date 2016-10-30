@@ -3,18 +3,15 @@ import tempfile
 import unittest
 import os
 from unittest import mock
-import threading
-import time
-
+import asyncio
+from joule.utils import config_manager
 
 class TestDaemonRun(unittest.TestCase):
-  def setUp(self):
-    pass
 
   @mock.patch("joule.daemon.daemon.InputModule",autospec=True)
   @mock.patch("joule.daemon.daemon.procdb_client",autospec=True)
   def test_it_creates_modules(self,mock_procdb,mock_module):
-    """creates a module for every *.conf file (ignores others"""
+    """creates a module for every *.conf file and ignores others"""
     module_names = ['module1.conf','ignored','temp.conf~','module2.conf']
     MODULE_COUNT = 2
     with tempfile.TemporaryDirectory() as dir:
@@ -22,25 +19,24 @@ class TestDaemonRun(unittest.TestCase):
             #create a stub module configuration (needed for configparser)
             with open(os.path.join(dir,name),'w') as f:
                 f.write('[Main]\n')
-        config = self.parse_configs("""
-        [Main]
-        """)
-        config["Main"]["InputModuleDir"]= dir
-        self.daemon.initialize(config)
-        self.assertEqual(MODULE_COUNT,len(self.daemon.input_modules))
+        custom_config = """
+         [Jouled]
+           ModuleDirectory={dir}
+        """.format(dir=dir)
+        configs = config_manager.load_configs(custom_config,verify=False)
+        print(configs)
+        daemon = Daemon()
+        daemon.initialize(configs)
+        self.assertEqual(MODULE_COUNT,len(daemon.input_modules))
 
-  def test_runs_modules_as_workers(self):
+  @mock.patch("joule.daemon.daemon.asyncio",autospec=True)
+  def test_runs_modules_as_workers(self,mock_asyncio):
     daemon = Daemon()
-    daemon.insertion_period = 0.1 #speed things up
-    start_worker = mock.Mock()
-    daemon._start_worker = start_worker
+    daemon._start_worker = mock.Mock()
     num_modules = 4
     daemon.input_modules = [mock.Mock() for x in range(num_modules)]
-    t = threading.Thread(target = daemon.run)
-    t.start()
-    time.sleep(0.1)
-    daemon.stop()
-    t.join()
-    self.assertEqual(start_worker.call_count,num_modules)
+    loop = asyncio.new_event_loop()
+    loop.run_until_complete(daemon.run(loop=loop))
+    loop.close()
+    self.assertEqual(mock_asyncio.ensure_future.call_count,num_modules)
     
-
