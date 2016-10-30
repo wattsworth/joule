@@ -8,11 +8,7 @@ import sqlite3
 from . import schema
 import os
 import time
-import contextlib
 from joule.daemon import inputmodule
-
-NILMDB_URL = "http://localhost/nilmdb"
-
 
 class SQLClient():
 
@@ -20,11 +16,14 @@ class SQLClient():
         """opens the procdb sqlite database (creates it if needed)"""
         self.db_path = db_path
         self.nilmdb_url = nilmdb_url
-
+        initialization_required = False
         if (not os.path.isfile(db_path)):
-            self._initialize_procdb()
+            initialization_required = True
         self.db = sqlite3.connect(db_path,timeout=5)
         self.db.row_factory = sqlite3.Row
+        if(initialization_required):
+            self._initialize_procdb()
+
         
     def register_input_module(self,input_module,config_file=""):
         """add an InputModule to the proc database"""
@@ -107,19 +106,18 @@ class SQLClient():
 
     def _initialize_procdb(self):
         """create the procdb sqlite database"""
-        conn = sqlite3.connect(self.db_path)
-        c = conn.cursor()
-        for model in schema.schema:
-            c.execute('CREATE TABLE {tn} (id INTEGER PRIMARY KEY)'.format(tn=model['table']))
-            for column in model['columns']:
-                c_name = column[0]
-                if(c_name=='id'): #ignore the id field if present in the schema
-                    continue
-                c_type = column[1]
-                c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct}"
-                          .format(tn=model["table"],cn=c_name,ct=c_type))
-        conn.commit()
-        conn.close()
+        with self.db:
+            c=self.db.cursor()
+            for model in schema.schema:
+                c.execute('CREATE TABLE {tn} (id INTEGER PRIMARY KEY)'.format(tn=model['table']))
+                for column in model['columns']:
+                    c_name = column[0]
+                    if(c_name=='id'): #ignore the id field if present in the schema
+                        continue
+                    c_type = column[1]
+                    c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct}"
+                              .format(tn=model["table"],cn=c_name,ct=c_type))
+
 
     def _create_destination_path(self,destination):
         client = self._get_numpy_client()
@@ -163,7 +161,7 @@ class SQLClient():
             module.id = c.lastrowid
 
     def _get_numpy_client(self):
-        return numpyclient.NumpyClient(NILMDB_URL)
+        return numpyclient.NumpyClient(self.nilmdb_url)
 
 class ProcDbError(Exception):
     """Base class for exceptions in this module"""

@@ -7,7 +7,7 @@ from e2eutils import joule as joule_cmd
 from e2eutils import nilmtool as nilmtool_cmd
 
 def main():
-  time.sleep(3) #wait for jouled to boot
+  time.sleep(8) #wait for jouled to boot
   check_status()
   check_data()
   check_logs()

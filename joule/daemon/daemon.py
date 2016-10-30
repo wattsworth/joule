@@ -5,15 +5,15 @@ import configparser
 import asyncio
 from .inputmodule import InputModule
 from .worker import Worker
-from .errors import DaemonError, ConfigError
+from .errors import DaemonError
 from joule.procdb import client as procdb_client
 import logging
-import time
+
 import argparse
 import signal
 import nilmdb.client
-
-from . import defaults, inserter
+from joule.utils import config_manager
+from . import inserter
 
 PROC_DB = "/tmp/joule-proc-db.sqlite"
 
@@ -26,32 +26,24 @@ class Daemon(object):
         self.inserters = []
 
     def initialize(self,config):
+        #Build a NilmDB client
+        nilmdb_url = config.nilmdb.url
+        self.nilmdb_client = nilmdb.client.numpyclient.\
+                             NumpyClient(nilmdb_url)
 
+        #Set up the ProcDB
+        self.db_path = PROC_DB
+        self.procdb = procdb_client.SQLClient(config.procdb.db_path,
+                                              config.nilmdb.url)
+        self.procdb.clear_input_modules()            
         
-        try:
-            #Build a NilmDB client
-            nilmdb_url = config["Main"]["NilmdbURL"]
-            self.nilmdb_client = nilmdb.client.numpyclient.\
-                                 NumpyClient(nilmdb_url)
-            #How often to flush local buffers to NilmDB
-            self.insertion_period = config.getint("Main","InsertionPeriod")
-            #Set up the ProcDB
-            self.db_path = PROC_DB
-            self.procdb = procdb_client.SQLClient(self.db_path,nilmdb_url)
-            self.procdb.clear_input_modules()            
-
-            #Set up the input modules
-            module_dir = config["Main"]["InputModuleDir"]
-            for module_config in os.listdir(module_dir):
-                if(not module_config.endswith(".conf")):
-                    continue
-                config_path = os.path.join(module_dir,module_config)
-                self._build_module(config_path)
-        except KeyError as e:
-            raise ConfigError(e) from e
-        except FileNotFoundError as e:
-            raise ConfigError("InputModuleDir [%s] does not exist"%
-                              module_dir) from e
+        #Set up the input modules
+        module_dir = config.jouled.module_directory
+        for module_config in os.listdir(module_dir):
+            if(not module_config.endswith(".conf")):
+                continue
+            config_path = os.path.join(module_dir,module_config)
+            self._build_module(config_path)
         
     def _build_module(self,module_config):
         """ create an input module from config file
@@ -91,11 +83,6 @@ class Daemon(object):
             asyncio.ensure_future(my_inserter.process(worker.subscribe()))
         asyncio.ensure_future(worker.run())
         
-    def _run_inserters(self):
-        while(self.run_flag):
-            for x in self.inserters:
-                x.process_data()
-            time.sleep(self.insertion_period)
 
 daemon = Daemon()
 
@@ -107,16 +94,19 @@ def main():
     parser = argparse.ArgumentParser("Joule Daemon")
     parser.add_argument("--config")
     args = parser.parse_args()
-    config = configparser.ConfigParser()
-    if(not os.path.isfile(args.config)):
-        print("Error, cannot load configuration file [%s], specify with --config"%args.config)
-        return -1
 
-
-    config.read_dict(defaults.config)
-    config.read(args.config)
     try:
-        daemon.initialize(config)
+        config_str = ''
+        if(args.config is not None):
+            with open(args.config) as f:
+                config_str = f.read()
+        my_configs = config_manager.load_configs(config_string=config_str)
+    except Exception as e:
+        logging.error("Error loading configuration: %s",str(e))
+        exit(1)
+        
+    try:
+        daemon.initialize(my_configs)
     except DaemonError as e:
         print(e)
         print("cannot recover, exiting")

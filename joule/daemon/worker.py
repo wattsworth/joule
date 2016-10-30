@@ -3,7 +3,7 @@ import logging
 import asyncio
 import shlex
 from . import inputmodule
-from . import utils
+from joule.utils import numpypipe
 
 
 class Worker:
@@ -44,7 +44,7 @@ class Worker:
     self.procdb_client.update_module(self.module)
     self.procdb_client.log_to_module("---starting module---",self.module.id)
     
-    npipe = utils.NumpyPipe(proc.stdout, num_cols = self.module.numpy_columns())
+    npipe = numpypipe.NumpyPipe(proc.stdout, num_cols = self.module.numpy_columns())
     asyncio.ensure_future(self._logger(proc.stderr))
     async for block in npipe:
       for q in self.observers:

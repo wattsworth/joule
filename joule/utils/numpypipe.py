@@ -1,5 +1,4 @@
 import numpy as np
-import asyncio
 
 MAX_ROWS=3000 #max array size is 3000 rows
 
