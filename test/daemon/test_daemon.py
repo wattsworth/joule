@@ -24,7 +24,6 @@ class TestDaemonRun(unittest.TestCase):
            ModuleDirectory={dir}
         """.format(dir=dir)
         configs = config_manager.load_configs(custom_config,verify=False)
-        print(configs)
         daemon = Daemon()
         daemon.initialize(configs)
         self.assertEqual(MODULE_COUNT,len(daemon.input_modules))
