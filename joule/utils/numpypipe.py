@@ -7,22 +7,22 @@ class NumpyPipe:
   def __init__(self,stream,num_cols):
     self.stream = stream
     self.num_cols = num_cols
-
+    self.buffer = b''
+    
   def __aiter__(self):
     return self
 
   async def __anext__(self):
     rowsize = self.num_cols*8
-    buffer = b''
     while(not self.stream.at_eof()):
       s_data = await self.stream.read(MAX_ROWS*rowsize)
-      extra_bytes = (len(s_data)+len(buffer))%rowsize
+      extra_bytes = (len(s_data)+len(self.buffer))%rowsize
       if(extra_bytes>0):
-        data=np.frombuffer(buffer+s_data[:-extra_bytes],dtype='float64')
-        buffer=s_data[-extra_bytes:]
+        data=np.frombuffer(self.buffer+s_data[:-extra_bytes],dtype='float64')
+        self.buffer=s_data[-extra_bytes:]
       else:
-        data=np.frombuffer(buffer+s_data,dtype='float64')
-        buffer = b''
+        data=np.frombuffer(self.buffer+s_data,dtype='float64')
+        self.buffer = b''
       data.shape = len(data)//self.num_cols,self.num_cols
       return data
     raise StopAsyncIteration
