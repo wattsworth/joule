@@ -10,8 +10,8 @@ from joule.procdb import client as procdb_client
 import logging
 
 import argparse
-import signal
 import nilmdb.client
+import signal
 from joule.utils import config_manager
 from . import inserter
 
@@ -24,7 +24,11 @@ class Daemon(object):
         self.input_modules = []
         self.workers = []
         self.inserters = []
-
+        #populated by initialize
+        self.procdb = None
+        self.nilmdb_client = None
+        self.stop_requested = False
+        
     def initialize(self,config):
         #Build a NilmDB client
         nilmdb_url = config.nilmdb.url
@@ -45,14 +49,22 @@ class Daemon(object):
             config_path = os.path.join(module_dir,module_config)
             self._build_module(config_path)
 
-    async def run(self,loop=None):
+    def run(self,loop):
         #start each module and store runtime structures in a worker
+        self.workers = []
+        tasks = []
         for module in self.input_modules:
-            asyncio.ensure_future(self._start_worker(module),loop=loop)
+            tasks.append(self._start_worker(module,loop=loop))
+        tasks.append(self._db_committer())
 
+        loop.run_until_complete(asyncio.gather(*tasks))
+                                
     def stop(self):
-        pass
-        #TODO set up for async processing
+        loop = asyncio.get_event_loop()
+        self.stop_requested=True
+        for worker in self.workers:
+            asyncio.ensure_future(worker.stop(loop))
+
         
     def _build_module(self,module_config):
         """ create an input module from config file
@@ -70,49 +82,53 @@ class Daemon(object):
 
     async def _start_worker(self,module,loop=None):
         worker = Worker(module,procdb_client=self.procdb)
+        self.workers.append(worker)
+        inserter_task = None
         if(module.keep_data):
             my_inserter = inserter.NilmDbInserter(self.nilmdb_client,
                                     module.destination.path,
                                     decimate = module.destination.decimate)
-            asyncio.ensure_future(my_inserter.process(worker.subscribe()),loop=loop)
-        asyncio.ensure_future(worker.run(),loop=loop)
-        
+            inserter_task = asyncio.ensure_future(my_inserter.process(worker.subscribe()),loop=loop)
+        await worker.run()
+        if(module.keep_data):
+            my_inserter.stop()
+            await inserter_task
 
-daemon = Daemon()
-
-def handler(signum, frame):
-    print("handler called with signum: ",signum)
-    daemon.stop()
-    
-def main():
-    parser = argparse.ArgumentParser("Joule Daemon")
-    parser.add_argument("--config")
-    args = parser.parse_args()
-
+    async def _db_committer(self,loop=None):
+      while(not self.stop_requested):
+          await asyncio.sleep(5)
+          self.procdb.commit()
+          
+def load_configs(config_file):
     try:
         config_str = ''
-        if(args.config is not None):
-            with open(args.config) as f:
+        if(config_file is not None):
+            with open(config_file) as f:
                 config_str = f.read()
-        my_configs = config_manager.load_configs(config_string=config_str)
+        return config_manager.load_configs(config_string=config_str)
     except Exception as e:
         logging.error("Error loading configuration: %s",str(e))
         exit(1)
-        
+    
+def main(args=None):
+
+    parser = argparse.ArgumentParser("Joule Daemon")
+    parser.add_argument("--config")
+    args = parser.parse_args(args)
+    configs = load_configs(args.config)
+    daemon = Daemon()
+
     try:
-        daemon.initialize(my_configs)
+        daemon.initialize(configs)
+
     except DaemonError as e:
-        print(e)
-        print("cannot recover, exiting")
+        print("Error starting jouled [%s]"%str(e))
         exit(1)
         
-    signal.signal(signal.SIGINT, handler)
-
     loop=asyncio.get_event_loop()
-    asyncio.ensure_future(daemon.run())
-    loop.run_forever()
+    loop.set_debug(True)
+    loop.add_signal_handler(signal.SIGINT,daemon.stop)
+    daemon.run(loop)
     loop.close()
+    exit(0)
 
-    
-if __name__=="__main__":
-    main()

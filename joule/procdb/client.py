@@ -47,16 +47,16 @@ class SQLClient():
             c.execute("DELETE FROM {table}".format(table=schema.modules['table']))
 
     def update_module(self,module):
-        with self.db:
-            c = self.db.cursor()
-            #these are the update-able fields in the module structure
-            data = {'pid': module.pid,
-                    'status': module.status
-            }
-            fields = ",".join(["%s=?"%name for name in data.keys()])
-            c.execute("UPDATE {table} SET {fields} WHERE id = ?".
-                      format(table = schema.modules['table'],
-                             fields = fields),(*data.values(),module.id))
+        """udpate module statistics. COMMIT REQUIRED"""
+        c = self.db.cursor()
+        #these are the update-able fields in the module structure
+        data = {'pid': module.pid,
+                'status': module.status
+        }
+        fields = ",".join(["%s=?"%name for name in data.keys()])
+        c.execute("UPDATE {table} SET {fields} WHERE id = ?".
+                  format(table = schema.modules['table'],
+                         fields = fields),(*data.values(),module.id))
 
     def find_module_by_name(self,module_name):
         return self._get_module_by_column("name",module_name)
@@ -68,38 +68,40 @@ class SQLClient():
         return self._get_module_by_column("destination_path",path)
 
     def log_to_module(self,line,module_id):
-        """add a log line to the database associated with module_id"""
-        with self.db:
-            c = self.db.cursor()
-            data = [None,line,module_id,int(time.time())]
-            c.execute("INSERT INTO {table} VALUES (?,?,?,?)".format(table=schema.logs["table"]),
-                      data)
+        """add a log line to the database associated with module_id
+           REQUIRES a commit! """
+        c = self.db.cursor()
+        data = [None,line,module_id,int(time.time())]
+        c.execute("INSERT INTO {table} VALUES (?,?,?,?)".format(table=schema.logs["table"]),
+                  data)
 
+    def commit(self):
+        self.db.commit()
+        
     def input_modules(self):
         modules = []
-        with self.db:
-            c = self.db.cursor()
-            c.execute("SELECT * FROM {table}".format(table=schema.modules['table']))
-            for row in c.fetchall():
-                module = inputmodule.InputModule(pid = row["pid"],
-                                                 id = row["id"],
-                                                 status = row["status"],
-                                                 config_file = row["config_file"])
-                modules.append(module)
+        c = self.db.cursor()
+        c.execute("SELECT * FROM {table}".format(table=schema.modules['table']))
+        for row in c.fetchall():
+            module = inputmodule.InputModule(pid = row["pid"],
+                                             id = row["id"],
+                                             status = row["status"],
+                                             config_file = row["config_file"])
+            modules.append(module)
         return modules    
 
     def logs(self,module_id):
         log_entries = []
-        with self.db:
-            c = self.db.cursor()
-            c.execute("SELECT * FROM {table} WHERE module_id=?".format(table=schema.logs['table']),
-                      [module_id])
-            for row in c.fetchall():
-                ts = time.localtime(row["timestamp"])
 
-                log_entries.append("[{timestamp}] {log}".
-                                   format(timestamp = time.strftime("%d %b %Y %H:%M:%S",ts),
-                                          log=row["line"]))
+        c = self.db.cursor()
+        c.execute("SELECT * FROM {table} WHERE module_id=?".format(table=schema.logs['table']),
+                  [module_id])
+        for row in c.fetchall():
+            ts = time.localtime(row["timestamp"])
+
+            log_entries.append("[{timestamp}] {log}".
+                               format(timestamp = time.strftime("%d %b %Y %H:%M:%S",ts),
+                                      log=row["line"]))
         return log_entries
 
 
@@ -137,11 +139,11 @@ class SQLClient():
 
 
     def _get_module_by_column(self,column,value):
-        with self.db:
-            c = self.db.cursor()
-            c.execute("SELECT * FROM {table} WHERE {column} = ?".
-                      format(table=schema.modules['table'],column=column),(value,))
-            row = c.fetchone()
+
+        c = self.db.cursor()
+        c.execute("SELECT * FROM {table} WHERE {column} = ?".
+                  format(table=schema.modules['table'],column=column),(value,))
+        row = c.fetchone()
         if row is None:
             return None
 

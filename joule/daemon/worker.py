@@ -34,7 +34,8 @@ class Worker:
           q.put_nowait(None)
       else:
         break
-  
+
+    
   async def _run_once(self,loop=None):
     cmd = shlex.split(self.module.exec_path)
     create = asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,
@@ -45,6 +46,7 @@ class Worker:
       self.procdb_client.log_to_module("ERROR: cannot start module: \n\t%s"%e,
                                        self.module.id)
       logging.error("Cannot start module [%s]"%self.module)
+      self.process = None
       return
 
     self.module.status = inputmodule.STATUS_RUNNING
@@ -59,19 +61,26 @@ class Worker:
       for q in self.observers:
         q.put_nowait(block)
     await self.process.wait()
+    self.process = None
+    
+  async def stop(self,loop):
 
-  async def stop(self):
     self.stop_requested = True
+    if(self.process is None):
+      return
+
     self.process.terminate()
     try:
-      await self.process.communicate()
+      await asyncio.wait_for(self.process.wait(),timeout=2,loop=loop)
     except asyncio.TimeoutError:
       self.process.kill()
     await self.logger_task
-#    await self.run_task
+
     
   async def _logger(self,stream):
-    while(not stream.at_eof()):
+    while(True):
       bline = await stream.readline()
+      if(len(bline)==0):
+        break
       line = bline.decode('UTF-8').rstrip()
       self.procdb_client.log_to_module(self.module.id,line)

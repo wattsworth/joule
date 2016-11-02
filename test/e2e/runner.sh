@@ -7,6 +7,7 @@ docker build ../.. -f Dockerfile -t jdonnal/joule:testing  >> /dev/null
 
 
 CMD=/src/test/e2e/bootstrap_inner.py
+#CMD=/src/test/e2e/raw_jouled.sh
 docker run --rm jdonnal/joule:testing $CMD
 EXIT_CODE=$?
 

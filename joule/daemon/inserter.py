@@ -14,9 +14,10 @@ class NilmDbInserter:
     self.client = client
     self.last_ts = None
     self.buffer = None
+    self.stop_requested = False
     
   async def process(self,queue,run_once=False,loop=None):
-    while(True):
+    while(not self.stop_requested):
       await asyncio.sleep(1,loop=loop)
       while not queue.empty():
         data = await queue.get()
@@ -30,7 +31,10 @@ class NilmDbInserter:
       self.flush()
       if run_once:
         break
-      
+
+  def stop(self):
+    self.stop_requested = True
+    
   def flush(self):
     if(self.buffer is None or len(self.buffer) == 0):
       return #nothing to flush

@@ -52,12 +52,13 @@ class TestWorkers(asynctest.TestCase):
     mock_module = mock.Mock()
     mock_module.exec_path="stub cmd"
     my_worker = worker.Worker(mock_module ,mock.Mock())
-
+    my_worker._logger = asynctest.CoroutineMock()
     loop = asyncio.get_event_loop()
 
     async def stop_worker():
       await asyncio.sleep(0.3)
-      await my_worker.stop()
+      await my_worker.stop(loop)
+      
     tasks = [ asyncio.ensure_future(stop_worker()),
               asyncio.ensure_future(my_worker.run(restart=True)) ]
     with self.assertLogs(level='ERROR'):

@@ -9,3 +9,5 @@ dist/*
 .coverage
 test/e2e/archive/nilm*
 joule/daemon/asynctest.py
+htmlcov/*
+asynctests.py

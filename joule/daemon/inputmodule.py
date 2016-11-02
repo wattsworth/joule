@@ -107,63 +107,6 @@ class InputModule(object):
     def numpy_columns(self):
         return len(self.destination.streams)+1
     
-    def start(self):
-        #---not used---
-        if(self.process is not None):
-            self.stop() #stop and cleanup the current process
-        cmd = shlex.split(self.exec_path)
-        (out_rpipe, out_wpipe) = os.pipe()
-        (err_rpipe, err_wpipe) = os.pipe()
-        try:
-            proc = subprocess.Popen(cmd,stdin=None,stdout=out_wpipe,stderr=err_wpipe)
-        except Exception as e:
-            procdb_client.log_to_module("ERROR: cannot start module: \n\t%s"%e,
-                                        self.id)
-            self.status = STATUS_FAILED
-            os.close(out_wpipe)
-            os.close(err_wpipe)
-            return None
-
-        os.close(out_wpipe)
-        os.close(err_wpipe)
-
-        self.process = proc
-        self.pid = proc.pid
-        procdb_client.log_to_module("---starting module---",self.id)
-        self.log_thread = threading.Thread(target=self._logger, args=(err_rpipe,))
-        self.log_thread.start()
-        self.status = STATUS_RUNNING
-#        return numpypipe.NumpyPipe(out_rpipe,
-#                                   num_streams=len(self.destination.streams))
-
-
-    def restart(self):
-        self.stop()
-        self.start()
-        
-    def stop(self):
-        if(self.is_alive() ):
-            self.process.terminate()
-            try:
-                self.process.wait(4)
-            except subprocess.TimeoutExpired:
-                self.process.kill()
-        if(self.log_thread is not None):
-            self.log_thread.join()
-        self.process = None
-        
-    def is_alive(self):
-        if(self.process is None):
-            return False
-        self.process.poll()
-        if(self.process.returncode is not None):
-            return False
-        return True
-
-    def _logger(self,pipe):
-        with open(pipe,'r') as f:
-            for line in f:
-                procdb_client.log_to_module(line.rstrip(),self.id)
             
     def __str__(self):
         if(self.name != ""):

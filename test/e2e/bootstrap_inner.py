@@ -7,6 +7,7 @@ import os
 import sys
 import subprocess
 import shlex
+import signal
 
 SOURCE_DIR="/src"
 SCENARIO_DIR = "/src/test/e2e/scenarios"
@@ -35,13 +36,12 @@ def main():
       print("---------[%s]---------"%entry.name)
       sys.stdout.flush()
       test = subprocess.run(os.path.join(entry.path,"test.py"))
-      jouled.terminate()
+      jouled.send_signal(signal.SIGINT)
       if(test.returncode!=0):
         print("----dump from jouled----")
         stdout,_ = jouled.communicate()
         for line in stdout.rstrip().split('\n'):
-            print("> %s"%line)
-
+          print("> %s"%line)
         return test.returncode
 
   return 0 #success

@@ -1,13 +1,14 @@
 from joule.daemon.daemon import Daemon
+from joule.daemon import daemon
 import tempfile
 import unittest
 import os
 from unittest import mock
 import asyncio
+import asynctest
 from joule.utils import config_manager
 
-class TestDaemonRun(unittest.TestCase):
-
+class TestDaemonSetup(unittest.TestCase):
   @mock.patch("joule.daemon.daemon.InputModule",autospec=True)
   @mock.patch("joule.daemon.daemon.procdb_client",autospec=True)
   def test_it_creates_modules(self,mock_procdb,mock_module):
@@ -28,14 +29,45 @@ class TestDaemonRun(unittest.TestCase):
         daemon.initialize(configs)
         self.assertEqual(MODULE_COUNT,len(daemon.input_modules))
 
-  @mock.patch("joule.daemon.daemon.asyncio",autospec=True)
-  def test_runs_modules_as_workers(self,mock_asyncio):
+  @mock.patch("joule.daemon.daemon.config_manager",autospec=True)
+  def test_daemon_reads_config_file(self,mock_configs):
+    CUSTOM_CONFIGURATION="custom_configuration"
+    with tempfile.NamedTemporaryFile() as fp:
+        fp.write(str.encode(CUSTOM_CONFIGURATION))
+        fp.flush()
+        daemon.load_configs(fp.name)
+    mock_configs.load_configs.assert_called_with(config_string=CUSTOM_CONFIGURATION)
+
+    
+class TestDaemonRun(asynctest.TestCase):
+  @asynctest.patch("joule.daemon.daemon.Worker",autospec=True)
+  @asynctest.patch("joule.daemon.daemon.inserter.NilmDbInserter",autospec=True)
+  def test_runs_modules_as_workers(self,mock_inserter,mock_worker):
+    """daemon starts a worker and inserter for every module"""
+    NUM_MODULES=4
+
+    inserter_runs = 0
+    async def run_inserter(*args):
+      nonlocal inserter_runs
+      inserter_runs += 1
+    instance = mock_inserter.return_value
+    instance.process = run_inserter
+
+    worker_runs = 0
+    async def run_worker():
+      nonlocal worker_runs
+      worker_runs += 1
+    instance = mock_worker.return_value
+    instance.run = run_worker
+
+
     daemon = Daemon()
-    daemon._start_worker = mock.Mock()
-    num_modules = 4
-    daemon.input_modules = [mock.Mock() for x in range(num_modules)]
-    loop = asyncio.new_event_loop()
-    loop.run_until_complete(daemon.run(loop=loop))
-    loop.close()
-    self.assertEqual(mock_asyncio.ensure_future.call_count,num_modules)
+    daemon.procdb = mock.Mock()
+    daemon.input_modules = [mock.Mock() for x in range(NUM_MODULES)]
+    loop = asyncio.get_event_loop()
+    daemon.stop_requested = True
+    daemon.run(loop)
+    
+    self.assertEqual(inserter_runs,NUM_MODULES)
+    self.assertEqual(worker_runs,NUM_MODULES)
     
