@@ -20,11 +20,18 @@ class Destination(object):
     @property
     def data_format(self):
         return "%s_%d"%(self.datatype,len(self.streams))
-    
+
+
+
+def validate_path(path):
+    if(re.fullmatch('^(\/\w+)(\/\w+)+$',path) is None):
+        raise ConfigError("invalid stream path, use format: /dir/subdir/../file")
+    return path
+
 class Parser(object):
     def run(self,configs):
         try:
-            path = self._validate_path(configs["path"])
+            path = validate_path(configs["path"])
             datatype = self._validate_datatype(configs["datatype"])
             keep_us = self._validate_keep(configs["keep"])
             decimate = configs.getboolean("decimate",fallback=True)
@@ -32,11 +39,6 @@ class Parser(object):
         except KeyError as e:
             raise ConfigError("[Destination] missing %s"%e.args[0])
         
-    def _validate_path(self,path):
-        if(re.fullmatch('^(\/\w+)(\/\w+)+$',path) is None):
-            raise ConfigError("invalid [Destination] path, \
-            use format: /dir/subdir/../file")
-        return path
     
     def _validate_datatype(self,datatype):
         valid_datatypes = ["uint%d"%x for x in [8,16,32,64]]+\

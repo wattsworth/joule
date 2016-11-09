@@ -6,12 +6,13 @@ Configuration File:
 [Main]
 name = module name
 description = module description
+exec = /path/to/file --args 
 
 [Source]
-# pick exec OR fifo
-generator = /path/to/python args
-exec = /path/to/file --args 
-fifo = /path/to/fifo
+path1 = /nilmdb/stream1
+path2 = /nilmdb/stream2
+  ....
+pathN = /nilmdb/streamN
 
 [Destination]
 #required settings (examples)
@@ -37,11 +38,6 @@ default_min  = 0.0
 import logging
 import re
 import configparser
-import shlex
-import subprocess
-import os
-import threading
-from joule.procdb import client as procdb_client
 from .errors import ConfigError
 from . import destination
 from . import stream
@@ -65,9 +61,7 @@ class InputModule(object):
         self.pid = pid
         self.id = id
         self.status = status
-        #runtime structures, cannot be restored from procdb
-        self.process = None
-        self.log_thread = None
+        self.source_paths = []
         #if a config file is specified, parse it and initialize
         if(config_file != ""):
             config = configparser.ConfigParser()
@@ -75,16 +69,35 @@ class InputModule(object):
             self.initialize(config)
             
     def initialize(self,config):
+        try:
+            self._load_info_configs(config['Main'])
+            self._load_source_configs(config['Source'])
+            self._load_destination_configs(config)
+        except KeyError as e:
+            raise ConfigError("Missing section [%s]"%e) from e
+        
+    def _load_info_configs(self,main_config):
         #initialize the module from the config file
         try:
-            self.name = config['Main']['name']
+            self.name = main_config['name']
             if(self.name==''):
-                raise KeyError
-            self.description = config['Main'].get('description','')
-            self.exec_path = config['Source']['exec']
+                raise ConfigError("module name is missing or blank")
+            self.description = main_config.get('description','')
+            self.exec_cmd = main_config['exec']
+            if(self.exec_cmd==''):
+                raise ConfigError("module exec_cmd is missing or blank")
         except KeyError as e:
-            raise ConfigError("module name is missing or blank")
-
+            raise ConfigError("In [main] missing [%s] setting"%e) from e
+        
+    def _load_source_configs(self,source_config):
+        for path in source_config.values():
+            try:
+                destination.validate_path(path)
+            except Exception as e:
+                raise ConfigError("Invalid source stream [{:s}]".format(path)) from e
+            self.source_paths.append(path)
+            
+    def _load_destination_configs(self,config):
         dest_parser = destination.Parser()
         stream_parser = stream.Parser()
         try:
@@ -99,7 +112,7 @@ class InputModule(object):
         #make sure we have at least one stream
         if(len(self.destination.streams)==0):
             raise ConfigError("missing stream configurations, must have at least one")
-        
+    
     def keep_data(self):
         """True if the destination is recording data (keep!=none)"""
         return self.destination.keep_us!=0

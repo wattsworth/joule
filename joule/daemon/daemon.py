@@ -21,13 +21,16 @@ class Daemon(object):
     log = logging.getLogger(__name__)
     
     def __init__(self):
-        self.input_modules = []
-        self.workers = []
-        self.inserters = []
+        
         #populated by initialize
         self.procdb = None
         self.nilmdb_client = None
         self.stop_requested = False
+        self.input_modules = []
+        #runtime structures
+        self.worked_paths = {}
+        self.workers = []
+        self.inserters = []
         
     def initialize(self,config):
         #Build a NilmDB client
@@ -50,15 +53,35 @@ class Daemon(object):
             self._build_module(config_path)
 
     def run(self,loop):
-        #start each module and store runtime structures in a worker
-        self.workers = []
+        """start each module and store runtime structures in a worker"""
+        #only call this function once, error if called twice
+        assert(len(self.workers)==0)
         tasks = []
-        for module in self.input_modules:
-            tasks.append(self._start_worker(module,loop=loop))
+        #set up module inputs
+
+        #loop through modules until they are all registered and started
+        #if a module cannot be registered log an error
+
+        pending_workers = [Worker(m,procdb_client = self.procdb)
+                           for m in self.input_modules]
+        while(len(pending_workers)>0):
+            started_a_worker = False
+            for w in pending_workers:
+                if(w.register_inputs(self.worked_paths)):
+                    tasks.append(self._start_worker(w,loop=loop))
+                    pending_workers.remove(w)
+                    started_a_worker = True
+            if(started_a_worker==False):
+                for w in pending_workers:
+                    logging.warn("Could not start [%s] because its inputs are not available"%
+                                 w.module)
+                break
+            
         tasks.append(self._db_committer())
 
         loop.run_until_complete(asyncio.gather(*tasks))
                                 
+
     def stop(self):
         loop = asyncio.get_event_loop()
         self.stop_requested=True
@@ -80,9 +103,10 @@ class Daemon(object):
             return
         self.input_modules.append(module)
 
-    async def _start_worker(self,module,loop=None):
-        worker = Worker(module,procdb_client=self.procdb)
+    async def _start_worker(self,worker,loop=None):
         self.workers.append(worker)
+        module = worker.module
+        self.worked_paths[module.destination.path]=worker
         inserter_task = None
         if(module.keep_data):
             my_inserter = inserter.NilmDbInserter(self.nilmdb_client,

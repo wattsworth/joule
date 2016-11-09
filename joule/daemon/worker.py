@@ -10,18 +10,45 @@ class Worker:
   def __init__(self,module,procdb_client):
     self.observers = []
     self.module = module
+    self.inputs = {} #no inputs
+    for path in self.module.source_paths:
+      #add the path as an input
+      self.inputs[path]=None
+
     self.procdb_client = procdb_client
     self.process = None
     self.stop_requested = False
+    self.all_inputs_registered = False
     
   def subscribe(self,loop=None):
     q = asyncio.Queue(loop=loop)
     self.observers.append(q)
     return q
 
+  def register_inputs(self,worked_paths):
+    #check if all the module's inputs are available
+    missing_input = False
+    for path in self.inputs.keys():
+      if not path in worked_paths:
+        missing_input = True
+    if(missing_input):
+      return False #cannot find all input sources
+    #subscribe to inputs
+    for path in self.inputs.keys():
+      self.inputs[path] = worked_paths[path].subscribe()
+    return True
   
+  def _validate_inputs(self):
+    for key,value in self.inputs:
+      if value is None:
+        logging.error("Cannot start module [{name}]: no input source for [{path}]".\
+                      format(name=self.module,path=key))
+        return False
+    return True
   
   async def run(self,restart=True,loop=None):
+    if(not self._validate_inputs()):
+      return
     self.stop_requested = False
     while(True):
       await self._run_once(loop)
@@ -37,7 +64,7 @@ class Worker:
 
     
   async def _run_once(self,loop=None):
-    cmd = shlex.split(self.module.exec_path)
+    cmd = shlex.split(self.module.exec_cmd)
     create = asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,
                                              stderr=asyncio.subprocess.PIPE)
     try:

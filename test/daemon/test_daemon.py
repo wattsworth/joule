@@ -59,8 +59,8 @@ class TestDaemonRun(asynctest.TestCase):
       worker_runs += 1
     instance = mock_worker.return_value
     instance.run = run_worker
-
-
+    instance.module = mock.Mock() #should be set by daemon but the object is mocked
+    
     daemon = Daemon()
     daemon.procdb = mock.Mock()
     daemon.input_modules = [mock.Mock() for x in range(NUM_MODULES)]
