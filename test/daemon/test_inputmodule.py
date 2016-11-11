@@ -56,13 +56,14 @@ class TestConfigFile(unittest.TestCase):
 
 
     def test_sets_source_streams(self):
-        input_paths = ["/path/to/stream1","/path/to/stream2","/path/to/stream3"]
-        x = 1
-        for path in input_paths:
-            self.base_config['Source']['path%d'%x] = path
-            x+=1
+        source_paths = {
+            "path1": "/path/to/stream1",
+            "path2": "/path/to/stream2",
+            "path3": "/path/to/stream3" }
+        self.base_config['Source']=source_paths
+
         self.module.initialize(self.base_config)
-        self.assertListEqual(input_paths,self.module.source_paths)
+        self.assertDictEqual(source_paths,self.module.source_paths)
 
     def test_rejects_invalid_formatting_on_source_streams(self):
         bad_input_streams = "/path/to/stream1,adfasdf,adf"

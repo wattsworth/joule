@@ -61,7 +61,7 @@ class InputModule(object):
         self.pid = pid
         self.id = id
         self.status = status
-        self.source_paths = []
+        self.source_paths = {}
         #if a config file is specified, parse it and initialize
         if(config_file != ""):
             config = configparser.ConfigParser()
@@ -90,12 +90,13 @@ class InputModule(object):
             raise ConfigError("In [main] missing [%s] setting"%e) from e
         
     def _load_source_configs(self,source_config):
-        for path in source_config.values():
+        for name in source_config:
             try:
+                path = source_config[name]
                 destination.validate_path(path)
             except Exception as e:
                 raise ConfigError("Invalid source stream [{:s}]".format(path)) from e
-            self.source_paths.append(path)
+            self.source_paths[name]=path
             
     def _load_destination_configs(self,config):
         dest_parser = destination.Parser()

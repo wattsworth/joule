@@ -3,6 +3,7 @@ import asyncio
 import shlex
 from . import inputmodule
 from joule.utils import numpypipe
+import os
 
 
 class Worker:
@@ -18,7 +19,9 @@ class Worker:
     self.procdb_client = procdb_client
     self.process = None
     self.stop_requested = False
-    self.all_inputs_registered = False
+    self.parent_pipes = []
+    self.child_pipes = []
+    self.pipe_tasks = []
     
   def subscribe(self,loop=None):
     q = asyncio.Queue(loop=loop)
@@ -65,8 +68,10 @@ class Worker:
     
   async def _run_once(self,loop=None):
     cmd = shlex.split(self.module.exec_cmd)
+    pipes = self._start_pipe_tasks()
+    cmd+=["--pipes",pipes]
     create = asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,
-                                             stderr=asyncio.subprocess.PIPE)
+                                             stderr=asyncio.subprocess.PIPE, close_fds=False)
     try:
       self.process = await create
     except Exception as e:
@@ -75,23 +80,18 @@ class Worker:
       logging.error("Cannot start module [%s]"%self.module)
       self.process = None
       return
-
+    self._close_child_pipes()
     self.module.status = inputmodule.STATUS_RUNNING
     self.module.pid = self.process.pid
     self.procdb_client.update_module(self.module)
     self.procdb_client.log_to_module("---starting module---",self.module.id)
-    
-    npipe = numpypipe.NumpyPipe(self.process.stdout,
-                                num_cols = self.module.numpy_columns())
     self.logger_task = asyncio.ensure_future(self._logger(self.process.stderr),loop=loop)
-    async for block in npipe:
-      for q in self.observers:
-        q.put_nowait(block)
+
     await self.process.wait()
     self.process = None
+    self._stop_pipe_tasks()
     
   async def stop(self,loop):
-
     self.stop_requested = True
     if(self.process is None):
       return
@@ -102,7 +102,6 @@ class Worker:
     except asyncio.TimeoutError:
       self.process.kill()
     await self.logger_task
-
     
   async def _logger(self,stream):
     while(True):
@@ -111,3 +110,55 @@ class Worker:
         break
       line = bline.decode('UTF-8').rstrip()
       self.procdb_client.log_to_module(self.module.id,line)
+
+  def _start_pipe_tasks(self):
+    pipes = {
+      'destination': 0,
+      'sources': {}
+    }
+
+    #configure destination pipe (output)
+    (dest_r,dest_w) = os.pipe()
+    os.set_inheritable(dest_w,True)
+    self.child_pipes.append(dest_w)
+    self.parent_pipes.append(dest_r)
+    pipes['destination']=dest_w
+    task = asyncio.ensure_future(self._pipe_in(dest_r))
+    self.pipe_tasks.append(task)
+    
+    #configure source pipes (input)
+    for source in self.module.source_paths:
+      (source_r,source_w) = os.pipe()
+      os.set_inheritable(source_r,True)
+      self.child_pipes.append(source_r)
+      self.parent_pipes.append(source_w)
+      pipes['sources'][source] = source_r
+      task = asyncio.ensure_future(self._pipe_out(self.inputs[source],source_w))
+      self.pipe_tasks.append(task)
+    return pipes
+  
+  def _close_child_pipes(self):
+    for pipe in self.child_pipes:
+      os.close(pipe)
+    self.child_pipes = []
+    
+  def _stop_pipe_tasks(self):
+    for pipe in self.parent_pipes:
+      os.close(pipe)
+    self.parent_pipes = []
+    for task in self.pipe_tasks:
+      task.cancel()
+    self.pipe_tasks = []
+
+  async def _pipe_in(self,stream):
+    npipe = numpypipe.NumpyPipe(stream,
+                                num_cols = self.module.numpy_columns())
+    async for block in npipe:
+      for q in self.observers:
+        q.put_nowait(block)
+     
+  async def _pipe_out(self,queue,stream):
+    while(True):
+      data = await queue.get()
+      os.write(stream,data.tobytes())
+        
