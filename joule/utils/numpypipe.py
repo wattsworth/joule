@@ -16,6 +16,8 @@ class NumpyPipe:
     rowsize = self.num_cols*8
     while(not self.stream.at_eof()):
       s_data = await self.stream.read(MAX_ROWS*rowsize)
+      if(len(s_data)==0):
+        raise StopAsyncIteration
       extra_bytes = (len(s_data)+len(self.buffer))%rowsize
       if(extra_bytes>0):
         data=np.frombuffer(self.buffer+s_data[:-extra_bytes],dtype='float64')
