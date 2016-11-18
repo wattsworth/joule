@@ -2,20 +2,19 @@
 Database interface to hold information
 about the joule daemon and its processes
 """
-import nilmdb.client.numpyclient as numpyclient
-import nilmtools.filter
+
 import sqlite3
 from . import schema
 import os
 import time
-from joule.daemon import inputmodule
+import logging
+from joule.daemon import module,stream,element
 
 class SQLClient():
 
-    def __init__(self,db_path,nilmdb_url):
+    def __init__(self,db_path):
         """opens the procdb sqlite database (creates it if needed)"""
         self.db_path = db_path
-        self.nilmdb_url = nilmdb_url
         initialization_required = False
         if (not os.path.isfile(db_path)):
             initialization_required = True
@@ -24,50 +23,50 @@ class SQLClient():
         if(initialization_required):
             self._initialize_procdb()
 
-        
-    def register_input_module(self,input_module,config_file=""):
-        """add an InputModule to the proc database"""
-        dest = input_module.destination
-        #1.) create a new path or ensure that
-        #    the existing path matches input_module's datatype
-        self._create_destination_path(dest)
-        #2.) check if any other modules are using this path
-        other_module = self._get_module_by_column("destination_path",dest.path)
-        if(other_module):
-            raise ConfigError("the path [%s] is being used by module [%s]"%
-                              (dest.path,other_module.name))
-        #3.) all good, register the module
-        self._insert_module(input_module,config_file)
+    def commit(self):
+        self.db.commit()
 
-    def clear_input_modules(self):
+    def clear_db(self):
         """remove all registered input modules"""
         with self.db:
             c = self.db.cursor()
             #use string substitution to escape db_input_module insert
-            c.execute("DELETE FROM {table}".format(table=schema.modules['table']))
+            for table in schema.models:
+                c.execute("DELETE FROM {table}".format(table=table['table']))
 
-    def update_module(self,module):
+            
+        
+    def register_module(self,my_module):
+        """add a Module to the proc database"""
+        c = self.db.cursor()
+        #use string substitution to escape db_input_module insert
+        data = [None,  my_module.pid, my_module.status,
+                my_module.name,my_module.description,my_module.exec_cmd]
+        c.execute("INSERT INTO {table} VALUES (?,?,?,?,?,?)".\
+                  format(table=schema.modules["table"]),data)
+        my_module.id = c.lastrowid
+
+        #link this module's destinations with existing streams
+
+        for (name,path) in my_module.destination_paths.items():
+            self._link_by_path(my_module,name,path,"destination")
+        for (name,path) in my_module.source_paths.items():
+            self._link_by_path(my_module,name,path,"source")
+
+
+    def update_module(self,my_module):
         """udpate module statistics. COMMIT REQUIRED"""
         c = self.db.cursor()
         #these are the update-able fields in the module structure
-        data = {'pid': module.pid,
-                'status': module.status
+        data = {'pid': my_module.pid,
+                'status': my_module.status
         }
         fields = ",".join(["%s=?"%name for name in data.keys()])
         c.execute("UPDATE {table} SET {fields} WHERE id = ?".
                   format(table = schema.modules['table'],
-                         fields = fields),(*data.values(),module.id))
+                         fields = fields),(*data.values(),my_module.id))
 
-    def find_module_by_name(self,module_name):
-        return self._get_module_by_column("name",module_name)
-
-    def find_module_by_id(self,module_id):
-        return self._get_module_by_column("id",module_id)
-
-    def find_module_by_dest_path(self,path):
-        return self._get_module_by_column("destination_path",path)
-
-    def log_to_module(self,line,module_id):
+    def add_log_by_module(self,line,module_id):
         """add a log line to the database associated with module_id
            REQUIRES a commit! """
         c = self.db.cursor()
@@ -75,22 +74,26 @@ class SQLClient():
         c.execute("INSERT INTO {table} VALUES (?,?,?,?)".format(table=schema.logs["table"]),
                   data)
 
-    def commit(self):
-        self.db.commit()
-        
-    def input_modules(self):
+    def find_module_by_name(self,module_name):
+        return self._find_module_by_column("name",module_name)
+
+    def find_module_by_id(self,module_id):
+        return self._find_module_by_column("id",module_id)
+
+    def find_all_modules(self):
         modules = []
         c = self.db.cursor()
         c.execute("SELECT * FROM {table}".format(table=schema.modules['table']))
         for row in c.fetchall():
-            module = inputmodule.InputModule(pid = row["pid"],
-                                             id = row["id"],
-                                             status = row["status"],
-                                             config_file = row["config_file"])
-            modules.append(module)
-        return modules    
+            attribs = {**row}
+            attribs['source_paths'] = {}
+            attribs['destination_paths'] = {}
+            my_module = module.Module(**attribs)
+            self._set_module_paths(my_module)
+            modules.append(my_module)
+        return modules            
 
-    def logs(self,module_id):
+    def find_logs_by_module(self,module_id):
         log_entries = []
 
         c = self.db.cursor()
@@ -104,13 +107,61 @@ class SQLClient():
                                       log=row["line"]))
         return log_entries
 
+    def register_stream(self,my_stream):
+        """add a Stream to the proc database"""
+        c = self.db.cursor()
+        #use string substitution to escape db_input_module insert
+        data = [None, my_stream.name, my_stream.description,
+                my_stream.keep_us, my_stream.decimate, my_stream.datatype, my_stream.path]
+        c.execute("INSERT INTO {table} VALUES (?,?,?,?,?,?,?)".\
+                  format(table=schema.streams["table"]),data)
+        my_stream.id = c.lastrowid
+        for my_element in my_stream.elements:
+            self._add_element(my_stream,my_element)
 
+    def find_streams_by_module(self,module_id,direction):
+        c = self.db.cursor()
+        if(direction != "source" and direction != "destination"):
+            raise ProcDbError("[direction] is invalid, must be soure|destination")
+        
+        c.execute("SELECT streams.* FROM streams_modules " +
+                  "JOIN modules ON streams_modules.module_id=modules.id "+ #TODO: remove?
+                  "JOIN streams ON streams_modules.stream_id=streams.id "+                  
+                  "WHERE streams_modules.direction=? AND streams_modules.module_id=?;",
+                  (direction,module_id))
 
+        streams = []
+        for row in c.fetchall():
+            my_stream = stream.Stream(**row)
+            self._set_stream_elements(my_stream)
+            streams.append(my_stream)
+            
+        return streams
+
+    def find_stream_by_id(self,id):
+        return self._find_stream_by_column("id",id)
+    
+    def find_stream_by_name(self,name):
+        return self._find_stream_by_column("name",name)
+
+    def find_stream_by_path(self,path):
+        return self._find_stream_by_column("path",path)
+
+    def find_all_streams(self):
+        streams = []
+        c = self.db.cursor()
+        c.execute("SELECT * FROM {table}".format(table=schema.streams['table']))
+        for row in c.fetchall():
+            my_stream = stream.Stream(**row)
+            self._set_stream_elements(my_stream)
+            streams.append(my_stream)
+        return streams
+        
     def _initialize_procdb(self):
         """create the procdb sqlite database"""
         with self.db:
             c=self.db.cursor()
-            for model in schema.schema:
+            for model in schema.models:
                 c.execute('CREATE TABLE {tn} (id INTEGER PRIMARY KEY)'.format(tn=model['table']))
                 for column in model['columns']:
                     c_name = column[0]
@@ -121,50 +172,70 @@ class SQLClient():
                               .format(tn=model["table"],cn=c_name,ct=c_type))
 
 
-    def _create_destination_path(self,destination):
-        client = self._get_numpy_client()
-        info = nilmtools.filter.get_stream_info(client,destination.path)
-        if info:
-            #path exists, make sure the structure matches what this destination wants
-            if(info.layout_type != destination.datatype):
-                raise ConfigError("the path [%s] has datatype [%s], but the module uses [%s]"%
-                                  (destination.path,info.layout_type,destination.datatype))
-            if(info.layout != destination.data_format):
-                raise ConfigError("the path[%s] has [%d] streams, but the module uses [%d]"%
-                                  (destination.path, info.layout_count, len(destination.streams)))
-            #datatype and stream count match so we are ok
-        else:
-            client.stream_create(destination.path,"%s_%d"%
-                                 (destination.datatype,len(destination.streams)))
-
-
-    def _get_module_by_column(self,column,value):
-
+    def _find_module_by_column(self,column,value):
         c = self.db.cursor()
         c.execute("SELECT * FROM {table} WHERE {column} = ?".
                   format(table=schema.modules['table'],column=column),(value,))
         row = c.fetchone()
         if row is None:
             return None
+        attribs = {**row}
+        attribs['source_paths'] = {}
+        attribs['destination_paths'] = {}
+        my_module = module.Module(**attribs)
+        self._set_module_paths(my_module)
+        return my_module
+    
+    def _find_stream_by_column(self,column,value):
+        c = self.db.cursor()
+        c.execute("SELECT * FROM {table} WHERE {column} = ?".
+                  format(table=schema.streams['table'],column=column),(value,))
+        row = c.fetchone()
+        if row is None:
+            return None
+        my_stream = stream.Stream(**row)
+        self._set_stream_elements(my_stream)
+        return my_stream
+        
+    def _set_module_paths(self,my_module):
+        c = self.db.cursor()
+        c.execute("SELECT streams_modules.name, streams_modules.direction, streams.path "+
+                  "FROM streams_modules "+
+                  "JOIN streams ON streams_modules.stream_id = streams.id "+
+                  "WHERE streams_modules.module_id=?",(my_module.id,))
+        for row in c.fetchall():
+            name = row['name']; path = row['path']
+            if(row['direction']=='source'):
+                my_module.source_paths[name]=path
+            else:
+                my_module.destination_paths[name]=path
 
-        module = inputmodule.InputModule(pid=row["pid"],
-                                         id = row["id"],
-                                         status=row["status"],
-                                         config_file = row["config_file"])
-        return module
+    def _link_by_path(self,my_module,name,path,direction):
+        c = self.db.cursor()
+        stream = self._find_stream_by_column('path',path)
+        if(stream is None):
+            logging.error("[%s]: stream [%s] is not in the database"%\
+                          (my_module.name,path))
+        else:
+            data = [None,name,stream.id,my_module.id,direction]
+            c.execute("INSERT INTO {table} VALUES (?,?,?,?,?)".\
+                      format(table=schema.streams_modules["table"]),data)
 
-    def _insert_module(self,module,config_file):
-        with self.db:
-            c = self.db.cursor()
-            #use string substitution to escape db_input_module insert
-            data = [None, config_file, module.pid, module.status,module.name,module.destination.path]
-            c.execute("INSERT INTO {table} VALUES (?,?,?,?,?,?)".format(table=schema.modules["table"]),
-                      data)
-            module.id = c.lastrowid
-
-    def _get_numpy_client(self):
-        return numpyclient.NumpyClient(self.nilmdb_url)
-
+    def _add_element(self,stream,element):
+        c = self.db.cursor()
+        data = [None,stream.id,*element]
+        c.execute("INSERT INTO {table} VALUES (?,?,?,?,?,?,?,?,?)".\
+                  format(table=schema.elements["table"]),data)
+        
+    def _set_stream_elements(self,stream):
+        c = self.db.cursor()
+        c.execute("SELECT * FROM {table} WHERE stream_id= ? ".\
+                  format(table=schema.elements["table"]),(stream.id,))
+        for row in c.fetchall():
+            attribs = {key:value for key,value in {**row}.items()
+                       if key not in ["id", "stream_id"]}
+            stream.elements.append(element.Element(**attribs))
+            
 class ProcDbError(Exception):
     """Base class for exceptions in this module"""
 

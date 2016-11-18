@@ -9,6 +9,10 @@ import json
 class Worker:
 
   def __init__(self,module,procdb_client):
+    self.observers = {}
+    for path in self.module.destination_paths.values():
+      #add observer queues for each destination
+      self.observers[path] = []
     self.observers = []
     self.module = module
     self.input_queues = {} #no inputs
@@ -23,9 +27,9 @@ class Worker:
     self.child_pipes = []
     self.pipe_tasks = []
     
-  def subscribe(self,loop=None):
+  def subscribe(self,path,loop=None):
     q = asyncio.Queue(loop=loop)
-    self.observers.append(q)
+    self.observers[path].append(q)
     return q
 
   def register_inputs(self,worked_paths):
@@ -122,13 +126,14 @@ class Worker:
       'sources': {}
     }
 
-    #configure destination pipe (output)
-    (dest_r,dest_w) = os.pipe()
-    os.set_inheritable(dest_w,True)
-    self.child_pipes.append(dest_w)
-    task = await self._start_stream_reader(dest_r,loop)
-    pipes['destination']=dest_w
-    self.pipe_tasks.append(task)
+    #configure destination pipes (output)
+    for name,path in self.module.destination_paths.items():
+      (dest_r,dest_w) = os.pipe()
+      os.set_inheritable(dest_w,True)
+      self.child_pipes.append(dest_w)
+      task = await self._start_stream_reader(dest_r,self.observers[path],loop)
+      pipes['destination'][name]=dest_w
+      self.pipe_tasks.append(task)
     
     #configure source pipes (input)
     for name,path in self.module.source_paths.items():
@@ -172,12 +177,12 @@ class Worker:
       task.cancel()
     self.pipe_tasks = []
 
-  async def _pipe_in(self,reader):
+  async def _pipe_in(self,reader,queues):
     
     npipe = numpypipe.NumpyPipe(reader,
                                 num_cols = self.module.numpy_columns())
     async for block in npipe:
-      for q in self.observers:
+      for q in queues:
         q.put_nowait(block)
      
   async def _pipe_out(self,queue,writer):

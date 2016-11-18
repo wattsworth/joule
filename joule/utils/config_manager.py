@@ -10,7 +10,7 @@ import os
 Configs = namedtuple('Configs', ['procdb','jouled','nilmdb'])
 ProcdbConfigs = namedtuple('ProcdbConfigs', ['db_path','max_log_lines'])
 NilmDbConfigs = namedtuple('NilmdbConfigs',['url','insertion_period'])
-JouledConfigs = namedtuple('JouledConfigs',['module_directory'])
+JouledConfigs = namedtuple('JouledConfigs',['module_directory','stream_directory'])
 
 DEFAULT_CONFIG = {
   "NilmDB":
@@ -25,41 +25,48 @@ DEFAULT_CONFIG = {
   },
   "Jouled":
   {
-    "ModuleDirectory": "/etc/joule/module_configs"
+    "ModuleDirectory": "/etc/joule/module_configs",
+    "StreamDirectory": "/etc/joule/stream_configs"
   }
 }
 
 def parse_procdb_configs(procdb_parser, verify):
-  max_log_lines = int(procdb_parser['MaxLogLines'])
-  if (max_log_lines < 0 and verify):
-    raise InvalidConfiguration("NilmdDB:InsertionPeriod must be greater than 0")
+  try:
+    max_log_lines = int(procdb_parser['MaxLogLines'])
+    if (max_log_lines < 0 ):
+      raise Exception()
+  except:
+    raise InvalidConfiguration("ProcDB:MaxLogLines must be integer greater than 0")
+
   return ProcdbConfigs(db_path = procdb_parser['DbPath'],
                        max_log_lines = max_log_lines)
                        
 def parse_jouled_configs(jouled_parser, verify):
   module_directory = jouled_parser['ModuleDirectory']
   if(not os.path.isdir(module_directory) and verify):
-    raise InvalidConfiguration("InputModuleDir [%s] does not exist"%module_directory)
+    raise InvalidConfiguration("ModuleDirectory [%s] does not exist"%module_directory)
+  stream_directory = jouled_parser['StreamDirectory']
+  if(not os.path.isdir(stream_directory) and verify):
+    raise InvalidConfiguration("StreamDirectory [%s] does not exist"%stream_directory)
 
-  return JouledConfigs(module_directory=module_directory)
+  return JouledConfigs(module_directory=module_directory,stream_directory=stream_directory)
 
 def parse_nilmdb_configs(nilmdb_parser, verify):
-  insertion_period = int(nilmdb_parser['InsertionPeriod'])
-  if (insertion_period <= 0 and verify):
-    raise InvalidConfiguration("NilmdDB:InsertionPeriod must be greater than 0")
+  try:
+    insertion_period = int(nilmdb_parser['InsertionPeriod'])
+    if (insertion_period <= 0 ):
+      raise Exception()
+  except:
+      raise InvalidConfiguration("NilmdDB:InsertionPeriod must be integer greater than 0")
   return NilmDbConfigs(url = nilmdb_parser['URL'],
                        insertion_period = insertion_period)
 
-def load_configs(config_string = '', verify = True):
+def load_configs(configs={}, verify = True):
   """provide a string INI formation configuration to override defaults
      if verify is True, perform checks on settings to make sure they are appropriate"""
   my_parser = configparser.ConfigParser()
   my_parser.read_dict(DEFAULT_CONFIG)
-  if(config_string != ''):
-    try:
-      my_parser.read_string(config_string)
-    except Exception as e:
-      raise InvalidConfiguration from e
+  my_parser.read_dict(configs)
 
   procdb_configs = parse_procdb_configs(my_parser['ProcDB'],verify)
   jouled_configs = parse_jouled_configs(my_parser['Jouled'],verify)

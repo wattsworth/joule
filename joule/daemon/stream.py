@@ -1,71 +1,129 @@
+"""
+Stream: NilmDB stream 
 
-import collections
-from .errors import ConfigError
+[Main]
+path = /nilmdb/path/name
+datatype = float
+keep = 1w
+#optional settings (defaults)
+decimate = yes
 
-Stream = collections.namedtuple("Stream",["name",
-                                          "plottable",
-                                          "discrete",
-                                          "offset",
-                                          "scale_factor",
-                                          "default_max",
-                                          "default_min"])
-def build_stream(name,plottable=True,discrete=False,
-                 offset=0,scale_factor=0,default_max=0,
-                 default_min=0):
-    """Builds a stream with default values"""
-    return Stream(name,plottable,discrete,offset,scale_factor,
-                  default_max, default_min)
+[Element1...ElementN]
+#required settings (examples)
+name         = Element Name
+#optional settings (defaults)
+description  = 
+plottable    = yes
+discrete     = no
+offset       = 0.0
+scale_factor = 0.0
+default_max  = 0.0
+default_min  = 0.0
+
 """
 
+import re
+from .errors import ConfigError
+from . import element
+
 class Stream(object):
-    def __init__(self,name,
-                 plottable=True,
-                 discrete=False,
-                 offset = 0.0,
-                 scale_factor = 0.0,
-                 default_max = 0.0,
-                 default_min = 0.0):
+    def __init__(self,name,description,path,datatype,
+                 keep_us,decimate,id=None):
+        self.path = path
+        self.datatype = datatype
+        self.keep_us = keep_us
+        self.decimate = decimate
         self.name = name
-        self.plottable = plottable
-        self.discrete = discrete
-        self.offset = offset
-        self.scale_factor = scale_factor
-        self.default_max = default_max
-        self.default_min = default_min
- """       
-class Parser(object): 
+        self.description = description
+        #set by procdb
+        self.id = id
+        #initialize empty element array
+        self.elements = []
+
+    def __eq__(self,other):
+        return self.__dict__==other.__dict__
+
+    def __str__(self):
+        return "Stream [{name}] @ [{path}]".format(name=self.name,path=self.path)
+
+    def __lt__(a,b):
+        return a.id<b.id
+
+    def __gt__(a,b):
+        return a.id>b.id
+    
+    def add_element(self,new_element):
+        #make sure the element name is unique
+        for s in self.elements:
+            if(s.name==new_element.name):
+                raise ConfigError("the name setting for each element must be unique")
+        self.elements.append(new_element)
+
+    @property
+    def data_format(self):
+        return "%s_%d"%(self.datatype,len(self.elements))
+
+
+
+def validate_path(path):
+    if(re.fullmatch('^(\/\w+)(\/\w+)+$',path) is None):
+        raise ConfigError("invalid stream path, use format: /dir/subdir/../file")
+    return path
+
+class Parser(object):
     def run(self,configs):
-        self.config_name = configs.name #for error reporting
-        name         = self._validate_name(configs["name"])
-        plottable    = self._get_bool("plottable",configs,True)
-        discrete     = self._get_bool("discrete",configs,False)
-        offset       = self._get_float("offset",configs,0.0)
-        scale_factor = self._get_float("scale_factor",configs,1.0)
-        default_max  = self._get_float("default_max",configs,0.0)
-        default_min  = self._get_float("default_min",configs,0.0)
-        self._validate_bounds(default_max,default_min)
-        return Stream(name,plottable,discrete,offset,
-                      scale_factor,default_max,default_min)
-
-    def _validate_name(self,name):
-        if(name==""):
-            raise ConfigError("[%s] missing name"%self.config_name)
-        return name
-    def _validate_bounds(self,max,min):
-        if(max==0 and min==0):
-            return
-        if(min>=max):
-            raise ConfigError("[%s] set default_min<default_max or use 0 for autoscale"%
-                              self.config_name)
-    def _get_bool(self,setting,configs,default):
+        main_configs = configs["Main"]
         try:
-            return configs.getboolean(setting,default)
-        except ValueError as e:
-            raise ConfigError("[%s] invalid value, use True/False"%setting)
+            path = validate_path(main_configs["path"])
+            datatype = self._validate_datatype(main_configs["datatype"])
+            keep_us = self._validate_keep(main_configs["keep"])
+            decimate = main_configs.getboolean("decimate",fallback=True)
+            name = main_configs["name"]
+            description = main_configs["description"]
+            my_stream =  Stream(name,description,path,datatype,keep_us,decimate)
+        except KeyError as e:
+            raise ConfigError("[Main] missing %s"%e.args[0])
+        #now try to load the elements
+        element_configs = filter(lambda sec: re.match("Element\d",sec),
+                                configs.sections())
+        for name in element_configs:
+            element_parser = element.Parser()
+            new_element = element_parser.run(configs[name])
+            my_stream.add_element(new_element)
+        #make sure we have at least one element
+        if(len(my_stream.elements)==0):
+            raise ConfigError("missing element configurations, must have at least one")
+        return my_stream
+    
+    def _validate_datatype(self,datatype):
+        valid_datatypes = ["uint%d"%x for x in [8,16,32,64]]+\
+                          ["int%d"%x for x in [8,16,32,64]]+\
+                          ["float%d"%x for x in [32,64]]
+        if(not(datatype in valid_datatypes)):
+            raise ConfigError("invalid [Stream] datatype "+
+                              "[%s], choose from [%s]"%
+                              (datatype,",".join(valid_datatypes)))
+        return datatype
+    
+    def _validate_keep(self,keep):
+        if keep.lower()=="none":
+            return 0
+        match = re.fullmatch('^(\d)([h|d|w|m|y])$',keep)
+        if(match is None):
+            raise ConfigError("invalid [Stream] keep, \
+            use format #unit (eg 1w)")
 
-    def _get_float(self,setting,configs,default):
-        try:
-            return configs.getfloat(setting,default)
-        except ValueError as e:
-            raise ConfigError("[%s] bad value for %s, must be a number"%
-                              (configs.name,setting)) from e
+        units = {
+            'h': 60*60*1e6,        #hours
+            'd': 24*60*60*1e6,     #days
+            'w': 7*24*60*60*1e6,   #weeks
+            'm': 4*7*24*60*60*1e6, #months
+            'y': 365*24*60*60*1e6  #years
+        }
+        unit = match.group(2)
+        time = int(match.group(1))
+        if(time<=0):
+            raise ConfigError("invalid [Stream] keep, \
+            invalid time (use No to avoid keeping data)")
+        return time*units[unit]
+

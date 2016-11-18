@@ -6,16 +6,16 @@ import asyncio
 from .inputmodule import InputModule
 from .worker import Worker
 from .errors import DaemonError
+from . import stream, inputmodule
 from joule.procdb import client as procdb_client
 import logging
-
+import functools
 import argparse
 import nilmdb.client
+import nilmtools.filter
 import signal
 from joule.utils import config_manager
 from . import inserter
-
-PROC_DB = "/tmp/joule-proc-db.sqlite"
 
 class Daemon(object):
     log = logging.getLogger(__name__)
@@ -26,31 +26,126 @@ class Daemon(object):
         self.procdb = None
         self.nilmdb_client = None
         self.stop_requested = False
-        self.input_modules = []
+        self.modules = []
+        self.destinations = []
+        
         #runtime structures
-        self.worked_paths = {}
+        self.path_workers = {} #subscriber dict
+        self.path_destinations = {} #destination dict
         self.workers = []
         self.inserters = []
         
     def initialize(self,config):
         #Build a NilmDB client
-        nilmdb_url = config.nilmdb.url
         self.nilmdb_client = nilmdb.client.numpyclient.\
-                             NumpyClient(nilmdb_url)
+                             NumpyClient(config.nilmdb.url)
 
         #Set up the ProcDB
-        self.db_path = PROC_DB
-        self.procdb = procdb_client.SQLClient(config.procdb.db_path,
-                                              config.nilmdb.url)
+        self.procdb = procdb_client.SQLClient(config.procdb.db_path)
         self.procdb.clear_input_modules()            
         
-        #Set up the input modules
+        #Set up destinations
+        path_dir = config.jouled.path_directory
+        destinations = self._load_configs(path_dir,self._build_destination)
+        self._register_items(destinations,self._validate_destination,self.destinations)
+        for dest in self.path_destinations: #set up dictionary to find destination by path
+            self.path_destinations[dest.path] = dest
+        #Set up modules
         module_dir = config.jouled.module_directory
-        for module_config in os.listdir(module_dir):
-            if(not module_config.endswith(".conf")):
+        modules = self._load_configs(module_dir,self._build_module)
+        self._register_items(modules,self._validate_module,self.modules)
+
+    def _load_configs(self,path,factory):
+        objects = []
+        for item in os.listdir(path):
+            if(not item.endswith(".conf")):
                 continue
-            config_path = os.path.join(module_dir,module_config)
-            self._build_module(config_path)
+            file_path = os.path.join(path,item)
+            config = configparser.ConfigParser()
+            config.read(file_path)
+            obj = factory(config)
+            if(obj is not None):
+                objects.append(obj)
+            
+        return objects
+
+    def _register_items(self,items,validator,store):
+        """Validate destination, creating them if they are not present in NilmDB
+           sets self.destinations"""
+        for item in items:
+            if(validator(item)):
+                store.append(item)
+        
+    def _build_destination(self,config):
+        """create a destination object from config
+        """
+        try:
+            parser = destination.Parser()
+            dest = parser.run(config)
+
+        except destination.ConfigError as e:
+            logging.error("Cannot load destination config: \n\t%s"%e)
+            return None
+        return dest
+
+    def _validate_destination(self,destination):
+        client = self.nilmdb_client
+        info = nilmtools.filter.get_stream_info(client,destination.path)
+        #1.) Validate or create the destination in NilmDB
+        if info:
+            #path exists, make sure the structure matches what this destination wants
+            if(info.layout_type != destination.datatype):
+                logging.error("Destination [%s]: the path [%s] has datatype [%s], this uses [%s]"%
+                                  (destination.name,destination.path,
+                                   info.layout_type,destination.datatype))
+                return False
+            if(info.layout != destination.data_format):
+                print("%s != %s"%(info.layout,destination.data_format))
+                logging.error("Destination [%s]: the path[%s] has [%d] streams, this has [%d]"%
+                                  (destination.name, destination.path,
+                                   info.layout_count, len(destination.streams)))
+                return False
+            #datatype and stream count match so we are ok
+        else:
+            client.stream_create(destination.path,"%s_%d"%
+                                 (destination.datatype,len(destination.streams)))
+        #2.) Make sure no other destination config is using this path
+        for dest in self.destinations:
+            if(dest.path==destination.path):
+                logging.error("Destination [%s]: the path [%s] is already used by [%s]"%
+                              (destination.name,dest.path,dest.name))
+                return False
+        #OK, all checks passed for this destination
+        return True
+    
+    def _build_module(self,config):
+        """ create an input module from config
+        """
+        module = InputModule()
+        try:
+            module.initialize(config)
+        except inputmodule.ConfigError as e:
+            self.log.error("Cannot load module config: \n\t%s"%(e))
+            return None
+        return module
+
+    def _validate_module(self,module):
+
+        for path in module.destination_paths.values():
+            #1.) Make sure all destinations have configurations
+            if(not path in self.path_destinations):
+                logging.error("Module [%s]: destination [%s] has no configuration"%
+                              (module.name,path))
+                return False
+            #2.) Make sure destinations are unique among modules
+            used_paths = [m.destination_paths.values() for m in self.modules]
+            for paths in used_paths:
+                if(path in paths):
+                    logging.error("Module [%s]: destination [%s] is already used"%
+                                  (module.name,path))
+                    return False
+        #OK: all checks passed for this module
+        return True
 
     def run(self,loop):
         """start each module and store runtime structures in a worker"""
@@ -67,7 +162,7 @@ class Daemon(object):
         while(len(pending_workers)>0):
             started_a_worker = False
             for w in pending_workers:
-                if(w.register_inputs(self.worked_paths)):
+                if(w.register_inputs(self.path_workers)):
                     tasks.append(self._start_worker(w,loop=loop))
                     pending_workers.remove(w)
                     started_a_worker = True
@@ -88,35 +183,25 @@ class Daemon(object):
         for worker in self.workers:
             asyncio.ensure_future(worker.stop(loop))
 
-        
-    def _build_module(self,module_config):
-        """ create an input module from config file
-        """
-        config = configparser.ConfigParser()
-        config.read(module_config)
-        module = InputModule()
-        try:
-            module.initialize(config)
-            self.procdb.register_input_module(module,module_config)
-        except (DaemonError, procdb_client.ConfigError) as e:
-            self.log.error("Cannot load module [%s]: \n\t%s"%(module_config,e))
-            return
-        self.input_modules.append(module)
 
     async def _start_worker(self,worker,loop=None):
         self.workers.append(worker)
         module = worker.module
-        self.worked_paths[module.destination.path]=worker
-        inserter_task = None
-        if(module.keep_data):
-            my_inserter = inserter.NilmDbInserter(self.nilmdb_client,
-                                    module.destination.path,
-                                    decimate = module.destination.decimate)
-            inserter_task = asyncio.ensure_future(my_inserter.process(worker.subscribe()),loop=loop)
+        my_inserters = []
+        for path in module.destination_paths.values():
+            self.path_workers[path] = functools.partial(worker.subscribe,path)
+            destination = self.destination_paths[path]
+            if(destination.keep_data):
+                i = inserter.NilmDbInserter(self.nilmdb_client,
+                                            path,
+                                            decimate = destination.decimate)
+                asyncio.ensure_future(i.process(worker.subscribe(path)),loop=loop)
+                my_inserters.append(i)
+        #waits here while worker runs
         await worker.run()
-        if(module.keep_data):
-            my_inserter.stop()
-            await inserter_task
+        #execute shutdown tasks
+        for i in my_inserters:
+            i.stop()
 
     async def _db_committer(self,loop=None):
       while(not self.stop_requested):

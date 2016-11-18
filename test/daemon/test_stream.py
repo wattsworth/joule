@@ -1,58 +1,62 @@
-import joule.daemon.stream as stream
-from joule.daemon.errors import DaemonError
-import test.util as util
+from joule.daemon import stream,element
+from . import helpers
 import unittest
 
-class TestStreamParsing(unittest.TestCase):
+class TestStream(unittest.TestCase):
     def setUp(self):
+        us_in_week = 7*24*60*60*1e6
         self.parser = stream.Parser()
-        config = util.parse_configs(
-            """[Stream1]
+        self.my_stream = stream.Stream(name="test",
+                                       description="test_description",
+                                       path="/some/path/to/data",
+                                       datatype="float32",
+                                       keep_us=us_in_week,
+                                       decimate = True)
+        self.my_stream.add_element(element.build_element("e1"))
+        self.base_config = helpers.parse_configs(
+            """[Main]
                  name = test
-                 plottable = no
-                 offset = 5.2
+                 description = test_description                 
+                 path = /some/path/to/data
+                 datatype = float32
+                 keep = 1w
+                 decimate = yes
+               [Element1]
+                 name = e1
             """)
-        self.base_config = config['Stream1']
+
     def test_parses_base_config(self):
-        stream = self.parser.run(self.base_config)
-        self.assertEqual(stream.name,"test")
-        self.assertEqual(stream.plottable,False)
-        self.assertEqual(stream.discrete,False) #default value
-        self.assertEqual(stream.offset,5.2)
-        self.assertEqual(stream.scale_factor,1.0) #default value
-        
-    def test_must_have_name(self):
-        self.base_config['name'] = ""
-        with self.assertRaisesRegex(DaemonError,"name"):
-            self.parser.run(self.base_config)
+        parsed_stream = self.parser.run(self.base_config)
+        self.assertEqual(parsed_stream,self.my_stream)
 
-    def test_sensible_bounds(self):
-        """default_min<default_max or both == 0 for autoscale"""
-        self.base_config['default_min']='10'
-        self.base_config['default_max']='-10'
-        with self.assertRaisesRegex(DaemonError,"default_min"):
-            self.parser.run(self.base_config)
+    def test_allows_no_keep(self):
+        config = helpers.parse_configs(
+            """[Main]
+                 name = test
+                 description = test_description                 
+                 path = /simple/demo
+                 datatype = float32
+                 keep = None
+               [Element1]
+                 name=1
+            """)
+        stream = self.parser.run(config)
+        self.assertEqual(stream.keep_us,0)
 
-    def test_errors_on_bad_offsets(self):
-        bad_offsets=['a','*','0y']
-        self.evaluate_bad_values("offset",bad_offsets)
-    def test_errors_on_bad_scale_factor(self):
-        bad_values=['a','*','0y']
-        self.evaluate_bad_values("scale_factor",bad_values)
-    def test_errors_on_bad_default_min(self):
-        bad_values=['a','*','0y']
-        self.evaluate_bad_values("default_min",bad_values)
-    def test_errors_on_bad_default_max(self):
-        bad_values=['a','*','0y']
-        self.evaluate_bad_values("default_max",bad_values)
-    def test_errors_on_bad_bool(self):
-        bad_values=['asdf','not_valid']
-        self.evaluate_bad_values("plottable",bad_values)
-    
-    def evaluate_bad_values(self,setting_name,bad_settings):
-        for setting in bad_settings:
-            with self.subTest(setting=setting):
-                self.base_config[setting_name]=setting
-                with self.assertRaisesRegex(DaemonError,setting_name):
-                    self.parser.run(self.base_config)
+    def test_computes_data_format(self):
+        """data_format returns float32_4 for example"""
+        self.my_stream.elements = []
+        for i in range(4):
+            self.my_stream.add_element(element.build_element(name="%d"%i))
+        self.assertEqual(self.my_stream.data_format(),"float32_4")
+
+    def test_has_string_representation(self):
+        self.assertRegex("%s"%self.my_stream,self.my_stream.name)
+
+    def test_sorts_by_id(self):
+        s1 = helpers.build_stream(name='s1',id=1)
+        s2 = helpers.build_stream(name='s2',id=2)
+        self.assertGreater(s2,s1)
+        self.assertLess(s1,s2)
+
 

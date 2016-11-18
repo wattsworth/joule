@@ -1,23 +1,55 @@
 
-
 modules = { 'table': "modules",
-            'columns': [
-              ["id",          "integer primary key"],
-              ["config_file", "string"],              
-              ["pid",         "integer"],
-              ["status",      "string"],
-              ["name",        "string"],
-              ["destination_path", "string"]]
+          'columns': [
+            ["id",           "integer primary key"],
+            ["pid",          "integer"],
+            ["status",       "string"],
+            ["name",         "string"],
+            ["description", "string"],
+            ["exec_cmd", "string"]]
 }
-
+streams = { 'table': "streams",
+          'columns': [
+            ["id",           "integer primary key"],
+            ["name",         "string"],
+            ["description",  "string"],
+            ["keep_us",      "integer"],
+            ["decimate",     "integer"],
+            ["datatype",     "string"],
+            ["path",         "string"]]
+}
+streams_modules = {'table': "streams_modules",
+         'columns' : [
+           ["id",          "integer primary key"],
+           ["name",        "integer"],
+           ["stream_id",   "integer"],
+           ["module_id",   "integer"],
+           ["direction",   "string"]] #source,destination                   
+}
+elements = {'table': "elements",
+        'columns' : [
+          ["id",           "integer primary key"],
+          ["stream_id",    "integer"],
+          ["name",         "string"],
+          ["plottable",    "integer"],
+          ["discrete",     "integer"],
+          ["offset",       "float"],
+          ["scale_factor", "float"],
+          ["default_max",  "float"],
+          ["default_min",  "float"]]
+}
+              
 logs = { 'table': "logs",
          'columns': [
-           ["id", "integer primary key"],
-           ["line", "string"],
-           ["module_id", "integer"],
-           ["timestamp", "integer"]]
+           ["id",             "integer primary key"],
+           ["line",           "string"],
+           ["module_id",      "integer"],
+           ["timestamp",      "integer"]]
 }
-schema = [
+models = [
   modules,
+  streams,
+  streams_modules, #join table
+  elements,
   logs
 ]
