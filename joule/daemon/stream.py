@@ -63,7 +63,9 @@ class Stream(object):
     def data_format(self):
         return "%s_%d"%(self.datatype,len(self.elements))
 
-
+    @property
+    def data_width(self):
+        return len(self.elements)+1
 
 def validate_path(path):
     if(re.fullmatch('^(\/\w+)(\/\w+)+$',path) is None):

@@ -1,21 +1,23 @@
 import logging
 import asyncio
 import shlex
-from . import inputmodule
+from joule.daemon import module
 from joule.utils import numpypipe
 import os
 import json
 
 class Worker:
 
-  def __init__(self,module,procdb_client):
-    self.observers = {}
-    for path in self.module.destination_paths.values():
-      #add observer queues for each destination
-      self.observers[path] = []
-    self.observers = []
-    self.module = module
+  def __init__(self,my_module,procdb_client):
+
+    self.module = my_module
+    self.output_queues = {}
     self.input_queues = {} #no inputs
+    
+    for path in self.module.destination_paths.values():
+      #add output_queues for each destination
+      self.output_queues[path] = []
+
     for path in self.module.source_paths.values():
       #add the path as an input
       self.input_queues[path]=None
@@ -23,13 +25,16 @@ class Worker:
     self.procdb_client = procdb_client
     self.process = None
     self.stop_requested = False
-    self.pipe_transports = []
-    self.child_pipes = []
+    self.npipes = []
+    self.child_pipes = {
+      'destinations': {},
+      'sources': {}
+    }
     self.pipe_tasks = []
     
   def subscribe(self,path,loop=None):
     q = asyncio.Queue(loop=loop)
-    self.observers[path].append(q)
+    self.output_queues[path].append(q)
     return q
 
   def register_inputs(self,worked_paths):
@@ -48,8 +53,8 @@ class Worker:
   def _validate_inputs(self):
     for key,value in self.input_queues.items():
       if value is None:
-        logging.error("Cannot start module [{name}]: no input source for [{path}]".\
-                      format(name=self.module,path=key))
+        logging.error("Cannot start {module}: no input source for [{path}]".\
+                      format(module=self.module,path=key))
         return False
     return True
   
@@ -65,9 +70,10 @@ class Worker:
       if(restart and not self.stop_requested):
         logging.error("Restarting failed module: %s"%self.module)
         await asyncio.sleep(0.1)
-        #insert an empty block in observers to indicate end of interval
-        for q in self.observers:
-          q.put_nowait(None)
+        #insert an empty block in output_queues to indicate end of interval
+        for queue_set in self.output_queues.values():
+          for q in queue_set:
+            q.put_nowait(None)
       else:
         break
 
@@ -75,30 +81,30 @@ class Worker:
   async def _run_once(self,loop):
 
     cmd = shlex.split(self.module.exec_cmd)
-    pipes = await self._start_pipe_tasks(loop)
-    cmd+=["--pipes",json.dumps(pipes)]
+    await self._start_pipe_tasks(loop)
+    cmd+=["--pipes",json.dumps(self.child_pipes)]
     create = asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,
                                              stderr=asyncio.subprocess.STDOUT, close_fds=False)
     try:
       self.process = await create
     except Exception as e:
-      self.procdb_client.log_to_module("ERROR: cannot start module: \n\t%s"%e,
+      self.procdb_client.add_log_by_module("ERROR: cannot start module: \n\t%s"%e,
                                        self.module.id)
-      logging.error("Cannot start module [%s]"%self.module)
+      logging.error("Cannot start %s"%self.module)
       self.process = None
       self._close_child_pipes()
-      self._stop_pipe_tasks()
+      await self._close_npipes()
       return
     self._close_child_pipes()
-    self.module.status = inputmodule.STATUS_RUNNING
+    self.module.status = module.STATUS_RUNNING
     self.module.pid = self.process.pid
     self.procdb_client.update_module(self.module)
-    self.procdb_client.log_to_module("---starting module---",self.module.id)
+    self.procdb_client.add_log_by_module("---starting module---",self.module.id)
     self.logger_task = asyncio.ensure_future(self._logger(self.process.stdout),loop=loop)
 
     await self.process.wait()
     self.process = None
-    self._stop_pipe_tasks()
+    await self._close_npipes()
     
   async def stop(self,loop):
     self.stop_requested = True
@@ -109,6 +115,7 @@ class Worker:
     try:
       await asyncio.wait_for(self.process.wait(),timeout=2,loop=loop)
     except asyncio.TimeoutError:
+      logging.warning("Cannot stop %s with SIGTERM, killing process"%self.module)
       self.process.kill()
     await self.logger_task
     
@@ -118,75 +125,62 @@ class Worker:
       if(len(bline)==0):
         break
       line = bline.decode('UTF-8').rstrip()
-      self.procdb_client.log_to_module(self.module.id,line)
+      self.procdb_client.add_log_by_module(self.module.id,line)
 
   async def _start_pipe_tasks(self,loop):
-    pipes = {
-      'destination': 0,
-      'sources': {}
-    }
-
-    #configure destination pipes (output)
+    #configure destination pipes          [module]==>[jouled]
     for name,path in self.module.destination_paths.items():
-      (dest_r,dest_w) = os.pipe()
-      os.set_inheritable(dest_w,True)
-      self.child_pipes.append(dest_w)
-      task = await self._start_stream_reader(dest_r,self.observers[path],loop)
-      pipes['destination'][name]=dest_w
+      (npipe,fd) = self._build_numpy_pipe(path,'output',loop)
+      self.child_pipes['destinations'][name]=fd
+      self.npipes.append(npipe)
+      task = asyncio.ensure_future(self._pipe_in(npipe,self.output_queues[path]))
       self.pipe_tasks.append(task)
     
-    #configure source pipes (input)
+    #configure source pipes               [jouled]==>[module]
     for name,path in self.module.source_paths.items():
-      (source_r,source_w) = os.pipe()
-      os.set_inheritable(source_r,True)
-      self.child_pipes.append(source_r)
-      task = await self._start_stream_writer(self.input_queues[path],source_w,loop)
-      pipes['sources'][name] = source_r
+      (fd,npipe) = self._build_numpy_pipe(path,'input',loop)
+      self.child_pipes['sources'][name] = fd
+      self.npipes.append(npipe)
+      task = asyncio.ensure_future(self._pipe_out(self.input_queues[path],npipe))
       self.pipe_tasks.append(task)
-      
-    return pipes
 
-  async def _start_stream_reader(self,fd,loop):
-    reader = asyncio.StreamReader()
-    reader_protocol = asyncio.StreamReaderProtocol(reader)
-    f = open(fd,'rb')
-    (transport,_) = await loop.connect_read_pipe(lambda: reader_protocol, f)
-    self.pipe_transports.append(transport)
-    return asyncio.ensure_future(self._pipe_in(reader))
-
-
-  async def _start_stream_writer(self,queue,fd,loop):
-    write_protocol = asyncio.StreamReaderProtocol(asyncio.StreamReader())
-    f = open(fd,'wb')
-    write_transport, _ = await loop.connect_write_pipe(
-      lambda: write_protocol, f)
-    writer = asyncio.StreamWriter(write_transport, write_protocol, None, loop)
-    self.pipe_transports.append(write_transport)
-    return asyncio.ensure_future(self._pipe_out(queue,writer))
-
-  def _close_child_pipes(self):
-    for pipe in self.child_pipes:
-      os.close(pipe)
-    self.child_pipes = []
+  def _build_numpy_pipe(self,path,direction,loop):
+    stream = self.procdb_client.find_stream_by_path(path)
+    (r,w) = os.pipe()
+    if(direction=='output'): # fd    ==> npipe
+      os.set_inheritable(w,True)
+      npipe = numpypipe.NumpyPipe(r,stream,loop)
+      return(npipe,w)
+    else:                    # npipe ==> fd
+      os.set_inheritable(r,True)
+      npipe = numpypipe.NumpyPipe(w,stream,loop)
+      return (r,npipe)
     
-  def _stop_pipe_tasks(self):
-    for transport in self.pipe_transports:
-      transport.close()
-    self.pipe_transports = []
+  def _close_child_pipes(self):
+    for pipe_set in self.child_pipes.values():
+      for pipe in pipe_set.values():
+        os.close(pipe)
+    
+  async def _close_npipes(self):
+    for npipe in self.npipes:
+      npipe.close()
     for task in self.pipe_tasks:
       task.cancel()
-    self.pipe_tasks = []
 
-  async def _pipe_in(self,reader,queues):
-    
-    npipe = numpypipe.NumpyPipe(reader,
-                                num_cols = self.module.numpy_columns())
-    async for block in npipe:
-      for q in queues:
-        q.put_nowait(block)
+      
+  async def _pipe_in(self,npipe,queues):
+    """given a numpy pipe, get data and put it 
+       into each queue in [output_queues] """    
+    while(True):
+      try:
+        data = await npipe.read()
+        for q in queues:
+          q.put_nowait(data)
+      except numpypipe.PipeClosed:
+        break
      
-  async def _pipe_out(self,queue,writer):
+  async def _pipe_out(self,queue,npipe):
     while(True):
       data = await queue.get()
-      writer.write(data.tobytes())
-        
+      await npipe.write(data)
+

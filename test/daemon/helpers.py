@@ -1,5 +1,5 @@
 import configparser
-from joule.daemon import stream,module
+from joule.daemon import stream,module,element
 
 def parse_configs(config_str):
   config = configparser.ConfigParser()
@@ -12,8 +12,12 @@ def build_stream(name,
                  datatype="float32",
                  keep_us=0,
                  decimate = True,
-                 id=None):
-  return stream.Stream(name,description,path,datatype,keep_us,decimate,id)
+                 id=None,
+                 num_elements = 0):
+  my_stream =  stream.Stream(name,description,path,datatype,keep_us,decimate,id)
+  for n in range(num_elements):
+    my_stream.add_element(element.build_element("e%d"%n))
+  return my_stream
 
 def build_module(name,
                  description ="test_description",
