@@ -7,7 +7,6 @@ from joule.procdb import client
 class TestCommits(unittest.TestCase):
   def setUp(self):
     self.tmpfile = tempfile.NamedTemporaryFile(delete=False).name
-    print(self.tmpfile)
     
   def tearDown(self):
     os.remove(self.tmpfile)

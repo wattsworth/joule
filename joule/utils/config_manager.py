@@ -77,7 +77,8 @@ def load_configs(configs={}, verify = True):
 
 class ConfigManagerError(Exception):
   """Base Exception for this class"""
+  pass
 
 class InvalidConfiguration(ConfigManagerError):
   """Error parsing configuration file"""
-
+  pass

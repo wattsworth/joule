@@ -59,3 +59,15 @@ class TestModule(unittest.TestCase):
         self.base_config['Destination']['streams']=bad_input_streams
         with self.assertRaisesRegex(DaemonError,'adfasdf'):
             self.parser.run(self.base_config)
+
+    @unittest.skip("TODO")
+    def test_errors_on_duplicate_destinations(self):
+        pass
+
+    @unittest.skip("TODO")
+    def test_errors_on_duplicate_sources(self):
+        pass
+
+    @unittest.skip("TODO")
+    def test_errors_on_same_path_in_source_and_destination(self):
+        pass

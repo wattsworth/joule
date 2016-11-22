@@ -4,21 +4,25 @@ import re
 from .errors import DaemonError
 
 class NilmDbInserter:
-  def __init__(self,client,path,decimate=True):
+  def __init__(self,client,
+               path,
+               insertion_period=0, #no insertion buffering by default
+               decimate=True):
     if(decimate):
       self.decimator = NilmDbDecimator(client,path)
     else:
       self.decimator = None
 
+    self.insertion_period=insertion_period
     self.path = path
     self.client = client
     self.last_ts = None
     self.buffer = None
     self.stop_requested = False
     
-  async def process(self,queue,run_once=False,loop=None):
+  async def process(self,queue,loop=None):
     while(not self.stop_requested):
-      await asyncio.sleep(1,loop=loop)
+      await asyncio.sleep(self.insertion_period,loop=loop)
       while not queue.empty():
         data = await queue.get()
         if(data is None):
@@ -29,8 +33,6 @@ class NilmDbInserter:
         else:
           self.buffer = np.append(self.buffer,data,axis=0)
       self.flush()
-      if run_once:
-        break
 
   def stop(self):
     self.stop_requested = True
@@ -89,11 +91,11 @@ class NilmDbDecimator:
     
   def _parse_path(self,path):
     """return the base path and the decimation level"""
+    print("parsing %s"%path)
     res = re.search("^([/\w]*)~decim-(\d*)$",path)
-    if(res is None):
-      return (path,1)
-    else:
-      return [res.group(1),int(res.group(2))]
+    #this function is only called if the source path is decimated
+    #so it is garaunteed to match this regex, implicitly raise an error o.w.
+    return [res.group(1),int(res.group(2))]
     
   def _is_decimated(self,path):
     if(re.search("~decim-\d*$",path) is not None):

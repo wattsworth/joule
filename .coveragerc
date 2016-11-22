@@ -1,2 +1,2 @@
 [run]
-omit = joule/_version.py
+omit = joule/_version.py, joule/main.py, joule/daemon/test.py

@@ -1,23 +1,29 @@
-from joule.daemon.daemon import Daemon
-from joule.daemon import daemon,stream
+
+from joule.daemon import daemon
 import tempfile
 import unittest
 import os
 from unittest import mock
 import asyncio
 import asynctest
+import time
+import threading
+import configparser
+from . import helpers
 from joule.utils import config_manager
 
-class TestDaemonSetup(unittest.TestCase):
-  @mock.patch("joule.daemon.daemon.InputModule",autospec=True)
-  @mock.patch("joule.daemon.daemon.destination.Parser",autospec=True)
+class TestDaemon(unittest.TestCase):
+
+  @mock.patch("joule.daemon.daemon.module.Parser",autospec=True)
+  @mock.patch("joule.daemon.daemon.stream.Parser",autospec=True)
   @mock.patch("joule.daemon.daemon.procdb_client",autospec=True)
-  def test_it_creates_modules_and_dests(self,mock_procdb,mock_parser,mock_module):
+  def test_creates_modules_and_streams_from_configs(self,mock_procdb,stream_parser,module_parser):
     """creates a module and stream for every *.conf file and ignores others"""
     module_names = ['module1.conf','ignored','temp.conf~','module2.conf']
     stream_names = ['destination1.conf','otherfile','backup.conf~','destination2.conf','d3.conf']
     MODULE_COUNT = 2
     STREAM_COUNT = 3
+    
     with tempfile.TemporaryDirectory() as module_dir:
       with tempfile.TemporaryDirectory() as stream_dir:
         for name in module_names:
@@ -29,131 +35,116 @@ class TestDaemonSetup(unittest.TestCase):
           with open(os.path.join(stream_dir,name),'w') as f:
             f.write('[Main]\n')
 
-        custom_config = """
-         [Jouled]
-           ModuleDirectory={:s}
-           StreamDirectory={:s}
-        """.format(module_dir,stream_dir)
+        custom_config = {'Jouled':
+                         {'ModuleDirectory': module_dir,
+                          'StreamDirectory': stream_dir}}
         configs = config_manager.load_configs(custom_config,verify=False)
-        daemon = Daemon()
-        daemon._validate_module = mock.Mock(return_value=True)
-        daemon._validate_destination = mock.Mock(return_value=True)
-        daemon.initialize(configs)
-        self.assertEqual(MODULE_COUNT,len(daemon.modules))
-        self.assertEqual(STREAM_COUNT,len(daemon.streams))
+        my_daemon = daemon.Daemon()
+        my_daemon._validate_module = mock.Mock(return_value=True)
+        my_daemon._validate_stream = mock.Mock(return_value=True)
+        my_daemon.initialize(configs)
+        self.assertEqual(MODULE_COUNT,len(my_daemon.modules))
+        self.assertEqual(STREAM_COUNT,len(my_daemon.streams))
 
-    
-  @mock.patch("joule.daemon.daemon.nilmtools.filter",autospec=True)
-  def test_register_destination_1(self,mock_filter):
-    """Cannot register destination if path exists with a different datatype"""
-    info = mock.Mock(layout="uint8_8", layout_type="uint8", layout_count=8)
+  @mock.patch("joule.daemon.daemon.nilmtools.filter",autospec=True)        
+  def test_validates_streams_and_modules(self,mock_filter):
+    streams = [ helpers.build_stream(name="in1",     path="/data/in1",     num_elements=4),
+                helpers.build_stream(name="out1in2", path="/data/out1in2", num_elements=4),
+                helpers.build_stream(name="out2",    path="/data/out2",    num_elements=4) ]
+    modules = [ helpers.build_module(name="m1", source_paths = {'in1':"/data/in1"},
+                                     destination_paths = {'out1': "/data/out1in2" }),
+                helpers.build_module(name="m2", source_paths = {'in2': "/data/out1in2"},
+                                     destination_paths = {'out2': "/data/out2"})]
+    #all streams exist in the database
+    info = mock.Mock(layout="float32_4", layout_type="float32",
+                     layout_count=4)
     mock_filter.get_stream_info = mock.MagicMock(return_value = info)
-    dest = self.build_destination(datatype='float32',stream_count=8)
-    with self.assertLogs(level='ERROR') as logs:
-      daemon=Daemon()
-      daemon._validate_destination(dest)
-    self.assertRegex("/n".join(logs.output),"float32")
 
+    my_daemon = daemon.Daemon()
+    for my_stream in streams:
+      self.assertTrue(my_daemon._validate_stream(my_stream))
+      my_daemon.streams.append(my_stream)
+      my_daemon.path_streams[my_stream.path] = my_stream
+      
+    for my_module in modules:
+      self.assertTrue(my_daemon._validate_module(my_module))
+      my_daemon.modules.append(my_module)
+
+                                     
   @mock.patch("joule.daemon.daemon.nilmtools.filter",autospec=True)
-  def test_register_destination_2(self,mock_filter):
-    """Cannot register destination if path exists with a different stream count"""
-    info = mock.Mock(layout="uint8_8", layout_type="uint8", layout_count=8)
-    mock_filter.get_stream_info = mock.MagicMock(return_value = info)
-    dest = self.build_destination(datatype='uint8',stream_count=4)
-    with self.assertLogs(level='ERROR') as logs:
-      daemon=Daemon()
-      daemon._validate_destination(dest)
-    self.assertRegex("/n".join(logs.output),"8")
-
-  @mock.patch("joule.daemon.daemon.nilmtools.filter",autospec=True)
-  def test_register_destination_3(self,mock_filter):
-    """Cannot register destination with duplicate path"""
-    info = mock.Mock(layout="float32_1", layout_type="float32",
-                     layout_count=1)
-    mock_filter.get_stream_info = mock.MagicMock(return_value = info)
-    dest1 = self.build_destination(name='first',path="/same/path")
-    dest2 = self.build_destination(name='second',path="/same/path")
-    with self.assertLogs(level='ERROR') as logs:
-      daemon=Daemon()
-      daemon.destinations.append(dest1)
-      daemon._validate_destination(dest2)
-    self.assertRegex("/n".join(logs.output),"first")
-    
-  def test_register_module_1(self):
-    """Cannot register modules with duplicate destinations"""
-    daemon = Daemon()
-    daemon.path_destinations = { "/path1/exists", mock.Mock(),
-                                 "/path2/exists", mock.Mock()}
-    module1 = mock.Mock()
-    module1.destination_paths = { "path1": "/path/exists"}
-    daemon.modules = [module1]
-    module2 = mock.Mock()
-    module2.destination_paths = {"path2": "/path2/exists",
-                                 "duplicate_path": "/path/exists"}
-
-    with self.assertLogs(level='ERROR') as logs:
-      daemon._validate_module(module2)
-    self.assertRegex("/n".join(logs.output),"path/exists")
-
-  def test_register_module_2(self):
-    """Module's destinations must have a configuration"""
-    daemon = Daemon()
-    daemon.path_destinations = { "/path/exists", mock.Mock()}
-    module1 = mock.Mock()
-    module1.destination_paths = { "path1": "/path/exists",
-                                  "path2": "/path/not/configured"}
-
-    with self.assertLogs(level='ERROR') as logs:
-      daemon._validate_module(module1)
-    self.assertRegex("/n".join(logs.output),"not/configured")
-
-  @mock.patch("joule.daemon.daemon.nilmtools.filter",autospec=True)
-  def test_register_module_3(self,mock_filter):
-    """Database path is created when destination is first registered"""
+  def test_creates_nilmdb_entries_for_new_streams(self,mock_filter):
+    """Database path is created when stream is first registered"""
     #the stream does not exist in the database
     mock_filter.get_stream_info = mock.MagicMock(return_value = None)
-    dest = self.build_destination("test","/test/path")
+    new_stream = helpers.build_stream(name="test",path="/test/path",num_elements=4)
     #mock out the actual NilmDB calls
     mock_client = mock.Mock()
-    daemon = Daemon()
-    daemon.nilmdb_client=mock_client
-    daemon._validate_destination(dest)
+    my_daemon = daemon.Daemon()
+    my_daemon.nilmdb_client=mock_client
+    my_daemon._validate_stream(new_stream)
     #the path should be set up in the nilmdb database
-    mock_client.stream_create.assert_called_with("/test/path","float32_1")
+    mock_client.stream_create.assert_called_with("/test/path","float32_4")
     
   @mock.patch("joule.daemon.daemon.nilmtools.filter",autospec=True)
-  def test_register_module_4(self,mock_filter):
-    """Database path is not created when module is registered again"""
+  def test_does_not_create_nilmdb_entries_for_existing_streams(self,mock_filter):
+    """Database path is not created when stream is registered again"""
     #the stream exists in the database
     info = mock.Mock(layout="float32_1", layout_type="float32",
                      layout_count=1)
     mock_filter.get_stream_info = mock.MagicMock(return_value = info)
-    dest = self.build_destination("test","/test/path")
+    existing_stream = helpers.build_stream(name="test",path="/test/path",num_elements=1)
     #mock out the actual NilmDB calls
     mock_client = mock.Mock()
-    daemon = Daemon()
-    daemon.nilmdb_client=mock_client
-    daemon._validate_destination(dest)
+    my_daemon = daemon.Daemon()
+    my_daemon.nilmdb_client=mock_client
+    my_daemon._validate_stream(existing_stream)
     #the path should be set up in the nilmdb database
     mock_client.stream_create.assert_not_called()
 
+        
+class TestDaemonModuleMethods(unittest.TestCase):
   @mock.patch("joule.daemon.daemon.config_manager",autospec=True)
-  def test_daemon_reads_config_file(self,mock_configs):
-    CUSTOM_CONFIGURATION="custom_configuration"
+  def test_load_configs(self,mock_configs):
+    config_data ="""[Main]
+                    Setting1 = value1
+                 """
+    #put config_data into a file
     with tempfile.NamedTemporaryFile() as fp:
-        fp.write(str.encode(CUSTOM_CONFIGURATION))
+        fp.write(str.encode(config_data))
         fp.flush()
         daemon.load_configs(fp.name)
-    mock_configs.load_configs.assert_called_with(config_string=CUSTOM_CONFIGURATION)
+    #extract the [configs] argument passed into [config_manager.load_configs]
+    kwargs = mock_configs.load_configs.call_args[1]
+    actual_configs = kwargs['configs']
+    #generate expected configs using a dictionary
+    expected_configs = configparser.ConfigParser()
+    expected_configs.read_dict({"Main":{"setting1":"value1"}})
+    #they should be equal
+    self.assertEqual(actual_configs,expected_configs)
 
-  def build_destination(self,name="test",path="/test/data",
-                         datatype='float32',stream_count = 1):
-    dest = destination.Destination(name,'auto-generated',path,datatype,keep_us=0,decimate=True)
-    for i in range(stream_count):
-      dest.add_stream(stream.build_stream("stream%d"%i))
-    return dest
+  @mock.patch("joule.daemon.daemon.Daemon",autospec=True)
+  @mock.patch("joule.daemon.daemon.asyncio",autospec=True)
+  @mock.patch("joule.daemon.daemon.load_configs")
 
+  def test_main(self,mock_load_configs,mock_asyncio,mock_daemon):
+    #set up the mocks
+    my_daemon = mock_daemon.return_value
+    my_daemon.initialize = mock.Mock()
+    mock_loop = mock.Mock(spec=asyncio.BaseEventLoop)
+    mock_asyncio.get_event_loop = mock.Mock(return_value = mock_loop)
 
+    #run the main function, exits successfully
+    with self.assertRaises(SystemExit) as cm:
+      daemon.main(["--config=/config/file"])
+    self.assertEqual(cm.exception.code,0)
+    #it should load the configuration
+    daemon.load_configs.assert_called_with("/config/file")
+    #..set up a signal handler
+    self.assertTrue(mock_loop.add_signal_handler.called)
+    #..run the loop
+    self.assertTrue(my_daemon.run.called)
+    #..and close the loop
+    self.assertTrue(mock_loop.close.called)
     
 class TestDaemonRun(asynctest.TestCase):
   @asynctest.patch("joule.daemon.daemon.Worker",autospec=True)
@@ -166,19 +157,38 @@ class TestDaemonRun(asynctest.TestCase):
     async def run_worker():
       nonlocal worker_runs
       worker_runs += 1
-    instance = mock_worker.return_value
-    instance.run = run_worker
-    instance.module = mock.Mock() #should be set by daemon but the object is mocked
-    instance.module.destination_paths = {}
-    
-    daemon = Daemon()
-    daemon.procdb = mock.Mock()
-    daemon.input_modules = [mock.Mock() for x in range(NUM_MODULES)]
+    worker_stops = 0
+    async def stop_worker(loop):
+      nonlocal worker_stops
+      worker_stops +=1
 
+    my_worker = mock_worker.return_value
+    my_worker.run = run_worker
+    my_worker.stop = stop_worker
+    #the instances will all share the same module object 
+    my_worker.module = helpers.build_module("mock",destination_paths = {"path1":"/mock/path"})
+
+    my_inserter = mock_inserter.return_value
+    my_inserter.process = asynctest.mock.CoroutineMock()
+    
+    my_daemon = daemon.Daemon()
+    my_daemon.procdb = mock.Mock()
+    my_daemon.modules = [mock.Mock() for x in range(NUM_MODULES)]
+    my_daemon.path_streams = {"/mock/path": mock.Mock()}
+    my_daemon.procdb_commit_interval = 0.1 #so we can stop quickly
+    
     loop = asyncio.get_event_loop()
-    daemon.stop_requested = True
-    daemon.run(loop)
-    
-
+    def stop_daemon():
+      time.sleep(0.2)
+      my_daemon.stop()
+    t = threading.Thread(target=stop_daemon)
+    t.start()
+    my_daemon.run(loop)
+    #make sure workers were all started and stopped
     self.assertEqual(worker_runs,NUM_MODULES)
-    
+    self.assertEqual(worker_stops,NUM_MODULES)
+    #make sure inserters were all started and stopped
+    self.assertEqual(my_inserter.process.call_count,NUM_MODULES)
+    self.assertEqual(my_inserter.stop.call_count,NUM_MODULES)
+    #make sure db committer task ran
+    self.assertGreater(my_daemon.procdb.commit.call_count,1)

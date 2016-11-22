@@ -74,7 +74,10 @@ def validate_path(path):
 
 class Parser(object):
     def run(self,configs):
-        main_configs = configs["Main"]
+        try:
+            main_configs = configs["Main"]
+        except KeyError as e:
+            raise ConfigError("Missing section [%s]"%e) from e
         try:
             path = validate_path(main_configs["path"])
             datatype = self._validate_datatype(main_configs["datatype"])

@@ -74,10 +74,11 @@ class TestWorker(asynctest.TestCase):
     loop = asyncio.get_event_loop()
 
     async def stop_worker():
-      await asyncio.sleep(0.5)
+      await asyncio.sleep(0.1)
       with self.assertLogs(level="WARNING"):
         await self.myworker.stop(loop)
-      
+
+    self.myworker.SIGTERM_TIMEOUT = 0.1 #don't wait to kill it
     tasks = [ asyncio.ensure_future(stop_worker()),
               asyncio.ensure_future(self.myworker.run(restart=True)) ]
     self.my_module.exec_cmd = "python "+MODULE_RUN_FOREVER

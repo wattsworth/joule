@@ -18,9 +18,6 @@ class NumpyPipe:
     self.writer = None #initialized by _open_write()
     self.transport = None
     
-  def __aiter__(self):
-    return self
-
   async def read(self):
     await self._open_read()
     
@@ -53,8 +50,6 @@ class NumpyPipe:
   async def _open_read(self):
     """initialize reader if not already setup"""
     if(self.reader is not None):
-      if(self.transport is None):
-        raise PipeClosed()
       return
     
     self.reader = asyncio.StreamReader()
@@ -65,8 +60,6 @@ class NumpyPipe:
     
   async def _open_write(self):
     if(self.writer is not None):
-      if(self.transport is None):
-        raise PipeClosed()
       return
     
     write_protocol = asyncio.StreamReaderProtocol(asyncio.StreamReader())

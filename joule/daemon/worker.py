@@ -31,6 +31,9 @@ class Worker:
       'sources': {}
     }
     self.pipe_tasks = []
+
+    #tunable constants
+    self.SIGTERM_TIMEOUT = 2 #how long to wait for proc to stop nicely
     
   def subscribe(self,path,loop=None):
     q = asyncio.Queue(loop=loop)
@@ -113,7 +116,9 @@ class Worker:
 
     self.process.terminate()
     try:
-      await asyncio.wait_for(self.process.wait(),timeout=2,loop=loop)
+      await asyncio.wait_for(self.process.wait(),
+                             timeout=self.SIGTERM_TIMEOUT,
+                             loop=loop)
     except asyncio.TimeoutError:
       logging.warning("Cannot stop %s with SIGTERM, killing process"%self.module)
       self.process.kill()

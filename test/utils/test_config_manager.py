@@ -35,8 +35,8 @@ class TestConfigManager(unittest.TestCase):
   def test_defaults_verify(self):
     #have to provide valid directories
     with tempfile.TemporaryDirectory() as temp:
-      self.default_config['Jouled']['ModuleDirectory']=temp
-      self.default_config['Jouled']['StreamDirectory']=temp
+      helpers.default_config['Jouled']['ModuleDirectory']=temp
+      helpers.default_config['Jouled']['StreamDirectory']=temp
       my_configs = config_manager.load_configs(helpers.default_config)
       self.assertIsInstance(my_configs,config_manager.Configs)
     
