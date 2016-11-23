@@ -91,7 +91,6 @@ class NilmDbDecimator:
     
   def _parse_path(self,path):
     """return the base path and the decimation level"""
-    print("parsing %s"%path)
     res = re.search("^([/\w]*)~decim-(\d*)$",path)
     #this function is only called if the source path is decimated
     #so it is garaunteed to match this regex, implicitly raise an error o.w.

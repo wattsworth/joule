@@ -62,7 +62,7 @@ def parse_nilmdb_configs(nilmdb_parser, verify):
                        insertion_period = insertion_period)
 
 def load_configs(configs={}, verify = True):
-  """provide a string INI formation configuration to override defaults
+  """provide a dict INI configuration to override defaults
      if verify is True, perform checks on settings to make sure they are appropriate"""
   my_parser = configparser.ConfigParser()
   my_parser.read_dict(DEFAULT_CONFIG)
