@@ -34,10 +34,10 @@ class NumpyPipe:
     
     extra_bytes = (len(s_data)+len(self.buffer))%rowsize
     if(extra_bytes>0):
-      data=np.frombuffer(self.buffer+s_data[:-extra_bytes],dtype='float64')
+      data=np.fromstring(self.buffer+s_data[:-extra_bytes],dtype='float64')
       self.buffer=s_data[-extra_bytes:]
     else:
-      data=np.frombuffer(self.buffer+s_data,dtype='float64')
+      data=np.fromstring(self.buffer+s_data,dtype='float64')
       self.buffer = b''
     data.shape = len(data)//self.num_cols,self.num_cols
     return data

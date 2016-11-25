@@ -1,4 +1,4 @@
-
+import time
 
 def main():
   time.sleep(0.1)

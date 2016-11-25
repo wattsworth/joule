@@ -51,7 +51,7 @@ class Worker:
       return False #cannot find all input sources
     #subscribe to inputs
     for path in self.input_queues:
-      self.input_queues[path] = worked_paths[path].subscribe()
+      self.input_queues[path] = worked_paths[path]()
     return True
   
   def _validate_inputs(self):
@@ -131,6 +131,7 @@ class Worker:
       if(len(bline)==0):
         break
       line = bline.decode('UTF-8').rstrip()
+#      print(">> %s"%line)
       self.procdb_client.add_log_by_module(self.module.id,line)
 
   async def _start_pipe_tasks(self,loop):

@@ -189,6 +189,8 @@ class Daemon(object):
             
         tasks.append(asyncio.ensure_future(self._db_committer()))
         tasks += self._start_inserters(loop)
+        #commit records to database
+        self.procdb.commit()
         loop.run_until_complete(asyncio.gather(*tasks))
                                 
 

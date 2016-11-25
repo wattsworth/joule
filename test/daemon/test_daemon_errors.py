@@ -148,6 +148,7 @@ class TestDaemonRunErrors(asynctest.TestCase):
       my_daemon.streams.append(my_stream)
 
     my_daemon.modules = modules
+    my_daemon.procdb = mock.Mock()
     my_daemon._start_worker = asynctest.mock.CoroutineMock()
     
     loop = asyncio.get_event_loop()

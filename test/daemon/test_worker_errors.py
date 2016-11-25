@@ -41,8 +41,8 @@ class TestWorker(asynctest.TestCase):
 
     self.myworker = worker.Worker(self.my_module,self.myprocdb)
     self.myworker.register_inputs({
-      '/data/path1': mock_worker1,
-      '/data/path2': mock_worker2
+      '/data/path1': mock_worker1.subscribe,
+      '/data/path2': mock_worker2.subscribe
     })
 
   def test_exits_cleanly_on_module_error(self):
