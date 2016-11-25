@@ -34,6 +34,7 @@ class Worker:
 
     #tunable constants
     self.SIGTERM_TIMEOUT = 2 #how long to wait for proc to stop nicely
+    self.RESTART_INTERVAL = 1 #how long to wait to restart a failed process
     
   def subscribe(self,path,loop=None):
     q = asyncio.Queue(loop=loop)
@@ -72,7 +73,7 @@ class Worker:
       #---only gets here if process terminates---
       if(restart and not self.stop_requested):
         logging.error("Restarting failed module: %s"%self.module)
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(self.RESTART_INTERVAL)
         #insert an empty block in output_queues to indicate end of interval
         for queue_set in self.output_queues.values():
           for q in queue_set:
@@ -151,6 +152,7 @@ class Worker:
 
   def _build_numpy_pipe(self,path,direction,loop):
     stream = self.procdb_client.find_stream_by_path(path)
+    assert(stream is not None) #procdb must have this stream entry
     (r,w) = os.pipe()
     if(direction=='output'): # fd    ==> npipe
       os.set_inheritable(w,True)

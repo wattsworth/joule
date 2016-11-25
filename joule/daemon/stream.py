@@ -84,7 +84,7 @@ class Parser(object):
             keep_us = self._validate_keep(main_configs["keep"])
             decimate = main_configs.getboolean("decimate",fallback=True)
             name = main_configs["name"]
-            description = main_configs["description"]
+            description = main_configs.get("description",fallback="")
             my_stream =  Stream(name,description,path,datatype,keep_us,decimate)
         except KeyError as e:
             raise ConfigError("[Main] missing %s"%e.args[0])

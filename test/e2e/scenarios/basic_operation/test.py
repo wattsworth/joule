@@ -8,11 +8,11 @@ from e2eutils import nilmtool as nilmtool_cmd
 
 def main():
   time.sleep(8) #wait for jouled to boot
-  check_status()
+  check_modules()
   check_data()
   check_logs()
   
-def check_status():
+def check_modules():
   """
   Test: check module status
   Goal:
@@ -21,16 +21,16 @@ def check_status():
     broken:  present (could be running or failed)
     misconfigured: not present b/c can't be loaded
   """
-  status = joule_cmd.status()
-  assert(len(status)==3) #normal1,normal2,broken
-  for module in status:
-    name = module[joule_cmd.STATUS_NAME_FIELD]
-    status = module[joule_cmd.STATUS_STATUS_FIELD]
-    if(name=='Normal1'):
-      assert(status==joule_cmd.STATUS_STATUS_RUNNING)
-    elif(name=='Normal2'):
-      assert(status==joule_cmd.STATUS_STATUS_RUNNING)
-    elif(name=='Broken'):
+  modules = joule_cmd.modules()
+  assert(len(modules)==3) #normal1,normal2,broken
+  for module in modules:
+    title = module[joule_cmd.MODULES_TITLE_FIELD]
+    status = module[joule_cmd.MODULES_STATUS_FIELD]
+    if(title['name']=='Normal1'):
+      assert(status==joule_cmd.MODULES_STATUS_RUNNING)
+    elif(title['name']=='Normal2'):
+      assert(status==joule_cmd.MODULES_STATUS_RUNNING)
+    elif(title['name']=='Broken'):
       pass
     else:
       assert(0) #unexpected module in status report

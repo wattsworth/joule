@@ -14,6 +14,8 @@ SCENARIO_DIR = "/src/test/e2e/scenarios"
 MODULE_SCRIPT_DIR="/src/test/e2e/module_scripts"
 JOULE_CONF_DIR="/etc/joule"
 
+FORCE_DUMP = True
+
 def prep_system():
   run("apache2ctl start")
   os.symlink(MODULE_SCRIPT_DIR,"/module_scripts")
@@ -37,7 +39,7 @@ def main():
       sys.stdout.flush()
       test = subprocess.run(os.path.join(entry.path,"test.py"))
       jouled.send_signal(signal.SIGINT)
-      if(test.returncode!=0):
+      if(test.returncode!=0 or FORCE_DUMP):
         print("----dump from jouled----")
         stdout,_ = jouled.communicate()
         for line in stdout.rstrip().split('\n'):

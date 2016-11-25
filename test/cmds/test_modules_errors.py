@@ -5,16 +5,15 @@ import unittest
 from unittest import mock
 import argparse
 import os
-import functools
-from joule.utils import config_manager
-from joule.daemon import module
+
 
 FIELD_MODULE=0
 FIELD_SOURCES=1
 FIELD_DESTS = 2
-FIELD_MEM = 3
-FIELD_CPU = 4
-FIELD_STATUS = 5
+FIELD_STATUS = 3
+FIELD_MEM = 4
+FIELD_CPU = 5
+
 
 class TestModulesError(unittest.TestCase):
     def setUp(self):

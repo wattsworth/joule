@@ -46,13 +46,10 @@ class TestWorker(asynctest.TestCase):
     })
 
   def test_exits_cleanly_on_module_error(self):
-    proc = psutil.Process()
     self.my_module.exec_cmd = "causes error"
     loop = asyncio.get_event_loop()
-    orig_fds = proc.num_fds()
     with self.assertLogs(level='ERROR'):
       loop.run_until_complete(self.myworker.run(restart=False))
-    self.assertEqual(proc.num_fds(),orig_fds)    
     loop.close()
 
   @asynctest.fail_on(unused_loop = False)
@@ -69,8 +66,7 @@ class TestWorker(asynctest.TestCase):
     self.myworker = worker.Worker(self.my_module,self.myprocdb)
 
     with self.assertLogs(level='ERROR'):
-      self._verify_no_file_descriptor_leakage(
-        loop.run_until_complete, args = [self.myworker.run(restart=False)])
+      loop.run_until_complete(self.myworker.run(restart=False))
       
 
   def test_restarts_failed_module_process(self):
@@ -83,11 +79,12 @@ class TestWorker(asynctest.TestCase):
     tasks = [ asyncio.ensure_future(stop_worker()),
               asyncio.ensure_future(self.myworker.run(restart=True)) ]
     self.my_module.exec_cmd = "python "+ MODULE_FAILS_ON_ERROR
+    #restart before [stop_worker] is called at t=0.5
+    self.myworker.RESTART_INTERVAL=0.1 
     q1 = self.myworker.subscribe("/output/path1")
     q2 = self.myworker.subscribe("/output/path2")
     with self.assertLogs(level="ERROR") as cm:
-      self._verify_no_file_descriptor_leakage(
-        loop.run_until_complete, args = [asyncio.gather(*tasks)])
+      loop.run_until_complete(asyncio.gather(*tasks))
     #make sure there are empty arrays in the output queues for every restart
     num_restarts = 0
     for entry in cm.output:
@@ -101,6 +98,7 @@ class TestWorker(asynctest.TestCase):
     self.assertTrue(q1.empty())
     self.assertTrue(q2.empty())
 
+  #not used, see note in ./test_worker
   def _verify_no_file_descriptor_leakage(self,func,args=[]):
     proc = psutil.Process()
     orig_fds = proc.num_fds()

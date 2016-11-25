@@ -43,6 +43,11 @@ class TestStream(unittest.TestCase):
         stream = self.parser.run(config)
         self.assertEqual(stream.keep_us,0)
 
+    def test_allows_no_description(self):
+        self.base_config.remove_option("Main","description")
+        parsed_stream = self.parser.run(self.base_config)
+        self.assertEqual(parsed_stream.description,"")
+        
     def test_computes_data_format(self):
         """data_format returns float32_4 for example"""
         self.my_stream.elements = []

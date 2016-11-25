@@ -151,8 +151,6 @@ class TestDaemonRun(asynctest.TestCase):
   @asynctest.patch("joule.daemon.daemon.inserter.NilmDbInserter",autospec=True)
   def test_runs_modules_as_workers(self,mock_inserter,mock_worker):
     """daemon starts a worker and inserter for every module"""
-    NUM_MODULES=4
-
     worker_runs = 0
     async def run_worker():
       nonlocal worker_runs
@@ -163,18 +161,20 @@ class TestDaemonRun(asynctest.TestCase):
       worker_stops +=1
 
     my_worker = mock_worker.return_value
-    my_worker.run = run_worker
-    my_worker.stop = stop_worker
-    #the instances will all share the same module object 
-    my_worker.module = helpers.build_module("mock",destination_paths = {"path1":"/mock/path"})
+    my_worker.run = asynctest.mock.CoroutineMock()
+    my_worker.stop = asynctest.mock.CoroutineMock()
+    my_module = helpers.build_module("mock",
+                                     destination_paths = {"path1":"/mock/path"})
+    my_daemon = daemon.Daemon()
+    my_daemon.procdb = mock.Mock()
+    my_daemon.modules = [mock.Mock()]
+    #a mock stream for the module
+    my_daemon.path_streams["/mock/path"]= mock.Mock()
+    my_worker.module = my_module #set again because worker is mocked
 
     my_inserter = mock_inserter.return_value
     my_inserter.process = asynctest.mock.CoroutineMock()
-    
-    my_daemon = daemon.Daemon()
-    my_daemon.procdb = mock.Mock()
-    my_daemon.modules = [mock.Mock() for x in range(NUM_MODULES)]
-    my_daemon.path_streams = {"/mock/path": mock.Mock()}
+
     my_daemon.procdb_commit_interval = 0.1 #so we can stop quickly
     
     loop = asyncio.get_event_loop()
@@ -185,10 +185,10 @@ class TestDaemonRun(asynctest.TestCase):
     t.start()
     my_daemon.run(loop)
     #make sure workers were all started and stopped
-    self.assertEqual(worker_runs,NUM_MODULES)
-    self.assertEqual(worker_stops,NUM_MODULES)
+    self.assertEqual(my_worker.run.call_count,1)
+    self.assertEqual(my_worker.stop.call_count,1)
     #make sure inserters were all started and stopped
-    self.assertEqual(my_inserter.process.call_count,NUM_MODULES)
-    self.assertEqual(my_inserter.stop.call_count,NUM_MODULES)
+    self.assertEqual(my_inserter.process.call_count,1)
+    self.assertEqual(my_inserter.stop.call_count,1)
     #make sure db committer task ran
     self.assertGreater(my_daemon.procdb.commit.call_count,1)

@@ -2,7 +2,6 @@
 from joule.procdb import client as procdb_client
 from cliff.command import Command
 from . import helpers
-from joule.utils import config_manager
 
 PROC_DB = "/tmp/joule-proc-db.sqlite"
 NILMDB_URL = "http://localhost/nilmdb"
@@ -21,7 +20,7 @@ class LogsCmd(Command):
     
     def take_action(self, parsed_args):
       configs = helpers.parse_config_file(parsed_args.config_file)
-      procdb = procdb_client.SQLClient(configs.procdb.dbpath)
+      procdb = procdb_client.SQLClient(configs.procdb.db_path)
       module_name = parsed_args.module
       module = procdb.find_module_by_name(module_name)
       if(module is None):

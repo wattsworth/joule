@@ -3,15 +3,15 @@ import subprocess
 import shlex
 import json
 
-STATUS_NAME_FIELD="Module Name"
-STATUS_STATUS_FIELD="Status"
-STATUS_STATUS_RUNNING="running"
-STATUS_STATUS_FAILED="failed"
+MODULES_TITLE_FIELD="Module"
+MODULES_STATUS_FIELD="Status"
+MODULES_STATUS_RUNNING="running"
+MODULES_STATUS_FAILED="failed"
 
 LOG_STARTING_STRING="---starting module---"
 
-def status():
-  output = _run("joule status -f json")
+def modules():
+  output = _run("joule modules -f json")
   assert(output is not None)
   return json.loads(output)
 

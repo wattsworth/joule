@@ -49,15 +49,20 @@ class Daemon(object):
         
         #Set up streams
         stream_dir = config.jouled.stream_directory
+
         streams = self._load_configs(stream_dir,self._build_stream)
         self._register_items(streams,self._validate_stream,self.streams)
+
         for my_stream in self.streams: #set up dictionary to find stream by path
             self.path_streams[my_stream.path] = my_stream
+            self.procdb.register_stream(my_stream)
         #Set up modules
         module_dir = config.jouled.module_directory
         modules = self._load_configs(module_dir,self._build_module)
         self._register_items(modules,self._validate_module,self.modules)
-
+        for my_module in self.modules:
+            self.procdb.register_module(my_module)
+            
         #Configure tunable constants
         self.NILMDB_INSERTION_PERIOD = config.nilmdb.insertion_period
         
@@ -129,7 +134,7 @@ class Daemon(object):
         try:
             my_module = parser.run(config)
         except module.ConfigError as e:
-            self.log.error("Cannot load module config: \n\t%s"%(e))
+            logging.error("Cannot load module config: %s"%(e))
             return None
         return my_module
 
@@ -182,8 +187,8 @@ class Daemon(object):
                                  w.module)
                 break
             
-        tasks.append(self._db_committer())
-
+        tasks.append(asyncio.ensure_future(self._db_committer()))
+        tasks += self._start_inserters(loop)
         loop.run_until_complete(asyncio.gather(*tasks))
                                 
 
@@ -192,27 +197,32 @@ class Daemon(object):
         self.stop_requested=True
         for worker in self.workers:
             asyncio.ensure_future(worker.stop(loop))
-
-    async def _start_worker(self,worker,loop=None):
-        self.workers.append(worker)
-        module = worker.module
-        my_inserters = [] 
-        for path in module.destination_paths.values():
-            self.path_workers[path] = functools.partial(worker.subscribe,path)
+        for my_inserter in self.inserters:
+            my_inserter.stop()
+            
+    def _start_inserters(self,loop):
+        inserter_tasks = []
+        for path in self.path_workers:
             stream = self.path_streams[path]
             #build inserters for any paths that have non-zero keeps
-            if(stream.keep_data):
-                i = inserter.NilmDbInserter(self.nilmdb_client,
+            if(stream.keep_us):
+                my_inserter = inserter.NilmDbInserter(self.nilmdb_client,
                                             path,
                                             insertion_period=self.NILMDB_INSERTION_PERIOD,
                                             decimate = stream.decimate)
-                asyncio.ensure_future(i.process(worker.subscribe(path)),loop=loop)
-                my_inserters.append(i)
+                coro = my_inserter.process(self.path_workers[path](),loop=loop)
+                task = asyncio.ensure_future(coro)
+                self.inserters.append(my_inserter)
+                inserter_tasks.append(task)
+        return inserter_tasks
+    
+    def _start_worker(self,worker,loop):
+        self.workers.append(worker)
+        module = worker.module
+        for path in module.destination_paths.values():
+            self.path_workers[path] = functools.partial(worker.subscribe,path)
         #waits here while worker runs
-        await worker.run()
-        #execute shutdown tasks
-        for i in my_inserters:
-            i.stop()
+        return asyncio.ensure_future(worker.run())
 
     async def _db_committer(self,loop=None):
       while(not self.stop_requested):

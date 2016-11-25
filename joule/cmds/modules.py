@@ -23,7 +23,7 @@ class ModulesCmd(Lister):
         headers = ('Module', 'Sources', 'Destinations', 'Status', 'CPU', 'mem')
         format_type = parsed_args.formatter #print differently if json output
         
-        procdb = procdb_client.SQLClient(configs.procdb.dbpath)
+        procdb = procdb_client.SQLClient(configs.procdb.db_path)
         modules = procdb.find_all_modules()
         module_stats = []
         for m in modules:
@@ -66,7 +66,7 @@ class ModulesCmd(Lister):
             status = my_module.status
         except Exception as e:
             status = module.STATUS_FAILED
-        return (cpu,mem,status)
+        return (status,cpu,mem)
             
     def _list_paths(self,paths,formatter):
         if(formatter=="json"):

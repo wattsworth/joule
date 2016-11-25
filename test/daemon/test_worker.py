@@ -56,8 +56,7 @@ class TestWorker(asynctest.TestCase):
     self.q_in2.put_nowait(DATA2)
 
     self.my_module.exec_cmd = "python "+MODULE_ECHO_DATA
-    self._verify_no_file_descriptor_leakage(
-      loop.run_until_complete, args = [(self.myworker.run(restart=False))])
+    loop.run_until_complete(self.myworker.run(restart=False))
 
     q1_output = q1_out.get_nowait()
     q2_output = q2_out.get_nowait()
@@ -82,10 +81,13 @@ class TestWorker(asynctest.TestCase):
     tasks = [ asyncio.ensure_future(stop_worker()),
               asyncio.ensure_future(self.myworker.run(restart=True)) ]
     self.my_module.exec_cmd = "python "+MODULE_RUN_FOREVER
-    self._verify_no_file_descriptor_leakage(
-      loop.run_until_complete, args = [asyncio.gather(*tasks)])
+    loop.run_until_complete(asyncio.gather(*tasks))
 
 
+  #**NOTE: intended as a wrapper around run_until_complete but
+  #  it seems like asyncio closes pipes with garbage collection
+  #  so the numpypipe does not actually have to close the file descriptor
+  #  and in fact this causes an error (see joule/utils/numpypipe)
   def _verify_no_file_descriptor_leakage(self,func,args=[]):
     proc = psutil.Process()
     orig_fds = proc.num_fds()
