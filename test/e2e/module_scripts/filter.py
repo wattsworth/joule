@@ -10,6 +10,7 @@ from joule.procdb import client
 from joule.utils import config_manager
 import argparse
 from joule.utils import numpypipe
+import sys
 
 async def echo_pipe(np_in,np_out,factor=1.0):
   while(True):
@@ -18,7 +19,8 @@ async def echo_pipe(np_in,np_out,factor=1.0):
     await np_out.write(data)
 
 if __name__=="__main__":
-  print("starting filter!")
+  sys.stderr.write("starting filter!\n")
+  sys.stderr.flush()
   parser = argparse.ArgumentParser("demo")
   parser.add_argument("--pipes")
   args = parser.parse_args()

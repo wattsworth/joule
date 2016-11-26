@@ -2,13 +2,13 @@
 import time
 import sys
 import re
+import numpy as np
 sys.path.append("/module_scripts") #add e2eutils
 from e2eutils import joule as joule_cmd
 from e2eutils import nilmtool as nilmtool_cmd
 
 def main():
   time.sleep(8) #wait for jouled to boot
-  print(joule_cmd.logs("Filter"))
   check_modules()
   check_data()
   check_logs()
@@ -66,10 +66,23 @@ def check_data():
   assert(nilmtool_cmd.is_decimated(normal1_path))
   assert(nilmtool_cmd.is_decimated(normal2_path))
   assert(nilmtool_cmd.is_decimated(broken_path))
+  assert(nilmtool_cmd.is_decimated(filter1_path))
+  assert(nilmtool_cmd.is_decimated(filter2_path))
 
-  print(nilmtool_cmd.data_extract(normal2_path))
-  print("------")
-  print(nilmtool_cmd.data_extract(filter2_path))
+  #verify the filter module executed correctly
+  #check the first 2000 rows, the filter won't have all the source data because
+  #the process was stopped 
+  expected_data = nilmtool_cmd.data_extract(normal1_path)
+  expected_data[:,1:]*=2.0
+  actual_data = nilmtool_cmd.data_extract(filter1_path)
+  np.testing.assert_almost_equal(actual_data[:2000,:],expected_data[:2000,:])
+
+  expected_data = nilmtool_cmd.data_extract(normal2_path)
+  expected_data[:,1:]*=3.0
+  actual_data = nilmtool_cmd.data_extract(filter2_path)
+  np.testing.assert_almost_equal(actual_data[:2000,:],expected_data[:2000,:])
+
+
   
 def check_logs():
   """

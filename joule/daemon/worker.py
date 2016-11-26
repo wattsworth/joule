@@ -132,7 +132,7 @@ class Worker:
         break
       line = bline.decode('UTF-8').rstrip()
 #      print(">> %s"%line)
-      self.procdb_client.add_log_by_module(self.module.id,line)
+      self.procdb_client.add_log_by_module(line,self.module.id)
 
   async def _start_pipe_tasks(self,loop):
     #configure destination pipes          [module]==>[jouled]

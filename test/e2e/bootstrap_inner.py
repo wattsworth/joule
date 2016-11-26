@@ -14,7 +14,7 @@ SCENARIO_DIR = "/src/test/e2e/scenarios"
 MODULE_SCRIPT_DIR="/src/test/e2e/module_scripts"
 JOULE_CONF_DIR="/etc/joule"
 
-FORCE_DUMP = True
+FORCE_DUMP = False
 
 def prep_system():
   run("apache2ctl start")

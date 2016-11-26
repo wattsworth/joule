@@ -53,7 +53,7 @@ class SQLClient():
         for (name,path) in my_module.source_paths.items():
             self._link_by_path(my_module,name,path,"source")
 
-
+#        print("added module %d with name [%s]"%(my_module.id,my_module.name))
     def update_module(self,my_module):
         """udpate module statistics. COMMIT REQUIRED"""
         c = self.db.cursor()
@@ -71,6 +71,7 @@ class SQLClient():
            REQUIRES a commit! """
         c = self.db.cursor()
         data = [None,line,module_id,int(time.time())]
+#        print(">>%d: %s"%(module_id,line))
         c.execute("INSERT INTO {table} VALUES (?,?,?,?)".format(table=schema.logs["table"]),
                   data)
 
