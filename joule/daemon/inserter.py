@@ -55,7 +55,8 @@ class NilmDbInserter:
     
   def finalize(self):
     self.last_ts = None
-    
+    if(self.decimator is not None):
+      self.decimator.finalize()
 
 class NilmDbDecimator:
   def __init__(self,client,source_path,factor=4):

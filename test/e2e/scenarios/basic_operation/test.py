@@ -29,7 +29,7 @@ def check_modules():
     title = module[joule_cmd.MODULES_TITLE_FIELD]
     status = module[joule_cmd.MODULES_STATUS_FIELD]
     if(title['name'] in ['Normal1','Normal2','Filter']):
-      assert(status==joule_cmd.MODULES_STATUS_RUNNING)
+      assert status==joule_cmd.MODULES_STATUS_RUNNING,"%s status=%s"%(title['name'],status)
     elif(title['name']=='Broken'):
       pass
     else:
@@ -63,9 +63,12 @@ def check_data():
     assert(nilmtool_cmd.is_decimated(path))
 
   #the broken module should have multiple intervals (each restart)
-  intervals = nilmtool_cmd.intervals(broken_path)
-  assert(len(intervals)>1)
-  for interval in intervals:
+  base_intervals = nilmtool_cmd.intervals(broken_path)
+  assert(len(base_intervals)>1)
+  decim_intervals = nilmtool_cmd.intervals(broken_path+"~decim-16")
+  assert(len(decim_intervals)>1)
+
+  for interval in base_intervals:
     num_samples = nilmtool_cmd.data_count(broken_path,interval)
     assert(num_samples==100)
   assert(nilmtool_cmd.is_decimated(broken_path))
