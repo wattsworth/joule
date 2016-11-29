@@ -6,6 +6,8 @@ from joule.utils import numpypipe
 import os
 import json
 
+popen_lock = asyncio.Lock()
+
 class Worker:
 
   def __init__(self,my_module,procdb_client):
@@ -85,21 +87,26 @@ class Worker:
   async def _run_once(self,loop):
 
     cmd = shlex.split(self.module.exec_cmd)
+    await popen_lock.acquire()
     await self._start_pipe_tasks(loop)
     cmd+=["--pipes",json.dumps(self.child_pipes)]
-    create = asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,
-                                             stderr=asyncio.subprocess.STDOUT, close_fds=False)
+    create = asyncio.create_subprocess_exec(*cmd,
+                                            stdin=asyncio.subprocess.DEVNULL,
+                                            stdout=asyncio.subprocess.PIPE,
+                                            stderr=asyncio.subprocess.STDOUT, close_fds=False)
     try:
       self.process = await create
     except Exception as e:
       self.procdb_client.add_log_by_module("ERROR: cannot start module: \n\t%s"%e,
                                        self.module.id)
       logging.error("Cannot start %s"%self.module)
+      popen_lock.release()
       self.process = None
       self._close_child_pipes()
       await self._close_npipes()
       return
     self._close_child_pipes()
+    popen_lock.release()
     self.module.status = module.STATUS_RUNNING
     self.module.pid = self.process.pid
     self.procdb_client.update_module(self.module)
@@ -131,7 +138,6 @@ class Worker:
       if(len(bline)==0):
         break
       line = bline.decode('UTF-8').rstrip()
-#      print(">> %s"%line)
       self.procdb_client.add_log_by_module(line,self.module.id)
 
   async def _start_pipe_tasks(self,loop):
@@ -174,7 +180,9 @@ class Worker:
       npipe.close()
     for task in self.pipe_tasks:
       task.cancel()
-
+    #clear out the arrays
+    self.npipes = []
+    self.pipe_tasks = []
       
   async def _pipe_in(self,npipe,queues):
     """given a numpy pipe, get data and put it 

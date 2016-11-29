@@ -73,7 +73,7 @@ class NumpyPipe:
       self.transport.close()
       self.transport = None
     try:
-      #os.close(self.fd)
+      os.close(self.fd)
       pass
     except OSError:
       pass
