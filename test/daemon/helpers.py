@@ -41,3 +41,16 @@ def create_data(stream,
   ts = np.arange(start,start+step*length,step,dtype=np.uint64)
   data = np.random.rand(length,len(stream.elements))
   return np.hstack((ts[:,None],data))
+
+def mock_stream_info(streams):
+  """pass in array of stream_info's:
+     [['/test/path','float32_3'],
+     ['/test/path2','float32_5'],...]
+     returns a function to mock stream_info as a side_effect"""
+
+  def stream_info(path):
+    for stream in streams:
+      if(stream[0]==path):
+        return [stream]
+    return []
+  return stream_info

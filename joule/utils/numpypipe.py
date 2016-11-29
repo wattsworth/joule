@@ -21,9 +21,6 @@ class NumpyPipe:
   async def read(self):
     await self._open_read()
     
-    if self.reader.at_eof():
-      self.close()
-      raise PipeClosed
     
     rowsize = self.num_cols*8
     s_data = await self.reader.read(MAX_ROWS*rowsize)

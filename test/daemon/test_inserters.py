@@ -98,7 +98,7 @@ class TestNilmDbDecimator(unittest.TestCase):
   @mock.patch("joule.daemon.daemon.nilmdb.client.numpyclient.NumpyClient",autospec=True)      
   def test_finds_existing_streams(self,mock_client):
     #both the base and the decimation stream already exist
-    mock_info = self.mock_stream_info([self.base_info,
+    mock_info = helpers.mock_stream_info([self.base_info,
                                        self.decim_lvl1_info])
     mock_client.stream_list = mock.Mock(side_effect=mock_info)
     inserter.NilmDbDecimator(mock_client,self.test_path)
@@ -108,7 +108,7 @@ class TestNilmDbDecimator(unittest.TestCase):
   @mock.patch("joule.daemon.daemon.nilmdb.client.numpyclient.NumpyClient",autospec=True)      
   def test_creates_first_decimation_stream(self,mock_client):
     #only the base exists
-    mock_info = self.mock_stream_info([self.base_info])
+    mock_info = helpers.mock_stream_info([self.base_info])
     mock_client.stream_list = mock.Mock(side_effect=mock_info)
     inserter.NilmDbDecimator(mock_client,self.test_path)
     #so the decimation stream should be created
@@ -118,7 +118,7 @@ class TestNilmDbDecimator(unittest.TestCase):
   @mock.patch("joule.daemon.daemon.nilmdb.client.numpyclient.NumpyClient",autospec=True)      
   def test_creates_subsequent_decimation_streams(self,mock_client):
     #both the base and the decimation stream already exist
-    mock_info = self.mock_stream_info([self.base_info,
+    mock_info = helpers.mock_stream_info([self.base_info,
                                        self.decim_lvl1_info])
     mock_client.stream_list = mock.Mock(side_effect=mock_info)
     inserter.NilmDbDecimator(mock_client,self.decim_lvl1_info[0])
@@ -133,7 +133,7 @@ class TestNilmDbDecimator(unittest.TestCase):
     data = helpers.create_data(my_stream,length=16)
     ts = data[:,0]; vals = data[:,1:];
     
-    mock_info = self.mock_stream_info([self.base_info,
+    mock_info = helpers.mock_stream_info([self.base_info,
                                        self.decim_lvl1_info,
                                        self.decim_lvl2_info])
     mock_client.stream_list = mock.Mock(side_effect=mock_info)
@@ -150,7 +150,7 @@ class TestNilmDbDecimator(unittest.TestCase):
         #   here we are looking at x16 so the timestamps are from the x4 stream
         #   so start is the mean of the first 4  timestamps, and end is likewise
         self.assertEqual(kwargs['start'],np.mean(ts[:4]))
-        self.assertEqual(kwargs['end'],np.mean(ts[-4:]))
+        self.assertEqual(kwargs['end'],np.mean(ts[-4:])+1)
         #check the contents of the data array
         np.testing.assert_array_almost_equal(data,[[np.mean(ts),   #average ts
                                              np.mean(vals), # data mean,min,ma
@@ -163,15 +163,3 @@ class TestNilmDbDecimator(unittest.TestCase):
     pass
 
 
-  def mock_stream_info(self,streams):
-    """pass in array of stream_info's:
-       [['/test/path','float32_3'],
-       ['/test/path2','float32_5'],...]
-       returns a function to mock stream_info as a side_effect"""
-    
-    def stream_info(path):
-      for stream in streams:
-        if(stream[0]==path):
-          return [stream]
-      return []
-    return stream_info

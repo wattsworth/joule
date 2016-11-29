@@ -155,15 +155,15 @@ class NilmDbDecimator:
 
     # set up the interval
     if(self.last_ts is None):
-      start_ts = data[0,0]
-    else:
-      start_ts = self.last_ts+1
-    self.last_ts = data[n-1,0]
+      self.last_ts = data[0,0]
+
+    start = self.last_ts
+    end = data[n-1,0]+1
     # insert the data into the database
     self.client.stream_insert_numpy(self.path, out,
-                                    start=start_ts, 
-                                    end=self.last_ts)
-
+                                    start=start, 
+                                    end=end)
+    self.last_ts = end
     # now call the child decimation object
     if(self.child==None):
       self.child = NilmDbDecimator(self.client,self.path)

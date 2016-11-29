@@ -13,6 +13,8 @@ class TestClient(unittest.TestCase):
   def test_returns_none_if_module_not_found(self):
     m=self.procdb.find_module_by_id(2)
     self.assertIsNone(m)
+    m=self.procdb.find_all_modules()
+    self.assertEqual(m,[])
     
   def test_returns_none_if_stream_not_found(self):
     s=self.procdb.find_stream_by_id(2)

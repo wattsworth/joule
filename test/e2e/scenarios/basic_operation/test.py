@@ -49,25 +49,26 @@ def check_data():
   broken_path = "/broken/data"
   filter1_path = "/filter1/data"
   filter2_path = "/filter2/data"
-  intervals = nilmtool_cmd.intervals(normal1_path)
-  assert(len(intervals)==1)
-  num_samples = nilmtool_cmd.data_count(normal1_path)
-  assert(num_samples>500)
-  intervals = nilmtool_cmd.intervals(normal2_path)
-  assert(len(intervals)==1)
-  num_samples = nilmtool_cmd.data_count(normal2_path)
-  assert(num_samples>500)
+  for path in [normal1_path,normal2_path,filter1_path,filter2_path]:
+    #1.) check streams have one continuous interval
+    base_intervals = nilmtool_cmd.intervals(path)
+
+    decim_intervals = nilmtool_cmd.intervals(path+"~decim-16") #check level 2 decimation
+    assert(len(base_intervals)==1)
+    assert(len(decim_intervals)==1)
+    #2.) make sure this interval has data in it
+    num_samples = nilmtool_cmd.data_count(path)
+    assert(num_samples>500)
+    #3.) make sure decimations have data
+    assert(nilmtool_cmd.is_decimated(path))
+
+  #the broken module should have multiple intervals (each restart)
   intervals = nilmtool_cmd.intervals(broken_path)
   assert(len(intervals)>1)
   for interval in intervals:
     num_samples = nilmtool_cmd.data_count(broken_path,interval)
     assert(num_samples==100)
-
-  assert(nilmtool_cmd.is_decimated(normal1_path))
-  assert(nilmtool_cmd.is_decimated(normal2_path))
   assert(nilmtool_cmd.is_decimated(broken_path))
-  assert(nilmtool_cmd.is_decimated(filter1_path))
-  assert(nilmtool_cmd.is_decimated(filter2_path))
 
   #verify the filter module executed correctly
   #check the first 2000 rows, the filter won't have all the source data because
