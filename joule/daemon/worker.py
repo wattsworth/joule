@@ -192,6 +192,7 @@ class Worker:
         data = await npipe.read()
         for q in queues:
           q.put_nowait(data)
+        await asyncio.sleep(0.25)
       except numpypipe.PipeClosed:
         break
      
@@ -199,4 +200,4 @@ class Worker:
     while(True):
       data = await queue.get()
       await npipe.write(data)
-
+      await asyncio.sleep(0.25)
