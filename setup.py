@@ -35,8 +35,8 @@ setup(
         install_requires = ['cliff',
                             'numpy',
                             'psutil'],
-       namespace_packages = [],
-        packages=find_packages(),
+        namespace_packages = [],
+        packages=find_packages(exclude="test"),
         include_package_data=True,
 
         entry_points={
