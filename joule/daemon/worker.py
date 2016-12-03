@@ -163,11 +163,11 @@ class Worker:
     (r,w) = os.pipe()
     if(direction=='output'): # fd    ==> npipe
       os.set_inheritable(w,True)
-      npipe = numpypipe.NumpyPipe(r,stream,loop)
+      npipe = numpypipe.NumpyPipe(name="fd ==> %s"%path,layout=stream.layout)
       return(npipe,w)
     else:                    # npipe ==> fd
       os.set_inheritable(r,True)
-      npipe = numpypipe.NumpyPipe(w,stream,loop)
+      npipe = numpypipe.NumpyPipe(name="%s ==> fd"%path,layout=stream.layout)
       return (r,npipe)
     
   def _close_child_pipes(self):

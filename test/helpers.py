@@ -1,5 +1,5 @@
 import configparser
-from joule.daemon import stream,element
+from joule.daemon import module,stream,element
 import numpy as np
 
 def build_stream(name,
@@ -14,6 +14,18 @@ def build_stream(name,
   for n in range(num_elements):
     my_stream.add_element(element.build_element("e%d"%n))
   return my_stream
+
+def build_module(name,
+                 description ="test_description",
+                 exec_cmd="/bin/true",
+                 source_paths = {"path1":"/some/path/1"},
+                 destination_paths = {"path1":"/some/path/2"},
+                 status=module.STATUS_UNKNOWN,
+                 pid=-1,
+                 id=None):
+  return module.Module(name,description,exec_cmd,source_paths,destination_paths,
+                       status=status,pid=pid,id=id)
+
 
 def create_data(layout,
                 length=100,
@@ -38,6 +50,11 @@ def create_data(layout,
   # Need the squeeze in case sarray['data'] is 1 dimensional
   sarray['data'] = np.squeeze(data)
   return sarray
+
+def to_chunks(data,chunk_size):
+  """Yield successive MAX_BLOCK_SIZE chunks of data."""
+  for i in range(0, len(data), chunk_size):
+    yield data[i:i + chunk_size]
 
 def parse_layout(layout):
   ltype = layout.split('_')[0]
@@ -71,3 +88,17 @@ default_config = parse_configs(
           ModuleDirectory = /etc/joule/module_configs
           StreamDirectory = /etc/joule/stream_configs
     """)
+
+
+def mock_stream_info(streams):
+  """pass in array of stream_info's:
+     [['/test/path','float32_3'],
+     ['/test/path2','float32_5'],...]
+     returns a function to mock stream_info as a side_effect"""
+
+  def stream_info(path):
+    for stream in streams:
+      if(stream[0]==path):
+        return [stream]
+    return []
+  return stream_info

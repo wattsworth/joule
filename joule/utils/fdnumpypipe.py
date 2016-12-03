@@ -1,16 +1,14 @@
 import numpy as np
 import asyncio
-from . import NumpyPipe
+from . import numpypipe
 import os
 
 MAX_ROWS=3000 #max array size is 3000 rows
 
-class FdNumpyPipe(NumpyPipe):
+class FdNumpyPipe(numpypipe.NumpyPipe):
 
   def __init__(self,name,fd,layout,loop=None):
-    super(FdNumpyPipe,name,layout)
-    """ given a file descriptor [fd] and a [stream], provide numpy array
-    access to data in [fd] as an asynchronous iterator"""
+    super().__init__(name,layout)
     self.fd = fd
     if(loop is None):
       self.loop = asyncio.get_event_loop()
@@ -23,34 +21,31 @@ class FdNumpyPipe(NumpyPipe):
     
   async def read(self,flatten=False):
     await self._open_read()
-    
-    
-    rowsize = self.num_cols*8
-    s_data = await self.reader.read(MAX_ROWS*rowsize)
+    rowbytes = self.dtype.itemsize
+    raw = await self.reader.read(MAX_ROWS*rowbytes)
 
-    if(len(s_data)==0):
+    if(len(raw)==0):
       self.close()
       raise PipeClosed
     
-    extra_bytes = (len(s_data)+len(self.buffer))%rowsize
+    extra_bytes = (len(raw)+len(self.buffer))%rowbytes
+    #TODO: optimize for common case where buffer is empty
     if(extra_bytes>0):
-      data=np.fromstring(self.buffer+s_data[:-extra_bytes],dtype='float64')
-      self.buffer=s_data[-extra_bytes:]
+      data=np.fromstring(self.buffer+raw[:-extra_bytes],dtype=self.dtype)
+      self.buffer=raw[-extra_bytes:]
     else:
-      data=np.fromstring(self.buffer+s_data,dtype=self.dtype)
+      data=np.fromstring(self.buffer+raw,dtype=self.dtype)
       self.buffer = b''
-    data.shape = len(data)//self.num_cols,self.num_cols
-    if(flatten):
-      return self._flatten(data)
-    else:
-      return data
+    return self._format_data(data,flatten)
 
-
+  def consume(self,num_rows):
+    pass
+  
   async def write(self,data):
     await self._open_write()
     #make sure dtype is structured
-    data = self._apply_dtype(data)
-    self.writer.write(data.tobytes())
+    sdata = self._apply_dtype(data)
+    self.writer.write(sdata.tobytes())
 
   async def _open_read(self):
     """initialize reader if not already setup"""

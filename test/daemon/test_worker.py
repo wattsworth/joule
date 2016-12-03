@@ -28,9 +28,9 @@ class TestWorker(asynctest.TestCase):
                                             'path2':'/output/path2'})
 
     self.myprocdb = mock.create_autospec(spec = SQLClient)
-    #mock up a stream with float64_1 data format so numpypipe builds correctly
+    #mock up a stream with int32_4 data format so numpypipe builds correctly
     self.myprocdb.find_stream_by_path = mock.Mock(return_value =
-                                                  helpers.build_stream(name="stub",num_elements=1))
+                                                  helpers.build_stream(name="stub",num_elements=4))
     #build data sources for module
     self.q_in1 = asyncio.Queue()
     mock_worker1=mock.create_autospec(spec = worker.Worker)
