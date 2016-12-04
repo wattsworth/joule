@@ -4,7 +4,7 @@ Test the inserter and decimator objects
 import unittest
 from joule.daemon import inserter, daemon
 from unittest import mock
-from . import helpers
+from test import helpers
 
 class TestNilmDbDecimatorErrors(unittest.TestCase):
 

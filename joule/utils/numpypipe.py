@@ -11,7 +11,7 @@ class NumpyPipe:
   def read(self,flatten=False):
     raise NumpyPipeError("abstract method must be implemented by child")
 
-  def write(self):
+  def write(self,data):
     raise NumpyPipeError("abstract method must be implemented by child")
 
   def consume(self,num_rows):

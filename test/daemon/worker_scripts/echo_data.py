@@ -12,14 +12,14 @@ def main():
   args = parser.parse_args()
 
   pipes = json.loads(args.pipes)
-  fd1_in = pipes['sources']['path1']
-  fd1_out = pipes['destinations']['path1']
-  x = os.read(fd1_in,1000)
+  fd1_in = pipes['sources']['path1']['fd']
+  fd1_out = pipes['destinations']['path1']['fd']
+  x = os.read(fd1_in,100000)
   os.write(fd1_out,x)
 
-  fd2_in = pipes['sources']['path2']
-  fd2_out = pipes['destinations']['path2']
-  x = os.read(fd2_in,1000)
+  fd2_in = pipes['sources']['path2']['fd']
+  fd2_out = pipes['destinations']['path2']['fd']
+  x = os.read(fd2_in,100000)
   os.write(fd2_out,x)
 
 

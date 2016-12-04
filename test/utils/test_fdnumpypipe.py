@@ -4,7 +4,7 @@ from joule.utils.fdnumpypipe import FdNumpyPipe
 import os
 import numpy as np
 import asyncio
-from . import helpers
+from test import helpers
 
 class TestFdNumpyPipe(asynctest.TestCase):
 

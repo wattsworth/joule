@@ -2,7 +2,7 @@ from joule.daemon import daemon
 import asyncio
 import asynctest
 from joule.utils import config_manager
-from . import helpers
+from test import helpers
 import unittest
 from unittest import mock
 

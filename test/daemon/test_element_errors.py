@@ -1,6 +1,6 @@
 import joule.daemon.element as stream
 from joule.daemon.errors import ConfigError
-from . import helpers
+from test import helpers
 import unittest
 
 class TestElementErrors(unittest.TestCase):

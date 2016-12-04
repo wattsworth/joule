@@ -2,7 +2,7 @@ import logging
 import asyncio
 import shlex
 from joule.daemon import module
-from joule.utils import numpypipe
+from joule.utils.fdnumpypipe import FdNumpyPipe, PipeClosed
 import os
 import json
 
@@ -88,7 +88,7 @@ class Worker:
 
     cmd = shlex.split(self.module.exec_cmd)
     await popen_lock.acquire()
-    await self._start_pipe_tasks(loop)
+    await self._start_pipe_tasks()
     cmd+=["--pipes",json.dumps(self.child_pipes)]
     create = asyncio.create_subprocess_exec(*cmd,
                                             stdin=asyncio.subprocess.DEVNULL,
@@ -140,40 +140,46 @@ class Worker:
       line = bline.decode('UTF-8').rstrip()
       self.procdb_client.add_log_by_module(line,self.module.id)
 
-  async def _start_pipe_tasks(self,loop):
+  async def _start_pipe_tasks(self):
     #configure destination pipes          [module]==>[jouled]
     for name,path in self.module.destination_paths.items():
-      (npipe,fd) = self._build_numpy_pipe(path,'output',loop)
-      self.child_pipes['destinations'][name]=fd
+      stream = self.procdb_client.find_stream_by_path(path)
+      assert stream is not None, "procdb missing stream %s"%path
+      (npipe,fd) = self._build_numpy_pipe(stream,'output')
+      self.child_pipes['destinations'][name]={'fd': fd, 'layout': stream.layout}
       self.npipes.append(npipe)
       task = asyncio.ensure_future(self._pipe_in(npipe,self.output_queues[path]))
       self.pipe_tasks.append(task)
     
     #configure source pipes               [jouled]==>[module]
     for name,path in self.module.source_paths.items():
-      (fd,npipe) = self._build_numpy_pipe(path,'input',loop)
-      self.child_pipes['sources'][name] = fd
+      stream = self.procdb_client.find_stream_by_path(path)
+      assert stream is not None, "procdb missing stream %s"%path
+      (fd,npipe) = self._build_numpy_pipe(stream,'input')
+      self.child_pipes['sources'][name] = {'fd':fd, 'layout': stream.layout}
       self.npipes.append(npipe)
       task = asyncio.ensure_future(self._pipe_out(self.input_queues[path],npipe))
       self.pipe_tasks.append(task)
 
-  def _build_numpy_pipe(self,path,direction,loop):
-    stream = self.procdb_client.find_stream_by_path(path)
-    assert(stream is not None) #procdb must have this stream entry
+  def _build_numpy_pipe(self,stream,direction):
     (r,w) = os.pipe()
     if(direction=='output'): # fd    ==> npipe
       os.set_inheritable(w,True)
-      npipe = numpypipe.NumpyPipe(name="fd ==> %s"%path,layout=stream.layout)
+      npipe = FdNumpyPipe(name="fd ==> %s"%stream.path,
+                          fd = r,
+                          layout=stream.layout)
       return(npipe,w)
     else:                    # npipe ==> fd
       os.set_inheritable(r,True)
-      npipe = numpypipe.NumpyPipe(name="%s ==> fd"%path,layout=stream.layout)
+      npipe = FdNumpyPipe(name="%s ==> fd"%stream.path,
+                          fd = w,
+                          layout=stream.layout)
       return (r,npipe)
     
   def _close_child_pipes(self):
     for pipe_set in self.child_pipes.values():
       for pipe in pipe_set.values():
-        os.close(pipe)
+        os.close(pipe['fd'])
     
   async def _close_npipes(self):
     for npipe in self.npipes:
@@ -193,7 +199,7 @@ class Worker:
         for q in queues:
           q.put_nowait(data)
         await asyncio.sleep(0.25)
-      except numpypipe.PipeClosed:
+      except PipeClosed:
         break
      
   async def _pipe_out(self,queue,npipe):
