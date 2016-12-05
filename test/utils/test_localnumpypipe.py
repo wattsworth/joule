@@ -59,10 +59,10 @@ class TestLocalNumpyPipe(asynctest.TestCase):
   def test_handles_flat_and_structured_arrays(self):
     """converts flat arrays to structured arrays and returns
        either flat or structured arrays depending on [flatten] parameter"""
-    LAYOUT="float64_3"; LENGTH=1000
+    LAYOUT="float64_1"; LENGTH=1000
     my_pipe = LocalNumpyPipe(name="my_pipe",layout=LAYOUT)
     test_data = helpers.create_data(LAYOUT,length=LENGTH)
-    flat_data = np.hstack((test_data['timestamp'][:,None],test_data['data']))
+    flat_data = np.c_[test_data['timestamp'][:,None],test_data['data']]
 
     async def reader():
       sdata = await my_pipe.read()

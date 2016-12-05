@@ -38,7 +38,7 @@ if __name__=="__main__":
   parser.add_argument("--pipes")
   args = parser.parse_args()
   pipes = json.loads(args.pipes)
-  output_fd = pipes["destinations"]["path1"]
+  output_fd = pipes["destinations"]["path1"]["fd"]
   main(time_now(),output_fd)
   main(time_now())
   

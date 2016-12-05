@@ -2,6 +2,7 @@ import numpy as np
 import asyncio
 from . import numpypipe
 import os
+import sys
 
 MAX_ROWS=3000 #max array size is 3000 rows
 
@@ -45,7 +46,7 @@ class FdNumpyPipe(numpypipe.NumpyPipe):
     await self._open_write()
     #make sure dtype is structured
     sdata = self._apply_dtype(data)
-    self.writer.write(sdata.tobytes())
+    self.writer.write(sdata.tostring())
 
   async def _open_read(self):
     """initialize reader if not already setup"""

@@ -61,7 +61,7 @@ class NumpyPipe:
     if(flatten==False):      
       return data
     else:
-      return  np.hstack((data['timestamp'][:,None],data['data']))
+      return  np.c_[data['timestamp'][:,None],data['data']]
       
 class NumpyPipeError(Exception):
   """base class for numpypipe exceptions"""

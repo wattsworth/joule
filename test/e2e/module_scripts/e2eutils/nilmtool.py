@@ -2,6 +2,7 @@
 import nilmdb.client
 import requests
 import numpy as np
+import json
 from io import StringIO
 
 NILMDB_URL = "http://localhost/nilmdb"
@@ -18,7 +19,12 @@ def data_count(path,interval=None):
     req = requests.get("{url}/stream/extract?path={path}&start={start}&end={end}&count=1".format(url=NILMDB_URL,path=path,start=interval[0],end=interval[1]))
 
   return int(req.text)
-    
+
+def layout(path):
+    req = requests.get("{url}/stream/list?path={path}".format(url=NILMDB_URL,path=path))
+    pathinfo = json.loads(req.text)
+    return pathinfo[0][1] #layout from first entry
+  
 def data_extract(path,interval=None):
   if(interval is None):
     req = requests.get("{url}/stream/extract?path={path}".format(url=NILMDB_URL,path=path))

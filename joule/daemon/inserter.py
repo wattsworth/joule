@@ -115,7 +115,7 @@ class NilmDbDecimator:
       
   def process(self,sarray):
     #flatten structured array
-    data = np.hstack((sarray['timestamp'][:,None],sarray['data']))
+    data = np.c_[sarray['timestamp'][:,None],sarray['data']]
     #check if there is old data
     if(len(self.buffer) != 0):
       #append the new data onto the old data
