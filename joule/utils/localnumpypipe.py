@@ -34,6 +34,15 @@ class LocalNumpyPipe(numpypipe.NumpyPipe):
     return self._format_data(self.buffer[:self.last_index],flatten)
 
 
+  def read_nowait(self,flatten=False):
+    while(not self._buffer_full() and not self.queue.empty()):
+      block = self.queue.get_nowait()
+      self.buffer[self.last_index:self.last_index+len(block)]=block
+      self.last_index += len(block)
+      if(self._buffer_full):
+        break #no more room in buffer
+    return self._format_data(self.buffer[:self.last_index],flatten)
+    
   def consume(self,num_rows):
     if(num_rows>self.last_index):
       raise errors.NumpyPipeError("cannot consume %d rows: only %d available"\
@@ -52,6 +61,18 @@ class LocalNumpyPipe(numpypipe.NumpyPipe):
     for block in self._chunks(sarray):
       self.queue.put_nowait(block)
 
+  def write_nowait(self,data):
+    #convert into a structured array
+    sarray = self._apply_dtype(data)
+    #send data to subscribers
+    for pipe in self.subscribers:
+        pipe.write_nowait(sarray)
+
+    #add blocks of data to our queue
+    for block in self._chunks(sarray):
+      self.queue.put_nowait(block)
+
+  
   def subscribe(self,pipe):
     self.subscribers.append(pipe)
 
