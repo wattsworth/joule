@@ -7,7 +7,7 @@ import argparse
 import json
 
 rows = 100
-freq = 4 #Hz
+freq = 40 #Hz
 
   
 def main(ts,fd):
@@ -22,7 +22,6 @@ def main(ts,fd):
     ts.shape = (rows,1)
     ts_data = np.hstack((ts,data))
     output.write(ts_data.tobytes())
-    print("added data")
     data_ts = top_ts
     time.sleep(1/freq)
 

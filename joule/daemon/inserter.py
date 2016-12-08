@@ -4,18 +4,19 @@ import re
 from .errors import DaemonError
 
 class NilmDbInserter:
-  def __init__(self,client,
+  def __init__(self,aioclient,client,
                path,
                insertion_period=0, #no insertion buffering by default
                decimate=True):
     if(decimate):
-      self.decimator = NilmDbDecimator(client,path)
+      self.decimator = NilmDbDecimator(client,aioclient,path)
     else:
       self.decimator = None
 
     self.insertion_period=insertion_period
     self.path = path
     self.client = client
+    self.aioclient = aioclient
     self.last_ts = None
     self.buffer = None
     self.stop_requested = False
@@ -23,21 +24,22 @@ class NilmDbInserter:
   async def process(self,queue,loop=None):
     while(not self.stop_requested):
       await asyncio.sleep(self.insertion_period,loop=loop)
+      print("%s q: %d"%(self.path,queue.qsize()))
       while not queue.empty():
         data = await queue.get()
         if(data is None):
-          self.flush()
+          await self.flush()
           self.finalize()
         elif(self.buffer is None):
           self.buffer = np.array(data)
         else:
           self.buffer = np.append(self.buffer,data,axis=0)
-      self.flush()
+      await self.flush()
 
   def stop(self):
     self.stop_requested = True
     
-  def flush(self):
+  async def flush(self):
     if(self.buffer is None or len(self.buffer) == 0):
       return #nothing to flush
     if(self.last_ts is None):
@@ -45,12 +47,12 @@ class NilmDbInserter:
 
     start = self.last_ts
     end = self.buffer[-1,0]+1
-    self.client.stream_insert_numpy(self.path, self.buffer,
-                                    start=start, 
-                                    end=end)
+    await self.aioclient.stream_insert(self.path, self.buffer,
+                                       start=start, 
+                                       end=end)
     self.last_ts = end #append next buffer to this interval
     if(self.decimator is not None):
-      self.decimator.process(self.buffer)
+      await self.decimator.process(self.buffer)
     self.buffer = None
     
   def finalize(self):
@@ -59,9 +61,10 @@ class NilmDbInserter:
       self.decimator.finalize()
 
 class NilmDbDecimator:
-  def __init__(self,client,source_path,factor=4):
+  def __init__(self,client,aioclient,source_path,factor=4):
     self.factor = factor
     self.client = client
+    self.aioclient = aioclient
     #get source info
     try:
       _,source_layout=client.stream_list(path = source_path)[0]
@@ -75,7 +78,7 @@ class NilmDbDecimator:
       level = source_level*factor
     else:
       self.again = False
-      destination_layout = "float32_{width}".\
+      destination_layout = "float64_{width}".\
                            format(width=self._stream_width(source_layout)*3)
       base_path = source_path
       level = factor
@@ -113,7 +116,7 @@ class NilmDbDecimator:
     if(self.child is not None):
       self.child.finalize()
       
-  def process(self,data):
+  async def process(self,data):
     #check if there is old data
     if(len(self.buffer) != 0):
       #append the new data onto the old data
@@ -161,12 +164,12 @@ class NilmDbDecimator:
     start = self.last_ts
     end = data[n-1,0]+1
     # insert the data into the database
-    self.client.stream_insert_numpy(self.path, out,
+    await self.aioclient.stream_insert(self.path, out,
                                     start=start, 
                                     end=end)
     self.last_ts = end
     # now call the child decimation object
     if(self.child==None):
-      self.child = NilmDbDecimator(self.client,self.path)
-    self.child.process(out)
+      self.child = NilmDbDecimator(self.client,self.aioclient,self.path)
+    await self.child.process(out)
 

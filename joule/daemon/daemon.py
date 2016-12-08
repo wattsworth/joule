@@ -5,7 +5,7 @@ import configparser
 import asyncio
 from .worker import Worker
 from .errors import DaemonError
-from . import stream, module
+from . import stream, module, aionilmdb
 from joule.procdb import client as procdb_client
 import logging
 import functools
@@ -15,6 +15,7 @@ import nilmtools.filter
 import signal
 from joule.utils import config_manager
 from . import inserter
+import cProfile
 
 class Daemon(object):
     log = logging.getLogger(__name__)
@@ -24,6 +25,7 @@ class Daemon(object):
         #populated by initialize
         self.procdb = None
         self.nilmdb_client = None
+        self.aionilmdb_client = None
         self.stop_requested = False
         self.modules = []
         self.streams = []
@@ -39,9 +41,9 @@ class Daemon(object):
         
     def initialize(self,config):
         #Build a NilmDB client
+        self.aionilmdb_client = aionilmdb.AioNilmdb(config.nilmdb.url)
         self.nilmdb_client = nilmdb.client.numpyclient.\
                              NumpyClient(config.nilmdb.url)
-
         #Set up the ProcDB
         self.procdb = procdb_client.SQLClient(config.procdb.db_path)
         self.procdb_commit_interval = 5 #commit every 5 seconds
@@ -208,7 +210,9 @@ class Daemon(object):
             stream = self.path_streams[path]
             #build inserters for any paths that have non-zero keeps
             if(stream.keep_us):
-                my_inserter = inserter.NilmDbInserter(self.nilmdb_client,
+                my_inserter = inserter.NilmDbInserter(
+                    self.aionilmdb_client,
+                    self.nilmdb_client,
                                             path,
                                             insertion_period=self.NILMDB_INSERTION_PERIOD,
                                             decimate = stream.decimate)
@@ -246,7 +250,7 @@ def main(argv=None):
     parser.add_argument("--config")
     args = parser.parse_args(argv)
     daemon = Daemon()
-
+#    logging.basicConfig(level=logging.DEBUG)
     try:
         configs = load_configs(args.config)
     except Exception as e:
@@ -261,7 +265,11 @@ def main(argv=None):
     loop=asyncio.get_event_loop()
     loop.set_debug(True)
     loop.add_signal_handler(signal.SIGINT,daemon.stop)
+    pr = cProfile.Profile()
+    pr.enable()
     daemon.run(loop)
     loop.close()
+    pr.disable()
+    pr.dump_stats('/home/pi/joule_stats.dat')
     exit(0)
 
