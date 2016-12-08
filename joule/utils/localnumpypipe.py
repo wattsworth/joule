@@ -39,7 +39,7 @@ class LocalNumpyPipe(numpypipe.NumpyPipe):
       block = self.queue.get_nowait()
       self.buffer[self.last_index:self.last_index+len(block)]=block
       self.last_index += len(block)
-      if(self._buffer_full):
+      if(self._buffer_full()):
         break #no more room in buffer
     return self._format_data(self.buffer[:self.last_index],flatten)
     

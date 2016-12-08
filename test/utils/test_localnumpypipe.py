@@ -65,6 +65,24 @@ class TestLocalNumpyPipe(asynctest.TestCase):
     result = my_pipe.read_nowait()
     np.testing.assert_array_almost_equal(test_data['data'],result['data'])
     np.testing.assert_array_almost_equal(test_data['timestamp'],result['timestamp'])
+
+  def test_nowait_read_empties_queue(self):
+    LAYOUT="int8_2"; LENGTH=50
+    my_pipe = LocalNumpyPipe(name="my_pipe",layout=LAYOUT)
+    test_data = helpers.create_data(LAYOUT,length=LENGTH)
+
+
+    async def writer():
+      for row in test_data:
+        await my_pipe.write(np.array([row]))
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(writer())
+    
+    result = my_pipe.read_nowait()
+
+    np.testing.assert_array_almost_equal(test_data['data'],result['data'])
+    np.testing.assert_array_almost_equal(test_data['timestamp'],result['timestamp'])
     
   def test_handles_flat_and_structured_arrays(self):
     """converts flat arrays to structured arrays and returns

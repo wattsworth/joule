@@ -34,9 +34,10 @@ setup(
         provides = [],
         install_requires = ['cliff',
                             'numpy',
-                            'psutil'],
+                            'psutil',
+                            'python-datetime-tz'],
         namespace_packages = [],
-        packages=find_packages(exclude="test"),
+        packages=["joule"],#find_packages(exclude="test"),
         include_package_data=True,
 
         entry_points={
