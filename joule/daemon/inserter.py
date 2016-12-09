@@ -43,10 +43,11 @@ class NilmDbInserter:
     if(self.buffer is None or len(self.buffer) == 0):
       return #nothing to flush
     if(self.last_ts is None):
-      self.last_ts = self.buffer[0,0]
+      self.last_ts = self.buffer['timestamp'][0]
 
     start = self.last_ts
-    end = self.buffer[-1,0]+1
+
+    end = self.buffer['timestamp'][-1]+1
     await self.aioclient.stream_insert(self.path, self.buffer,
                                        start=start, 
                                        end=end)
@@ -116,7 +117,10 @@ class NilmDbDecimator:
     if(self.child is not None):
       self.child.finalize()
       
-  async def process(self,data):
+  async def process(self,sarray):
+    #flatten structured array
+    data = np.c_[sarray['timestamp'][:,None],sarray['data']]
+
     #check if there is old data
     if(len(self.buffer) != 0):
       #append the new data onto the old data
@@ -163,13 +167,20 @@ class NilmDbDecimator:
 
     start = self.last_ts
     end = data[n-1,0]+1
+    # structure the array
+    width = np.shape(out)[1]-1
+    dtype = np.dtype([('timestamp','<i8'),('data','<f4',width)])
+    sout = np.zeros(out.shape[0], dtype=dtype)
+    sout['timestamp']=out[:,0]
+    sout['data']=out[:,1:]
     # insert the data into the database
-    await self.aioclient.stream_insert(self.path, out,
-                                    start=start, 
-                                    end=end)
+
+    await self.aioclient.stream_insert(self.path, sout,
+                                       start=start, 
+                                       end=end)
     self.last_ts = end
     # now call the child decimation object
     if(self.child==None):
       self.child = NilmDbDecimator(self.client,self.aioclient,self.path)
-    await self.child.process(out)
+    await self.child.process(sout)
 

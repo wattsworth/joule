@@ -7,12 +7,12 @@ from unittest import mock
 import numpy as np
 import asyncio
 import asynctest
-from . import helpers
+from test import helpers
 
 class TestNilmDbInserter(asynctest.TestCase):
 
   def setUp(self):
-    self.my_stream = helpers.build_stream(name="test",path="/test/path",num_elements=5)
+    self.my_stream = helpers.build_stream(name="test",datatype="uint32",path="/test/path",num_elements=5)
     
   @mock.patch("joule.daemon.daemon.nilmdb.client.numpyclient.NumpyClient",autospec=True)
   @mock.patch("joule.daemon.inserter.NilmDbDecimator",autospec=True)
@@ -26,7 +26,7 @@ class TestNilmDbInserter(asynctest.TestCase):
     interval_start = 500
     step = 100
     interval_end = interval_start+(length-1)*step
-    data = helpers.create_data(self.my_stream,length=length,start=interval_start,step=step)
+    data = helpers.create_data(self.my_stream.layout,length=length,start=interval_start,step=step)
     
     #insert it by block
     blk_size = 10
@@ -63,9 +63,9 @@ class TestNilmDbInserter(asynctest.TestCase):
     #missing data between two inserts
     interval1_start = 500; interval2_start = 1000;
     queue = asyncio.Queue(loop=self.loop)
-    queue.put_nowait(helpers.create_data(self.my_stream,start=interval1_start,step=1))
+    queue.put_nowait(helpers.create_data(self.my_stream.layout,start=interval1_start,step=1))
     queue.put_nowait(None) #break in the data
-    queue.put_nowait(helpers.create_data(self.my_stream,start=interval2_start,step=1))
+    queue.put_nowait(helpers.create_data(self.my_stream.layout,start=interval2_start,step=1))
                           
     #send everything to the database
     async def stop_inserter():
@@ -91,7 +91,7 @@ class TestNilmDbDecimator(unittest.TestCase):
   
   def setUp(self):
     self.test_path = "/test/path"
-    self.base_info = [self.test_path,"int8_4"]
+    self.base_info = [self.test_path,"int32_4"]
     self.decim_lvl1_info = [self.test_path+"~decim-4","float32_12"]
     self.decim_lvl2_info = [self.test_path+"~decim-16","float32_12"]
 
@@ -129,13 +129,12 @@ class TestNilmDbDecimator(unittest.TestCase):
   def test_correctly_decimates_data(self,mock_client):
     #    vals = np.arange(1,17); ts = np.arange(1,17)*100 #some test data to decimate
     #    data = np.hstack((ts[:,None],vals[:,None]))
-    my_stream = helpers.build_stream("test",path="/test/path",num_elements=1)
-    data = helpers.create_data(my_stream,length=16)
-    ts = data[:,0]; vals = data[:,1:];
+    data = helpers.create_data("int32_4",length=16)
+    ts = data['timestamp']; vals = data['data'];
     
     mock_info = helpers.mock_stream_info([self.base_info,
-                                       self.decim_lvl1_info,
-                                       self.decim_lvl2_info])
+                                          self.decim_lvl1_info,
+                                          self.decim_lvl2_info])
     mock_client.stream_list = mock.Mock(side_effect=mock_info)
     my_decimator = inserter.NilmDbDecimator(mock_client,self.base_info[0])
     my_decimator.process(data[:7]) #insert data in chunks to test decimation buffer
@@ -143,6 +142,8 @@ class TestNilmDbDecimator(unittest.TestCase):
     inserted_lvl2 = False 
     for args in mock_client.stream_insert_numpy.call_args_list:
       (path,data) = args[0]
+      r_vals = data['data']
+      r_ts = data['timestamp']
       kwargs = args[1]
       if(path==self.decim_lvl2_info[0]):
         #upper decimations match incoming data bounds **note actual bounds here**
@@ -152,10 +153,11 @@ class TestNilmDbDecimator(unittest.TestCase):
         self.assertEqual(kwargs['start'],np.mean(ts[:4]))
         self.assertEqual(kwargs['end'],np.mean(ts[-4:])+1)
         #check the contents of the data array
-        np.testing.assert_array_almost_equal(data,[[np.mean(ts),   #average ts
-                                             np.mean(vals), # data mean,min,ma
-                                             np.min(vals),
-                                             np.max(vals)]])
+        np.testing.assert_array_almost_equal(r_ts,np.mean(ts))
+        expected_vals =  np.hstack((np.mean(vals,axis=0), # data mean,min,ma
+                                    np.min(vals,axis=0),
+                                    np.max(vals,axis=0)))
+        np.testing.assert_array_almost_equal(np.squeeze(r_vals), expected_vals)
         inserted_lvl2=True
     self.assertTrue(inserted_lvl2) #make sure level2 (x16) decimation was performed
 

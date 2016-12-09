@@ -1,5 +1,5 @@
 from joule.daemon import module
-from . import helpers
+from test import helpers
 import unittest
 
 class TestModule(unittest.TestCase):

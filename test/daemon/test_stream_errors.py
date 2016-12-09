@@ -1,6 +1,6 @@
 from joule.daemon import stream
 from joule.daemon.errors import ConfigError
-from . import helpers
+from test import helpers
 import unittest
 
 class TestStreamErrors(unittest.TestCase):

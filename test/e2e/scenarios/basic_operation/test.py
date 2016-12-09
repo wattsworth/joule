@@ -39,9 +39,9 @@ def check_data():
   """
   Test: check data inserted into nilmdb
   Goal:
-    /normal1/data has 1 interval with >500 samples
-    /normal2/subpath/data has multiple intervals each with 100 samples
-    /broken/data exists but has no data
+    /normal1/data is int32_1, has 1 interval with >500 samples
+    /normal2/subpath/data  is int32_1, has multiple intervals each with 100 samples
+    /broken/data is float64_1, has separated intervals of data
     both normal1 and normal2 have decimations
   """
   normal1_path = "/normal1/data"
@@ -73,6 +73,12 @@ def check_data():
     assert(num_samples==100)
   assert(nilmtool_cmd.is_decimated(broken_path))
 
+  #verify stream layouts
+  assert nilmtool_cmd.layout(normal1_path)=="int32_1", nilmtool_cmd.layout(normal1_path)
+  assert nilmtool_cmd.layout(normal2_path)=="int32_1"
+  assert nilmtool_cmd.layout(filter1_path)=="float32_1"
+  assert nilmtool_cmd.layout(filter2_path)=="float64_1"
+  
   #verify the filter module executed correctly
   #check the first 2000 rows, the filter won't have all the source data because
   #the process was stopped 

@@ -1,5 +1,5 @@
 from joule.daemon import stream,element
-from . import helpers
+from test import helpers
 import unittest
 
 class TestStream(unittest.TestCase):
@@ -48,12 +48,12 @@ class TestStream(unittest.TestCase):
         parsed_stream = self.parser.run(self.base_config)
         self.assertEqual(parsed_stream.description,"")
         
-    def test_computes_data_format(self):
+    def test_computes_layout(self):
         """data_format returns float32_4 for example"""
         self.my_stream.elements = []
         for i in range(4):
             self.my_stream.add_element(element.build_element(name="%d"%i))
-        self.assertEqual(self.my_stream.data_format,"float32_4")
+        self.assertEqual(self.my_stream.layout,"float32_4")
 
     def test_has_string_representation(self):
         self.assertRegex("%s"%self.my_stream,self.my_stream.name)

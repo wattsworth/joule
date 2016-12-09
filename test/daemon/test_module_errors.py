@@ -1,6 +1,6 @@
 from joule.daemon import module
 from joule.daemon.errors import DaemonError
-from . import helpers
+from test import helpers
 import unittest
 
 class TestModule(unittest.TestCase):

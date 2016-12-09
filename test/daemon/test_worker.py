@@ -7,7 +7,7 @@ import asynctest
 import asyncio
 from unittest import mock
 import joule.daemon.worker as worker
-from . import helpers
+from test import helpers
 from joule.procdb.client import SQLClient
 import os
 import psutil
@@ -28,9 +28,11 @@ class TestWorker(asynctest.TestCase):
                                             'path2':'/output/path2'})
 
     self.myprocdb = mock.create_autospec(spec = SQLClient)
-    #mock up a stream with float64_1 data format so numpypipe builds correctly
+    #mock up a stream with int32_4 data format so numpypipe builds correctly
     self.myprocdb.find_stream_by_path = mock.Mock(return_value =
-                                                  helpers.build_stream(name="stub",num_elements=1))
+                                                  helpers.build_stream(name="stub",
+                                                                       datatype="int32",
+                                                                       num_elements=4))
     #build data sources for module
     self.q_in1 = asyncio.Queue()
     mock_worker1=mock.create_autospec(spec = worker.Worker)
@@ -47,27 +49,25 @@ class TestWorker(asynctest.TestCase):
 
   def test_pipes_data_to_and_from_the_module_process(self):
     #subscribe module to sample output streams
-    DATA1 = np.array([[1.0,2.0],[3.0,4.0]])
-    DATA2 = np.array([[5.0,6.0],[7.0,8.0]])
-    q1_out = self.myworker.subscribe('/output/path1')
-    q2_out = self.myworker.subscribe('/output/path2')
-    loop = asyncio.get_event_loop()
+    DATA1 = helpers.create_data(layout="int32_4",length=100)
+    DATA2 = helpers.create_data(layout="int32_4",length=250)
+    q_out1 = self.myworker.subscribe('/output/path1')
+    q_out2 = self.myworker.subscribe('/output/path2')
+
     self.q_in1.put_nowait(DATA1)
     self.q_in2.put_nowait(DATA2)
 
     self.my_module.exec_cmd = "python "+MODULE_ECHO_DATA
+    loop = asyncio.get_event_loop()
     loop.run_until_complete(self.myworker.run(restart=False))
 
-    q1_output = q1_out.get_nowait()
-    q2_output = q2_out.get_nowait()
+    output1 = q_out1.get_nowait()
+    output2 = q_out2.get_nowait()
     #make sure child echoed data correctly
-    np.testing.assert_array_equal(q1_output,DATA1)
-    np.testing.assert_array_equal(q2_output,DATA2)
-    self.assertTrue(q1_out.empty())
-    self.assertTrue(q2_out.empty())
-
-
-    loop.close()
+    np.testing.assert_array_equal(output1,DATA1)
+    np.testing.assert_array_equal(output2,DATA2)
+    self.assertTrue(q_out1.empty())
+    self.assertTrue(q_out2.empty())
 
   def test_stops_module_process_on_command(self):
     loop = asyncio.get_event_loop()
@@ -84,7 +84,7 @@ class TestWorker(asynctest.TestCase):
     loop.run_until_complete(asyncio.gather(*tasks))
 
 
-  #**NOTE: intended as a wrapper around run_until_complete but
+  #**NOTE: intended as a warpper around run_until_complete but
   #  it seems like asyncio closes pipes with garbage collection
   #  so the numpypipe does not actually have to close the file descriptor
   #  and in fact this causes an error (see joule/utils/numpypipe)

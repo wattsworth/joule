@@ -34,8 +34,10 @@ setup(
         provides = [],
         install_requires = ['cliff',
                             'numpy',
-                            'psutil'],
-       namespace_packages = [],
+                            'psutil',
+                            'python-datetime-tz',
+                            'aiohttp'],
+        namespace_packages = [],
         packages=find_packages(),
         include_package_data=True,
 

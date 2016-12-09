@@ -112,14 +112,14 @@ class Daemon(object):
                                   (my_stream.name,my_stream.path,
                                    info.layout_type,my_stream.datatype))
                 return False
-            if(info.layout != my_stream.data_format):
+            if(info.layout != my_stream.layout):
                 logging.error("Stream [%s]: the path[%s] has [%d] elements, this has [%d]"%
                                   (my_stream.name, my_stream.path,
                                    info.layout_count, len(my_stream.elements)))
                 return False
             #datatype and element count match so we are ok
         else:
-            client.stream_create(my_stream.path,my_stream.data_format)
+            client.stream_create(my_stream.path,my_stream.layout)
         #2.) Make sure no other stream config is using this path
         for other_stream in self.streams:
             if(my_stream.path==other_stream.path):

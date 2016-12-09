@@ -9,7 +9,7 @@ import asynctest
 import time
 import threading
 import configparser
-from . import helpers
+from test import helpers
 from joule.utils import config_manager
 
 class TestDaemon(unittest.TestCase):

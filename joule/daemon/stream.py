@@ -3,7 +3,7 @@ Stream: NilmDB stream
 
 [Main]
 path = /nilmdb/path/name
-datatype = float
+datatype = float32
 keep = 1w
 #optional settings (defaults)
 decimate = yes
@@ -60,7 +60,7 @@ class Stream(object):
         self.elements.append(new_element)
 
     @property
-    def data_format(self):
+    def layout(self):
         return "%s_%d"%(self.datatype,len(self.elements))
 
     @property
