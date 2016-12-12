@@ -1,3 +1,4 @@
+import json
 from joule.utils.fdnumpypipe import FdNumpyPipe
 
 def add_args(parser):
@@ -9,15 +10,18 @@ def add_args(parser):
 
 def build_pipes(parsed_args):
     pipe_args = parsed_args.pipes
-    dest_args = pipe_args['destinations']
-    src_args = pipe_args['sources']
-    pipes_out = []; pipes_in = [];
+    if(pipe_args == 'unset'):
+        return ({},{})
+    pipe_json = json.loads(pipe_args)
+    dest_args = pipe_json['destinations']
+    src_args  = pipe_json['sources']
+    pipes_out = {}; pipes_in = {};
     for name,arg in dest_args.items():
-      pipes_out.append(FdNumpyPipe(name=name,
-                                   fd=arg['fd'],
-                                   layout=arg['layout']))
+      pipes_out[name] = FdNumpyPipe(name=name,
+                                    fd=arg['fd'],
+                                    layout=arg['layout'])
     for name,arg in src_args.items():
-      pipes_in.append(FdNumpyPipe(name=name,
+      pipes_in[name] = FdNumpyPipe(name=name,
                                    fd=arg['fd'],
-                                   layout=arg['layout']))
+                                   layout=arg['layout'])
     return (pipes_in, pipes_out)
