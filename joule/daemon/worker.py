@@ -208,6 +208,7 @@ class Worker:
         while(True):
             try:
                 data = await npipe.read()
+                print("adding %d rows from %s to queues"%(len(data),npipe.name))
                 for q in queues:
                     q.put_nowait(data)
                 await asyncio.sleep(0.25)

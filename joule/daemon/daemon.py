@@ -98,7 +98,7 @@ class Daemon(object):
 
     def _validate_stream(self, my_stream):
         client = self.nilmdb_client
-        info = client.get_stream_info_nowait(my_stream.path)
+        info = client.stream_info_nowait(my_stream.path)
         # 1.) Validate or create the stream in NilmDB
         if info:
             # path exists, make sure the structure matches what this stream

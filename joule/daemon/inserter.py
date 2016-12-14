@@ -23,7 +23,7 @@ class NilmDbInserter:
   async def process(self,queue,loop=None):
     while(not self.stop_requested):
       await asyncio.sleep(self.insertion_period,loop=loop)
-      #print("%s q: %d"%(self.path,queue.qsize()))
+      print("%s q: %d"%(self.path,queue.qsize()))
       while not queue.empty():
         data = await queue.get()
         if(data is None):

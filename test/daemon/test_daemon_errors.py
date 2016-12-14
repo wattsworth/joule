@@ -17,7 +17,7 @@ class TestDaemonErrors(unittest.TestCase):
 
         # mock AioNilmdb client
         mock_client = mock.Mock(autospec=daemon.aionilmdb.AioNilmdb)
-        mock_client.get_stream_info_nowait = mock.MagicMock(return_value=info)
+        mock_client.stream_info_nowait = mock.MagicMock(return_value=info)
         my_daemon = daemon.Daemon()
         my_daemon.nilmdb_client = mock_client
 
@@ -31,7 +31,7 @@ class TestDaemonErrors(unittest.TestCase):
         info = mock.Mock(layout="uint8_4", layout_type="uint8", layout_count=4)
         # mock AioNilmdb client
         mock_client = mock.Mock(autospec=daemon.aionilmdb.AioNilmdb)
-        mock_client.get_stream_info_nowait = mock.MagicMock(return_value=info)
+        mock_client.stream_info_nowait = mock.MagicMock(return_value=info)
         my_daemon = daemon.Daemon()
         my_daemon.nilmdb_client = mock_client
 
@@ -46,7 +46,7 @@ class TestDaemonErrors(unittest.TestCase):
                          layout_count=1)
         # mock AioNilmdb client
         mock_client = mock.Mock(autospec=daemon.aionilmdb.AioNilmdb)
-        mock_client.get_stream_info_nowait = mock.MagicMock(return_value=info)
+        mock_client.stream_info_nowait = mock.MagicMock(return_value=info)
         my_daemon = daemon.Daemon()
         my_daemon.nilmdb_client = mock_client
 

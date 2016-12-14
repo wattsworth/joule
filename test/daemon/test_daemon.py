@@ -82,7 +82,7 @@ class TestDaemon(unittest.TestCase):
         my_daemon = daemon.Daemon()
         # mock AioNilmdb client
         mock_client = mock.Mock(autospec=daemon.aionilmdb.AioNilmdb)
-        mock_client.get_stream_info_nowait = mock.MagicMock(return_value=
+        mock_client.stream_info_nowait = mock.MagicMock(return_value=
                                                             info)
         my_daemon.nilmdb_client = mock_client
 
@@ -99,7 +99,7 @@ class TestDaemon(unittest.TestCase):
         """Database path is created when stream is first registered"""
         # mock AioNilmdb client
         mock_client = mock.Mock(autospec=daemon.aionilmdb.AioNilmdb)
-        mock_client.get_stream_info_nowait = mock.MagicMock(return_value=None)
+        mock_client.stream_info_nowait = mock.MagicMock(return_value=None)
 
         # the stream does not exist in the database
         new_stream = helpers.build_stream(
@@ -119,7 +119,7 @@ class TestDaemon(unittest.TestCase):
 
         # mock AioNilmdb client
         mock_client = mock.Mock(autospec=daemon.aionilmdb.AioNilmdb)
-        mock_client.get_stream_info_nowait = mock.MagicMock(return_value=info)
+        mock_client.stream_info_nowait = mock.MagicMock(return_value=info)
 
         existing_stream = helpers.build_stream(
             name="test", path="/test/path", num_elements=1)
