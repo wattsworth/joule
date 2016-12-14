@@ -10,12 +10,10 @@ from joule.procdb import client as procdb_client
 import logging
 import functools
 import argparse
-import nilmdb.client
 import nilmtools.filter
 import signal
 from joule.utils import config_manager
 from . import inserter
-import cProfile
 
 class Daemon(object):
     log = logging.getLogger(__name__)
@@ -41,9 +39,7 @@ class Daemon(object):
         
     def initialize(self,config):
         #Build a NilmDB client
-        self.aionilmdb_client = aionilmdb.AioNilmdb(config.nilmdb.url)
-        self.nilmdb_client = nilmdb.client.numpyclient.\
-                             NumpyClient(config.nilmdb.url)
+        self.nilmdb_client = aionilmdb.AioNilmdb(config.nilmdb.url)
         #Set up the ProcDB
         self.procdb = procdb_client.SQLClient(config.procdb.db_path)
         self.procdb_commit_interval = 5 #commit every 5 seconds
@@ -103,7 +99,8 @@ class Daemon(object):
 
     def _validate_stream(self,my_stream):
         client = self.nilmdb_client
-        info = nilmtools.filter.get_stream_info(client,my_stream.path)
+        assert False, "need to implement get_stream_info"
+        info = client.get_stream_info_nowait(my_stream.path)
         #1.) Validate or create the stream in NilmDB
         if info:
             #path exists, make sure the structure matches what this stream wants
@@ -119,7 +116,7 @@ class Daemon(object):
                 return False
             #datatype and element count match so we are ok
         else:
-            client.stream_create(my_stream.path,my_stream.layout)
+            client.stream_create_nowait(my_stream.path,my_stream.layout)
         #2.) Make sure no other stream config is using this path
         for other_stream in self.streams:
             if(my_stream.path==other_stream.path):
@@ -194,7 +191,8 @@ class Daemon(object):
         #commit records to database
         self.procdb.commit()
         loop.run_until_complete(asyncio.gather(*tasks))
-                                
+        if(self.nilmdb_client is not None):
+            self.nilmdb_client.close()
 
     def stop(self):
         loop = asyncio.get_event_loop()
@@ -211,11 +209,10 @@ class Daemon(object):
             #build inserters for any paths that have non-zero keeps
             if(stream.keep_us):
                 my_inserter = inserter.NilmDbInserter(
-                    self.aionilmdb_client,
                     self.nilmdb_client,
-                                            path,
-                                            insertion_period=self.NILMDB_INSERTION_PERIOD,
-                                            decimate = stream.decimate)
+                    path,
+                    insertion_period=self.NILMDB_INSERTION_PERIOD,
+                    decimate = stream.decimate)
                 coro = my_inserter.process(self.path_workers[path](),loop=loop)
                 task = asyncio.ensure_future(coro)
                 self.inserters.append(my_inserter)
@@ -265,11 +262,7 @@ def main(argv=None):
     loop=asyncio.get_event_loop()
     loop.set_debug(True)
     loop.add_signal_handler(signal.SIGINT,daemon.stop)
-    pr = cProfile.Profile()
-    pr.enable()
     daemon.run(loop)
     loop.close()
-    pr.disable()
-    pr.dump_stats('/home/pi/joule_stats.dat')
     exit(0)
 

@@ -54,7 +54,8 @@ class TestStream(unittest.TestCase):
         for i in range(4):
             self.my_stream.add_element(element.build_element(name="%d"%i))
         self.assertEqual(self.my_stream.layout,"float32_4")
-
+        self.assertEqual(self.my_stream.data_width,5)
+    
     def test_has_string_representation(self):
         self.assertRegex("%s"%self.my_stream,self.my_stream.name)
 

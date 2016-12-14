@@ -3,15 +3,19 @@ Asyncio Client for NilmDB
 """
 import aiohttp
 import numpy
+import json
 
 class AioNilmdb:
 
     def __init__(self,server):
-        self.session = None 
-        self.server = server
+        self.server = server 
+        self.session = aiohttp.ClientSession()
+
+    def close(self):
+        self.session.close()
         
     async def stream_insert(self,path, data, start, end):
-#        session = await self._get_session()
+
         url = "{server}/stream/insert".format(server=self.server)
         params = {"start":"%d"%start,
                   "end":"%d"%end,
@@ -29,24 +33,30 @@ class AioNilmdb:
             raise ValueError("wrong number of fields for this data type")
         data = sarray
 
-        async with aiohttp.ClientSession() as session:
-            async with session.put(url,params=params,
-                                   data=data.tostring()) as resp:
-                if(resp.status!=200):
-                    print(await resp.text())
+        async with self.session.put(url,params=params,
+                                    data=data.tostring()) as resp:
+            if(resp.status!=200):
+                raise AioNilmdbError(await resp.text())
 
-    async def _get_session(self):
-        if(self.session is not None):
-            return self.session
-        else:
-            self.session = await aiohttp.ClientSession()
-            return self.session
+    async def stream_list(self,path,layout=None,extended=False):
+      url = "{server}/stream/list".format(server=self.server)
+      params = {"path":   path}
+      async with self.session.get(url,params=params) as resp:
+        body = await resp.text()
+        if(resp.status!=200):
+            raise AioNilmdbError(body)
+        return json.loads(body)
 
-    def stream_list(self,path):
-        pass
+    async def stream_create(self,path,layout):
+      url = "{server}/stream/create".format(server=self.server)
+      data = {"path":   path,
+              "layout": layout}
+      async with self.session.post(url,data=data) as resp:
+        if(resp.status!=200):
+            raise AioNilmdbError(await resp.text())
+      return True
 
-    def get_stream_info(self,path):
-        pass
 
-    def stream_create(self,path,format):
-        pass
+
+class AioNilmdbError(Exception):
+    pass

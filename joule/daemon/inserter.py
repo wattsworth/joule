@@ -4,19 +4,18 @@ import re
 from .errors import DaemonError
 
 class NilmDbInserter:
-  def __init__(self,aioclient,client,
+  def __init__(self,client,
                path,
                insertion_period=0, #no insertion buffering by default
                decimate=True):
     if(decimate):
-      self.decimator = NilmDbDecimator(client,aioclient,path)
+      self.decimator = NilmDbDecimator(client,path)
     else:
       self.decimator = None
 
     self.insertion_period=insertion_period
     self.path = path
     self.client = client
-    self.aioclient = aioclient
     self.last_ts = None
     self.buffer = None
     self.stop_requested = False
@@ -24,7 +23,7 @@ class NilmDbInserter:
   async def process(self,queue,loop=None):
     while(not self.stop_requested):
       await asyncio.sleep(self.insertion_period,loop=loop)
-      print("%s q: %d"%(self.path,queue.qsize()))
+      #print("%s q: %d"%(self.path,queue.qsize()))
       while not queue.empty():
         data = await queue.get()
         if(data is None):
@@ -48,7 +47,7 @@ class NilmDbInserter:
     start = self.last_ts
 
     end = self.buffer['timestamp'][-1]+1
-    await self.aioclient.stream_insert(self.path, self.buffer,
+    await self.client.stream_insert(self.path, self.buffer,
                                        start=start, 
                                        end=end)
     self.last_ts = end #append next buffer to this interval
@@ -62,13 +61,18 @@ class NilmDbInserter:
       self.decimator.finalize()
 
 class NilmDbDecimator:
-  def __init__(self,client,aioclient,source_path,factor=4):
+  def __init__(self,client,source_path,factor=4):
     self.factor = factor
     self.client = client
-    self.aioclient = aioclient
+    self.source_path = source_path
+    self.initialized = False
+    
+  async def _initialize(self):
     #get source info
+    source_path = self.source_path
     try:
-      _,source_layout=client.stream_list(path = source_path)[0]
+      stream_list = await self.client.stream_list(path = source_path)
+      _,source_layout = stream_list[0]
     except IndexError:
       raise DaemonError("the decimator source [{path}] is not in the database".\
                         format(path=source_path))
@@ -76,24 +80,27 @@ class NilmDbDecimator:
       destination_layout = source_layout
       self.again = True
       (base_path,source_level) = self._parse_path(source_path)
-      level = source_level*factor
+      level = source_level*self.factor
     else:
       self.again = False
-      destination_layout = "float64_{width}".\
+      destination_layout = "float32_{width}".\
                            format(width=self._stream_width(source_layout)*3)
       base_path = source_path
-      level = factor
+      level = self.factor
     destination_path = "{base}~decim-{level}".format(base=base_path,level=level)
 
     #create the destination if it doesn't exist
-    if(len(client.stream_list(destination_path))==0):
-      client.stream_create(destination_path,destination_layout)
+    stream_list = await self.client.stream_list(path = destination_path)
+
+    if(len(stream_list)==0):
+      await self.client.stream_create(destination_path,destination_layout)
     
     self.last_ts = None
     self.buffer = []
     self.child = None
     self.path = destination_path
-    
+    self.initialized = True
+
   def _parse_path(self,path):
     """return the base path and the decimation level"""
     res = re.search("^([/\w]*)~decim-(\d*)$",path)
@@ -118,6 +125,10 @@ class NilmDbDecimator:
       self.child.finalize()
       
   async def process(self,sarray):
+    #lazy initialization
+    if(not self.initialized):
+      await self._initialize()
+
     #flatten structured array
     data = np.c_[sarray['timestamp'][:,None],sarray['data']]
 
@@ -174,13 +185,14 @@ class NilmDbDecimator:
     sout['timestamp']=out[:,0]
     sout['data']=out[:,1:]
     # insert the data into the database
-
-    await self.aioclient.stream_insert(self.path, sout,
-                                       start=start, 
-                                       end=end)
+    await self.client.stream_insert(self.path,
+                                    sout,
+                                    start=start, 
+                                    end=end)
     self.last_ts = end
     # now call the child decimation object
     if(self.child==None):
-      self.child = NilmDbDecimator(self.client,self.aioclient,self.path)
+      self.child = NilmDbDecimator(self.client,self.path,self.factor)
+
     await self.child.process(sout)
 

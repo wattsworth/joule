@@ -11,7 +11,7 @@ class TestNilmDbDecimatorErrors(unittest.TestCase):
   def setUp(self):
     pass
 
-  @mock.patch("joule.daemon.daemon.nilmdb.client.numpyclient.NumpyClient",autospec=True)      
+  @mock.patch("joule.daemon.daemon.aionilmdb.AioNilmdb",autospec=True)      
   def test_error_if_source_does_not_exist(self, mock_client):
     
     #only /other/path exists in the database
@@ -21,7 +21,7 @@ class TestNilmDbDecimatorErrors(unittest.TestCase):
     with self.assertRaisesRegex(daemon.DaemonError,"/base/path"):
       inserter.NilmDbDecimator(mock_client,"/base/path")
 
-  @mock.patch("joule.daemon.daemon.nilmdb.client.numpyclient.NumpyClient",autospec=True)      
+  @mock.patch("joule.daemon.daemon.aionilmdb.AioNilmdb",autospec=True)
   def test_error_if_nilmdb_returns_corrupt_layout(self, mock_client):
     #note: this should never happen but verify nilmdb response just to be safe
     bad_layout = "uint8_adsf"
