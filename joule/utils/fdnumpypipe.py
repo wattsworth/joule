@@ -4,7 +4,7 @@ from . import numpypipe
 import os
 import sys
 
-MAX_ROWS = 3000  # max array size is 3000 rows
+MAX_ROWS = 9000  # max array size is 3000 rows
 
 
 class FdNumpyPipe(numpypipe.NumpyPipe):
@@ -49,6 +49,9 @@ class FdNumpyPipe(numpypipe.NumpyPipe):
         await self._open_write()
         # make sure dtype is structured
         sdata = self._apply_dtype(data)
+        # print("writing %d rows (%d bytes) to fd[%d]"%\
+        #    (len(sdata),len(sdata.tostring()),self.fd))
+        sys.stdout.flush()
         self.writer.write(sdata.tostring())
 
     async def _open_read(self):

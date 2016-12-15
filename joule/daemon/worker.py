@@ -93,6 +93,7 @@ class Worker:
         await popen_lock.acquire()
         await self._start_pipe_tasks()
         cmd += ["--pipes", json.dumps(self.child_pipes)]
+        logging.warn(cmd)
         create = asyncio.create_subprocess_exec(
             *cmd,
             stdin=asyncio.subprocess.DEVNULL,
@@ -208,8 +209,9 @@ class Worker:
         while(True):
             try:
                 data = await npipe.read()
-                # print("adding %d rows from %s to queues"%(len(data),npipe.name))
+                # print("adding %d rows of data to"%len(data))
                 for q in queues:
+                    # print("\tworker q: %d"%id(q))
                     q.put_nowait(data)
                 await asyncio.sleep(0.25)
             except EmptyPipe:

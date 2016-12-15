@@ -6,6 +6,7 @@ class NumpyPipe:
   def __init__(self,name,layout):
 
     self.name = name
+    self.layout = layout
     self.dtype = self._layout_to_dtype(layout)
 
   def read(self,flatten=False):
