@@ -1,0 +1,13 @@
+version: '2'
+services:
+  joule:
+    build: ../../.
+    links:
+      - nilmdb
+    entrypoint: /joule/test/e2e/bootstrap_inner.py
+  nilmdb:
+    image: jdonnal/nilmdb
+    logging:
+      driver: none
+    stop_signal: SIGKILL
+    
