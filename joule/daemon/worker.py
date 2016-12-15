@@ -2,7 +2,7 @@ import logging
 import asyncio
 import shlex
 from joule.daemon import module
-from joule.utils.fdnumpypipe import FdNumpyPipe, PipeClosed
+from joule.utils.fdnumpypipe import FdNumpyPipe, EmptyPipe
 import os
 import json
 
@@ -208,11 +208,12 @@ class Worker:
         while(True):
             try:
                 data = await npipe.read()
-                print("adding %d rows from %s to queues"%(len(data),npipe.name))
+                # print("adding %d rows from %s to queues"%(len(data),npipe.name))
                 for q in queues:
                     q.put_nowait(data)
                 await asyncio.sleep(0.25)
-            except PipeClosed:
+            except EmptyPipe:
+                # print("empty pipe %s, exiting loop"%npipe.name)
                 break
 
     async def _pipe_out(self, queue, npipe):

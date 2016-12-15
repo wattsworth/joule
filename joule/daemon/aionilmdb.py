@@ -62,7 +62,7 @@ class AioNilmdb:
         if(r.status_code != requests.codes.ok):
             raise AioNilmdbError(r.text)
         streams = json.loads(r.text)
-        if(len(streams)==0):
+        if (len(streams)==0):
             return None
         else:
             return StreamInfo(self.server, streams[0])

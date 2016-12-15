@@ -5,50 +5,36 @@ InStream2 ==> x3 ==> OutStream2
 """
 
 import asyncio
-import json
 import argparse
-from joule.utils.fdnumpypipe import FdNumpyPipe
+import joule.utils.client
 import sys
 
-async def echo_pipe(np_in,np_out,factor=1.0):
-  while(True):
-    data = await np_in.read(flatten=True)
-    data[:,1:]*=factor
-    await np_out.write(data)
 
-if __name__=="__main__":
-  sys.stderr.write("starting filter!\n")
-  sys.stderr.flush()
-  parser = argparse.ArgumentParser("demo")
-  parser.add_argument("--pipes")
-  args = parser.parse_args()
+async def echo_pipe(np_in, np_out, factor=1.0):
+    while(True):
+        data = await np_in.read(flatten=True)
+        data[:, 1:] *= factor
+        await np_out.write(data)
 
-  pipe_args = json.loads(args.pipes)
+if __name__ == "__main__":
+    sys.stderr.write("starting filter!\n")
+    sys.stderr.flush()
+    parser = argparse.ArgumentParser("demo")
+    joule.utils.client.add_args(parser)
+    args = parser.parse_args()
 
-  loop = asyncio.get_event_loop()
+    (pipes_in, pipes_out) = joule.utils.client.build_pipes(args)
 
-  pipe_in1 = pipe_args['sources']['path1']
-  pipe_out1 = pipe_args['destinations']['path1']  
-  np_in1 = FdNumpyPipe("np_in1",layout=pipe_in1['layout'],
-                       fd = pipe_in1['fd'])
-  np_out1 = FdNumpyPipe("np_out1",layout=pipe_out1['layout'],
-                        fd = pipe_out1['fd'])
-  
-  pipe_in2 = pipe_args['sources']['path2']
-  pipe_out2 = pipe_args['destinations']['path2']  
-  np_in2 = FdNumpyPipe("np_in2",layout=pipe_in2['layout'],
-                       fd = pipe_in2['fd'])
-  np_out2 = FdNumpyPipe("np_out2",layout=pipe_out2['layout'],
-                        fd = pipe_out2['fd'])
-
-  tasks = [
-    asyncio.ensure_future(echo_pipe(np_in1,np_out1,factor=2)),
-    asyncio.ensure_future(echo_pipe(np_in2,np_out2,factor=3))]
-
-
-  loop.run_until_complete(asyncio.gather(*tasks))
-  loop.close()
-  print("all done")
-  
+    np_in1 = pipes_in['path1']
+    np_in2 = pipes_in['path2']
+    np_out1 = pipes_out['path1']
+    np_out2 = pipes_out['path2']
     
-
+    tasks = [
+        asyncio.ensure_future(echo_pipe(np_in1, np_out1, factor=2)),
+        asyncio.ensure_future(echo_pipe(np_in2, np_out2, factor=3))]
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(asyncio.gather(*tasks))
+    loop.close()
+    
+    print("all done")

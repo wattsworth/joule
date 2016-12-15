@@ -25,7 +25,7 @@ class NilmDbInserter:
     async def process(self, queue, loop=None):
         while(not self.stop_requested):
             await asyncio.sleep(self.insertion_period, loop=loop)
-            print("%s q: %d" % (self.path, queue.qsize()))
+#            print("%s q: %d" % (self.path, queue.qsize()))
             while not queue.empty():
                 data = await queue.get()
                 if(data is None):
@@ -47,11 +47,12 @@ class NilmDbInserter:
             self.last_ts = self.buffer['timestamp'][0]
 
         start = self.last_ts
-
+        
         end = self.buffer['timestamp'][-1] + 1
         await self.client.stream_insert(self.path, self.buffer,
                                         start=start,
                                         end=end)
+#        print("inserting %d->%d to %s"%(start,end,self.path))
         self.last_ts = end  # append next buffer to this interval
         if(self.decimator is not None):
             await self.decimator.process(self.buffer)
