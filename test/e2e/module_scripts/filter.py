@@ -13,6 +13,7 @@ import sys
 async def echo_pipe(np_in, np_out, factor=1.0):
     while(True):
         data = await np_in.read(flatten=True)
+        np_in.consume(len(data))
         data[:, 1:] *= factor
         await np_out.write(data)
 
