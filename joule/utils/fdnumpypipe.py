@@ -53,7 +53,8 @@ class FdNumpyPipe(numpypipe.NumpyPipe):
         #    (len(sdata),len(sdata.tostring()),self.fd))
         sys.stdout.flush()
         self.writer.write(sdata.tostring())
-
+        await self.writer.drain()
+        
     async def _open_read(self):
         """initialize reader if not already setup"""
         if(self.reader is not None):
@@ -73,6 +74,9 @@ class FdNumpyPipe(numpypipe.NumpyPipe):
         f = open(self.fd, 'wb')
         (self.transport, _) = await self.loop.connect_write_pipe(
             lambda: write_protocol, f)
+        print("-------buffer limits------------")
+        print(self.transport.get_write_buffer_limits())
+        sys.stdout.flush()
         self.writer = asyncio.StreamWriter(
             self.transport, write_protocol, None, self.loop)
 
