@@ -18,7 +18,7 @@ class TestDaemon(unittest.TestCase):
     @mock.patch("joule.daemon.daemon.module.Parser", autospec=True)
     @mock.patch("joule.daemon.daemon.stream.Parser", autospec=True)
     @mock.patch("joule.daemon.daemon.procdb_client", autospec=True)
-    @mock.patch("joule.daemon.daemon.aionilmdb.AioNilmdb",autospec=True)
+    @mock.patch("joule.daemon.daemon.aionilmdb.AioNilmdb", autospec=True)
     def test_creates_modules_and_streams_from_configs(self,
                                                       mock_client,
                                                       mock_procdb,
@@ -82,8 +82,7 @@ class TestDaemon(unittest.TestCase):
         my_daemon = daemon.Daemon()
         # mock AioNilmdb client
         mock_client = mock.Mock(autospec=daemon.aionilmdb.AioNilmdb)
-        mock_client.stream_info_nowait = mock.MagicMock(return_value=
-                                                            info)
+        mock_client.stream_info_nowait = mock.MagicMock(return_value=info)
         my_daemon.nilmdb_client = mock_client
 
         for my_stream in streams:

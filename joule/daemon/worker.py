@@ -62,7 +62,7 @@ class Worker:
     def _validate_inputs(self):
         for key, value in self.input_queues.items():
             if value is None:
-                logging.error("Cannot start %s: no input source for [%s]"%
+                logging.error("Cannot start %s: no input source for [%s]" %
                               (self.module, key))
                 return False
         return True

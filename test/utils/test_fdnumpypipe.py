@@ -40,7 +40,7 @@ class TestFdNumpyPipe(asynctest.TestCase):
                 end_pos = data_cursor + len(used_data)
                 np.testing.assert_array_equal(used_data,
                                               test_data[start_pos:end_pos])
-                
+
                 data_cursor += len(used_data)
                 run_count += 1
 
@@ -111,15 +111,15 @@ class TestFdNumpyPipe(asynctest.TestCase):
 
         async def writer():
             await npipe_in.write(test_data)
-            
+
         async def reader():
             data = await npipe_out.read()
-            npipe_out.consume(len(data)-UNCONSUMED_ROWS)
+            npipe_out.consume(len(data) - UNCONSUMED_ROWS)
             next_data = await npipe_out.read()
 
             np.testing.assert_array_equal(data[-UNCONSUMED_ROWS:],
                                           next_data[:UNCONSUMED_ROWS])
-          
+
         tasks = [asyncio.ensure_future(writer()),
                  asyncio.ensure_future(reader())]
         loop = asyncio.get_event_loop()

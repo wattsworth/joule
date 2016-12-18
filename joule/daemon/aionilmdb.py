@@ -62,7 +62,7 @@ class AioNilmdb:
         if(r.status_code != requests.codes.ok):
             raise AioNilmdbError(r.text)
         streams = json.loads(r.text)
-        if (len(streams)==0):
+        if (len(streams) == 0):
             return None
         else:
             return StreamInfo(self.server, streams[0])
@@ -90,14 +90,14 @@ class StreamInfo(object):
         """Return stream info as a string.  If interhost is true,
         include the host URL."""
         if interhost:
-            return "[%s] "%(self.url) + str(self)
+            return "[%s] " % (self.url) + str(self)
         return str(self)
 
     def __str__(self):
         """Return stream info as a string."""
-        return "%s (%s), %.2fM rows, %.2f hours"%(
-                       self.path, self.layout, self.rows / 1e6,
-                       self.seconds / 3600.0)
+        return "%s (%s), %.2fM rows, %.2f hours" % (
+            self.path, self.layout, self.rows / 1e6,
+            self.seconds / 3600.0)
 
 
 class AioNilmdbError(Exception):

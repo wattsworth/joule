@@ -18,7 +18,7 @@ class TestNilmDbDecimatorErrors(asynctest.TestCase):
 
         # only /other/path exists in the database
         mock_info = helpers.mock_stream_info([["/other/path", "uint8_1"]])
-        
+
         mock_client = mock.Mock(autospec=aionilmdb.AioNilmdb)
         mock_client.stream_list = \
             asynctest.mock.CoroutineMock(side_effect=mock_info)
@@ -45,5 +45,3 @@ class TestNilmDbDecimatorErrors(asynctest.TestCase):
             loop = asyncio.get_event_loop()
             data = helpers.create_data("int32_4", length=1)
             loop.run_until_complete(my_decimator.process(data))
-
-

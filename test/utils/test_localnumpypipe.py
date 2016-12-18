@@ -73,14 +73,14 @@ class TestLocalNumpyPipe(asynctest.TestCase):
 
         async def reader():
             data = await my_pipe.read()
-            my_pipe.consume(len(data)-UNCONSUMED_ROWS)
+            my_pipe.consume(len(data) - UNCONSUMED_ROWS)
             next_data = await my_pipe.read()
             np.testing.assert_array_equal(data[-UNCONSUMED_ROWS:],
-                                          next_data[:UNCONSUMED_ROWS+1])
-          
+                                          next_data[:UNCONSUMED_ROWS + 1])
+
         loop = asyncio.get_event_loop()
         loop.run_until_complete(reader())
-        
+
     @asynctest.fail_on(unused_loop=False)
     def test_nowait_read_writes(self):
         LAYOUT = "int8_2"

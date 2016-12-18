@@ -18,7 +18,7 @@ FORCE_DUMP = False
 
 
 def prep_system():
-#    run("apache2ctl start")
+    #    run("apache2ctl start")
     os.symlink(MODULE_SCRIPT_DIR, "/module_scripts")
 #    os.chdir(SOURCE_DIR)
 #    run("python3 setup.py install")

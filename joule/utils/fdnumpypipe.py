@@ -19,7 +19,7 @@ class FdNumpyPipe(numpypipe.NumpyPipe):
         self.byte_buffer = b''
         # tunable constants
         self.BUFFER_SIZE = buffer_size
-        self.buffer = np.zeros(self.BUFFER_SIZE, dtype = self.dtype)
+        self.buffer = np.zeros(self.BUFFER_SIZE, dtype=self.dtype)
         self.last_index = 0
         self.reader = None  # initialized by _open_read()
         self.writer = None  # initialized by _open_write()
@@ -28,7 +28,7 @@ class FdNumpyPipe(numpypipe.NumpyPipe):
     async def read(self, flatten=False):
         await self._open_read()
         rowbytes = self.dtype.itemsize
-        max_rows = self.BUFFER_SIZE-self.last_index
+        max_rows = self.BUFFER_SIZE - self.last_index
         if(max_rows == 0):
             return self._format_data(self.buffer[:self.last_index], flatten)
 
@@ -57,7 +57,7 @@ class FdNumpyPipe(numpypipe.NumpyPipe):
     def consume(self, num_rows):
         if(num_rows > self.last_index):
             raise numpypipe.NumpyPipeError("cannot consume %d rows: only %d available"
-                                        % (num_rows, self.last_index))
+                                           % (num_rows, self.last_index))
         self.buffer = np.roll(self.buffer, -1 * num_rows)
         self.last_index -= num_rows
 
@@ -70,7 +70,7 @@ class FdNumpyPipe(numpypipe.NumpyPipe):
         sys.stdout.flush()
         self.writer.write(sdata.tostring())
         await self.writer.drain()
-        
+
     async def _open_read(self):
         """initialize reader if not already setup"""
         if(self.reader is not None):
@@ -103,7 +103,6 @@ class FdNumpyPipe(numpypipe.NumpyPipe):
             pass
         except OSError:
             pass
-
 
 
 class NumpyPipeError(Exception):

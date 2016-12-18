@@ -48,7 +48,7 @@ class NilmDbInserter:
             self.last_ts = self.buffer['timestamp'][0]
 
         start = self.last_ts
-        
+
         end = self.buffer['timestamp'][-1] + 1
         await self.client.stream_insert(self.path, self.buffer,
                                         start=start,
@@ -71,7 +71,7 @@ class NilmDbDecimator:
         self.factor = factor
         self.client = client
         self.source_path = source_path
-        self.child = None        
+        self.child = None
         self.initialized = False
 
     async def _initialize(self):

@@ -8,7 +8,7 @@ def main():
         time.sleep(0.1)
         print("in run_forever")
         sys.stdout.flush()
-        
+
 
 def handler(signum, frame):
     print("caught %d, ignoring" % signum)

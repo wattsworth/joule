@@ -1,0 +1,6 @@
+note: set KeepAlive on for Apache nilmdb process
+sqlite triggers: http://stackoverflow.com/questions/1977341/rolling-rows-in-sql-table
+
+#also, no need for synchronous data writes
+PRAGMA schema.synchronous = 0 | OFF | 1 | NORMAL | 2 | FULL | 3 | EXTRA;
+PRAGMA synchronous=OFF
