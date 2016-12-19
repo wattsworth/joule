@@ -222,5 +222,9 @@ class Worker:
     async def _pipe_out(self, queue, npipe):
         while(True):
             data = await queue.get()
-            await npipe.write(data)
+            # TODO: handle broken intervals
+            if data is not None:
+                await npipe.write(data)
+            # rate limit pipe reads
             await asyncio.sleep(0.25)
+

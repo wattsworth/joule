@@ -190,7 +190,12 @@ class Daemon(object):
         tasks += self._start_inserters(loop)
         # commit records to database
         self.procdb.commit()
-        loop.run_until_complete(asyncio.gather(*tasks))
+        try:
+            loop.run_until_complete(asyncio.gather(*tasks))
+        except Exception as e:
+            logging.error("task interrupted")
+            #print(e)
+            
         if(self.nilmdb_client is not None):
             self.nilmdb_client.close()
 
@@ -263,7 +268,7 @@ def main(argv=None):
         exit(1)
 
     loop = asyncio.get_event_loop()
-    loop.set_debug(True)
+    loop.set_debug(False)
     loop.add_signal_handler(signal.SIGINT, daemon.stop)
     daemon.run(loop)
     loop.close()

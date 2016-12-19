@@ -28,12 +28,16 @@ if __name__ == "__main__":
 
     np_in1 = pipes_in['path1']
     np_in2 = pipes_in['path2']
+    np_in3 = pipes_in['path3']
     np_out1 = pipes_out['path1']
     np_out2 = pipes_out['path2']
-    
+    np_out3 = pipes_out['path3']
+
     tasks = [
         asyncio.ensure_future(echo_pipe(np_in1, np_out1, factor=2)),
-        asyncio.ensure_future(echo_pipe(np_in2, np_out2, factor=3))]
+        asyncio.ensure_future(echo_pipe(np_in2, np_out2, factor=3)),
+        asyncio.ensure_future(echo_pipe(np_in3, np_out3, factor=4))]
+
     loop = asyncio.get_event_loop()
     loop.run_until_complete(asyncio.gather(*tasks))
     loop.close()

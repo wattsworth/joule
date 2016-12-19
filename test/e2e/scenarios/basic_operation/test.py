@@ -46,6 +46,7 @@ def check_data():
       /normal1/data is int32_1, has 1 interval with >500 samples
       /normal2/subpath/data  is int32_1, has multiple intervals each with 100 samples
       /broken/data is float64_1, has separated intervals of data
+      /filter3/data is float64_1, has separated intervals of data
       both normal1 and normal2 have decimations
     """
     normal1_path = "/normal1/data"
@@ -53,33 +54,36 @@ def check_data():
     broken_path = "/broken/data"
     filter1_path = "/filter1/data"
     filter2_path = "/filter2/data"
+    filter3_path = "/filter3/data"
     for path in [normal1_path, normal2_path, filter1_path, filter2_path]:
         # 1.) check streams have one continuous interval
         base_intervals = nilmtool_cmd.intervals(path)
         decim_intervals = nilmtool_cmd.intervals(
             path + "~decim-16")  # check level 2 decimation
         assert len(base_intervals) == 1,\
-            "%s has %d intervals"%(path, len(base_intervals))
+            "%s has %d intervals" % (path, len(base_intervals))
         assert len(decim_intervals) == 1,\
-            "%s has %d intervals"%(path+"~decim-16", len(decim_intervals))
+            "%s has %d intervals" % (path+"~decim-16", len(decim_intervals))
         # 2.) make sure this interval has data in it
         num_samples = nilmtool_cmd.data_count(path)
         assert(num_samples > 500)
         # 3.) make sure decimations have data
         assert(nilmtool_cmd.is_decimated(path))
 
-    # the broken module should have multiple intervals (each restart)
-    base_intervals = nilmtool_cmd.intervals(broken_path)
-    decim_intervals = nilmtool_cmd.intervals(broken_path + "~decim-16")
-    assert len(base_intervals) > 1,\
-        "%s has %d intervals"%(broken_path, len(base_intervals))
-    assert len(decim_intervals) > 1,\
-        "%s has %d intervals"%(broken_path+"~decim-16", len(decim_intervals))
+    # the broken module and its filtered output
+    # should have multiple intervals (each restart)
+    for path in [broken_path]:#, filter3_path]:
+        base_intervals = nilmtool_cmd.intervals(path)
+        decim_intervals = nilmtool_cmd.intervals(path + "~decim-16")
+        assert len(base_intervals) > 1,\
+            "%s has %d intervals" % (path, len(base_intervals))
+        assert len(decim_intervals) > 1,\
+            "%s has %d intervals" % (path+"~decim-16", len(decim_intervals))
 
-    for interval in base_intervals:
-        num_samples = nilmtool_cmd.data_count(broken_path, interval)
-        assert(num_samples == 100)
-    assert(nilmtool_cmd.is_decimated(broken_path))
+        for interval in base_intervals:
+            num_samples = nilmtool_cmd.data_count(path, interval)
+            assert(num_samples == 100)
+        assert(nilmtool_cmd.is_decimated(path))
 
     # verify stream layouts
     assert nilmtool_cmd.layout(
