@@ -21,7 +21,8 @@ class LogsCmd(Command):
 
     def take_action(self, parsed_args):
         configs = helpers.parse_config_file(parsed_args.config_file)
-        procdb = procdb_client.SQLClient(configs.procdb.db_path)
+        procdb = procdb_client.SQLClient(configs.procdb.db_path,
+                                         configs.procdb.max_log_lines)
         module_name = parsed_args.module
         module = procdb.find_module_by_name(module_name)
         if(module is None):

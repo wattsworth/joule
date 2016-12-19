@@ -7,7 +7,8 @@ from . import helpers
 class TestClient(unittest.TestCase):
 
     def setUp(self):
-        self.procdb = client.SQLClient(":memory:")
+        self.procdb = client.SQLClient(":memory:",
+                                       max_log_lines=100)
 
     def tearDown(self):
         pass

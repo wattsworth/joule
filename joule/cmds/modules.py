@@ -23,7 +23,8 @@ class ModulesCmd(Lister):
         headers = ('Module', 'Sources', 'Destinations', 'Status', 'CPU', 'mem')
         format_type = parsed_args.formatter  # print differently if json output
 
-        procdb = procdb_client.SQLClient(configs.procdb.db_path)
+        procdb = procdb_client.SQLClient(configs.procdb.db_path,
+                                         configs.procdb.max_log_lines)
         modules = procdb.find_all_modules()
         module_stats = []
         for m in modules:

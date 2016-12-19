@@ -40,7 +40,8 @@ class Daemon(object):
         # Build a NilmDB client
         self.nilmdb_client = aionilmdb.AioNilmdb(config.nilmdb.url)
         # Set up the ProcDB
-        self.procdb = procdb_client.SQLClient(config.procdb.db_path)
+        self.procdb = procdb_client.SQLClient(config.procdb.db_path,
+                                              config.procdb.max_log_lines)
         self.procdb_commit_interval = 5  # commit every 5 seconds
         self.procdb.clear_db()
 
@@ -49,8 +50,8 @@ class Daemon(object):
 
         streams = self._load_configs(stream_dir, self._build_stream)
         self._register_items(streams, self._validate_stream, self.streams)
-
-        for my_stream in self.streams:  # set up dictionary to find stream by path
+        # set up dictionary to find stream by path
+        for my_stream in self.streams:
             self.path_streams[my_stream.path] = my_stream
             self.procdb.register_stream(my_stream)
         # Set up modules

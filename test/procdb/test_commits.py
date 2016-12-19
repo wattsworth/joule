@@ -20,13 +20,13 @@ class TestCommits(unittest.TestCase):
         s1 = helpers.build_stream(name="s1", path="/some/path/1")
         s2 = helpers.build_stream(name="s2", path="/some/path/2")
 
-        procdb = client.SQLClient(self.tmpfile)
+        procdb = client.SQLClient(self.tmpfile, max_log_lines=100)
         procdb._initialize_procdb()  # force initialization
         procdb.register_stream(s1)
         procdb.register_stream(s2)
         procdb.register_module(m)
         procdb.commit()
 
-        procdb2 = client.SQLClient(self.tmpfile)
+        procdb2 = client.SQLClient(self.tmpfile, max_log_lines=100)
         m_r = procdb2.find_module_by_id(m.id)
         self.assertEqual(m, m_r)

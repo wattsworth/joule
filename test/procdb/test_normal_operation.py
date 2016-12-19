@@ -6,9 +6,10 @@ from joule.daemon import module
 
 class TestNormalOperation(unittest.TestCase):
     """Streams and modules can be stored and retrieved"""
-
+    
     def setUp(self):
-        self.procdb = client.SQLClient(":memory:")  # "/tmp/test.sql")
+        self.MAX_LOG_LINES = 100
+        self.procdb = client.SQLClient(":memory:", self.MAX_LOG_LINES)
         self.s1 = helpers.build_stream(name="s1", path="/some/path/1")
         self.s2 = helpers.build_stream(name="s2", path="/some/path/2")
         self.s3 = helpers.build_stream(name="s3", path="/some/path/3")
@@ -84,3 +85,20 @@ class TestNormalOperation(unittest.TestCase):
         self.procdb.update_module(self.m1)
         m1_r = self.procdb.find_module_by_name(self.m1.name)
         self.assertEqual(self.m1, m1_r)
+
+    def test_keeps_maxlogs_log_entries(self):
+        NUM_INSERTED_LINES = self.MAX_LOG_LINES*2
+        for i in range(NUM_INSERTED_LINES):
+            self.procdb.add_log_by_module("m1_%d" % i, self.m1.id)
+            self.procdb.add_log_by_module("m2_%d" % i, self.m2.id)
+        m1_logs = self.procdb.find_logs_by_module(self.m1.id)
+        m2_logs = self.procdb.find_logs_by_module(self.m2.id)
+        # only store MAX_LOGS
+        self.assertEqual(len(m1_logs), self.MAX_LOG_LINES)
+        self.assertEqual(len(m2_logs), self.MAX_LOG_LINES)
+        # keeps most recent entries
+        last_log = "m1_%d" % (NUM_INSERTED_LINES-self.MAX_LOG_LINES)
+        self.assertRegex(m1_logs[0], last_log)
+        last_log = "m2_%d" % (NUM_INSERTED_LINES-self.MAX_LOG_LINES)
+        self.assertRegex(m2_logs[0], last_log)
+

@@ -13,9 +13,10 @@ from joule.daemon import module, stream, element
 
 class SQLClient():
 
-    def __init__(self, db_path):
+    def __init__(self, db_path, max_log_lines):
         """opens the procdb sqlite database (creates it if needed)"""
         self.db_path = db_path
+        self.max_log_lines = max_log_lines
         initialization_required = False
         if (not os.path.isfile(db_path)):
             initialization_required = True
@@ -70,9 +71,17 @@ class SQLClient():
            REQUIRES a commit! """
         c = self.db.cursor()
         data = [None, line, module_id, int(time.time())]
-#        print(">>%d: %s"%(module_id,line))
-        c.execute("INSERT INTO {table} VALUES (?,?,?,?)".format(table=schema.logs["table"]),
-                  data)
+        cmd = "INSERT INTO {table} VALUES (?,?,?,?)".\
+              format(table=schema.logs["table"])
+        c.execute(cmd, data)
+        # limit number of logs per module
+        cmd = """
+        DELETE FROM logs WHERE module_id = ? AND id <=
+          (SELECT id FROM logs WHERE module_id = ?
+           ORDER BY id DESC LIMIT 1 OFFSET ?);
+         """ 
+        data = [module_id, module_id, self.max_log_lines]
+        c.execute(cmd, data)
 
     def find_module_by_name(self, module_name):
         return self._find_module_by_column("name", module_name)
@@ -169,11 +178,14 @@ class SQLClient():
                     tn=model['table']))
                 for column in model['columns']:
                     c_name = column[0]
-                    if(c_name == 'id'):  # ignore the id field if present in the schema
+                    # ignore the id field if present in the schema
+                    if(c_name == 'id'):
                         continue
                     c_type = column[1]
                     c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct}"
                               .format(tn=model["table"], cn=c_name, ct=c_type))
+            # turn off synchronous mode to speed up commits
+            c.execute("PRAGMA synchronous=OFF")
 
     def _find_module_by_column(self, column, value):
         c = self.db.cursor()
