@@ -62,6 +62,19 @@ class Stream(object):
                     "the name setting for each element must be unique")
         self.elements.append(new_element)
 
+    def to_json(self):
+        stream_data = []
+
+        for i in range(len(self.elements)):
+            d = self.elements[i]._asdict()
+            d["column"] = i
+            stream_data.append(d)
+            
+        return {"name": self.name,
+                "name_abbrev": "",
+                "delete_locked": True,
+                "streams": stream_data}
+
     @property
     def layout(self):
         return "%s_%d" % (self.datatype, len(self.elements))

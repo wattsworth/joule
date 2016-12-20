@@ -2,6 +2,7 @@ import collections
 from .errors import ConfigError
 
 Element = collections.namedtuple("Element", ["name",
+                                             "units",
                                              "plottable",
                                              "discrete",
                                              "offset",
@@ -10,30 +11,12 @@ Element = collections.namedtuple("Element", ["name",
                                              "default_min"])
 
 
-def build_element(name, plottable=True, discrete=False,
+def build_element(name, units="", plottable=True, discrete=False,
                   offset=0.0, scale_factor=1.0, default_max=0.0,
                   default_min=0.0):
     """Builds an element with default values"""
-    return Element(name, plottable, discrete, offset, scale_factor,
+    return Element(name, units, plottable, discrete, offset, scale_factor,
                    default_max, default_min)
-"""
-
-class Element(object):
-    def __init__(self,name,
-                 plottable=True,
-                 discrete=False,
-                 offset = 0.0,
-                 scale_factor = 0.0,
-                 default_max = 0.0,
-                 default_min = 0.0):
-        self.name = name
-        self.plottable = plottable
-        self.discrete = discrete
-        self.offset = offset
-        self.scale_factor = scale_factor
-        self.default_max = default_max
-        self.default_min = default_min
- """
 
 
 class Parser(object):
@@ -41,6 +24,10 @@ class Parser(object):
     def run(self, configs):
         self.config_name = configs.name  # for error reporting
         name = self._validate_name(configs["name"])
+        if("units" in configs):
+            units = configs["units"]
+        else:
+            units = ""
         plottable = self._get_bool("plottable", configs, True)
         discrete = self._get_bool("discrete", configs, False)
         offset = self._get_float("offset", configs, 0.0)
@@ -48,7 +35,7 @@ class Parser(object):
         default_max = self._get_float("default_max", configs, 0.0)
         default_min = self._get_float("default_min", configs, 0.0)
         self._validate_bounds(default_max, default_min)
-        return Element(name, plottable, discrete, offset,
+        return Element(name, units, plottable, discrete, offset,
                        scale_factor, default_max, default_min)
 
     def _validate_name(self, name):

@@ -3,6 +3,7 @@
 import os
 import configparser
 import asyncio
+import json
 from .worker import Worker
 from .errors import DaemonError
 from . import stream, module
@@ -119,7 +120,7 @@ class Daemon(object):
                 return False
             # datatype and element count match so we are ok
         else:
-            client.stream_create(my_stream.path, my_stream.layout)
+            self._create_stream(my_stream)
         # 2.) Make sure no other stream config is using this path
         for other_stream in self.streams:
             if(my_stream.path == other_stream.path):
@@ -128,6 +129,13 @@ class Daemon(object):
                 return False
         # OK, all checks passed for this stream
         return True
+
+    def _create_stream(self, my_stream):
+        # 1.) create stream on the server
+        self.nilmdb_client.stream_create(my_stream.path, my_stream.layout)
+        # 2.) set metadata tags
+        metadata = {"config_key__": json.dumps(my_stream.to_json())}
+        self.nilmdb_client.stream_update_metadata(my_stream.path, metadata)
 
     def _build_module(self, config):
         """ create an input module from config

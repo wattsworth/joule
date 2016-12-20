@@ -240,7 +240,7 @@ class SQLClient():
     def _add_element(self, stream, element):
         c = self.db.cursor()
         data = [None, stream.id, *element]
-        c.execute("INSERT INTO {table} VALUES (?,?,?,?,?,?,?,?,?)".
+        c.execute("INSERT INTO {table} VALUES (?,?,?,?,?,?,?,?,?,?)".
                   format(table=schema.elements["table"]), data)
 
     def _set_stream_elements(self, stream):
