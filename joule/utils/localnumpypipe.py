@@ -28,7 +28,7 @@ class LocalNumpyPipe(numpypipe.NumpyPipe):
                 self.buffer[
                     self.last_index:self.last_index + len(block)] = block
                 self.last_index += len(block)
-                if(self._buffer_full):
+                if(self._buffer_full()):
                     break  # no more room in buffer
                 if(self.queue.empty()):
                     break  # no more data in buffer
