@@ -5,13 +5,14 @@ import configparser
 import asyncio
 from .worker import Worker
 from .errors import DaemonError
-from . import stream, module, aionilmdb
+from . import stream, module
+
 from joule.procdb import client as procdb_client
 import logging
 import functools
 import argparse
 import signal
-from joule.utils import config_manager
+from joule.utils import config_manager, nilmdb
 from . import inserter
 
 
@@ -23,6 +24,7 @@ class Daemon(object):
         # populated by initialize
         self.procdb = None
         self.nilmdb_client = None
+        self.async_nilmdb_client = None
         self.stop_requested = False
         self.modules = []
         self.streams = []
@@ -38,7 +40,8 @@ class Daemon(object):
 
     def initialize(self, config):
         # Build a NilmDB client
-        self.nilmdb_client = aionilmdb.AioNilmdb(config.nilmdb.url)
+        self.async_nilmdb_client = nilmdb.AsyncClient(config.nilmdb.url)
+        self.nilmdb_client = nilmdb.Client(config.nilmdb.url)
         # Set up the ProcDB
         self.procdb = procdb_client.SQLClient(config.procdb.db_path,
                                               config.procdb.max_log_lines)
@@ -99,7 +102,7 @@ class Daemon(object):
 
     def _validate_stream(self, my_stream):
         client = self.nilmdb_client
-        info = client.stream_info_nowait(my_stream.path)
+        info = client.stream_info(my_stream.path)
         # 1.) Validate or create the stream in NilmDB
         if info:
             # path exists, make sure the structure matches what this stream
@@ -116,7 +119,7 @@ class Daemon(object):
                 return False
             # datatype and element count match so we are ok
         else:
-            client.stream_create_nowait(my_stream.path, my_stream.layout)
+            client.stream_create(my_stream.path, my_stream.layout)
         # 2.) Make sure no other stream config is using this path
         for other_stream in self.streams:
             if(my_stream.path == other_stream.path):
@@ -196,8 +199,8 @@ class Daemon(object):
             logging.error("task interrupted")
             #print(e)
             
-        if(self.nilmdb_client is not None):
-            self.nilmdb_client.close()
+        if(self.async_nilmdb_client is not None):
+            self.async_nilmdb_client.close()
 
     def stop(self):
         loop = asyncio.get_event_loop()
@@ -214,7 +217,7 @@ class Daemon(object):
             # build inserters for any paths that have non-zero keeps
             if(stream.keep_us):
                 my_inserter = inserter.NilmDbInserter(
-                    self.nilmdb_client,
+                    self.async_nilmdb_client,
                     path,
                     insertion_period=self.NILMDB_INSERTION_PERIOD,
                     decimate=stream.decimate)

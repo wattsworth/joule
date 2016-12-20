@@ -16,7 +16,7 @@ class TestNilmDbInserter(asynctest.TestCase):
         self.my_stream = helpers.build_stream(
             name="test", datatype="uint32", path="/test/path", num_elements=5)
 
-    @mock.patch("joule.daemon.daemon.aionilmdb.AioNilmdb", autospec=True)
+    @mock.patch("joule.daemon.daemon.nilmdb.AsyncClient", autospec=True)
     @mock.patch("joule.daemon.inserter.NilmDbDecimator", autospec=True)
     def test_processes_data_from_queue(self, mock_decimator, mock_client):
         mock_client.stream_insert = asynctest.mock.CoroutineMock()
@@ -61,7 +61,7 @@ class TestNilmDbInserter(asynctest.TestCase):
         # make sure the decimations were processed
         self.assertTrue(my_decimator.process.called)
 
-    @mock.patch("joule.daemon.daemon.aionilmdb.AioNilmdb", autospec=True)
+    @mock.patch("joule.daemon.daemon.nilmdb.AsyncClient", autospec=True)
     def test_detects_interval_breaks(self, mock_client):
         my_inserter = inserter.NilmDbInserter(
             mock_client, "/test/path", decimate=False)
@@ -106,7 +106,7 @@ class TestNilmDbDecimator(unittest.TestCase):
         self.decim_lvl2_info = [self.test_path + "~decim-16", "float32_12"]
         self.decim_lvl3_info = [self.test_path + "~decim-64", "float32_12"]
 
-    @mock.patch("joule.daemon.daemon.aionilmdb.AioNilmdb", autospec=True)
+    @mock.patch("joule.daemon.daemon.nilmdb.AsyncClient", autospec=True)
     def test_finds_existing_streams(self, mock_client):
         # both the base and the decimation stream already exist
         mock_info = helpers.mock_stream_info([self.base_info,
@@ -117,7 +117,7 @@ class TestNilmDbDecimator(unittest.TestCase):
         # so the decimation stream shouldn't be created
         mock_client.stream_create.assert_not_called()
 
-    @mock.patch("joule.daemon.daemon.aionilmdb.AioNilmdb", autospec=True)
+    @mock.patch("joule.daemon.daemon.nilmdb.AsyncClient", autospec=True)
     def test_creates_first_decimation_stream(self, mock_client):
         # only the base exists
         mock_info = helpers.mock_stream_info([self.base_info])
@@ -133,7 +133,7 @@ class TestNilmDbDecimator(unittest.TestCase):
         # so the decimation stream should be created
         mock_client.stream_create.assert_called_with(*self.decim_lvl1_info)
 
-    @mock.patch("joule.daemon.daemon.aionilmdb.AioNilmdb", autospec=True)
+    @mock.patch("joule.daemon.daemon.nilmdb.AsyncClient", autospec=True)
     def test_creates_subsequent_decimation_streams(self, mock_client):
         # both the base and the decimation stream already exist
         mock_info = helpers.mock_stream_info([self.base_info,
@@ -152,7 +152,7 @@ class TestNilmDbDecimator(unittest.TestCase):
         # the 2nd level decimation should be created
         mock_client.stream_create.assert_called_with(*self.decim_lvl2_info)
 
-    @mock.patch("joule.daemon.daemon.aionilmdb.AioNilmdb", autospec=True)
+    @mock.patch("joule.daemon.daemon.nilmdb.AsyncClient", autospec=True)
     def test_correctly_decimates_data(self, mock_client):
 
         data = helpers.create_data("int32_4", length=16)

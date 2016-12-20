@@ -2,7 +2,8 @@
 Test the inserter and decimator objects
 """
 
-from joule.daemon import inserter, daemon, aionilmdb
+from joule.daemon import inserter, daemon
+from joule.utils import nilmdb
 from unittest import mock
 from test import helpers
 import asynctest
@@ -19,7 +20,7 @@ class TestNilmDbDecimatorErrors(asynctest.TestCase):
         # only /other/path exists in the database
         mock_info = helpers.mock_stream_info([["/other/path", "uint8_1"]])
 
-        mock_client = mock.Mock(autospec=aionilmdb.AioNilmdb)
+        mock_client = mock.Mock(autospec=nilmdb.AsyncClient)
         mock_client.stream_list = \
             asynctest.mock.CoroutineMock(side_effect=mock_info)
 
@@ -35,7 +36,7 @@ class TestNilmDbDecimatorErrors(asynctest.TestCase):
         verify nilmdb response just to be safe"""
         bad_layout = "uint8_adsf"
         mock_info = helpers.mock_stream_info([["/base/path", bad_layout]])
-        mock_client = mock.Mock(autospec=aionilmdb.AioNilmdb)
+        mock_client = mock.Mock(autospec=nilmdb.AsyncClient)
         mock_client.stream_list = \
             asynctest.mock.CoroutineMock(side_effect=mock_info)
 

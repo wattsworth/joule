@@ -16,8 +16,8 @@ class TestDaemonErrors(unittest.TestCase):
                          layout_type="float32", layout_count=4)
 
         # mock AioNilmdb client
-        mock_client = mock.Mock(autospec=daemon.aionilmdb.AioNilmdb)
-        mock_client.stream_info_nowait = mock.MagicMock(return_value=info)
+        mock_client = mock.Mock(autospec=daemon.nilmdb.Client)
+        mock_client.stream_info = mock.MagicMock(return_value=info)
         my_daemon = daemon.Daemon()
         my_daemon.nilmdb_client = mock_client
 
@@ -30,8 +30,8 @@ class TestDaemonErrors(unittest.TestCase):
         """Cannot register stream if path exists with a different datatype"""
         info = mock.Mock(layout="uint8_4", layout_type="uint8", layout_count=4)
         # mock AioNilmdb client
-        mock_client = mock.Mock(autospec=daemon.aionilmdb.AioNilmdb)
-        mock_client.stream_info_nowait = mock.MagicMock(return_value=info)
+        mock_client = mock.Mock(autospec=daemon.nilmdb.Client)
+        mock_client.stream_info = mock.MagicMock(return_value=info)
         my_daemon = daemon.Daemon()
         my_daemon.nilmdb_client = mock_client
 
@@ -44,9 +44,9 @@ class TestDaemonErrors(unittest.TestCase):
         """Cannot register stream with duplicate path"""
         info = mock.Mock(layout="float32_1", layout_type="float32",
                          layout_count=1)
-        # mock AioNilmdb client
-        mock_client = mock.Mock(autospec=daemon.aionilmdb.AioNilmdb)
-        mock_client.stream_info_nowait = mock.MagicMock(return_value=info)
+        # mock Nilmdb client
+        mock_client = mock.Mock(autospec=daemon.nilmdb.Client)
+        mock_client.stream_info = mock.MagicMock(return_value=info)
         my_daemon = daemon.Daemon()
         my_daemon.nilmdb_client = mock_client
 

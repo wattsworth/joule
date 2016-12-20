@@ -18,7 +18,7 @@ class TestDaemon(unittest.TestCase):
     @mock.patch("joule.daemon.daemon.module.Parser", autospec=True)
     @mock.patch("joule.daemon.daemon.stream.Parser", autospec=True)
     @mock.patch("joule.daemon.daemon.procdb_client", autospec=True)
-    @mock.patch("joule.daemon.daemon.aionilmdb.AioNilmdb", autospec=True)
+    @mock.patch("joule.daemon.daemon.nilmdb.AsyncClient", autospec=True)
     def test_creates_modules_and_streams_from_configs(self,
                                                       mock_client,
                                                       mock_procdb,
@@ -81,8 +81,8 @@ class TestDaemon(unittest.TestCase):
                          layout_count=4)
         my_daemon = daemon.Daemon()
         # mock AioNilmdb client
-        mock_client = mock.Mock(autospec=daemon.aionilmdb.AioNilmdb)
-        mock_client.stream_info_nowait = mock.MagicMock(return_value=info)
+        mock_client = mock.Mock(autospec=daemon.nilmdb.Client)
+        mock_client.stream_info = mock.MagicMock(return_value=info)
         my_daemon.nilmdb_client = mock_client
 
         for my_stream in streams:
@@ -97,8 +97,8 @@ class TestDaemon(unittest.TestCase):
     def test_creates_nilmdb_entries_for_new_streams(self):
         """Database path is created when stream is first registered"""
         # mock AioNilmdb client
-        mock_client = mock.Mock(autospec=daemon.aionilmdb.AioNilmdb)
-        mock_client.stream_info_nowait = mock.MagicMock(return_value=None)
+        mock_client = mock.Mock(autospec=daemon.nilmdb.Client)
+        mock_client.stream_info = mock.MagicMock(return_value=None)
 
         # the stream does not exist in the database
         new_stream = helpers.build_stream(
@@ -107,7 +107,7 @@ class TestDaemon(unittest.TestCase):
         my_daemon.nilmdb_client = mock_client
         my_daemon._validate_stream(new_stream)
         # the path should be set up in the nilmdb database
-        mock_client.stream_create_nowait.assert_called_with(
+        mock_client.stream_create.assert_called_with(
             "/test/path", "float32_4")
 
     def test_does_not_create_nilmdb_entries_for_existing_streams(self):
@@ -117,8 +117,8 @@ class TestDaemon(unittest.TestCase):
                          layout_count=1)
 
         # mock AioNilmdb client
-        mock_client = mock.Mock(autospec=daemon.aionilmdb.AioNilmdb)
-        mock_client.stream_info_nowait = mock.MagicMock(return_value=info)
+        mock_client = mock.Mock(autospec=daemon.nilmdb.Client)
+        mock_client.stream_info = mock.MagicMock(return_value=info)
 
         existing_stream = helpers.build_stream(
             name="test", path="/test/path", num_elements=1)
@@ -127,7 +127,7 @@ class TestDaemon(unittest.TestCase):
         my_daemon.nilmdb_client = mock_client
         my_daemon._validate_stream(existing_stream)
         # the path should be set up in the nilmdb database
-        mock_client.stream_create_nowait.assert_not_called()
+        mock_client.stream_create.assert_not_called()
 
 
 class TestDaemonModuleMethods(unittest.TestCase):
