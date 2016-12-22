@@ -5,6 +5,8 @@ import aiohttp
 import json
 import joule.utils.time
 import requests
+import logging
+import asyncio
 
 
 class Client:
@@ -83,19 +85,40 @@ class AsyncClient:
     def close(self):
         self.session.close()
 
-    async def stream_insert(self, path, data, start, end):
-
+    async def stream_insert(self, path, data, start, end, retry=True):
+        """insert stream data, retry on error"""
         url = "{server}/stream/insert".format(server=self.server)
         params = {"start": "%d" % start,
                   "end": "%d" % end,
                   "path": path,
                   "binary": '1'}
-
-        async with self.session.put(url, params=params,
-                                    data=data.tostring()) as resp:
-            if(resp.status != 200):
-                raise AioNilmdbError(await resp.text())
-
+        success = False
+        while(success is False):
+            try:
+                async with self.session.put(url, params=params,
+                                            data=data.tostring()) as resp:
+                    if(resp.status != 200):
+                        error = await resp.text()
+                        if(resp.status == 400):
+                            # nilmdb rejected the data because
+                            # something is wrong with it
+                            logging.error("nilmdb error, " +
+                                          "dumped bad data [%s]" % error)
+                            success = True
+                        else:
+                            # nilmdb itself has an error, we can retry
+                            raise AioNilmdbError(error)
+                    else:
+                        success = True
+            except Exception as e:
+                self.session.close()
+                self.session = aiohttp.ClientSession()
+                if(retry is False):
+                    raise AioNilmdbError from e
+                else:
+                    logging.error("nilmdb error: [%s], retrying" % e)
+                    await asyncio.sleep(0.1)
+                    
     async def stream_list(self, path, layout=None, extended=False):
         url = "{server}/stream/list".format(server=self.server)
         params = {"path":   path}

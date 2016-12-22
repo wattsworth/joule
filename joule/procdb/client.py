@@ -24,6 +24,9 @@ class SQLClient():
         self.db.row_factory = sqlite3.Row
         if(initialization_required):
             self._initialize_procdb()
+        # turn off synchronous mode to speed up commits
+        c = self.db.cursor()
+        c.execute("PRAGMA synchronous=OFF")
 
     def commit(self):
         self.db.commit()
@@ -184,8 +187,6 @@ class SQLClient():
                     c_type = column[1]
                     c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct}"
                               .format(tn=model["table"], cn=c_name, ct=c_type))
-            # turn off synchronous mode to speed up commits
-            c.execute("PRAGMA synchronous=OFF")
 
     def _find_module_by_column(self, column, value):
         c = self.db.cursor()

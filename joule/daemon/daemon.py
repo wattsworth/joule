@@ -13,7 +13,7 @@ import logging
 import functools
 import argparse
 import signal
-from joule.utils import config_manager, nilmdb
+from joule.utils import config_manager, nilmdb, time
 from . import inserter
 
 
@@ -262,7 +262,10 @@ def main(argv=None):
     parser.add_argument("--config")
     args = parser.parse_args(argv)
     daemon = Daemon()
-#    logging.basicConfig(level=logging.DEBUG)
+    log = logging.getLogger()
+    log.addFilter(LogDedupFilter())
+    logging.basicConfig(format=
+                        '%(asctime)s %(levelname)s:%(message)s')
     try:
         configs = load_configs(args.config)
     except Exception as e:
@@ -280,3 +283,36 @@ def main(argv=None):
     daemon.run(loop)
     loop.close()
     exit(0)
+
+
+class LogDedupFilter:
+    def __init__(self, name='', max_gap=5):
+        self.max_gap = max_gap
+        self.first_repeat = True
+        self.last_time = 0
+        self.last_msg = None
+
+    def filter(self, record):
+        if(self.last_msg is None):
+            self.last_msg = record.msg
+            return True
+        if(self.last_msg == record.msg):
+            # same log entry
+            now = time.now()/1e6
+            prev = self.last_time
+            self.last_msg = record.msg
+            self.last_time = now
+            if(now-prev < self.max_gap):
+                if(self.first_repeat):
+                    record.msg = "[...repeats]"
+                    self.first_repeat = False
+                    return True
+                else:
+                    return False  # suppress
+            return True  # far enough apart
+
+        self.last_time = 0
+        self.last_msg = record.msg
+        self.first_repeat = True
+        return True
+
