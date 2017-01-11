@@ -7,12 +7,12 @@ from . import errors, numpypipe
 class LocalNumpyPipe(numpypipe.NumpyPipe):
     """pipe for intra-module async communication"""
 
-    def __init__(self, name, layout, buffer_size=3000):
+    def __init__(self, name, layout, buffer_size=3000, debug=False):
         super().__init__(name, layout)
         # tunable constants
         self.BUFFER_SIZE = buffer_size
         self.MAX_BLOCK_SIZE = int(buffer_size / 3)
-
+        self.debug = debug
         # initialize buffer and queue
         self.queue = asyncio.Queue()
         self.buffer = np.zeros(self.BUFFER_SIZE, dtype=self.dtype)
@@ -27,6 +27,12 @@ class LocalNumpyPipe(numpypipe.NumpyPipe):
                 block = await self.queue.get()
                 self.buffer[
                     self.last_index:self.last_index + len(block)] = block
+                if(self.debug):
+                    if(self._buffer_full()):
+                        msg = "buffer FULL"
+                    else:
+                        msg = "not full"
+                    print("adding [%d block] to index %d, %s" % (len(block),self.last_index,msg))
                 self.last_index += len(block)
                 if(self._buffer_full()):
                     break  # no more room in buffer
