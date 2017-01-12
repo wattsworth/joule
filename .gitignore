@@ -13,3 +13,4 @@ htmlcov/*
 asynctests.py
 joule/daemon/test.py
 test/e2e/nilmdb
+docs/_build

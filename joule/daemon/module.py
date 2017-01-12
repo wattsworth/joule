@@ -6,7 +6,7 @@ Configuration File:
 [Main]
 name = module name
 description = module description
-exec = /path/to/file --args 
+exec_cmd = /path/to/file --args [joule adds --pipes arg]
 
 [Source]
 path1 = /nilmdb/input/stream1

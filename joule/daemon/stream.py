@@ -12,7 +12,6 @@ decimate = yes
 #required settings (examples)
 name         = Element Name
 #optional settings (defaults)
-description  = 
 plottable    = yes
 discrete     = no
 offset       = 0.0
