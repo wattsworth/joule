@@ -1,11 +1,11 @@
 Joule
 ========
 
-Joule is a data capture and processing engine. It allows you to build
-robust sensors using resource constrained systems such as the
-Raspberry Pi. Joule uses a modular design to build complex acquisition
-and signal processing workflows from building blocks called
-modules. Modules are user defined processes that are connected
+Joule is a data capture and signal processing engine. It allows you to build
+robust sensors using embedded systems such as the
+Raspberry Pi. Joule uses modules to build complex acquisition
+and signal processing workflows from simple building blocks. 
+Modules are user defined processes that are connected
 together by data streams.
 
 Joule acts as a process manager, ensuring that modules start at system
@@ -14,24 +14,24 @@ statistics and logs for each module making it easy to detect
 bugs and find bottlenecks in processing pipelines.
 
 
-
-
 Streams
 -------
 
-Streams connect modules together and can be persisted to a database
-(NilmDB) for storage. Streams are timestamped datasets. A stream has
-one or more elements and can be viewed as a database table:
+Streams are timestamped data flows that connect modules together.
+Streams can represent primary measurements such as readings from a current
+sensor or derived measurements such as harmonic content. A stream has
+one or more elements and can be viewed as a database table: ::
 
- [timestamp | value1  | value2  | ... | valueN]
-   1003421  |  0.0    |   10.5  | ... | 2.3
-   1003423  |  1.0    |   -8.0  | ... | 2.3
-   1003429  |  8.0    |   12.5  | ... | 2.3
-   1003485  |  4.0    |   83.5  | ... | 2.3
+ ========= ====== ====== === ======
+ timestamp value1 value2 ... valueN
+ ========= ====== ====== === ======
+ 1003421   0.0    10.5   ... 2.3
+ 1003423   1.0    -8.0   ... 2.3
+ 1003429   8.0    12.5   ... 2.3
+ 1003485   4.0    83.5   ... 2.3
+ ========= ====== ====== === ======
 
-Streams can represent a physical quantity such as X,Y,Z from an
-acceleromiter, current and voltage from a power meter, etc. or events
-such as error condition, system status, etc. 
+
 
 Modules
 -------
@@ -49,12 +49,12 @@ reusable building blocks.
 
 Example
 -------
-Using a light sensor and temperature sensor to detect occupancy in a room
+Using a light sensor and temperature sensor to detect occupancy in a room: ::
 
-[Module]  a_stream
-
-[ TempReader] --> temp_values  --,
-[LightReader] --> light_values --+--> [OccupancyFilter] --> room_status
+    [Module]  a_stream
+    
+    [ TempReader] --> temp_values  --,
+    [LightReader] --> light_values --+--> [OccupancyFilter] --> room_status
 
 Features
 --------
