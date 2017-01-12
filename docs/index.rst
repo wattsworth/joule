@@ -3,9 +3,6 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
    
 Joule: Modular Data Processing
 =================================
@@ -23,8 +20,14 @@ boot and are restarted if they fail. Joule also collects runtime
 statistics and logs for each module making it easy to detect
 bugs and find bottlenecks in processing pipelines.
 
-Intro
-------
+.. toctree::
+   :maxdepth: 2
+
+   modules
+   streams
+   support
+   install
+
 
 Streams
 """""""
@@ -80,3 +83,4 @@ API Documentation
 
 Contributing & Running Tests
 ----------------------------
+
