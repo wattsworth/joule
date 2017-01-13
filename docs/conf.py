@@ -94,8 +94,6 @@ html_theme = 'alabaster'
 
 html_theme_options = {
     "logo": "logo.png",
-    "github_user": "jdrunner",
-    "github_repo": "smartee"
 }
 
 html_sidebars = {
