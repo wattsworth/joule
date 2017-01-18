@@ -3,6 +3,7 @@ Concepts
 ==============
 
 
+.. _streams:
 
 Streams
 """""""
@@ -12,16 +13,17 @@ Streams can represent primary measurements such as readings from a current
 sensor or derived measurements such as harmonic content. A stream has
 one or more elements and can be viewed as a database table: 
 
- ========= ====== ====== === ======
- timestamp value1 value2 ... valueN
- ========= ====== ====== === ======
- 1003421   0.0    10.5   ... 2.3
- 1003423   1.0    -8.0   ... 2.3
- 1003429   8.0    12.5   ... 2.3
- 1003485   4.0    83.5   ... 2.3
- ========= ====== ====== === ======
+ ========= ======== ======== === ========
+ timestamp element1 element2 ... elementN
+ ========= ======== ======== === ========
+ 1003421   0.0      10.5     ... 2.3
+ 1003423   1.0      -8.0     ... 2.3
+ 1003429   8.0      12.5     ... 2.3
+ 1003485   4.0      83.5     ... 2.3
+ ========= ======== ======== === ========
 
 
+.. _modules:
 
 Modules
 """""""

@@ -26,8 +26,8 @@ bugs and find bottlenecks in processing pipelines.
    concepts
    install
    getting_started
-   cookbook
-   support
+   writing_modules
+   nilm
 
                                              
 Tutorial

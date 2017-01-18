@@ -1,3 +1,5 @@
+.. _installing-joule:
+
 ============
 Installation
 ============
@@ -8,8 +10,10 @@ that do not ship with Python 3.5 such as Raspbian it must be built from source.
 
 Install NilmDb
 --------------------
-NilmDb is accessible form the Wattsworth git repository. Contact donnal@usna.edu to request access.
-From the terminal, run the following commands to install and configure NilmDb.
+
+NilmDb is accessible from the Wattsworth git repository. Contact
+donnal@usna.edu to request access.  From the terminal, run the
+following commands to install and configure NilmDb.
 
 
 Install dependencies
@@ -33,8 +37,8 @@ Install NilmDb
 
 *Configure WSGI Scripts*
 
-Create a directory for NilmDB (eg **/opt/nilmdb**), in this directory create a file
-**nilmdb.wsgi** as shown below:
+Create a directory for NilmDB (eg **/opt/nilmdb**), in this directory
+create a file **nilmdb.wsgi** as shown below:
 
 .. code-block:: python
    
@@ -52,7 +56,9 @@ permissions on the directory:
    
 *Configure Apache*
 
-Edit the default virtual host configuration at **/etc/apache2/site-available/000-default** to add the following lines within the ``<VirtualHost>`` directive:
+Edit the default virtual host configuration at
+**/etc/apache2/site-available/000-default** to add the following lines
+within the ``<VirtualHost>`` directive:
 
 .. code-block:: apache
 
@@ -67,12 +73,14 @@ Edit the default virtual host configuration at **/etc/apache2/site-available/000
     # (other existing configuration here)
   </VirtualHost>
 
-Note these values assume you followed the user creation and file naming guidelines above.
+Note these values assume you followed the user creation and file
+naming guidelines above.
 
 Docker
 ^^^^^^
 
-NilmDb is also available as a Docker container available through Docker Hub. E-mail donnal@usna.edu for access.
+NilmDb is also available as a Docker container available through
+Docker Hub. E-mail donnal@usna.edu for access.
 
 .. code-block:: bash
 
@@ -127,7 +135,8 @@ environments is with *virtualenvwrapper*
  $> export WORKON_HOME=~/Envs
  $> source /usr/local/bin/virtualenvwrapper.sh
 
-(`Full virtualenvwrapper install instructions. <https://virtualenvwrapper.readthedocs.io/en/latest/install.html>`_)
+(`Full virtualenvwrapper install
+instructions. <https://virtualenvwrapper.readthedocs.io/en/latest/install.html>`_)
  
 Create a new virtual environment using Python 3.5
 
@@ -150,10 +159,10 @@ following commands to install and configure Joule.
  $> cd joule
  $> python3 setup.py install
 
-Configure Joule
+*Configure Joule*
 
-By default joule looks for configuration files at **/etc/joule**. Run the following commands
-to create the basic directory structure
+By default joule looks for configuration files at **/etc/joule**. Run
+the following commands to create the basic directory structure
 
 .. code-block:: bash
 
@@ -161,12 +170,64 @@ to create the basic directory structure
  $> sudo mkdir -p /etc/joule/stream_configs
  $> sudo touch /etc/joule/main.conf
  
-Create Startup Scripts
+*Create Startup Scripts*
 
+To configure Joule to run automatically you must add a configuration script to systemd. Copy the following into **/etc/systemd/system/joule.service**
 
+.. code-block:: ini
+		
+  [Unit]
+  Description = "Joule Management Daemon"
+  After = syslog.target
+
+  [Service]
+  Type = simple
+  # **note: path will be different if joule is in a virtualenv**
+  ExecStart = /usr/local/bin/jouled 
+  StandardOutput = journal
+  StandardError = journal
+  Restart = always
+
+  [Install]
+  WantedBy = multi-user.target
+
+To enable and start the joule service run
+
+.. code-block:: bash
+
+   $> sudo systemctl enable joule.service
+   $> sudo systemctl start joule.service
+   
 
 Verify Installation
 -------------------
+
+Check that joule is running:
+
+.. code-block:: bash
+
+   $> sudo systemctl status joule.service
+   ● joule.service - "Joule Management Daemon"
+      Loaded: loaded (/etc/systemd/system/joule.service; enabled)
+      Active: active (running) since Tue 2017-01-17 09:53:21 EST; 7s ago
+   Main PID: 2296 (jouled)
+     CGroup: /system.slice/joule.service
+             └─2296 /usr/local/bin/python3 /usr/local/bin/jouled
+
+Joule is managed from the terminal using the **joule** command, on a fresh
+installation there is nothing for Joule to do so these commands will not return
+data. Check that they are available by printing the help output.
+
+.. code-block:: bash
+
+   $> joule modules -h
+      # ... some help text
+   $> joule logs -h
+      # ... some help text
+
+Your Joule installation should be ready to go, read
+:ref:`getting-started` to configure your first module and start
+capturing data.
 
 
 .. [#f1] A local installation of NilmDb is not strictly necessary as all
