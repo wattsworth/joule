@@ -1,6 +1,8 @@
 from cliff.command import Command
 from joule.client.random import RandomReader
 from joule.client.file import FileReader
+import joule.utils.client
+import asyncio
 
 
 class ReaderCmd(Command):
@@ -41,8 +43,11 @@ class ReaderCmd(Command):
 
             self.module_parsers[module_name].print_help()
             return
-        
         reader = self.modules[parsed_args.reader]
-        reader.run(parsed_args)
+        task = reader.run_as_task(parsed_args)
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(task)
+        loop.close()
+
 
 
