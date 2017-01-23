@@ -45,28 +45,35 @@ you must remove it before continuing.*
 Next we will set up a module to write data to this stream. **joule
 reader** is a multipurpose reader module provided with Joule. It can
 read values from file objects, serial ports, and more. In this
-demonstration we will use it to simply generate random values. When **joule
+demonstration we will use it to simply generate random values. When a **joule
 reader** is called from the command line it prints values to stdout: 
 
 .. code-block:: bash
 
-		$> joule reader rand -h
-		#  ... help text
-		$> joule reader rand --width 2 --rate_ms 10
-		#  ... output ...
+		$> joule reader
+		#  ... list of reader modules
+		$> joule reader help random
+		#  ... help with the random module
+		$> joule reader random 2 10
+		Starting random stream: 2 elements @ 10.0Hz
+		1485188853650944 0.32359053067687582 0.70028608966895545
+		1485188853750944 0.72139550945715136 0.39218791387411422
+		1485188853850944 0.40728044378612194 0.26446072057019654
+		1485188853950944 0.61021957330250398 0.27359526775709841
+		#  ... more output ...
   
 Copy the following into a file at **/etc/joule/module_configs/demo_reader.conf**
 
 .. code-block:: ini
 
 		[Main]
-		exec_cmd = joule reader rand --width 2 --rate_ms 10
+		exec_cmd = joule reader random 2 10
 		name = Demo Reader
 
 		[Destination]
 		output = /demo/random
 
-This will create a reader module that runs **joule reader** and pipes
+This will create a reader module that runs **joule reader random** and pipes
 the output to **/demo/random**. That's all you need to do to set up
 the capture pipeline. Restart joule and check that the new module is
 running:
@@ -81,7 +88,7 @@ running:
 		| Rand Reader |            | /demo/random  | running | 2%  | 1KB |
 		+-------------+------------+---------------+---------+-----+-----+
 		$> joule logs "Rand Reader"
-		[17 Jan 2017 10:55:31] Starting random generator: 2 float32's @ 10ms
+		[17 Jan 2017 10:55:31] Starting random stream: 2 elements @ 10.0Hz
 
 
 A Filter Module
@@ -120,11 +127,12 @@ it will display a description of the operations it will perform on the data
 
 .. code-block:: bash
 
-		$> joule filter -h
-		#  ... help text
-		$> joule filter average --window 10
-		   compute the per-element moving average using a window size of 10
-
+		$> joule filter
+		#  ... list of filter modules
+		$> joule filter help mean
+		#  ... help with the mean module
+		$> joule filter mean 8 
+		per-element moving average with a window size of 8
 
 To add this filter to our pipeline copy the following into a file at
 **/etc/joule/module_configs/demo_filter.conf**
@@ -132,7 +140,7 @@ To add this filter to our pipeline copy the following into a file at
 .. code-block:: ini
 
 		[Main]
-		exec_cmd = joule filter avaerage --window 10
+		exec_cmd = joule filter mean 8
 		name = Demo Filter
 
 		[Source]
@@ -156,10 +164,10 @@ and a filter.  Restart joule and check that both modules are running:
 		| Demo Reader |              | /demo/random   | running | 2%  | 1KB |
 		| Demo Filter | /demo/random | /demo/filtered | running | 2%  | 1KB |
 		+-------------+--------------+----------------+---------+-----+-----+
-		$> joule logs "Rand Reader"
-		[17 Jan 2017 10:55:31] Starting random generator: 2x float32 @ 10ms
+		$> joule logs "Demo Reader"
+		[17 Jan 2017 10:55:31] Starting random stream: 2 elements @ 10.0Hz
 		$> joule logs "Demo Filter"
-		[17 Jan 2017 10:55:31] Starting moving average filter with window size 10
+		[17 Jan 2017 10:55:31] Starting moving average filter with window size 8
 
 
 .. _main.conf:		

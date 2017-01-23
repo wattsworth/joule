@@ -4,9 +4,9 @@ import asyncio
 import signal
 
 
-class ReaderModule:
+class FilterModule:
 
-    def __init__(self, name="Joule Reader Module"):
+    def __init__(self, name="Joule Filter Module"):
         self.name = name
         self.parser = ""  # initialized in build_args
 
@@ -20,7 +20,14 @@ class ReaderModule:
         # parser.add_argument("--custom_flag")
         pass
 
-    async def run(self, parsed_args, output):
+    def runtime_help(self, parsed_args):
+        return "TODO: implement in child"
+
+    async def print_runtime_help(self, parsed_args):
+        " short message explaining what filter does given the args "
+        print(self.runtime_help(parsed_args))
+        
+    async def run(self, parsed_args, inputs, outputs):
         # some logic...
         # await output.write(np_array)
         assert False, "implement in child class"
@@ -49,16 +56,8 @@ class ReaderModule:
     def run_as_task(self, parsed_args):
         (pipes_in, pipes_out) = joule.utils.client.build_pipes(parsed_args)
         if(pipes_out == {}):
-            output = StdoutPipe()
+            return asyncio.ensure_future(
+                self.print_runtime_help(parsed_args))
         else:
-            output = pipes_out['output']
-        return asyncio.ensure_future(self.run(parsed_args, output))
-
-    
-class StdoutPipe:
-
-    async def write(self, data):
-        for row in data:
-            ts = row[0]
-            vals = row[1:]
-            print("%d %s" % (ts, " ".join([repr(x) for x in vals])))
+            return asyncio.ensure_future(
+                self.run(parsed_args, pipes_in, pipes_out))
