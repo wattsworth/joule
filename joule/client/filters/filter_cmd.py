@@ -1,7 +1,7 @@
 from cliff.command import Command
-from joule.client.mean import MeanFilter
-from joule.client.median import MedianFilter
-from joule.client.merge import MergeFilter
+from .mean import MeanFilter
+from .median import MedianFilter
+from .merge import MergeFilter
 import joule.utils.client
 import asyncio
 
@@ -23,7 +23,7 @@ class FilterCmd(Command):
         subparsers = parser.add_subparsers()
         for (name, filter) in self.modules.items():
             my_parser = subparsers.add_parser(name,
-                                              help=filter.description())
+                                              help=filter.description)
             filter.build_args(my_parser)
             my_parser.set_defaults(filter=name)
             self.module_parsers[name] = my_parser
@@ -41,7 +41,7 @@ class FilterCmd(Command):
 
         if(parsed_args.filter == "help"):
             module_name = parsed_args.module
-            print(self.modules[module_name].help())
+            print(self.modules[module_name].help)
 
             self.module_parsers[module_name].print_help()
             return

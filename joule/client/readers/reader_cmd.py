@@ -1,7 +1,7 @@
 from cliff.command import Command
-from joule.client.random import RandomReader
-from joule.client.file import FileReader
-import joule.utils.client
+from .random import RandomReader
+from .file import FileReader
+
 import asyncio
 
 
@@ -21,7 +21,7 @@ class ReaderCmd(Command):
         subparsers = parser.add_subparsers()
         for (name, reader) in self.modules.items():
             my_parser = subparsers.add_parser(name,
-                                              help=reader.description())
+                                              help=reader.description)
             reader.build_args(my_parser)
             my_parser.set_defaults(reader=name)
             self.module_parsers[name] = my_parser
@@ -39,7 +39,7 @@ class ReaderCmd(Command):
 
         if(parsed_args.reader == "help"):
             module_name = parsed_args.module
-            print(self.modules[module_name].help())
+            print(self.modules[module_name].help)
 
             self.module_parsers[module_name].print_help()
             return

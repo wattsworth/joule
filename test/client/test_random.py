@@ -3,7 +3,7 @@ import asynctest
 import asyncio
 import numpy as np
 import argparse
-from joule.client.random import RandomReader
+from joule.client.readers.random import RandomReader
 
 
 class TestRandomReader(asynctest.TestCase):
@@ -24,4 +24,5 @@ class TestRandomReader(asynctest.TestCase):
         diffs = np.diff(result['timestamp'])
         self.assertEqual(np.mean(diffs), 1/RATE*1e6)
         self.assertEqual(np.shape(result['data'])[1], WIDTH)
-        print(len(result))
+
+        

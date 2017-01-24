@@ -1,5 +1,5 @@
 from joule.utils.time import now as time_now
-from joule.client.reader import ReaderModule
+from joule.client import ReaderModule
 import numpy as np
 import asyncio
 
@@ -10,26 +10,22 @@ class FileReader(ReaderModule):
     def __init__(self):
         super(FileReader, self).__init__("Random Reader")
         self.stop_requested = False
+        self.description = "read data from a file"
+        self.help = """
+This is a module that reads data from a file
+Specify -t to add timestamps to data (note, this should only be
+used for real time FIFO's. The 8us difference in example below
+is the actual time taken to read the file line)
 
-    def description(self):
-        return "read data from a file"
-
-    def help(self):
-        return """
-        This is a module that reads data from a file
-        Specify -t to add timestamps to data
-        Example:
-            $> joule reader file /tmp/my_fifo
-            1234 45 82 -33
-            1234 45 82 -33
-            1234 45 82 -33
-            1234 45 82 -33
-            1234 45 82 -33
-        """
+Example:
+    $> echo -e "3,4\n5,6" > /tmp/file
+    $> joule reader file -t /tmp/file
+    1485274825371860 3.0 4.0
+    1485274825371968 5.0 6.0
+"""
 
     def custom_args(self, parser):
-        parser.add_argument("-f", "--file", required=True,
-                            help="file name")
+        parser.add_argument("file", help="file name")
         parser.add_argument("-d", "--delimiter", default=",",
                             choices=[" ", ","],
                             help="character between values")
@@ -39,8 +35,6 @@ class FileReader(ReaderModule):
     async def run(self, parsed_args, output):
         with open(parsed_args.file, 'r') as f:
             for line in f:
-                #if not line:
-                #    break
                 data = np.fromstring(line, dtype=float,
                                      sep=parsed_args.delimiter)
                 if(parsed_args.timestamp):

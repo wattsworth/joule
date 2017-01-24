@@ -1,5 +1,5 @@
 import argparse
-import joule.utils.client
+from joule.client import helpers
 import asyncio
 import signal
 
@@ -9,19 +9,15 @@ class FilterModule:
     def __init__(self, name="Joule Filter Module"):
         self.name = name
         self.parser = ""  # initialized in build_args
-
-    def help(self):
-        return """TODO: how to use this module: override in child"""
-
-    def description(self):
-        return """TODO: one line description"""
+        self.help = """TODO: how to use this module: override in child"""
+        self.description = """TODO: one line description"""
     
     def custom_args(self, parser):
         # parser.add_argument("--custom_flag")
         pass
 
     def runtime_help(self, parsed_args):
-        return "TODO: implement in child"
+        return self.help
 
     async def print_runtime_help(self, parsed_args):
         " short message explaining what filter does given the args "
@@ -39,7 +35,7 @@ class FilterModule:
         self.task.cancel()
         
     def build_args(self, parser):
-        joule.utils.client.add_args(parser)
+        helpers.add_args(parser)
         self.custom_args(parser)
         
     def start(self, argv=None):
@@ -54,7 +50,7 @@ class FilterModule:
         loop.close()
         
     def run_as_task(self, parsed_args):
-        (pipes_in, pipes_out) = joule.utils.client.build_pipes(parsed_args)
+        (pipes_in, pipes_out) = helpers.build_pipes(parsed_args)
         if(pipes_out == {}):
             return asyncio.ensure_future(
                 self.print_runtime_help(parsed_args))
