@@ -1,5 +1,7 @@
+.. _joule-concepts:
+
 ==============
-Concepts
+Joule Concepts
 ==============
 
 

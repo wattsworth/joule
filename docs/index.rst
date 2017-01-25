@@ -28,21 +28,25 @@ bugs and find bottlenecks in processing pipelines.
    getting_started
    writing_modules
    nilm
-
                                              
-Tutorial
---------
-
-Let's install everything and get it up and running
-
-Usage Documentation
--------------------
-
-Here's how to use it
-
-API Documentation
------------------
-
 Contributing & Running Tests
 ----------------------------
+Contribution is always welcome. Please include tests with your pull request. 
+Unittests can be run using nose2, see **joule/htmlcov** for code coverage.
 
+.. code-block:: bash
+		
+		$> cd joule
+		$> nose2 # run all unittests
+
+End to end tests are run from the **tests/e2e** directory and require
+docker-compose and the NilmDB container. See
+https://docs.docker.com/compose/install/ for details on installing
+docker-compose. The NilmDB container is available by request on `Docker Hub`_.
+
+.. code-block:: bash
+		
+		$> cd test/e2e
+		$> ./runner.sh # run end-to-end tests
+   
+.. _Docker Hub: https://hub.docker.com/
