@@ -201,8 +201,10 @@ configuration file. These pipes connect the module to the joule system.
 		output = /demo/filtered #<--name used in outputs dictionary
 
 
-The input pipes have two single functions, **read** and **consume**. Access data in the pipe
-using the read function which is a coroutine. This returns a structured Numpy array by default, if you would like a flattened array, set the optional parameter flatten.
+The input pipes have two functions, **read** and **consume**. Access
+data in the pipe using the read function which is a coroutine. This
+returns a structured Numpy array by default, if you would like a
+flattened array, set the optional parameter flatten.
 
 .. code-block:: python
 
@@ -217,23 +219,22 @@ using the read function which is a coroutine. This returns a structured Numpy ar
 		# values = [[ts, val1, val2, val3, ..., valN],
 		            [ts, val1, val2, val3, ..., valN],...]
 			    
-, **write** which accepts a numpy array.
-The array should be a matrix of timestamps and values, if you are inserting a single sample,
-enclose the matrix in double braces to provide the correct dimension. Also note that the
-**write** method is a coroutine and must be called with the **await** keyword.
+Every call to **read** should followed by **consume** to indicate how
+much of the data your module has used. The next call to **read** will
+prepend any unconsumed data from the previous read. This allows you to
+design filters which operate on only a portion of the input data such
+as linear filters. See the built-in **mean** and **median** filters
+for an example of using a portion of the input data.
 
-.. code-block:: python
+The **ouput** pipes have a single function **write** which accepts
+a Numpy array. See the ReaderModule section for more details on output pipes.
 
-   data = np.array([[ts, val, val, val, ...],
-                    [ts, val, val, val, ...],
-          	    ....])
+Unlike ReaderModules, modules derived from FilterModule cannot be run
+from the command line because filters require an input stream provided
+by the joule environment.You should always verify your modules using
+unittests. The testing framework provides mock input streams to test
+modules in isolation, see **test_filter.py** for an example.
 
-   await output.write(data)
-   
-If you run the filter from the command line it will print values to stdout. This can help
-debug your code. Additionally it is best practice to provide unittests for your custom reader
-modules. See **test_reader.py** for an example.
-		    
 Custom Modules
 --------------
 writing modules from scratch
