@@ -259,7 +259,7 @@ def load_configs(config_file):
 
 def main(argv=None):
     parser = argparse.ArgumentParser("Joule Daemon")
-    parser.add_argument("--config")
+    parser.add_argument("--config", default="/etc/joule/main.conf")
     args = parser.parse_args(argv)
     daemon = Daemon()
     log = logging.getLogger()

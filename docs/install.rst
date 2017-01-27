@@ -177,7 +177,7 @@ following commands to install and configure Joule.
 		# install dependencies
 		$> pip3 install --upgrade pip # make sure pip is up to date
 		$> pip3 install python-datetime-tz
-		$> apt-get install python3-numpy python3-scipy -y
+		$> apt-get install python3-numpy python3-scipy python3-yaml -y
 		
 .. code-block:: bash
 
