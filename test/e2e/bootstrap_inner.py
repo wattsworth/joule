@@ -7,6 +7,7 @@ import os
 import sys
 import subprocess
 import shlex
+import shutil
 import signal
 
 SOURCE_DIR = "/joule"
@@ -34,6 +35,8 @@ def main():
     prep_system()
     for entry in os.scandir(SCENARIO_DIR):
         if not entry.name.startswith('.') and entry.is_dir():
+            if(os.path.exists("/etc/joule/")):
+                shutil.rmtree("/etc/joule")
             os.symlink(entry.path, "/etc/joule")
             jouled = subprocess.Popen(["jouled", "--config",
                                        "/etc/joule/main.conf"],
