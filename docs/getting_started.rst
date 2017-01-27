@@ -144,8 +144,8 @@ it will display a description of the operations it will perform on the data
 		#  ... list of filter modules
 		$> joule filter help mean
 		#  ... help with the mean module
-		$> joule filter mean 8 
-		per-element moving average with a window size of 8
+		$> joule filter mean 9
+		per-element moving average with a window size of 9
 
 To add this filter to our pipeline copy the following into a file at
 **/etc/joule/module_configs/demo_filter.conf**
@@ -153,7 +153,7 @@ To add this filter to our pipeline copy the following into a file at
 .. code-block:: ini
 
 		[Main]
-		exec_cmd = joule filter mean 8
+		exec_cmd = joule filter mean 9
 		name = Demo Filter
 
 		[Source]
@@ -168,21 +168,34 @@ input from **/demo/random** and storing output in
 and a filter.  Restart joule and check that both modules are running:
 
 .. code-block:: bash
-
+			  
 		$> sudo systemctl restart jouled
+
+		# check status using joule commands
 		$> joule modules
-		+-------------+--------------+----------------+---------+-----+-----+
-		| Module      | Sources      | Destinations   | Status  | CPU | mem |
-		+-------------+--------------+----------------+---------+-----+-----+
-		| Demo Reader |              | /demo/random   | running | 2%  | 1KB |
-		| Demo Filter | /demo/random | /demo/filtered | running | 2%  | 1KB |
-		+-------------+--------------+----------------+---------+-----+-----+
+		+-------------+--------------+----------------+---------+-----+-------------+
+		| Module      | Sources      | Destinations   | Status  | CPU | mem         |
+		+-------------+--------------+----------------+---------+-----+-------------+
+		| Demo Reader |              | /demo/random   | running | 0%  | 33 MB (42%) |
+		| Demo Filter | /demo/random | /demo/filtered | running | 0%  | 53 MB (68%) |
+		+-------------+--------------+----------------+---------+-----+-------------+
 		$> joule logs "Demo Reader"
-		[17 Jan 2017 10:55:31] Starting random stream: 2 elements @ 10.0Hz
+		[27 Jan 2017 18:22:48] ---starting module---
+		[27 Jan 2017 18:22:48] Starting random stream: 2 elements @ 10.0Hz
 		$> joule logs "Demo Filter"
-		[17 Jan 2017 10:55:31] Starting moving average filter with window size 8
+		[27 Jan 2017 18:22:48] ---starting module---
+		[27 Jan 2017 18:22:48] Starting moving average filter with window size 9
 
-
+		# confirm data is entering NilmDB
+		$> nilmtool list -E -n /demo/*
+		/demo/filtered
+		  interval extents: Fri, 27 Jan 2017 # ...
+		          total data: 132 rows, 13.100001 seconds
+		/demo/random
+		  interval extents: Fri, 27 Jan 2017 # ...
+	                  total data: 147 rows, 14.600001 seconds
+		    
+			  
 .. _main.conf:		
 
 main.conf
