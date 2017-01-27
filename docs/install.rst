@@ -20,20 +20,21 @@ Install dependencies
 
 .. code-block:: bash
 
- $> sudo apt-get install cython git build-essential \		
-      python2.7 python2.7-dev python-setuptools python-pip \
-      python-cherrypy3 python-decorator python-requests \
-      python-dateutil python-tz python-progressbar python-psutil \
-      python-simplejson
- $> sudo apt-get install apache2 libapache2-mod-wsgi
+		$> sudo apt-get update
+		$> sudo apt-get install cython git build-essential \		
+		python2.7 python2.7-dev python-setuptools python-pip \
+		python-cherrypy3 python-decorator python-requests \
+		python-dateutil python-tz python-progressbar python-psutil \
+		python-simplejson apache2 libapache2-mod-wsgi -y
+
    
 Install NilmDb
 
 .. code-block:: bash
-
-   $> git clone https://git.wattsworth.net/nilm/nilmdb.git
-   $> cd nilmdb
-   $> sudo python setup.py install
+		
+		$> git clone https://git.wattsworth.net/wattsworth/nilmdb.git
+		$> cd nilmdb
+		$> sudo make install
 
 *Configure WSGI Scripts*
 
@@ -52,7 +53,7 @@ permissions on the directory:
 .. code-block:: bash
 
    $> adduser nilmdb
-   $> chown -R nilmdb:nilmdb /opt/nilmdb
+   $> sudo chown -R nilmdb:nilmdb /opt/nilmdb
    
 *Configure Apache*
 
@@ -64,11 +65,12 @@ within the ``<VirtualHost>`` directive:
 
   <VirtualHost *:80>
     # Add these 6 lines
-    WSGIScriptAlias /nilmdb /home/nilmdb/nilmdb.wsgi
+    WSGIScriptAlias /nilmdb /opt/nilmdb/nilmdb.wsgi
     WSGIDaemonProcess nilmdb-procgroup threads=32 user=nilmdb group=nilmdb
     <Location /nilmdb>
       WSGIProcessGroup nilmdb-procgroup
       WSGIApplicationGroup nilmdb-appgroup
+      Require all granted	  
     </Location>
     # (other existing configuration here)
   </VirtualHost>
@@ -76,11 +78,25 @@ within the ``<VirtualHost>`` directive:
 Note these values assume you followed the user creation and file
 naming guidelines above.
 
+*Test the Installation*
+
+Restart Apache to start the NilmDB server, then check the database is
+available using the **nilmtool** command.
+
+.. code-block:: bash
+
+   $> sudo apache2ctl restart
+   $> nilmtool info
+   Client version: 1.10.3
+   #...more information
+
 Docker
 ^^^^^^
 
-NilmDb is also available as a Docker container available through
-Docker Hub. E-mail donnal@usna.edu for access.
+NilmDb is also available as a container through
+Docker Hub.  E-mail donnal@usna.edu for access. See the `docker homepage
+<https://www.docker.com/>`_ for
+more information on containers.
 
 .. code-block:: bash
 
@@ -98,9 +114,12 @@ the following command:
 
 .. code-block:: bash
 
+  $> sudo apt-get install python3 python3-pip -y
   $> python3 -V
   Python 3.5.2   #<--- this version is ok
   
+If your version is 3.5.2 or greater, skip ahead to installing Joule, otherwise you
+must build Python 3.5 from source by following the instructions below:
 
 Install Dependencies
 
@@ -155,9 +174,17 @@ following commands to install and configure Joule.
 
 .. code-block:: bash
 
- $> git clone https://git.wattsworth.net/wattsworth/joule.git
- $> cd joule
- $> python3 setup.py install
+		# install dependencies
+		$> pip3 install --upgrade pip # make sure pip is up to date
+		$> pip3 install python-datetime-tz
+		$> apt-get install python3-numpy python3-scipy
+		
+.. code-block:: bash
+
+		# install Joule
+		$> git clone https://git.wattsworth.net/wattsworth/joule.git
+		$> cd joule
+		$> python3 setup.py install
 
 *Configure Joule*
 

@@ -26,7 +26,8 @@ the following into a new file at
 .. code-block:: ini
 
 		[Main]
-		path = /demo/random
+		name = Random Data
+		path = /demo/random 
 		datatype = float32
 		keep = 1w
 
@@ -36,16 +37,16 @@ the following into a new file at
 		[Element2]
 		name = rand2
 
-This will allocate a new stream at **/demo/random** that holds two
-**float32** elements. We name the first element **rand1** and the
-second element **rand2**. **Note:** *If your database has an existing stream
-at this path with a different layout (datatype and/or number of elements)
-you must remove it before continuing.*
+This will allocate a new stream in NilmDB named **/demo/random** that
+holds two **float32** elements. We name the first element **rand1**
+and the second element **rand2**. **Note:** *If your database has an
+existing stream with this name and a different layout (datatype
+and/or number of elements) you must remove it before continuing.*
 
 Next we will set up a module to write data to this stream. **joule
 reader** is a multipurpose reader module provided with Joule. It can
 read values from file objects, serial ports, and more. In this
-demonstration we will use it to simply generate random values. When a **joule
+demonstration we will use it to simply generate random values. When **joule
 reader** is called from the command line it prints values to stdout: 
 
 .. code-block:: bash
@@ -70,6 +71,9 @@ Copy the following into a file at **/etc/joule/module_configs/demo_reader.conf**
 		exec_cmd = joule reader random 2 10
 		name = Demo Reader
 
+		[Source]
+		# a reader has no inputs
+		
 		[Destination]
 		output = /demo/random
 
@@ -81,16 +85,24 @@ running:
 .. code-block:: bash
 
 		$> sudo systemctl restart jouled
+
+		# check status using joule commands
 		$> joule modules
-		+-------------+------------+---------------+---------+-----+-----+
-		| Module      | Sources    | Destinations  | Status  | CPU | mem |
-		+-------------+------------+---------------+---------+-----+-----+
-		| Rand Reader |            | /demo/random  | running | 2%  | 1KB |
-		+-------------+------------+---------------+---------+-----+-----+
-		$> joule logs "Rand Reader"
-		[17 Jan 2017 10:55:31] Starting random stream: 2 elements @ 10.0Hz
+		+-------------+---------+--------------+---------+-----+-------------+
+		| Module      | Sources | Destinations | Status  | CPU | mem         |
+		+-------------+---------+--------------+---------+-----+-------------+
+		| Demo Reader |         | /demo/random | running | 0%  | 33 MB (42%) |
+		+-------------+---------+--------------+---------+-----+-------------+
+		$> joule logs "Demo Reader"
+		[27 Jan 2017 18:05:41] ---starting module---
+		[27 Jan 2017 18:05:41] Starting random stream: 2 elements @ 10.0Hz
 
-
+		# confirm data is entering NilmDB
+		$> nilmtool list -E /demo/random
+		/demo/random
+		  interval extents: Fri, 27 Jan 2017 # ... 
+		          total data: 1559 rows, 155.700002 seconds
+			  
 A Filter Module
 ---------------
 
@@ -105,6 +117,7 @@ following into a new file at
 .. code-block:: ini
 
 		[Main]
+		name = Filtered Data
 		path = /demo/filtered
 		datatype = float32
 		keep = 1w

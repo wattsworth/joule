@@ -32,6 +32,7 @@ setup(
     provides=[],
     install_requires=['cliff',
                       'numpy',
+                      'scipy',
                       'psutil',
                       'python-datetime-tz',
                       'requests',

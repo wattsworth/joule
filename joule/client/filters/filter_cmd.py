@@ -2,7 +2,6 @@ from cliff.command import Command
 from .mean import MeanFilter
 from .median import MedianFilter
 from .merge import MergeFilter
-import joule.utils.client
 import asyncio
 
 
