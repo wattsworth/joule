@@ -23,7 +23,6 @@ class ReaderModule:
 
     def stop(self):
         # override in client for alternate shutdown strategy
-        # TODO: this doesn't seem to work, maybe a problem with Cliff?
         print("closing...")
         self.task.cancel()
         
@@ -39,7 +38,10 @@ class ReaderModule:
         loop = asyncio.get_event_loop()
         loop.add_signal_handler(signal.SIGINT, self.stop)
         loop.add_signal_handler(signal.SIGTERM, self.stop)
-        loop.run_until_complete(self.task)
+        try:
+            loop.run_until_complete(self.task)
+        except asyncio.CancelledError:
+            pass
         loop.close()
         
     def run_as_task(self, parsed_args):
