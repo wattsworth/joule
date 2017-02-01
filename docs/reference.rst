@@ -26,6 +26,8 @@ stream configs
 module configs
 ''''''''''''''
 
+.. _numpy_pipes:
+
 Numpy Pipes
 -----------
 

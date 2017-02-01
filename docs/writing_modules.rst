@@ -79,7 +79,7 @@ the ``run`` function.
 
 Finally, the module must implement ``run``. This function performs the
 actual work in the module.  It is an asynchronous coroutine but you
-can treat it as a normal function. See the `asyncio documenation
+can generally treat it as a normal function. See the `asyncio documenation
 <https://docs.python.org/3/library/asyncio.html>`_ for details on
 coroutines.
 
@@ -94,11 +94,13 @@ coroutines.
 
 This function takes two parameters, **parsed_args** and
 **output**. The parsed_args is a namespace object with values for the
-arguments specified in **custom_args**. **output** is a NumpyPipe that connects the module
-to the joule system. The pipe has a single function, **write** which accepts a numpy array.
-The array should be a matrix of timestamps and values, if you are inserting a single sample,
-enclose the matrix in double braces to provide the correct dimension. Also note that the
-**write** method is a coroutine and must be called with the **await** keyword.
+arguments specified in **custom_args**. **output** is a NumpyPipe that
+connects the module to the joule system (see :ref:`numpy_pipes`). The
+pipe has a single function, **write** which accepts a numpy array.
+The array should be a matrix of timestamps and values, if you are
+inserting a single sample, enclose the matrix in double braces to
+provide the correct dimension. Also note that the **write** method is
+a coroutine and must be called with the **await** keyword.
 
 .. code-block:: python
 
@@ -110,7 +112,7 @@ enclose the matrix in double braces to provide the correct dimension. Also note 
    
 If you run the filter from the command line it will print values to stdout. This can help
 debug your code. Additionally it is best practice to provide unittests for your custom reader
-modules. See **test_reader.py** for an example.
+modules. An example is provided in **test_reader.py**. See :ref:`unit_testing` for more details.
 
 
 Custom Filters
@@ -233,18 +235,167 @@ Unlike ReaderModules, modules derived from FilterModule cannot be run
 from the command line because filters require an input stream provided
 by the joule environment.You should always verify your modules using
 unittests. The testing framework provides mock input streams to test
-modules in isolation, see **test_filter.py** for an example.
+modules in isolation. An example is provided in **test_filter.py**. See
+:ref:`unit_testing` for more details.
 
+
+.. _unit_testing:
 
 Unit Testing
 ------------
 
+Unit tests run your module in isolation using mock input and output
+streams.  This ensures that your module produces expected output given
+a set of specified inputs. When combined with end-to-end testing, good
+unit tests assure that your code will work correctly once it is
+deployed. While unit tests may at first seem tedious to configure,
+they greatly improve your code in two ways. First, a good test
+suite prevents code regressions allowing you to refactor confidently.
+Second, well written tests provide "live" documentation that others
+can use to understand what your module does and how to use it.
+
 ReaderModules
 '''''''''''''
 
+This section refers to **test_reader.py** in the example_modules
+repository. Joule unittests are written using `asynctest
+<https://asynctest.readthedocs.io/en/latest/>`_, a library built on
+top of the standard **unittest** module that reduces the boilerplate of
+writing tests for async coroutines.
+
+Each unittest file should contain a single ``async.TestCase`` class. The
+test runner will automatically run any functions starting with
+``test_``. Each test should have a docstring explaining the input and desired output.
+Tests should have three main sections:
+
+1. Build test objects
+2. Run reader in event loop
+3. Check the resuls
+
+.. code-block:: python
+
+		class TestReader(asynctest.TestCase):
+		
+ 		    def test_reader(self):
+		        " with a rate=0.1, reader should generate 10 values in 1 second "
+			# build test objects
+			# run reader in an event loop
+			# check the results
+
+Build test objects
+++++++++++++++++++
+
+.. code-block:: python
+
+		# build test objects
+		my_reader = ReaderDemo()
+		pipe = LocalNumpyPipe("output", layout="float32_1")
+		args = argparse.Namespace(rate=0.1, pipes="unset")
+
+Run reader in an event loop
++++++++++++++++++++++++++++
+
+.. code-block:: python
+		
+		loop = asyncio.get_event_loop()
+		my_task = asyncio.ensure_future(my_reader.run(args, pipe))
+		loop.call_later(1, my_task.cancel)
+		try:
+		    loop.run_until_complete(my_task)
+		except asyncio.CancelledError:
+		    pass
+		loop.close()
+
+Check the results
++++++++++++++++++
+
+.. code-block:: python
+
+		result = pipe.read_nowait()
+		# data should be 0,1,2,...,9
+		np.testing.assert_array_equal(result['data'],
+                                              np.arange(10))
+		# timestamps should be about 0.1s apart
+		np.testing.assert_array_almost_equal(np.diff(result['timestamp'])/1e6,
+                                                     np.ones(9)*0.1, decimal=2)
+        
+
+   
 FilterModules
 '''''''''''''
 
+This section refers to **test_filter.py** in the example_modules
+repository. Joule unittests are written using `asynctest
+<https://asynctest.readthedocs.io/en/latest/>`_, a library built on
+top of the standard **unittest** module that reduces the boilerplate of
+writing tests for async coroutines.
+
+Each unittest file should contain a single ``async.TestCase`` class. The
+test runner will automatically run any functions starting with
+``test_``. Each test should have a docstring explaining the input and desired output.
+Tests should have three main sections:
+
+1. Build test objects
+2. Run reader in event loop
+3. Check the resuls
+
+.. code-block:: python
+
+		class TestFilter(asynctest.TestCase):
+		
+		    def test_filter(self):
+		    " with offset=2, output should be 2+input "
+		    # build test objects
+		    # run filter in an event loop
+		    # check the results
+
+
+Build test objects
+++++++++++++++++++
+
+.. code-block:: python
+
+		my_filter = FilterDemo()
+		pipe_in = LocalNumpyPipe("input", layout="float32_1")
+		pipe_out = LocalNumpyPipe("output", layout="float32_1")
+		args = argparse.Namespace(offset=2)
+		# create the input data 0,1,2,...,9
+		# fake timestamps are ok, just use an increasing sequence
+		test_input = np.hstack((np.arange(10)[:, None],   # timestamp 0-9
+                                        np.arange(10)[:, None]))  # data, also 0-9
+		pipe_in.write_nowait(test_input)
+
+
+Run filter in an event loop
++++++++++++++++++++++++++++
+
+.. code-block:: python
+
+		loop = asyncio.get_event_loop()
+		my_task = asyncio.ensure_future(
+		    my_filter.run(args,
+                                  {"input": pipe_in},
+				  {"output": pipe_out}))
+        
+		loop.call_later(0.1, my_task.cancel)
+		try:
+		    loop.run_until_complete(my_task)
+		except asyncio.CancelledError:
+		    pass
+		loop.close()
+
+Chck the results
+++++++++++++++++
+
+.. code-block:: python
+		
+		result = pipe_out.read_nowait()
+		# data should be 2,3,4,...,11
+		np.testing.assert_array_equal(result['data'],
+                                              test_input[:, 1]+2)
+		# timestamps should be the same as the input
+		np.testing.assert_array_almost_equal(result['timestamp'],
+                                                     test_input[:, 0])
 
 
 End-to-End Testing
