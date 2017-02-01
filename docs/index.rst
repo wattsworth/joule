@@ -27,6 +27,7 @@ bugs and find bottlenecks in processing pipelines.
    install
    getting_started
    writing_modules
+   testing_modules
    nilm
    reference
    
