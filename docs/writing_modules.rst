@@ -25,8 +25,8 @@ This repository contains an example reader and filter as well as unit
 testing and end to end testing infrastructure. Proper testing is
 critical to designing complex modules, especially filters.
 
-Extending ReaderModule
-----------------------
+Custom Readers
+--------------
 
 This section explains how to use the **ReaderModule** class to develop
 a custom reader module. The code snippets in this section refer to the
@@ -113,8 +113,8 @@ debug your code. Additionally it is best practice to provide unittests for your 
 modules. See **test_reader.py** for an example.
 
 
-Extending FilterModule
-----------------------
+Custom Filters
+--------------
 This section explains how to use the **FilterModule** class to develop
 a custom filter module. The code snippets in this section refer to the
 **FilterDemo** module defined in **filter.py** from the example_modules
@@ -235,11 +235,17 @@ by the joule environment.You should always verify your modules using
 unittests. The testing framework provides mock input streams to test
 modules in isolation, see **test_filter.py** for an example.
 
-Custom Modules
---------------
-writing modules from scratch
+
+Unit Testing
+------------
+
+ReaderModules
+'''''''''''''
+
+FilterModules
+'''''''''''''
 
 
-Advanced Modules
-----------------
-using local numpy pipes
+
+End-to-End Testing
+------------------

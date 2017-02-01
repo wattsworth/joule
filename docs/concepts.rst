@@ -40,9 +40,22 @@ values. Filters take these streams as inputs and produce new outputs.
 Filters can be chained to produce complex behavior from simple,
 reusable building blocks.
 
-
 Example
 """""""
 Using a light sensor and temperature sensor to detect occupancy in a room:
 
 .. image:: /images/joule_system.png
+
+	   
+Pipes
+"""""
+
+Pipes connect streams to modules. Pipe read and writes are asynchronous
+coroutines which allows modules to effeciently manage many pipe connections
+at once. The animation below shows a producer module using a pipe to communicate
+with a consume module. See reference section for details on the pipe API.
+
+.. image:: /_static/joule_pipe.gif
+
+
+

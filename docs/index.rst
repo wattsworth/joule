@@ -28,7 +28,8 @@ bugs and find bottlenecks in processing pipelines.
    getting_started
    writing_modules
    nilm
-                                             
+   reference
+   
 Contributing & Running Tests
 ----------------------------
 Contribution is always welcome. Please include tests with your pull request. 
