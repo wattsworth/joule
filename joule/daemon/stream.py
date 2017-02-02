@@ -84,9 +84,11 @@ class Stream(object):
 
 
 def validate_path(path):
-    if(re.fullmatch('^(\/\w+)(\/\w+)+$', path) is None):
+    if(re.fullmatch('^(\/[\w-]+)(\/[\w-]+)+$', path) is None):
         raise ConfigError(
-            "invalid stream path, use format: /dir/subdir/../file")
+            "invalid stream path, use format: /dir/subdir/../file. " +
+            "valid characters: [0-9,A-Z,_,-]")
+    
     return path
 
 

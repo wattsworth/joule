@@ -18,7 +18,7 @@ class TestStream(unittest.TestCase):
         self.base_config = helpers.parse_configs(
             """[Main]
                  name = test
-                 description = test_description                 
+                 description = test_description
                  path = /some/path/to/data
                  datatype = float32
                  keep = 1w

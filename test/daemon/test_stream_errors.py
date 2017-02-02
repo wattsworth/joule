@@ -29,7 +29,10 @@ class TestStreamErrors(unittest.TestCase):
         """path must be of form /dir/subdir/../file"""
         bad_paths = ["", "bad name", "/tooshort", "/*bad&symb()ls"]
         self.evaluate_bad_values("path", bad_paths)
-
+        # but allows paths with _ and -
+        good_paths = ["/meters-4/prep-a", "/meter_4/prep-b"]
+        self.evaluate_good_values("path", good_paths)
+        
     def test_errors_on_bad_keep(self):
         """keep is # and timeunit (eg 1w, 30h, 2y) or False"""
         bad_keeps = ["0w", "3", "w", "something random", "-2h"]
@@ -58,3 +61,10 @@ class TestStreamErrors(unittest.TestCase):
                 self.base_config[section][setting_name] = setting
                 with self.assertRaisesRegex(ConfigError, setting_name):
                     self.parser.run(self.base_config)
+
+    def evaluate_good_values(self, setting_name, settings, section="Main"):
+        for setting in settings:
+            with self.subTest(setting=setting):
+                self.base_config[section][setting_name] = setting
+                self.parser.run(self.base_config)
+                    
