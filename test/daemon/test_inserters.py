@@ -22,7 +22,7 @@ class TestNilmDbInserter(asynctest.TestCase):
         mock_client.stream_insert = asynctest.mock.CoroutineMock()
 
         my_inserter = inserter.NilmDbInserter(
-            mock_client, "/test/path", decimate=True)
+            mock_client, "/test-a/path-with_dashes", decimate=True)
         my_decimator = mock_decimator.return_value
         my_decimator.process = asynctest.mock.CoroutineMock()
         # generate random data
@@ -100,7 +100,7 @@ class TestNilmDbInserter(asynctest.TestCase):
 class TestNilmDbDecimator(unittest.TestCase):
 
     def setUp(self):
-        self.test_path = "/test/path"
+        self.test_path = "/test-a/path_with-dashes"
         self.base_info = [self.test_path, "int32_4"]
         self.decim_lvl1_info = [self.test_path + "~decim-4", "float32_12"]
         self.decim_lvl2_info = [self.test_path + "~decim-16", "float32_12"]
