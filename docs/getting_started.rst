@@ -84,7 +84,7 @@ running:
 
 .. code-block:: bash
 
-		$> sudo systemctl restart jouled
+		$> sudo systemctl restart joule.service
 
 		# check status using joule commands
 		$> joule modules
@@ -169,7 +169,7 @@ and a filter.  Restart joule and check that both modules are running:
 
 .. code-block:: bash
 			  
-		$> sudo systemctl restart jouled
+		$> sudo systemctl restart joule.service
 
 		# check status using joule commands
 		$> joule modules
