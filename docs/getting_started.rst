@@ -196,46 +196,4 @@ and a filter.  Restart joule and check that both modules are running:
 	                  total data: 147 rows, 14.600001 seconds
 		    
 			  
-.. _main.conf:		
-
-main.conf
----------
-
-Joule uses a set of default configurations that should work for most
-cases. These defaults can be customized by editing
-**/ect/joule/main.conf** (create it if it does not exist). The example
-**main.conf** below shows the full set of options and their
-default settings:
-
-.. code-block:: ini
-
-		[NilmDB]:
-		url = http://localhost/nilmdb
-		InsertionPeriod = 5 # seconds
-
-		[ProcDB]:
-		DbPath = /tmp/joule-proc-db.sqlite
-		MaxLogLines = 100
-
-		[Jouled]
-		ModuleDirectory = /etc/joule/module_configs
-		StreamDirectory = /etc/joule/stream_configs
-
-Start joule with the **--config** flag to use a configuration file at
-an alternate location. See the list below for information on each setting.
-
-NilmDB:URL
-  address of NilmDB server
-NilmDB:InsertionPeriod
-  how often to send stream data to NilmDB (in seconds)
-ProcDB:DbPath
-  path to sqlite database used internally by joule
-ProcDB:MaxLogLines
-  max number of lines to keep in a module log file (automatically rolls)
-Jouled:ModuleDirectory
-  folder with module configuration files, each module file should in **.conf**
-Jouled:StreamDirectory
-  folder with stream configuration files, each stream file should end in **.conf**
-
-
 

@@ -125,7 +125,7 @@ Install Dependencies
 
 .. code-block:: bash
 		
- $> sudo apt-get install build-essential tk-dev  
+ $> sudo apt-get install build-essential tk-dev libssl-dev
 
 Download and Install Source
 
@@ -150,7 +150,7 @@ environments is with *virtualenvwrapper*
 
 .. code-block:: bash
 		
- $> pip install virtualenv virtualenvwrapper
+ $> pip2 install virtualenv virtualenvwrapper
  $> export WORKON_HOME=~/Envs
  $> source /usr/local/bin/virtualenvwrapper.sh
 
@@ -161,7 +161,7 @@ Create a new virtual environment using Python 3.5
 
 .. code-block:: bash
 		
- $> mkvirtualenv joule -p 3.5
+ $> mkvirtualenv joule -p /usr/local/bin/python3.5 #<-- path to 3.5 installation
  $> workon joule
 
 
@@ -175,6 +175,8 @@ following commands to install and configure Joule.
 .. code-block:: bash
 
 		# install dependencies
+		# if python3.5 was installed from source you must specify the correct pip
+		# (ie /usr/local/bin/pip3.5 instead of pip3)
 		$> pip3 install --upgrade pip # make sure pip is up to date
 		$> pip3 install python-datetime-tz
 		$> apt-get install python3-numpy python3-scipy python3-yaml -y
