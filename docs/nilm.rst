@@ -16,7 +16,7 @@ following commands to install and configure NILM Modules
 
 .. code-block:: bash
 
-   $> git clone https://git.wattsworth.net/joule/nilm.git
+   $> git clone https://git.wattsworth.net/wattsworth/nilm.git
    $> cd nilm
    $> sudo python setup.py install
 
@@ -41,8 +41,10 @@ will have four streams located in **/meter#**
 		  current and voltage at the sample rate of the sensor
 		/meter#/sinefit
 		  zero crossings of the voltage waveform (freq, amplitude, offset)
-		/meter#/prep
-		  harmonic envelopes of real and reactive power for all phases
+		/meter#/prep-a
+		/meter#/prep-b
+		/meter#/prep-c
+		  harmonic envelopes of real and reactive power for each phase
 		
 Each NILM has a reader module **meter#_capture** and a filter module
 **meter#_process**. The modules read configuration values from the
@@ -56,7 +58,7 @@ running the following command:
 
 .. code-block:: bash
 
-		$> sudo systemctl restart jouled
+		$> sudo systemctl restart joule.service
 
 Verify that the modules are running using the **joule modules** command.
 
@@ -66,8 +68,10 @@ Verify that the modules are running using the **joule modules** command.
   +--------------------------------+----------------+-----------------+---------+-----+--------------+
   | Module                         | Sources        | Destinations    | Status  | CPU | mem          |
   +--------------------------------+----------------+-----------------+---------+-----+--------------+
-  | meter4 process:                | /meter4/sensor | /meter4/prep    | running | 39% | 30 MB (355%) |
-  | reconstruct -> sinefit -> prep |                | /meter4/iv      |         |     |              |
+  | meter4 process:                | /meter4/sensor | /meter4/prep-a  | running | 39% | 30 MB (355%) |
+  | reconstruct -> sinefit -> prep |                | /meter4/prep-b  |         |     |              |
+  |                                |                | /meter4/prep-c  |         |     |              |
+  |                                |                | /meter4/iv      |         |     |              |
   |                                |                | /meter4/sinefit |         |     |              |
   | meter4 capture:                |                | /meter4/sensor  | running | 8%  | 28 MB (336%) |
   | serial data capture            |                |                 |         |     |              |
@@ -88,14 +92,16 @@ Check that the data is entering NilmDB using the **nilmtool** command. Joule ins
 
 .. code-block:: bash
 		
-   $> nilmtool list -E /meter4/prep
-   /meter4/prep
+   $> nilmtool list -En /meter4/prep*
+   /meter4/prep-a
      interval extents: Mon, 23 Jan 2017 16:11:01.833447 -0500 -> Mon, 23 Jan 2017 16:16:29.322283 -0500
            total data: 18054 rows, 300.878769 seconds
-		
-
-
-
+   /meter4/prep-b
+     interval extents: Mon, 23 Jan 2017 16:11:01.833447 -0500 -> Mon, 23 Jan 2017 16:16:29.322283 -0500
+           total data: 18054 rows, 300.878769 seconds
+   /meter4/prep-c   /meter4/prep-a
+     interval extents: Mon, 23 Jan 2017 16:11:01.833447 -0500 -> Mon, 23 Jan 2017 16:16:29.322283 -0500
+           total data: 18054 rows, 300.878769 seconds
 
 .. _contact meter: https://www.wattsworth.net/help/software#config-contact
 .. _noncontact meter: https://www.wattsworth.net/help/software#config-noncontact
