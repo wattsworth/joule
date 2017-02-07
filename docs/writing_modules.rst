@@ -20,6 +20,8 @@ clone the starter repository:
 		
 		$> git clone https://git.wattsworth.net/wattsworth/example_modules.git
 		$> cd example_modules
+		# install nose2 and asynctest module to run tests
+		$> sudo pip3 install nose2 asynctest
 
 This repository contains an example reader and filter as well as unit
 testing and end to end testing infrastructure. Proper testing is

@@ -125,7 +125,8 @@ Install Dependencies
 
 .. code-block:: bash
 		
- $> sudo apt-get install build-essential tk-dev libssl-dev
+ $> sudo apt-get install build-essential tk-dev libssl-dev libblas-dev  \
+ liblapack-dev libbz2-dev gfortran libsqlite3-dev
 
 Download and Install Source
 

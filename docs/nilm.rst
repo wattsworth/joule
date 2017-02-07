@@ -16,9 +16,9 @@ following commands to install and configure NILM Modules
 
 .. code-block:: bash
 
-   $> git clone https://git.wattsworth.net/joule/nilm.git
+   $> git clone https://git.wattsworth.net/wattsworth/nilm.git
    $> cd nilm
-   $> sudo python setup.py install
+   $> sudo python3 setup.py install
 
 
 Configuration
