@@ -118,6 +118,38 @@ class AsyncClient:
                 else:
                     logging.error("nilmdb error: [%s], retrying" % e)
                     await asyncio.sleep(0.1)
+
+    async def streams_remove(self, paths, start, end, retry=True):
+        """ remove data from an array of paths (eg base+decimations)"""
+        for path in paths:
+            await self.stream_remove(path, start, end, retry)
+            
+    async def stream_remove(self, path, start, end, retry=True):
+        """remove data from streams, retry on error"""
+        url = "{server}/stream/remove".format(server=self.server)
+        params = {"start": "%d" % start,
+                  "end": "%d" % end,
+                  "path": path}
+        success = False
+        while(success is False):
+            try:
+                async with self.session.post(url, params=params) as resp:
+                    if(resp.status != 200):
+                        error = await resp.text()
+                        logging.error("nilmdb error removing data: %s"
+                                      % error)
+                        # session was probably closed, retry
+                        raise AioNilmdbError(error)
+                    else:
+                        success = True
+            except Exception as e:
+                self.session.close()
+                self.session = aiohttp.ClientSession()
+                if(retry is False):
+                    raise AioNilmdbError from e
+                else:
+                    logging.error("nilmdb error: [%s], retrying" % e)
+                    await asyncio.sleep(0.1)
                     
     async def stream_list(self, path, layout=None, extended=False):
         url = "{server}/stream/list".format(server=self.server)

@@ -9,7 +9,9 @@ import os
 
 Configs = namedtuple('Configs', ['procdb', 'jouled', 'nilmdb'])
 ProcdbConfigs = namedtuple('ProcdbConfigs', ['db_path', 'max_log_lines'])
-NilmDbConfigs = namedtuple('NilmdbConfigs', ['url', 'insertion_period'])
+NilmDbConfigs = namedtuple('NilmdbConfigs', ['url',
+                                             'insertion_period',
+                                             'cleanup_period'])
 JouledConfigs = namedtuple(
     'JouledConfigs', ['module_directory', 'stream_directory'])
 
@@ -17,7 +19,8 @@ DEFAULT_CONFIG = {
     "NilmDB":
     {
         "URL": "http://localhost/nilmdb",
-        "InsertionPeriod": 5
+        "InsertionPeriod": 5,
+        "CleanupPeriod": 600
     },
     "ProcDB":
     {
@@ -55,7 +58,8 @@ def parse_jouled_configs(jouled_parser, verify):
         raise InvalidConfiguration(
             "StreamDirectory [%s] does not exist" % stream_directory)
 
-    return JouledConfigs(module_directory=module_directory, stream_directory=stream_directory)
+    return JouledConfigs(module_directory=module_directory,
+                         stream_directory=stream_directory)
 
 
 def parse_nilmdb_configs(nilmdb_parser, verify):
@@ -63,10 +67,14 @@ def parse_nilmdb_configs(nilmdb_parser, verify):
         insertion_period = int(nilmdb_parser['InsertionPeriod'])
         if (insertion_period <= 0):
             raise Exception()
+        cleanup_period = int(nilmdb_parser['CleanupPeriod'])
+        if (cleanup_period <= 0):
+            raise Exception()
     except:
         raise InvalidConfiguration(
-            "NilmdDB:InsertionPeriod must be integer greater than 0")
+            "NilmdDB:InsertionPeriod/CleanupPeriod must be integer greater than 0")
     return NilmDbConfigs(url=nilmdb_parser['URL'],
+                         cleanup_period=cleanup_period,
                          insertion_period=insertion_period)
 
 

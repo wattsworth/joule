@@ -1,6 +1,7 @@
 import numpy as np
 import asyncio
 import re
+import joule.utils.time
 from .errors import DaemonError
 
 
@@ -9,6 +10,7 @@ class NilmDbInserter:
     def __init__(self, client,
                  path,
                  insertion_period=0,  # no insertion buffering by default
+                 cleanup_period=10,   # 10s cleanup intervals by default
                  decimate=True):
         if(decimate):
             self.decimator = NilmDbDecimator(client, path)
@@ -16,6 +18,7 @@ class NilmDbInserter:
             self.decimator = None
 
         self.insertion_period = insertion_period
+        self.cleanup_period = cleanup_period
         self.path = path
         self.client = client
         self.last_ts = None
@@ -23,6 +26,7 @@ class NilmDbInserter:
         self.stop_requested = False
 
     async def process(self, queue, loop=None):
+        cleanup_task = self._start_cleanup_task(loop)
         while(not self.stop_requested):
             await asyncio.sleep(self.insertion_period, loop=loop)
             # print("inserter q: %d"%id(queue))
@@ -37,10 +41,15 @@ class NilmDbInserter:
                 else:
                     self.buffer = np.append(self.buffer, data, axis=0)
             await self.flush()
-
+        try:
+            cleanup_task.cancel()
+            await cleanup_task
+        except asyncio.CancelledError:
+            pass
+        
     def stop(self):
         self.stop_requested = True
-
+        
     async def flush(self):
         if(self.buffer is None or len(self.buffer) == 0):
             return  # nothing to flush
@@ -64,7 +73,19 @@ class NilmDbInserter:
         if(self.decimator is not None):
             self.decimator.finalize()
 
+    def _start_cleanup_task(self, loop=None):
+        if(loop is None):
+            loop = asyncio.get_event_loop()
+        return loop.call_soon(self._cleanup(loop))
 
+    async def cleanup(self, loop=None):
+        while(True):
+            await asyncio.sleep(self.cleanup_period, loop=loop)
+            keep_time = joule.utils.time.now()-self.keep_us
+            paths = [self.path].append(self.decimator.get_paths)
+            await self.client.streams_remove(paths, start=0, end=keep_time)
+
+            
 class NilmDbDecimator:
 
     def __init__(self, client, source_path, factor=4):
@@ -74,6 +95,13 @@ class NilmDbDecimator:
         self.child = None
         self.initialized = False
 
+    def get_paths(self):
+        """return an array of decimated paths (recursive)"""
+        paths = [self.path]
+        if(self.child is not None):
+            paths.append(self.child.get_paths())
+        return paths
+    
     async def _initialize(self):
         # get source info
         source_path = self.source_path

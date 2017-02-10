@@ -165,7 +165,7 @@ class Daemon(object):
                     return False
         for path in module.source_paths.values():
             # 1.) Make sure all sources have matching streams
-            if(not path in self.path_streams):
+            if(path not in self.path_streams):
                 logging.error("Module [%s]: source [%s] has no configuration" %
                               (module.name, path))
                 return False
@@ -191,7 +191,7 @@ class Daemon(object):
                     tasks.append(self._start_worker(w, loop=loop))
                     pending_workers.remove(w)
                     started_a_worker = True
-            if(started_a_worker == False):
+            if(started_a_worker is False):
                 for w in pending_workers:
                     logging.warning("Could not start %s because nobody is producing its inputs" %
                                     w.module)
@@ -199,6 +199,7 @@ class Daemon(object):
 
         tasks.append(asyncio.ensure_future(self._db_committer()))
         tasks += self._start_inserters(loop)
+                    
         # commit records to database
         self.procdb.commit()
         loop.run_until_complete(asyncio.gather(*tasks))
