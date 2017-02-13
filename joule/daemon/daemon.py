@@ -32,7 +32,7 @@ class Daemon(object):
 
         # constants customized by initialize
         self.NILMDB_INSERTION_PERIOD = 5
-
+        self.NILMDB_CLEANUP_PERIOD = 600
         # runtime structures
         self.path_workers = {}  # key: path, value: fn_subscribe()
         self.path_streams = {}  # key: path, value: stream
@@ -67,7 +67,8 @@ class Daemon(object):
 
         # Configure tunable constants
         self.NILMDB_INSERTION_PERIOD = config.nilmdb.insertion_period
-
+        self.NILMDB_CLEANUP_PERIOD = config.nilmdb.cleanup_period
+        
     def _load_configs(self, path, factory):
         objects = []
         for item in os.listdir(path):
@@ -225,6 +226,8 @@ class Daemon(object):
                     self.async_nilmdb_client,
                     path,
                     insertion_period=self.NILMDB_INSERTION_PERIOD,
+                    cleanup_period=self.NILMDB_CLEANUP_PERIOD,
+                    keep_us=stream.keep_us,
                     decimate=stream.decimate)
                 coro = my_inserter.process(
                     self.path_workers[path](), loop=loop)

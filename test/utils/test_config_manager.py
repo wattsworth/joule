@@ -11,7 +11,7 @@ class TestConfigManager(unittest.TestCase):
         procdb_config = config_manager.ProcdbConfigs("/tmp/joule-proc-db.sqlite",
                                                      100)
         nilmdb_config = config_manager.NilmDbConfigs("http://localhost/nilmdb",
-                                                     5)
+                                                     5, 600)
         jouled_config = config_manager.JouledConfigs("/etc/joule/module_configs",
                                                      "/etc/joule/stream_configs")
         self.defaults = config_manager.Configs(procdb_config,

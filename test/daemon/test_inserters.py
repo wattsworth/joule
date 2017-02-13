@@ -13,8 +13,14 @@ from test import helpers
 class TestNilmDbInserter(asynctest.TestCase):
 
     def setUp(self):
+        self.test_path = "/test/path"
         self.my_stream = helpers.build_stream(
-            name="test", datatype="uint32", path="/test/path", num_elements=5)
+            name="test", datatype="uint32",
+            path=self.test_path, num_elements=5)
+        self.base_info = [self.test_path, "int32_3"]
+        self.decim_lvl1_info = [self.test_path + "~decim-4", "float32_12"]
+        self.decim_lvl2_info = [self.test_path + "~decim-16", "float32_12"]
+        self.decim_lvl3_info = [self.test_path + "~decim-64", "float32_12"]
 
     @mock.patch("joule.daemon.daemon.nilmdb.AsyncClient", autospec=True)
     @mock.patch("joule.daemon.inserter.NilmDbDecimator", autospec=True)
@@ -22,7 +28,7 @@ class TestNilmDbInserter(asynctest.TestCase):
         mock_client.stream_insert = asynctest.mock.CoroutineMock()
 
         my_inserter = inserter.NilmDbInserter(
-            mock_client, "/test-a/path-with_dashes", decimate=True)
+            mock_client, "/test-a/path-with_dashes", 100, decimate=True)
         my_decimator = mock_decimator.return_value
         my_decimator.process = asynctest.mock.CoroutineMock()
         # generate random data
@@ -64,7 +70,7 @@ class TestNilmDbInserter(asynctest.TestCase):
     @mock.patch("joule.daemon.daemon.nilmdb.AsyncClient", autospec=True)
     def test_detects_interval_breaks(self, mock_client):
         my_inserter = inserter.NilmDbInserter(
-            mock_client, "/test/path", decimate=False)
+            mock_client, "/test/path", 100, decimate=False)
         mock_client.stream_insert = asynctest.mock.CoroutineMock()
 
         # missing data between two inserts
@@ -96,7 +102,70 @@ class TestNilmDbInserter(asynctest.TestCase):
         start = interval2[1]['start']
         self.assertEqual(start, interval2_start)
 
+    @mock.patch("joule.utils.time", autospec=True)
+    def test_cleans_up_streams_with_decimations(self, mock_time):
+        """Inserter removes data from base and decimations based on keep_us"""
+        
+        # Advance time by days after epoch
+        ONE_DAY = 24*60*60*1e6  # 1 day
+        KEEP_US = ONE_DAY
+        times = np.arange(2, 100) * ONE_DAY
+        mock_time.now = mock.Mock(side_effect=times)
+        
+        mock_client = mock.Mock()
+        mock_client.stream_insert = asynctest.mock.CoroutineMock()
+        mock_client.streams_remove = asynctest.mock.CoroutineMock()
+        mock_client.stream_create = asynctest.mock.CoroutineMock()
+        
+        # both the base and the decimation stream already exist
+        mock_info = helpers.mock_stream_info([self.base_info,
+                                              self.decim_lvl1_info,
+                                              self.decim_lvl2_info,
+                                              self.decim_lvl3_info])
 
+        mock_client.stream_list = asynctest.mock.CoroutineMock(
+            side_effect=mock_info)
+
+        my_inserter = inserter.NilmDbInserter(
+            mock_client, self.test_path, keep_us=KEEP_US,
+            decimate=True, cleanup_period=0.01)  # speed up cleanup rate
+        # generate random data, data timestamps do not matter for this test
+        # length of 64 creates 4 levels of decimations
+        length = 64
+        interval_start = 500
+        step = 100
+        data = helpers.create_data(self.my_stream.layout,
+                                   length=length,
+                                   start=interval_start,
+                                   step=step)
+        queue = asyncio.Queue(loop=self.loop)
+        queue.put_nowait(data)
+
+        # send everything to the database
+        async def stop_inserter():
+            # time advances by 1day=0.01s so cleanup should be called ~5 times
+            await asyncio.sleep(0.05)
+            my_inserter.stop()
+        loop = asyncio.get_event_loop()
+        tasks = [asyncio.ensure_future(stop_inserter()),
+                 asyncio.ensure_future(my_inserter.process(queue, loop=loop))]
+        loop.run_until_complete(asyncio.gather(*tasks))
+
+        # make sure cleanup was called on all streams
+        p = self.test_path
+        pd = p+"~decim-%d"
+        expected_paths = [p, pd % 4, pd % 16, pd % 64, pd % 256]
+        time = 1 * ONE_DAY
+        for call in mock_client.streams_remove.call_args_list:
+            args = call[0]
+            kwargs = call[1]
+            self.assertEqual(args[0], expected_paths)
+            self.assertEqual(kwargs['end'], time)
+            self.assertEqual(kwargs['start'], 0)
+            # each cleanup call should be one more day
+            time += ONE_DAY
+
+            
 class TestNilmDbDecimator(unittest.TestCase):
 
     def setUp(self):
