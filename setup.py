@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import versioneer
+
 from setuptools import setup, find_packages
 
 PROJECT = 'Joule'
@@ -13,8 +13,8 @@ except IOError:
 
 setup(
     name=PROJECT,
-    version=versioneer.get_version(),
-    cmdclass=versioneer.get_cmdclass(),
+    version='0.1.0',  # versioneer.get_version(),
+    #cmdclass=versioneer.get_cmdclass(),
     description='Process manager for embedded systems',
     long_description=long_description,
 
