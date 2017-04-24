@@ -1,0 +1,16 @@
+[Main]
+#required
+name = module name
+exec_cmd = /path/to/executable --args
+#optional
+description = a short description
+
+[Source]
+path1 = /nilmdb/input/stream1
+path2 = /nilmdb/input/stream2
+# additional sources...
+
+[Destination]
+path1 = /nilmdb/output/stream1
+path2 = /nilmdb/output/stream2
+# additional destinations...

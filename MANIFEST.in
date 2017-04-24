@@ -1,2 +1,1 @@
-include versioneer.py
-include joule/_version.py
+include joule/resources/*

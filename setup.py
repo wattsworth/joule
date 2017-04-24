@@ -49,8 +49,10 @@ setup(
         'joule.commands': [
             'modules = joule.cmds.modules:ModulesCmd',
             'logs = joule.cmds.logs:LogsCmd',
+            'initialize = joule.cmds.initialize:InitializeCmd',
             'reader = joule.client.readers.reader_cmd:ReaderCmd',
-            'filter = joule.client.filters.filter_cmd:FilterCmd'
+            'filter = joule.client.filters.filter_cmd:FilterCmd',
+
         ],
     },
     options={

@@ -1,0 +1,18 @@
+[Main]
+#required settings (examples)
+path = /nilmdb/path/name
+datatype = float32
+keep = 1w
+#optional settings (defaults)
+decimate = yes
+
+[Element1...ElementN]
+#required settings (examples)
+name         = Element Name
+#optional settings (defaults)
+plottable    = yes
+discrete     = no
+offset       = 0.0
+scale_factor = 1.0
+default_max  = null
+default_min  = null
