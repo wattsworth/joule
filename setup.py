@@ -55,10 +55,10 @@ setup(
 
         ],
     },
-    options={
-        'build_scripts': {
-            'executable': '/usr/local/bin/python3.5'
-        }
-    },
+    #options={
+    #    'build_scripts': {
+    #        'executable': '/usr/local/bin/python3.5'
+    #    }
+    #},
     zip_safe=False,
 )
