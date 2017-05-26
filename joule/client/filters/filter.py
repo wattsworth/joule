@@ -1,14 +1,16 @@
 import argparse
-from joule.client import helpers
+import textwrap
 import asyncio
 import signal
 
+from joule.client import helpers
 
 class FilterModule:
 
     def __init__(self, name="Joule Filter Module"):
         self.name = name
         self.parser = ""  # initialized in build_args
+        self.arg_description = ""  # optional argument description
         self.help = """TODO: how to use this module: override in child"""
         self.description = """TODO: one line description"""
     
@@ -37,10 +39,14 @@ class FilterModule:
         helpers.add_args(parser)
         self.custom_args(parser)
         
-    def start(self, argv=None):
-        parser = argparse.ArgumentParser(self.name)
-        self.build_args(parser)
-        parsed_args = parser.parse_args()
+    def start(self, parsed_args=None):
+        if(parsed_args is None):
+            parser = argparse.ArgumentParser(
+                self.name,
+                description=textwrap.dedent(self.arg_description))
+            self.build_args(parser)
+            parsed_args = parser.parse_args()
+            
         self.task = self.run_as_task(parsed_args)
         loop = asyncio.get_event_loop()
         loop.add_signal_handler(signal.SIGINT, self.stop)
