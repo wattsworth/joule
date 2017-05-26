@@ -1,1 +1,2 @@
-recursive-include joule/resources/*
+recursive-include joule/resources *
+prune test
