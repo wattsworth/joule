@@ -1,1 +1,1 @@
-include joule/resources/*
+recursive-include joule/resources/*
