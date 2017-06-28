@@ -94,12 +94,13 @@ class NilmDbDecimator:
         self.factor = factor
         self.client = client
         self.source_path = source_path
+        self.path = None # configured by initialze
         self.child = None
         self.initialized = False
 
     def get_paths(self):
         """return an array of decimated paths (recursive)"""
-        paths = [self.source_path]
+        paths = [self.path]
         if(self.child is not None):
             paths += self.child.get_paths()
         return paths

@@ -34,7 +34,6 @@ setup(
                       'numpy',
                       'scipy',
                       'psutil',
-                      'python-datetime-tz',
                       'requests',
                       'aiohttp'],
     namespace_packages=[],

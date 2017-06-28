@@ -8,7 +8,7 @@ import numpy as np
 import asyncio
 import asynctest
 from test import helpers
-
+import pdb
 
 class TestNilmDbInserter(asynctest.TestCase):
 
@@ -159,6 +159,7 @@ class TestNilmDbInserter(asynctest.TestCase):
         for call in mock_client.streams_remove.call_args_list:
             args = call[0]
             kwargs = call[1]
+
             self.assertEqual(args[0], expected_paths)
             self.assertEqual(kwargs['end'], time)
             self.assertEqual(kwargs['start'], 0)
