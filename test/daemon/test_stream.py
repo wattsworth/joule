@@ -45,6 +45,20 @@ class TestStream(unittest.TestCase):
         stream = self.parser.run(config)
         self.assertEqual(stream.keep_us, 0)
 
+    def test_allows_long_keeps(self):
+        config = helpers.parse_configs(
+            """[Main]
+                 name = test
+                 description = test_description                 
+                 path = /simple/demo
+                 datatype = float32
+                 keep = 100h
+               [Element1]
+                 name=1
+            """)
+        stream = self.parser.run(config)
+        self.assertEqual(stream.keep_us, 100*60*60*1e6)
+        
     def test_allows_no_description(self):
         self.base_config.remove_option("Main", "description")
         parsed_stream = self.parser.run(self.base_config)

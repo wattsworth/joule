@@ -136,7 +136,7 @@ class Parser(object):
     def _validate_keep(self, keep):
         if keep.lower() == "none":
             return 0
-        match = re.fullmatch('^(\d)([h|d|w|m|y])$', keep)
+        match = re.fullmatch('^(\d+)([h|d|w|m|y])$', keep)
         if(match is None):
             raise ConfigError("invalid [Stream] keep, \
             use format #unit (eg 1w)")
