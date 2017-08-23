@@ -43,7 +43,9 @@ class FilterModule:
         if(parsed_args is None):
             parser = argparse.ArgumentParser(
                 self.name,
-                description=textwrap.dedent(self.arg_description))
+                description=textwrap.dedent(self.arg_description),
+                formatter_class=argparse.RawTextHelpFormatter
+            )
             self.build_args(parser)
             parsed_args = parser.parse_args()
             

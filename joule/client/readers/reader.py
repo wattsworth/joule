@@ -1,4 +1,5 @@
 import argparse
+import textwrap
 from joule.client import helpers
 import asyncio
 import signal
@@ -9,6 +10,7 @@ class ReaderModule:
     def __init__(self, name="Joule Reader Module"):
         self.name = name
         self.parser = ""  # initialized in build_args
+        self.arg_description = ""  # optional argument description
         self.help = """TODO: how to use this module: override in child"""
         self.description = """TODO: one line description"""
     
@@ -31,7 +33,11 @@ class ReaderModule:
         self.custom_args(parser)
         
     def start(self, argv=None):
-        parser = argparse.ArgumentParser(self.name)
+        parser = argparse.ArgumentParser(
+            self.name,
+            description=textwrap.dedent(self.arg_description),
+            formatter_class=argparse.RawTextHelpFormatter
+        )
         self.build_args(parser)
         parsed_args = parser.parse_args()
         self.task = self.run_as_task(parsed_args)
