@@ -1,0 +1,91 @@
+.command-title {
+    background: #DDD;
+    padding: 8px;
+    border-radius: 4px;
+    margin-top: 40px;
+    border-top: black;
+    border-style: solid;
+    border-width: 1px
+}
+
+.command-title>i {
+    font-style: normal;
+    font-weight: bold;
+    font-family: monospace;
+}
+
+.text-mono {
+    font-family: monospace;
+}
+
+.block-indent {
+    margin-left: 20px;
+}
+
+.text-grey {
+    color: #808080;
+}
+
+.arglist>dd {
+    margin: 0px;
+    margin-left: 30px;
+}
+
+.arglist>dt {
+    color: #808080;
+    font-weight: normal;
+    font-family: monospace;
+}
+
+.arglist {
+    margin-top: 0px;
+    margin-bottom: 0px;
+}
+
+.plainlist {
+    margin-bottom: 0px;
+}
+
+.plainlist>dd {
+    margin-left: 30px;
+}
+
+.plainlist>dt {
+    font-weight: normal;
+    font-family: monospace;
+}
+
+.plug-cli {
+    font-family: monospace;
+    background: #DDD;
+    display: block;
+    margin: 5px;
+    padding: 5px;
+    border-radius: 4px;
+    border-style: solid;
+    border-width: 1px;
+    border-color: #BBB
+}
+
+.mono-dl>dt {
+    font-family: monospace;
+}
+
+.arglist.dl-horizontal>dt {
+    width: inherit;
+}
+
+.arglist.dl-horizontal>dd {
+    margin-left: 130px;
+}
+
+.command {
+    font-family: monospace;
+    color: #808080
+}
+
+.command>em {
+    font-weight: bold;
+    font-style: normal;
+    color: black;
+}

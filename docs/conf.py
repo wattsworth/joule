@@ -168,4 +168,5 @@ texinfo_documents = [
 ]
 
 
-
+def setup(app):
+    app.add_stylesheet('css/custom.css')  # may also be an URL

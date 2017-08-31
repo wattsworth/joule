@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-   
+
 Joule: Modular Data Processing
 =================================
 
@@ -21,23 +21,22 @@ bugs and find bottlenecks in processing pipelines.
 
 
 .. toctree::
-   :maxdepth: 2
-      
+   :maxdepth: 3
+
    concepts
-   install
    getting_started
    writing_modules
    testing_modules
-   nilm
+   nilmdb
    reference
-   
+
 Contributing & Running Tests
 ----------------------------
-Contribution is always welcome. Please include tests with your pull request. 
+Contribution is always welcome. Please include tests with your pull request.
 Unittests can be run using nose2, see **joule/htmlcov** for code coverage.
 
 .. code-block:: bash
-		
+
 		$> cd joule
 		$> nose2 # run all unittests
 
@@ -47,8 +46,8 @@ https://docs.docker.com/compose/install/ for details on installing
 docker-compose. The NilmDB container is available by request on `Docker Hub`_.
 
 .. code-block:: bash
-		
+
 		$> cd test/e2e
 		$> ./runner.sh # run end-to-end tests
-   
+
 .. _Docker Hub: https://hub.docker.com/
