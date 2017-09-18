@@ -141,6 +141,14 @@ Download and Install Source
 
 This will install python3.5 into **/usr/local/bin**
 
+Install matplotlib, numpy and scipy. These must be built from source so you need to 
+get the dependencies before running pip. Edit ``/etc/apt/sources.list`` to include a 
+source entry like ``deb-src``. Then run the following commands:
+
+.. code-block:: bash
+
+   $> sudo apt-get build-dep python3-scipy python3-numpy python3-matplotlib
+   $> sudo pip3 install numpy matplotlib scipy
 VirtualEnv
 ^^^^^^^^^^
 
