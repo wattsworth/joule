@@ -65,3 +65,6 @@ class NumpyPipe:
 
 class NumpyPipeError(Exception):
     """base class for numpypipe exceptions"""
+
+class EmptyPipe(NumpyPipeError):
+    pass

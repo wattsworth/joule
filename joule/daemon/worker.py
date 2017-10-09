@@ -2,7 +2,11 @@ import logging
 import asyncio
 import shlex
 from joule.daemon import module
-from joule.utils.fdnumpypipe import FdNumpyPipe, EmptyPipe
+from joule.utils.stream_numpypipe_reader import StreamNumpyPipeReader
+from joule.utils.stream_numpypipe_writer import StreamNumpyPipeWriter
+from joule.utils.numpypipe import EmptyPipe
+import joule.utils.fd_factory as fd_factory
+
 import os
 import json
 
@@ -178,15 +182,15 @@ class Worker:
         (r, w) = os.pipe()
         if(direction == 'output'):  # fd    ==> npipe
             os.set_inheritable(w, True)
-            npipe = FdNumpyPipe(name="fd ==> %s" % stream.path,
-                                fd=r,
-                                layout=stream.layout)
+            npipe = StreamNumpyPipeReader(stream.layout,
+                                          fd_factory.reader_factory(r))
+                                          
             return(npipe, w)
         else:                    # npipe ==> fd
             os.set_inheritable(r, True)
-            npipe = FdNumpyPipe(name="%s ==> fd" % stream.path,
-                                fd=w,
-                                layout=stream.layout)
+            npipe = StreamNumpyPipeWriter(stream.layout,
+                                          fd_factory.writer_factory(w))
+                                          
             return (r, npipe)
 
     def _close_child_pipes(self):

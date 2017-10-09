@@ -200,7 +200,20 @@ class Daemon(object):
 
         tasks.append(asyncio.ensure_future(self._db_committer()))
         tasks += self._start_inserters(loop)
-                    
+
+        # helper function to build an inserter for a stream 
+        def build_inserter(stream):  inserter.NilmDbInserter(
+                    self.async_nilmdb_client,
+                    stream.path,
+                    insertion_period=self.NILMDB_INSERTION_PERIOD,
+                    cleanup_period=self.NILMDB_CLEANUP_PERIOD,
+                    keep_us=stream.keep_us,
+                    decimate=stream.decimate)
+
+        # add the stream sockets (read/write) to the event loop
+        #tasks += build_stream_sockets(self.path_workers,
+        #                              build_inserter, loop)
+        
         # commit records to database
         self.procdb.commit()
         loop.run_until_complete(asyncio.gather(*tasks))
