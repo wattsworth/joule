@@ -1,5 +1,7 @@
 import json
-from joule.utils.fdnumpypipe import FdNumpyPipe
+from joule.utils.stream_numpypipe_reader import StreamNumpyPipeReader
+from joule.utils.stream_numpypipe_writer import StreamNumpyPipeWriter
+import joule.utils.fd_factory as fd_factory
 
 
 def add_args(parser):
@@ -20,11 +22,11 @@ def build_pipes(parsed_args):
     pipes_out = {}
     pipes_in = {}
     for name, arg in dest_args.items():
-        pipes_out[name] = FdNumpyPipe(name=name,
-                                      fd=arg['fd'],
-                                      layout=arg['layout'])
+        wf = fd_factory.writer_factory(arg['fd'])
+        pipes_out[name] = StreamNumpyPipeWriter(arg['layout'], wf)
+                                                
     for name, arg in src_args.items():
-        pipes_in[name] = FdNumpyPipe(name=name,
-                                     fd=arg['fd'],
-                                     layout=arg['layout'])
+        rf = fd_factory.reader_factory(arg['fd'])
+        pipes_in[name] = StreamNumpyPipeReader(arg['layout'], rf)
+
     return (pipes_in, pipes_out)

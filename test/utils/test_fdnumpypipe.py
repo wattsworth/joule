@@ -1,28 +1,35 @@
 
 import asynctest
-from joule.utils.fdnumpypipe import FdNumpyPipe
+from joule.utils.stream_numpypipe_reader import StreamNumpyPipeReader
+from joule.utils.stream_numpypipe_writer import StreamNumpyPipeWriter
+import joule.utils.fd_factory as fd_factory
 import os
 import numpy as np
 import asyncio
 from test import helpers
 
+"""
+Tests NumpyPipes with subprocess pipes 
+"""
 
-class TestFdNumpyPipe(asynctest.TestCase):
+
+class TestNumpyPipe(asynctest.TestCase):
 
     def test_pipes_numpy_arrays(self):
         LAYOUT = "int8_2"
         LENGTH = 1000
         (fd_r, fd_w) = os.pipe()
 
-        # wrap the file descriptors in numpypipes
-        npipe_in = FdNumpyPipe("pipe_in", fd_w, layout=LAYOUT)
-        npipe_out = FdNumpyPipe("pipe_out", fd_r, layout=LAYOUT)
+        npipe_in = StreamNumpyPipeReader(LAYOUT,
+                                         fd_factory.reader_factory(fd_r))
+        npipe_out = StreamNumpyPipeWriter(LAYOUT,
+                                          fd_factory.writer_factory(fd_w))
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
-        # print(test_data['data'][:,1])
+
 
         async def writer():
             for block in helpers.to_chunks(test_data, 270):
-                await npipe_in.write(block)
+                await npipe_out.write(block)
                 await asyncio.sleep(0.01)
 
         async def reader():
@@ -31,11 +38,11 @@ class TestFdNumpyPipe(asynctest.TestCase):
             run_count = 0
             while(data_cursor != len(test_data)):
                 # consume all data in pipe
-                data = await npipe_out.read()
+                data = await npipe_in.read()
                 rows_used = min(len(data), blk_size)
                 used_data = data[:rows_used]
                 # print(used_data['data'][:,1])
-                npipe_out.consume(rows_used)
+                npipe_in.consume(rows_used)
                 start_pos = data_cursor
                 end_pos = data_cursor + len(used_data)
                 np.testing.assert_array_equal(used_data,
@@ -61,7 +68,8 @@ class TestFdNumpyPipe(asynctest.TestCase):
         (fd_r, fd_w) = os.pipe()
 
         # wrap the file descriptors in numpypipes
-        npipe_out = FdNumpyPipe("pipe_out", fd_r, layout=LAYOUT)
+        npipe_in = StreamNumpyPipeReader(LAYOUT,
+                                         fd_factory.reader_factory(fd_r))
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
 
         async def writer():
@@ -79,8 +87,8 @@ class TestFdNumpyPipe(asynctest.TestCase):
             run_count = 0
             while(data_cursor != len(test_data)):
                 # consume all data in pipe
-                data = await npipe_out.read()
-                npipe_out.consume(len(data))
+                data = await npipe_in.read()
+                npipe_in.consume(len(data))
                 start_pos = data_cursor
                 end_pos = data_cursor + len(data)
                 np.testing.assert_array_equal(data,
@@ -95,7 +103,7 @@ class TestFdNumpyPipe(asynctest.TestCase):
                  asyncio.ensure_future(reader())]
         loop = asyncio.get_event_loop()
         loop.run_until_complete(asyncio.gather(*tasks))
-        npipe_out.close()
+        npipe_in.close()
 
     def test_read_data_must_be_consumed(self):
         """writes to pipe sends data to reader and any subscribers"""
@@ -104,18 +112,21 @@ class TestFdNumpyPipe(asynctest.TestCase):
         UNCONSUMED_ROWS = 4
         (fd_r, fd_w) = os.pipe()
         # wrap the file descriptors in numpypipes
-        npipe_in = FdNumpyPipe("pipe_in", fd_w, layout=LAYOUT)
-        npipe_out = FdNumpyPipe("pipe_out", fd_r,
-                                layout=LAYOUT, buffer_size=100)
+        npipe_in = StreamNumpyPipeReader(LAYOUT,
+                                         fd_factory.reader_factory(fd_r),
+                                         buffer_size=100)
+        npipe_out = StreamNumpyPipeWriter(LAYOUT,
+                                          fd_factory.writer_factory(fd_w))
+        
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
 
         async def writer():
-            await npipe_in.write(test_data)
+            await npipe_out.write(test_data)
 
         async def reader():
-            data = await npipe_out.read()
-            npipe_out.consume(len(data) - UNCONSUMED_ROWS)
-            next_data = await npipe_out.read()
+            data = await npipe_in.read()
+            npipe_in.consume(len(data) - UNCONSUMED_ROWS)
+            next_data = await npipe_in.read()
 
             np.testing.assert_array_equal(data[-UNCONSUMED_ROWS:],
                                           next_data[:UNCONSUMED_ROWS])
