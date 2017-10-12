@@ -14,7 +14,7 @@ import functools
 import argparse
 import signal
 from joule.utils import config_manager, nilmdb, time
-from . import inserter
+from . import inserter, server
 
 
 class Daemon(object):
@@ -202,7 +202,7 @@ class Daemon(object):
         tasks += self._start_inserters(loop)
 
         # helper function to build an inserter for a stream 
-        def build_inserter(stream):  inserter.NilmDbInserter(
+        def inserter_factory(stream):  inserter.NilmDbInserter(
                     self.async_nilmdb_client,
                     stream.path,
                     insertion_period=self.NILMDB_INSERTION_PERIOD,
@@ -210,9 +210,9 @@ class Daemon(object):
                     keep_us=stream.keep_us,
                     decimate=stream.decimate)
 
-        # add the stream sockets (read/write) to the event loop
-        #tasks += build_stream_sockets(self.path_workers,
-        #                              build_inserter, loop)
+        # add the stream serverto the event loop
+        #tasks += server.build_server(self.path_workers,
+        #                             inserter_factory, loop)
         
         # commit records to database
         self.procdb.commit()
