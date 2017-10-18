@@ -14,8 +14,7 @@ import logging
   path: /some/path,
   direction: read,
   decimation: 1,
-  start: ts,
-  end: ts
+  time_range: [start, end]
 }
 """
 
@@ -33,24 +32,27 @@ WriterConfig = collections.namedtuple("Config", ["path",
 ReaderConfig = collections.namedtuple("ReaderConfig", ["path",
                                                        "direction",
                                                        "decimation",
-                                                       "start",
-                                                       "end"])
+                                                       "time_range"])
 
 
-def create_reader_config(path, decimation=1, start=None, end=None):
-    return ReaderConfig(path, DIR_READ, decimation, start, end)
+def create_reader_config(path, decimation=1, time_range=None):
+    return ReaderConfig(path, DIR_READ, decimation, time_range)
 
 
 def create_config_from_json(j):
-    if(j['direction'] == DIR_READ):
-        return ReaderConfig(j['path'], DIR_READ, j['direction'],
-                            j['decimation'], j['start'], j['end'])
-    elif(j['direction'] == DIR_WRITE):
-        return WriterConfig(j['path'], DIR_WRITE,
-                            j['direction'], j['configuration'])
-    else:
-        raise KeyError('direction')
-    
+    try:
+        if(j['direction'] == DIR_READ):
+            return ReaderConfig(j['path'], DIR_READ,
+                                j['decimation'], j['time_range'])
+        elif(j['direction'] == DIR_WRITE):
+            return WriterConfig(j['path'], DIR_WRITE,
+                                j['layout'], j['configuration'])
+        else:
+            raise KeyError
+    except Exception as e:
+        logging.warning("cannot parse json config: %r" % e)
+        return None
+        
 
 def create_writer_config(path, stream_configuration):
     return WriterConfig(path, DIR_WRITE, stream_configuration)

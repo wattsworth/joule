@@ -7,10 +7,11 @@ MAX_ROWS = 9000  # max array size is 3000 rows
 
 class StreamNumpyPipeReader(numpypipe.NumpyPipe):
 
-    def __init__(self, layout, reader_factory, loop=None, buffer_size=3000):
+    def __init__(self, layout, reader=None,
+                 reader_factory=None, loop=None, buffer_size=3000):
         super().__init__("REMOVE_THIS_ARG", layout)
         self.reader_factory = reader_factory
-        self.reader = None  # initialized on first call to read
+        self.reader = reader
         if(loop is None):
             self.loop = asyncio.get_event_loop()
         else:

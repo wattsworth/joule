@@ -21,9 +21,9 @@ class TestNumpyPipe(asynctest.TestCase):
         (fd_r, fd_w) = os.pipe()
 
         npipe_in = StreamNumpyPipeReader(LAYOUT,
-                                         fd_factory.reader_factory(fd_r))
+                                         reader_factory=fd_factory.reader_factory(fd_r))
         npipe_out = StreamNumpyPipeWriter(LAYOUT,
-                                          fd_factory.writer_factory(fd_w))
+                                          writer_factory=fd_factory.writer_factory(fd_w))
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
 
 
@@ -69,7 +69,7 @@ class TestNumpyPipe(asynctest.TestCase):
 
         # wrap the file descriptors in numpypipes
         npipe_in = StreamNumpyPipeReader(LAYOUT,
-                                         fd_factory.reader_factory(fd_r))
+                                         reader_factory=fd_factory.reader_factory(fd_r))
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
 
         async def writer():
@@ -113,10 +113,10 @@ class TestNumpyPipe(asynctest.TestCase):
         (fd_r, fd_w) = os.pipe()
         # wrap the file descriptors in numpypipes
         npipe_in = StreamNumpyPipeReader(LAYOUT,
-                                         fd_factory.reader_factory(fd_r),
+                                         reader_factory=fd_factory.reader_factory(fd_r),
                                          buffer_size=100)
         npipe_out = StreamNumpyPipeWriter(LAYOUT,
-                                          fd_factory.writer_factory(fd_w))
+                                          writer_factory=fd_factory.writer_factory(fd_w))
         
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
 

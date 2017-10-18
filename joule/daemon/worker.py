@@ -183,13 +183,13 @@ class Worker:
         if(direction == 'output'):  # fd    ==> npipe
             os.set_inheritable(w, True)
             npipe = StreamNumpyPipeReader(stream.layout,
-                                          fd_factory.reader_factory(r))
+                                          reader_factory=fd_factory.reader_factory(r))
                                           
             return(npipe, w)
         else:                    # npipe ==> fd
             os.set_inheritable(r, True)
             npipe = StreamNumpyPipeWriter(stream.layout,
-                                          fd_factory.writer_factory(w))
+                                          writer_factory=fd_factory.writer_factory(w))
                                           
             return (r, npipe)
 

@@ -7,10 +7,11 @@ MAX_ROWS = 9000  # max array size is 3000 rows
 
 class StreamNumpyPipeWriter(numpypipe.NumpyPipe):
 
-    def __init__(self, layout, writer_factory, loop=None, buffer_size=3000):
+    def __init__(self, layout, writer=None, writer_factory=None,
+                 loop=None, buffer_size=3000):
         super().__init__("REMOVE THIS ARG", layout)
         self.writer_factory = writer_factory
-        self.writer = None  # initialized on first call to write
+        self.writer = writer  
         if(loop is None):
             self.loop = asyncio.get_event_loop()
         else:
