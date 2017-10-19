@@ -201,18 +201,32 @@ class Daemon(object):
         tasks.append(asyncio.ensure_future(self._db_committer()))
         tasks += self._start_inserters(loop)
 
-        # helper function to build an inserter for a stream 
-        def inserter_factory(stream):  inserter.NilmDbInserter(
-                    self.async_nilmdb_client,
-                    stream.path,
-                    insertion_period=self.NILMDB_INSERTION_PERIOD,
-                    cleanup_period=self.NILMDB_CLEANUP_PERIOD,
-                    keep_us=stream.keep_us,
-                    decimate=stream.decimate)
-
-        # add the stream serverto the event loop
-        #tasks += server.build_server(self.path_workers,
-        #                             inserter_factory, loop)
+        # Factory function to allow the server to build inserters 
+        def inserter_factory(stream):
+            if(not self._validate_stream(stream)):
+                return None
+            return inserter.NilmDbInserter(
+                self.async_nilmdb_client,
+                stream.path,
+                insertion_period=self.NILMDB_INSERTION_PERIOD,
+                cleanup_period=self.NILMDB_CLEANUP_PERIOD,
+                keep_us=stream.keep_us,
+                decimate=stream.decimate)
+        
+        # Factory function to allow the server to build readers
+        def reader_factory(path, time_range):
+            if(time_range is None):
+                if path in self.path_workers:
+                    return self.path_workers[path]()
+                else:
+                    return None
+            else:
+                # build a nilmdb reader to retrieve stored data
+                return None
+            
+        # add the stream server to the event loop
+        tasks += server.build_server(reader_factory,
+                                     inserter_factory, loop)
         
         # commit records to database
         self.procdb.commit()

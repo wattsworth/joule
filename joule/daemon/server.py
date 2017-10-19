@@ -65,7 +65,7 @@ class Server:
             msg = "path [%s] is unavailable"
             await server_utils.send_error(writer, msg)
             return
-        msg = "read from [%s] authorized" % config.path
+        msg = "%s" % npipe_r.layout
         await server_utils.send_ok(writer, msg)
         npipe_w = StreamNumpyPipeWriter(npipe_r.layout, writer=writer)
         try:

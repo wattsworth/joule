@@ -2,61 +2,54 @@
 import json
 import collections
 import logging
-
-"""
-{
-  path: /some/path,
-  direction: write,
-  layout: float32_3 
-  configuration: { }
-}
-{
-  path: /some/path,
-  direction: read,
-  decimation: 1,
-  time_range: [start, end]
-}
-"""
-
-DIR_READ = 'read'
-DIR_WRITE = 'write'
+from joule.daemon import stream 
 
 STATUS_ERROR = 'error'
 STATUS_OK = 'ok'
 
-WriterConfig = collections.namedtuple("Config", ["path",
-                                                 "direction",
-                                                 "layout",
-                                                 "configuration"])
+"""
+DataRequest Definitions
+-----------------------------------------
+"""
+DataRequest = collections.namedtuple("DataRequest", ["type", "config"])
 
-ReaderConfig = collections.namedtuple("ReaderConfig", ["path",
-                                                       "direction",
-                                                       "decimation",
-                                                       "time_range"])
+"""
+Request a stream to write into
+config: stream object as JSON
+"""
+REQ_WRITE = 'write'
+
+"""
+Request a stream to read from
+config: 
+    {
+      path: /some/path,
+      decimation: 1,
+      time_range: [start, end]
+    }
+"""
+REQ_READ = 'read'
+
+ReaderConfig = collections.namedtuple("ReaderConfig",
+                                      ["path", "decimation", "time_range"])
 
 
-def create_reader_config(path, decimation=1, time_range=None):
-    return ReaderConfig(path, DIR_READ, decimation, time_range)
-
-
-def create_config_from_json(j):
+def parse_request_config(j):
     try:
-        if(j['direction'] == DIR_READ):
-            return ReaderConfig(j['path'], DIR_READ,
-                                j['decimation'], j['time_range'])
-        elif(j['direction'] == DIR_WRITE):
-            return WriterConfig(j['path'], DIR_WRITE,
-                                j['layout'], j['configuration'])
+        type = j['type']
+        config = j['config']
+        if(type == REQ_READ):
+            return ReaderConfig(config['path'],
+                                config['decimation'],
+                                config['time_range'])
+        elif(type == REQ_WRITE):
+            return stream.from_json(config)  # TODO
         else:
-            raise KeyError
+            raise Exception("invalid type: %s" % type)
     except Exception as e:
         logging.warning("cannot parse json config: %r" % e)
         return None
         
-
-def create_writer_config(path, stream_configuration):
-    return WriterConfig(path, DIR_WRITE, stream_configuration)
-
 
 async def send_ok(writer, message=''):
     msg = {'status': STATUS_OK, 'message': message}
