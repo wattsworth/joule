@@ -1,8 +1,8 @@
 import numpy as np
 import asyncio
 import logging
-from . import numpypipe
-from joule.daemon import server_utils, stream
+from . import numpypipe, network
+
 
 MAX_ROWS = 9000  # max array size is 3000 rows
 
@@ -74,11 +74,11 @@ async def request_reader(path,
                          loop=None):
 
     r, w = await asyncio.open_connection(address, port, loop=loop)
-    config = server_utils.ReaderConfig(path, decimation, time_range)
-    msg = server_utils.DataRequest(server_utils.REQ_READ, config)    
-    await server_utils.send_json(w, msg)
-    resp = await server_utils.read_json(r)
-    if(resp['status'] != server_utils.STATUS_OK):
+    config = network.ReaderConfig(path, decimation, time_range)
+    msg = network.DataRequest(network.REQ_READ, config._asdict())    
+    await network.send_json(w, msg._asdict())
+    resp = await network.read_json(r)
+    if(resp['status'] != network.STATUS_OK):
         msg = "Request to read [%s] failed: %s" %\
                       (path, resp['message'])
         logging.error(msg)

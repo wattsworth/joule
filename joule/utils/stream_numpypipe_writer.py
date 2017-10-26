@@ -1,8 +1,8 @@
 import numpy as np
 import asyncio
 import logging
-from . import numpypipe
-from joule.daemon import server_utils
+from . import numpypipe, network
+
 
 MAX_ROWS = 9000  # max array size is 3000 rows
 
@@ -45,11 +45,11 @@ async def request_writer(stream,
                          loop=None):
 
     r, w = await asyncio.open_connection(address, port, loop=loop)
-    msg = server_utils.DataRequest(server_utils.REQ_WRITE,
+    msg = network.DataRequest(network.REQ_WRITE,
                                    stream.to_json(ini_format=True))
-    await server_utils.send_json(w, msg)
-    resp = await server_utils.read_json(r)
-    if(resp['status'] != server_utils.STATUS_OK):
+    await network.send_json(w, msg._asdict())
+    resp = await network.read_json(r)
+    if(resp['status'] != network.STATUS_OK):
         msg = "Request to write [%s] failed: %s" %\
                       (stream.name, resp['message'])
         logging.error(msg)

@@ -3,7 +3,8 @@ import asyncio
 import asynctest
 import numpy as np
 from test import helpers 
-from joule.daemon import server, server_utils
+from joule.daemon import server
+from joule.utils import network
 from joule.utils.stream_numpypipe_reader import request_reader
 from joule.utils.stream_numpypipe_writer import request_writer
 from joule.utils.localnumpypipe import LocalNumpyPipe
@@ -28,9 +29,9 @@ class TestSever(asynctest.TestCase):
             nonlocal client_connections
             r, w = await asyncio.open_connection(ADDR, PORT, loop=loop)
             msg = {'invalid config': None}
-            await server_utils.send_json(w, msg)
-            r = await server_utils.read_json(r)
-            self.assertEqual(r['status'], server_utils.STATUS_ERROR)
+            await network.send_json(w, msg)
+            r = await network.read_json(r)
+            self.assertEqual(r['status'], network.STATUS_ERROR)
             client_connections += 1
             w.close()
 

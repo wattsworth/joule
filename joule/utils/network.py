@@ -36,8 +36,8 @@ ReaderConfig = collections.namedtuple("ReaderConfig",
 
 
 def parse_data_request(data_request):
-    req_type = data_request[0]
-    req_config = data_request[1]
+    req_type = data_request['type']
+    req_config = data_request['config']
     if(req_type == REQ_READ):
         return DataRequest(REQ_READ, ReaderConfig(req_config['path'],
                                                   req_config['decimation'],

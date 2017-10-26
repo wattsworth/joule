@@ -4,7 +4,8 @@ import asyncio
 import asynctest
 
 
-from joule.daemon import server, server_utils
+from joule.daemon import server
+from joule.utils import network
 
 ADDR = '127.0.0.1'
 PORT = '1234'
@@ -20,7 +21,7 @@ class TestSeverErrors(asynctest.TestCase):
         async def client():
             r, w = await asyncio.open_connection(ADDR, PORT, loop=loop)
             msg = {'not waiting for response': None}
-            await server_utils.send_json(w, msg)
+            await network.send_json(w, msg)
             w.close()
 
         async def run():
@@ -40,7 +41,7 @@ class TestSeverErrors(asynctest.TestCase):
         async def client():
             r, w = await asyncio.open_connection(ADDR, PORT, loop=loop)
             msg = {'not waiting for response': None}
-            await server_utils.send_json(w, msg)
+            await network.send_json(w, msg)
             w.close()
 
         async def run():

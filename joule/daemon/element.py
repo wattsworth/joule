@@ -61,6 +61,8 @@ class Parser(object):
             if(configs[setting] == "None"):
                 return default
             return configs.getfloat(setting, default)
+        except KeyError as e:
+            return default
         except ValueError as e:
             raise ConfigError("[%s] bad value for %s, must be a number" %
                               (configs.name, setting)) from e
