@@ -1,12 +1,11 @@
 
-
 import asyncio
 import asynctest
 import numpy as np
 from test import helpers 
 from joule.daemon import server, server_utils
-from joule.utils.stream_numpypipe_reader import StreamNumpyPipeReader
-from joule.utils.stream_numpypipe_writer import StreamNumpyPipeWriter
+from joule.utils.stream_numpypipe_reader import request_reader
+from joule.utils.stream_numpypipe_writer import request_writer
 from joule.utils.localnumpypipe import LocalNumpyPipe
 
 ADDR = '127.0.0.1'
@@ -60,16 +59,11 @@ class TestSever(asynctest.TestCase):
             test_data = helpers.create_data(LAYOUT, length=LENGTH)
             s = await server.build_server(ADDR, PORT, None,
                                           lambda stream: mock_inserter)
-            r, w = await asyncio.open_connection(ADDR, PORT, loop=loop) 
-            stream_config = helpers.build_stream('test',
-                                                 datatype=DTYPE,
-                                                 num_elements=NELEM).to_json()
-            msg = {'path': '/some/path', 'direction': 'write',
-                   'layout': LAYOUT, 'configuration': stream_config}
-            await server_utils.send_json(w, msg)
-            resp = await server_utils.read_json(r)
-            self.assertEqual(resp['status'], server_utils.STATUS_OK)
-            npipe = StreamNumpyPipeWriter(LAYOUT, writer=w)
+            r, w = await asyncio.open_connection(ADDR, PORT, loop=loop)
+            test_stream = helpers.build_stream('test',
+                                               datatype=DTYPE,
+                                               num_elements=NELEM)
+            npipe = await request_writer(test_stream, ADDR, PORT, loop=loop)
             await npipe.write(test_data)
             await asyncio.sleep(0.1)
             s.close()
@@ -97,12 +91,7 @@ class TestSever(asynctest.TestCase):
                                           lambda path, time_range: npipe,
                                           None)
             r, w = await asyncio.open_connection(ADDR, PORT, loop=loop) 
-            msg = {'path': '/some/path', 'direction': 'read',
-                   'decimation': 1, 'time_range': None}
-            await server_utils.send_json(w, msg)
-            resp = await server_utils.read_json(r)
-            self.assertEqual(resp['status'], server_utils.STATUS_OK)
-            npipe = StreamNumpyPipeReader(LAYOUT, reader=r)
+            npipe = await request_reader("/test/path")
             rx_data = await npipe.read()
             npipe.consume(len(rx_data))
             s.close()

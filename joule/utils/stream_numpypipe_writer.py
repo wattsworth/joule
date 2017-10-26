@@ -45,7 +45,8 @@ async def request_writer(stream,
                          loop=None):
 
     r, w = await asyncio.open_connection(address, port, loop=loop)
-    msg = server_utils.DataRequest(server_utils.REQ_WRITE, stream)
+    msg = server_utils.DataRequest(server_utils.REQ_WRITE,
+                                   stream.to_json(ini_format=True))
     await server_utils.send_json(w, msg)
     resp = await server_utils.read_json(r)
     if(resp['status'] != server_utils.STATUS_OK):

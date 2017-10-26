@@ -225,8 +225,8 @@ class Daemon(object):
                 return None
             
         # add the stream server to the event loop
-        tasks += server.build_server(reader_factory,
-                                     inserter_factory, loop)
+        #tasks += server.build_server(reader_factory,
+        #                             inserter_factory, loop)
         
         # commit records to database
         self.procdb.commit()

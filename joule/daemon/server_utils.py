@@ -2,6 +2,7 @@
 import json
 import collections
 import logging
+import configparser
 from joule.daemon import stream 
 
 STATUS_ERROR = 'error'
@@ -21,7 +22,7 @@ REQ_WRITE = 'write'
 
 """
 Request a stream to read from
-config: 
+config:
     {
       path: /some/path,
       decimation: 1,
@@ -34,23 +35,23 @@ ReaderConfig = collections.namedtuple("ReaderConfig",
                                       ["path", "decimation", "time_range"])
 
 
-def parse_request_config(j):
-    try:
-        type = j['type']
-        config = j['config']
-        if(type == REQ_READ):
-            return ReaderConfig(config['path'],
-                                config['decimation'],
-                                config['time_range'])
-        elif(type == REQ_WRITE):
-            return stream.from_json(config)  # TODO
-        else:
-            raise Exception("invalid type: %s" % type)
-    except Exception as e:
-        logging.warning("cannot parse json config: %r" % e)
-        return None
-        
+def parse_data_request(data_request):
+    req_type = data_request[0]
+    req_config = data_request[1]
+    if(req_type == REQ_READ):
+        return DataRequest(REQ_READ, ReaderConfig(req_config['path'],
+                                                  req_config['decimation'],
+                                                  req_config['time_range']))
+    elif(req_type == REQ_WRITE):
+        config = configparser.ConfigParser()
+        config.read_dict(req_config)
+        streamparser = stream.Parser()
+        req_stream = streamparser.run(config)
+        return DataRequest(REQ_WRITE, req_stream)
+    else:
+        raise Exception("invalid request type: %s" % type)
 
+    
 async def send_ok(writer, message=''):
     msg = {'status': STATUS_OK, 'message': message}
     await send_json(writer, msg)
@@ -75,14 +76,10 @@ async def send_json(writer, msg):
     
 async def read_json(reader):
     # get the length of the json request
-    try:
-        b = await reader.read(4)
-        size = int.from_bytes(b,
-                              byteorder='big',
-                              signed=False)
-        # create a config object 
-        raw = await reader.read(size)
-        return json.loads(raw.decode())
-    except json.decoder.JSONDecodeError:
-        logging.warning('invalid json')
-        return None
+    b = await reader.read(4)
+    size = int.from_bytes(b,
+                          byteorder='big',
+                          signed=False)
+    # create a config object 
+    raw = await reader.read(size)
+    return json.loads(raw.decode())

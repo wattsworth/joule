@@ -2,10 +2,12 @@
 Stream: NilmDB stream 
 
 [Main]
+name = Stream Name
 path = /nilmdb/path/name
 datatype = float32
 keep = 1w
 #optional settings (defaults)
+description =
 decimate = yes
 
 [Element1...ElementN]
@@ -61,7 +63,41 @@ class Stream(object):
                     "the name setting for each element must be unique")
         self.elements.append(new_element)
 
-    def to_json(self):
+    # used for serializing stream in nilmdb metadata
+    # or turning into a dictionary equivalent to the *.conf setup
+    # set ini_format to True to send as *.conf setup
+    def to_json(self, ini_format=False):
+        if(ini_format):
+            # convert keep_us to hours
+            if(self.keep_us == 0):
+                keep = "none"
+            else:
+                keep = "%dh" % (self.keep_us//(60 * 60 * 1e6))
+            
+            ini = {'Main':
+                   {
+                       'name': str(self.name),
+                       'description': str(self.description),
+                       'path': str(self.path),
+                       'datatype': str(self.datatype),
+                       'keep': str(keep),
+                       'decimate': str(self.decimate)
+                   }}
+            i = 1
+            for elem in self.elements:
+                ini["Element%d" % i] = {
+                    'name': str(elem.name),
+                    'plottable': str(elem.plottable),
+                    'discrete': str(elem.discrete),
+                    'offset': str(elem.offset),
+                    'scale_factor': str(elem.scale_factor),
+                    'default_max': str(elem.default_max),
+                    'default_min': str(elem.default_min)
+                    }
+                i += 1
+            return ini
+        
+        # otherwise return data in format for nilmdb serialization
         stream_data = []
 
         for i in range(len(self.elements)):

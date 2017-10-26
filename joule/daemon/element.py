@@ -58,6 +58,8 @@ class Parser(object):
 
     def _get_float(self, setting, configs, default):
         try:
+            if(configs[setting] == "None"):
+                return default
             return configs.getfloat(setting, default)
         except ValueError as e:
             raise ConfigError("[%s] bad value for %s, must be a number" %
