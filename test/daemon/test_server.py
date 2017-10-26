@@ -5,9 +5,10 @@ import numpy as np
 from test import helpers 
 from joule.daemon import server
 from joule.utils import network
-from joule.utils.stream_numpypipe_reader import request_reader
-from joule.utils.stream_numpypipe_writer import request_writer
-from joule.utils.localnumpypipe import LocalNumpyPipe
+from joule.utils.numpypipe import (request_reader,
+                                   request_writer,
+                                   LocalNumpyPipe)
+
 
 ADDR = '127.0.0.1'
 PORT = '1234'

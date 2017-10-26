@@ -3,7 +3,7 @@ from test import helpers
 import numpy as np
 import asyncio
 
-from joule.utils.localnumpypipe import LocalNumpyPipe
+from joule.utils.numpypipe import LocalNumpyPipe
 
 
 class TestLocalNumpyPipe(asynctest.TestCase):

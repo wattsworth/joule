@@ -1,10 +1,10 @@
 
 import asyncio
 import numpy as np
-from . import errors, numpypipe
+from .numpypipe import NumpyPipe, NumpyPipeError
 
 
-class LocalNumpyPipe(numpypipe.NumpyPipe):
+class LocalNumpyPipe(NumpyPipe):
     """pipe for intra-module async communication"""
 
     def __init__(self, name, layout, buffer_size=3000, debug=False):
@@ -32,7 +32,8 @@ class LocalNumpyPipe(numpypipe.NumpyPipe):
                         msg = "buffer FULL"
                     else:
                         msg = "not full"
-                    print("adding [%d block] to index %d, %s" % (len(block),self.last_index,msg))
+                    print("adding [%d block] to index %d, %s" %
+                          (len(block), self.last_index, msg))
                 self.last_index += len(block)
                 if(self._buffer_full()):
                     break  # no more room in buffer
@@ -52,8 +53,8 @@ class LocalNumpyPipe(numpypipe.NumpyPipe):
 
     def consume(self, num_rows):
         if(num_rows > self.last_index):
-            raise errors.NumpyPipeError("cannot consume %d rows: only %d available"
-                                        % (num_rows, self.last_index))
+            raise NumpyPipeError("cannot consume %d rows: only %d available"
+                                 % (num_rows, self.last_index))
         self.buffer = np.roll(self.buffer, -1 * num_rows)
         self.last_index -= num_rows
 

@@ -1,7 +1,7 @@
 import json
-from joule.utils.stream_numpypipe_reader import StreamNumpyPipeReader
-from joule.utils.stream_numpypipe_writer import StreamNumpyPipeWriter
-import joule.utils.fd_factory as fd_factory
+from joule.utils.numpypipe import (StreamNumpyPipeReader,
+                                   StreamNumpyPipeWriter,
+                                   fd_factory)
 
 
 def add_args(parser):

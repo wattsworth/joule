@@ -1,7 +1,8 @@
 import numpy as np
 import asyncio
 import logging
-from . import numpypipe, network
+from . import numpypipe
+from .. import network
 
 
 MAX_ROWS = 9000  # max array size is 3000 rows

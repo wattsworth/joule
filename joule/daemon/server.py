@@ -2,10 +2,8 @@
 import traceback
 import asyncio
 import logging
-from joule.utils.stream_numpypipe_reader import StreamNumpyPipeReader
-from joule.utils.stream_numpypipe_writer import StreamNumpyPipeWriter
+from joule.utils.numpypipe import StreamNumpyPipeReader, StreamNumpyPipeWriter
 from joule.utils import network
-
 
 
 class Server:

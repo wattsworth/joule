@@ -3,7 +3,7 @@ import json
 import collections
 import logging
 import configparser
-from joule.daemon import stream 
+from joule.daemon import stream
 
 STATUS_ERROR = 'error'
 STATUS_OK = 'ok'
