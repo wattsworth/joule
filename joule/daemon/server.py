@@ -35,9 +35,7 @@ class Server:
     async def handle_input(self, reader, writer, dest_stream):
         inserter = self.inserter_factory(dest_stream)
         if(inserter is None):
-            msg = "cannot write to requested path"
-            await network.send_error(writer, msg)
-            return
+            raise Exception("cannot write to [%s]" % dest_stream.path)
         
         msg = "write to [%s] authorized" % dest_stream.path
         await network.send_ok(writer, msg)
@@ -54,18 +52,14 @@ class Server:
                 await asyncio.sleep(0.25)
         except ConnectionResetError:
             pass
-        except Exception as e:
-            logging.warning("networked stream writer failed: %r" % e)
-            raise e
         inserter.stop()
-        await task            
+        await task
         
     async def handle_output(self, reader, writer, config):
         npipe_r = self.reader_factory(config.path, config.time_range)
         if(npipe_r is None):
-            msg = "path [%s] is unavailable"
-            await network.send_error(writer, msg)
-            return
+            raise Exception("path [%s] is unavailable" % config.path)
+
         msg = "%s" % npipe_r.layout
         await network.send_ok(writer, msg)
         npipe_w = StreamNumpyPipeWriter(npipe_r.layout, writer=writer)
@@ -77,14 +71,13 @@ class Server:
                 await asyncio.sleep(0.25)
         except ConnectionResetError:
             pass
-        except Exception as e:
-            logging.warning("networked stream reader failed: %r" % e)
         
         
 def build_server(ip_addr, port,
                  reader_factory,
                  inserter_factory,
                  loop=None):
+
     server = Server(reader_factory, inserter_factory, loop=loop)
     coro = asyncio.start_server(server.handle_connection,
                                 ip_addr, port, loop=loop)

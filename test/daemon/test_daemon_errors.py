@@ -54,10 +54,9 @@ class TestDaemonErrors(unittest.TestCase):
             name='first', path="/same/path", num_elements=1)
         stream2 = helpers.build_stream(
             name='second', path="/same/path", num_elements=1)
-        with self.assertLogs(level='ERROR') as logs:
-            my_daemon.streams.append(stream1)
+        with self.assertLogs(level='ERROR'):
+            my_daemon.path_streams[stream1.path] = stream1
             my_daemon._validate_stream(stream2)
-        self.assertRegex("/n".join(logs.output), "first")
 
     def test_build_stream_fails_on_bad_configs(self):
         with self.assertLogs(level='ERROR') as logs:
@@ -162,8 +161,9 @@ class TestDaemonRunErrors(asynctest.TestCase):
 
         for my_stream in streams:
             my_daemon.path_streams[my_stream.path] = my_stream
-            my_daemon.streams.append(my_stream)
 
+        my_daemon.SERVER_IP_ADDRESS = '127.0.0.1'
+        my_daemon.SERVER_PORT = 1234            
         my_daemon.modules = modules
         my_daemon.procdb = mock.Mock()
         my_daemon._start_worker = asynctest.mock.CoroutineMock()

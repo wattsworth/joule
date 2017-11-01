@@ -34,7 +34,10 @@ STATUS_UNKNOWN = 'unknown'
 class Module(object):
     log = logging.getLogger(__name__)
 
-    def __init__(self, name, description, exec_cmd, source_paths, destination_paths,
+    def __init__(self, name, description,
+                 exec_cmd,
+                 source_paths,
+                 destination_paths,
                  status=STATUS_UNKNOWN, pid=-1, id=None):
 
         self.name = name

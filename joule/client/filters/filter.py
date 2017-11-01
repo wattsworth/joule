@@ -5,6 +5,7 @@ import signal
 
 from joule.client import helpers
 
+
 class FilterModule:
 
     def __init__(self, name="Joule Filter Module"):

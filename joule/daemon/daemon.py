@@ -28,11 +28,12 @@ class Daemon(object):
         self.async_nilmdb_client = None
         self.stop_requested = False
         self.modules = []
-        self.streams = []
 
         # constants customized by initialize
         self.NILMDB_INSERTION_PERIOD = 5
         self.NILMDB_CLEANUP_PERIOD = 600
+        self.SERVER_IP_ADDRESS = ''
+        self.SERVER_PORT = None
         # runtime structures
         self.path_workers = {}  # key: path, value: fn_subscribe()
         self.path_streams = {}  # key: path, value: stream
@@ -53,9 +54,10 @@ class Daemon(object):
         stream_dir = config.jouled.stream_directory
 
         streams = self._load_configs(stream_dir, self._build_stream)
-        self._register_items(streams, self._validate_stream, self.streams)
+        valid_streams = []
+        self._register_items(streams, self._validate_stream, valid_streams)
         # set up dictionary to find stream by path
-        for my_stream in self.streams:
+        for my_stream in valid_streams:
             self.path_streams[my_stream.path] = my_stream
             self.procdb.register_stream(my_stream)
         # Set up modules
@@ -68,6 +70,8 @@ class Daemon(object):
         # Configure tunable constants
         self.NILMDB_INSERTION_PERIOD = config.nilmdb.insertion_period
         self.NILMDB_CLEANUP_PERIOD = config.nilmdb.cleanup_period
+        self.SERVER_IP_ADDRESS = config.jouled.ip_address
+        self.SERVER_PORT = config.jouled.port
         
     def _load_configs(self, path, factory):
         objects = []
@@ -123,11 +127,10 @@ class Daemon(object):
         else:
             self._create_stream(my_stream)
         # 2.) Make sure no other stream config is using this path
-        for other_stream in self.streams:
-            if(my_stream.path == other_stream.path):
-                logging.error("Stream [%s]: the path [%s] is already used by [%s]" %
-                              (my_stream.name, my_stream.path, other_stream.name))
-                return False
+        if my_stream.path in self.path_streams:
+            logging.error("Stream [%s]: The path [%s] is already in use" %
+                          (my_stream.name, my_stream.path))
+            return False
         # OK, all checks passed for this stream
         return True
 
@@ -153,7 +156,7 @@ class Daemon(object):
 
         for path in module.destination_paths.values():
             # 1.) Make sure all destinations have matching streams
-            if(not path in self.path_streams):
+            if(path not in self.path_streams):
                 logging.error("Module [%s]: destination [%s] has no configuration" %
                               (module.name, path))
                 return False
@@ -201,10 +204,13 @@ class Daemon(object):
         tasks.append(asyncio.ensure_future(self._db_committer()))
         tasks += self._start_inserters(loop)
 
-        # Factory function to allow the server to build inserters 
+        # Factory function to allow the server to build inserters
         def inserter_factory(stream):
             if(not self._validate_stream(stream)):
                 return None
+            else:
+                self.path_streams[stream.path] = stream
+            
             return inserter.NilmDbInserter(
                 self.async_nilmdb_client,
                 stream.path,
@@ -225,13 +231,25 @@ class Daemon(object):
                 return None
             
         # add the stream server to the event loop
-        #tasks += server.build_server(reader_factory,
-        #                             inserter_factory, loop)
+        coro = server.build_server(
+            self.SERVER_IP_ADDRESS,
+            self.SERVER_PORT,
+            reader_factory,
+            inserter_factory, loop)
+
+        my_server = loop.run_until_complete(coro)
         
         # commit records to database
         self.procdb.commit()
+
+        # run joule
         loop.run_until_complete(asyncio.gather(*tasks))
-                    
+
+        # shut down the server
+        my_server.close()
+        loop.run_until_complete(my_server.wait_closed())
+
+        # shut down the nilmdb connection
         if(self.async_nilmdb_client is not None):
             self.async_nilmdb_client.close()
 
@@ -280,7 +298,7 @@ class Daemon(object):
 def load_configs(config_file):
     configs = {}
     if(config_file is not None):
-        if(os.path.isfile(config_file) == False):
+        if(os.path.isfile(config_file) is False):
             raise config_manager.\
                 InvalidConfiguration("cannot load file [%s]" % config_file)
         configs = configparser.ConfigParser()
@@ -295,8 +313,8 @@ def main(argv=None):
     daemon = Daemon()
     log = logging.getLogger()
     log.addFilter(LogDedupFilter())
-    logging.basicConfig(format=
-                        '%(asctime)s %(levelname)s:%(message)s')
+    logging.basicConfig(
+        format='%(asctime)s %(levelname)s:%(message)s')
     try:
         configs = load_configs(args.config)
     except Exception as e:

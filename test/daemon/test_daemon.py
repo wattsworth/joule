@@ -56,7 +56,8 @@ class TestDaemon(unittest.TestCase):
                 my_daemon._validate_stream = mock.Mock(return_value=True)
                 my_daemon.initialize(configs)
                 self.assertEqual(MODULE_COUNT, len(my_daemon.modules))
-                self.assertEqual(STREAM_COUNT, len(my_daemon.streams))
+                self.assertEqual(STREAM_COUNT,
+                                 my_daemon._validate_stream.call_count)
 
     def test_validates_streams_and_modules(self):
         streams = [helpers.build_stream(name="in1",
@@ -87,7 +88,6 @@ class TestDaemon(unittest.TestCase):
 
         for my_stream in streams:
             self.assertTrue(my_daemon._validate_stream(my_stream))
-            my_daemon.streams.append(my_stream)
             my_daemon.path_streams[my_stream.path] = my_stream
 
         for my_module in modules:
@@ -178,6 +178,93 @@ class TestDaemonModuleMethods(unittest.TestCase):
 
 class TestDaemonRun(asynctest.TestCase):
 
+    @mock.patch("joule.daemon.daemon.procdb_client", autospec=True)
+    @mock.patch("joule.daemon.daemon.server.build_server")
+    @mock.patch("joule.daemon.daemon.nilmdb.AsyncClient", autospec=True)
+    @asynctest.patch("joule.daemon.daemon.Worker", autospec=True)
+    @asynctest.patch("joule.daemon.daemon.inserter.NilmDbInserter",
+                     autospec=True)
+    def test_provides_reader_and_inserter_factories_to_server(
+            self, mock_inserter, mock_worker, mock_client,
+            mock_builder, mock_procdb):
+
+        my_daemon = daemon.Daemon()
+        my_daemon.procdb = mock.Mock()
+        
+        async def buildit():
+            return asynctest.mock.CoroutineMock()
+        
+        mock_builder.return_value = buildit()
+        my_daemon.SERVER_IP_ADDRESS = '127.0.0.1'
+        my_daemon.SERVER_PORT = 1234
+        my_daemon.modules = []
+
+        nilmdb_paths = ["/worked/path", "/exists/float32_4"]
+        
+        def mock_info(path):
+            nonlocal nilmdb_paths
+            res = mock.Mock(layout="float32_4",
+                            layout_type="float32",
+                            layout_count=4)
+            if(path in nilmdb_paths):
+                return res
+            else:
+                return None
+            
+        # mock AioNilmdb client
+        mock_client = mock.Mock(autospec=daemon.nilmdb.Client)
+        mock_client.stream_info = mock_info 
+        
+        my_daemon.nilmdb_client = mock_client
+
+        # a mock stream for the module
+        my_daemon.path_streams["/worked/path"] = mock.Mock()
+        my_daemon.path_workers["/worked/path"] = mock.Mock()
+        my_inserter = mock_inserter.return_value
+        my_inserter.process = asynctest.mock.CoroutineMock()
+
+        my_daemon.procdb_commit_interval = 0.1  # so we can stop quickly
+
+        loop = asyncio.get_event_loop()
+
+        def stop_daemon():
+            time.sleep(0.2)
+            my_daemon.stop()
+        t = threading.Thread(target=stop_daemon)
+        t.start()
+        my_daemon.run(loop)
+
+        # check the reader and inserter factories
+        reader_factory = mock_builder.call_args[0][2]
+        inserter_factory = mock_builder.call_args[0][3]
+
+        # should return a reader for available paths
+        self.assertIsNotNone(reader_factory("/worked/path", None))
+        # should return None for paths that are not worked by another module
+        self.assertIsNone(reader_factory("/unworked/path", None))
+
+        # should return an inserter for unworked paths
+        unworked_stream = helpers.build_stream("test", path="/unworked/path")
+        self.assertIsNotNone(inserter_factory(unworked_stream))
+        # should not return more than one inserter per path
+        self.assertIsNone(inserter_factory(unworked_stream))
+        worked_stream = helpers.build_stream("worked",
+                                             path="/worked/path",
+                                             datatype="float32",
+                                             num_elements=4)
+        self.assertIsNone(inserter_factory(worked_stream))
+        # cannot insert stream with datatype mismatch
+        dtype_mismatch = helpers.build_stream("mismatch",
+                                              path="/exists/float32_4",
+                                              datatype="uint32",
+                                              num_elements=4)
+        self.assertIsNone(inserter_factory(dtype_mismatch))
+        nelem_mismatch = helpers.build_stream("mismatch",
+                                              path="/exists/float32_4",
+                                              datatype="float32",
+                                              num_elements=3)
+        self.assertIsNone(inserter_factory(nelem_mismatch))
+        
     @asynctest.patch("joule.daemon.daemon.Worker", autospec=True)
     @asynctest.patch("joule.daemon.daemon.inserter.NilmDbInserter",
                      autospec=True)
@@ -201,6 +288,9 @@ class TestDaemonRun(asynctest.TestCase):
                                          destination_paths={"path1":
                                                             "/mock/path"})
         my_daemon = daemon.Daemon()
+        my_daemon.SERVER_IP_ADDRESS = '127.0.0.1'
+        my_daemon.SERVER_PORT = 1234
+
         my_daemon.procdb = mock.Mock()
         my_daemon.modules = [mock.Mock()]
         # a mock stream for the module

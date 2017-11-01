@@ -5,6 +5,7 @@ Use load_configs to retrieve Configs object
 
 from collections import namedtuple
 import configparser
+import ipaddress
 import os
 
 Configs = namedtuple('Configs', ['procdb', 'jouled', 'nilmdb'])
@@ -13,7 +14,10 @@ NilmDbConfigs = namedtuple('NilmdbConfigs', ['url',
                                              'insertion_period',
                                              'cleanup_period'])
 JouledConfigs = namedtuple(
-    'JouledConfigs', ['module_directory', 'stream_directory'])
+    'JouledConfigs', ['module_directory',
+                      'stream_directory',
+                      'ip_address',
+                      'port'])
 
 DEFAULT_CONFIG = {
     "NilmDB":
@@ -30,7 +34,9 @@ DEFAULT_CONFIG = {
     "Jouled":
     {
         "ModuleDirectory": "/etc/joule/module_configs",
-        "StreamDirectory": "/etc/joule/stream_configs"
+        "StreamDirectory": "/etc/joule/stream_configs",
+        "IPAddress": "127.0.0.1",
+        "Port": 1234
     }
 }
 
@@ -52,14 +58,27 @@ def parse_jouled_configs(jouled_parser, verify):
     module_directory = jouled_parser['ModuleDirectory']
     if(not os.path.isdir(module_directory) and verify):
         raise InvalidConfiguration(
-            "ModuleDirectory [%s] does not exist" % module_directory)
+            "Jouled:ModuleDirectory [%s] does not exist" % module_directory)
     stream_directory = jouled_parser['StreamDirectory']
     if(not os.path.isdir(stream_directory) and verify):
         raise InvalidConfiguration(
-            "StreamDirectory [%s] does not exist" % stream_directory)
-
+            "Jouled:StreamDirectory [%s] does not exist" % stream_directory)
+    ip_address = jouled_parser['IPAddress']
+    try:
+        ipaddress.ip_address(ip_address)
+    except ValueError as e:
+        raise InvalidConfiguration("Jouled:IPAddress is invalid")
+    try:
+        port = int(jouled_parser['Port'])
+        if(port < 0 or port > 65535):
+            raise Exception()
+    except:
+        raise InvalidConfiguration("Jouled:Port must be between 0 - 65535")
+    
     return JouledConfigs(module_directory=module_directory,
-                         stream_directory=stream_directory)
+                         stream_directory=stream_directory,
+                         ip_address=ip_address,
+                         port=port)
 
 
 def parse_nilmdb_configs(nilmdb_parser, verify):
