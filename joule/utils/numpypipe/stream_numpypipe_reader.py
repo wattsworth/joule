@@ -76,7 +76,7 @@ async def request_reader(path,
 
     r, w = await asyncio.open_connection(address, port, loop=loop)
     config = network.ReaderConfig(path, decimation, time_range)
-    msg = network.DataRequest(network.REQ_READ, config._asdict())    
+    msg = network.DataRequest(network.REQ_READ, config._asdict())
     await network.send_json(w, msg._asdict())
     resp = await network.read_json(r)
     if(resp['status'] != network.STATUS_OK):

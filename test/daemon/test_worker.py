@@ -41,10 +41,12 @@ class TestWorker(asynctest.TestCase):
         # build data sources for module
         self.q_in1 = asyncio.Queue()
         mock_worker1 = mock.create_autospec(spec=worker.Worker)
-        mock_worker1.subscribe = mock.Mock(return_value=self.q_in1)
+        mock_worker1.subscribe = mock.Mock(
+            return_value=(self.q_in1, mock.Mock()))
         self.q_in2 = asyncio.Queue()
         mock_worker2 = mock.create_autospec(spec=worker.Worker)
-        mock_worker2.subscribe = mock.Mock(return_value=self.q_in2)
+        mock_worker2.subscribe = mock.Mock(
+            return_value=(self.q_in2, mock.Mock()))
 
         self.myworker = worker.Worker(self.my_module, self.myprocdb)
         self.myworker.register_inputs({
@@ -56,8 +58,8 @@ class TestWorker(asynctest.TestCase):
         # subscribe module to sample output streams
         DATA1 = helpers.create_data(layout="int32_4", length=100)
         DATA2 = helpers.create_data(layout="int32_4", length=250)
-        q_out1 = self.myworker.subscribe('/output/path1')
-        q_out2 = self.myworker.subscribe('/output/path2')
+        (q_out1, _) = self.myworker.subscribe('/output/path1')
+        (q_out2, _) = self.myworker.subscribe('/output/path2')
 
         self.q_in1.put_nowait(DATA1)
         self.q_in2.put_nowait(DATA2)

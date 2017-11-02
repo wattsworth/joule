@@ -33,32 +33,40 @@ async def build_pipes(parsed_args):
     if(pipe_args == 'unset'):
         if(module_config_file == 'unset' or
            stream_config_dir == 'unset'):
-            return ({}, {})
+            msg = """specify --module_config_file and
+            --stream_config_dir or run in joule environment"""
+            raise ModuleError(msg)
         else:
             # request pipe sockets from joule server
-            return build_socket_pipes(module_config_file,
-                                      stream_config_dir)
+            return await build_socket_pipes(module_config_file,
+                                            stream_config_dir)
     else:
         return build_fd_pipes(pipe_args)
 
     
 async def build_socket_pipes(module_config_file, stream_config_dir):
     module_config = configparser.ConfigParser()
-    module_config.read_file(module_config_file)
-    my_module = module.Parser(module_config)
+    with open(module_config_file, 'r') as f:
+        module_config.read_file(f)
+    parser = module.Parser()
+    my_module = parser.run(module_config)
+    # build the input pipes (must already exist)
     pipes_in = {}
-    for path in my_module.source_paths:
+    for name in my_module.source_paths.keys():
+        path = my_module.source_paths[name]
         npipe = await request_reader(path)
-        pipes_in[path] = npipe
+        pipes_in[name] = npipe
+    # build the output pipes (must have matching stream.conf)
     pipes_out = {}
     streams = parse_streams(stream_config_dir)
-    for path in my_module.destination_paths:
+    for name in my_module.destination_paths.keys():
+        path = my_module.destination_paths[name]
         try:
             npipe = await request_writer(streams[path])
         except KeyError:
-            raise Exception(
+            raise ModuleError(
                 "Missing configuration for destination [%s]" % path)
-        pipes_out[path] = npipe
+        pipes_out[name] = npipe
     return (pipes_in, pipes_out)
 
         
@@ -70,7 +78,8 @@ def parse_streams(stream_config_dir):
         file_path = os.path.join(stream_config_dir, item)
         config = configparser.ConfigParser()
         config.read(file_path)
-        my_stream = stream.Parser(config)
+        parser = stream.Parser()
+        my_stream = parser.run(config)
         if(my_stream is not None):
             streams[my_stream.path] = my_stream
         else:
@@ -95,3 +104,7 @@ def build_fd_pipes(pipe_args):
                                                reader_factory=rf)
 
     return (pipes_in, pipes_out)
+
+
+class ModuleError(Exception):
+    pass

@@ -22,9 +22,8 @@ class TestDaemonErrors(unittest.TestCase):
         my_daemon.nilmdb_client = mock_client
 
         my_stream = helpers.build_stream(name="test", num_elements=5)
-        with self.assertLogs(level='ERROR') as logs:
+        with self.assertRaisesRegex(Exception, "5"):
             my_daemon._validate_stream(my_stream)
-        self.assertRegex("/n".join(logs.output), "5")
 
     def test_stream_validation_fails_if_different_datatype(self):
         """Cannot register stream if path exists with a different datatype"""
@@ -36,9 +35,8 @@ class TestDaemonErrors(unittest.TestCase):
         my_daemon.nilmdb_client = mock_client
 
         my_stream = helpers.build_stream(name="test", num_elements=5)
-        with self.assertLogs(level='ERROR') as logs:
+        with self.assertRaisesRegex(Exception, "uint8"):
             my_daemon._validate_stream(my_stream)
-        self.assertRegex("/n".join(logs.output), "uint8")
 
     def test_stream_validation_fails_if_duplicate_path(self):
         """Cannot register stream with duplicate path"""
@@ -54,7 +52,7 @@ class TestDaemonErrors(unittest.TestCase):
             name='first', path="/same/path", num_elements=1)
         stream2 = helpers.build_stream(
             name='second', path="/same/path", num_elements=1)
-        with self.assertLogs(level='ERROR'):
+        with self.assertRaisesRegex(Exception, "/same/path"):
             my_daemon.path_streams[stream1.path] = stream1
             my_daemon._validate_stream(stream2)
 
@@ -76,10 +74,8 @@ class TestDaemonErrors(unittest.TestCase):
         module2 = mock.Mock()
         module2.destination_paths = {"path2": "/path2/exists",
                                      "duplicate_path": "/path1/exists"}
-
-        with self.assertLogs(level='ERROR') as logs:
+        with self.assertRaisesRegex(Exception, "/path1/exists"):
             my_daemon._validate_module(module2)
-        self.assertRegex("/n".join(logs.output), "/path1/exists")
 
     def test_validate_module_fails_on_missing_stream(self):
         """Module's sources and destinations must have matching streams"""
@@ -95,13 +91,11 @@ class TestDaemonErrors(unittest.TestCase):
                                               "path2": "/path/not/configured"}
         module_missing_source.destination_paths = {}
 
-        with self.assertLogs(level='ERROR') as logs:
+        with self.assertRaisesRegex(Exception, "not/configured"):
             my_daemon._validate_module(module_missing_destination)
-        self.assertRegex("/n".join(logs.output), "not/configured")
 
-        with self.assertLogs(level='ERROR') as logs:
+        with self.assertRaisesRegex(Exception, "not/configured"):
             my_daemon._validate_module(module_missing_source)
-        self.assertRegex("/n".join(logs.output), "not/configured")
 
     def test_build_module_fails_on_bad_configs(self):
         with self.assertLogs(level='ERROR') as logs:

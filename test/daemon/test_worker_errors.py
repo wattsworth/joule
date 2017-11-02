@@ -38,10 +38,12 @@ class TestWorker(asynctest.TestCase):
         # build data sources for module
         self.q_in1 = asyncio.Queue()
         mock_worker1 = mock.create_autospec(spec=worker.Worker)
-        mock_worker1.subscribe = mock.Mock(return_value=self.q_in1)
+        mock_worker1.subscribe = mock.Mock(
+            return_value=(self.q_in1, mock.Mock()))
         self.q_in2 = asyncio.Queue()
         mock_worker2 = mock.create_autospec(spec=worker.Worker)
-        mock_worker2.subscribe = mock.Mock(return_value=self.q_in2)
+        mock_worker2.subscribe = mock.Mock(
+            return_value=(self.q_in2, mock.Mock()))
 
         self.myworker = worker.Worker(self.my_module, self.myprocdb)
         self.myworker.register_inputs({
@@ -83,8 +85,8 @@ class TestWorker(asynctest.TestCase):
         self.my_module.exec_cmd = "python " + MODULE_FAILS_ON_ERROR
         # restart before [stop_worker] is called at t=0.5
         self.myworker.RESTART_INTERVAL = 0.1
-        q1 = self.myworker.subscribe("/output/path1")
-        q2 = self.myworker.subscribe("/output/path2")
+        (q1, _) = self.myworker.subscribe("/output/path1")
+        (q2, _) = self.myworker.subscribe("/output/path2")
         with self.assertLogs(level="ERROR") as cm:
             loop.run_until_complete(asyncio.gather(*tasks))
         # make sure there are empty arrays in the output queues for every

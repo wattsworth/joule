@@ -91,8 +91,11 @@ class Daemon(object):
         """Validate stream, creating them if they are not present in NilmDB
            sets self.streams"""
         for item in items:
-            if(validator(item)):
+            try:
+                validator(item)
                 store.append(item)
+            except Exception as e:
+                logging.error(e)
 
     def _build_stream(self, config):
         """create a stream object from config
@@ -114,23 +117,24 @@ class Daemon(object):
             # path exists, make sure the structure matches what this stream
             # wants
             if(info.layout_type != my_stream.datatype):
-                logging.error("Stream [%s]: the path [%s] has datatype [%s], this uses [%s]" %
-                              (my_stream.name, my_stream.path,
-                               info.layout_type, my_stream.datatype))
-                return False
+                msg = ("Stream [%s]: the path [%s] has datatype [%s], this uses [%s]" %
+                       (my_stream.name, my_stream.path,
+                        info.layout_type, my_stream.datatype))
+                raise Exception(msg)
+
             if(info.layout != my_stream.layout):
-                logging.error("Stream [%s]: the path[%s] has [%d] elements, this has [%d]" %
-                              (my_stream.name, my_stream.path,
-                               info.layout_count, len(my_stream.elements)))
-                return False
+                msg = ("Stream [%s]: the path[%s] has [%d] elements, this has [%d]" %
+                       (my_stream.name, my_stream.path,
+                        info.layout_count, len(my_stream.elements)))
+                raise Exception(msg)
             # datatype and element count match so we are ok
         else:
             self._create_stream(my_stream)
         # 2.) Make sure no other stream config is using this path
         if my_stream.path in self.path_streams:
-            logging.error("Stream [%s]: The path [%s] is already in use" %
-                          (my_stream.name, my_stream.path))
-            return False
+            msg = ("Stream [%s]: The path [%s] is already in use" %
+                   (my_stream.name, my_stream.path))
+            raise Exception(msg)
         # OK, all checks passed for this stream
         return True
 
@@ -157,22 +161,22 @@ class Daemon(object):
         for path in module.destination_paths.values():
             # 1.) Make sure all destinations have matching streams
             if(path not in self.path_streams):
-                logging.error("Module [%s]: destination [%s] has no configuration" %
-                              (module.name, path))
-                return False
+                msg = ("Module [%s]: destination [%s] has no configuration" %
+                       (module.name, path))
+                raise Exception(msg)
             # 2.) Make sure destinations are unique among modules
             used_paths = [m.destination_paths.values() for m in self.modules]
             for paths in used_paths:
                 if(path in paths):
-                    logging.error("Module [%s]: destination [%s] is already used" %
-                                  (module.name, path))
-                    return False
+                    msg = ("Module [%s]: destination [%s] is already used" %
+                           (module.name, path))
+                    raise Exception(msg)
         for path in module.source_paths.values():
             # 1.) Make sure all sources have matching streams
             if(path not in self.path_streams):
-                logging.error("Module [%s]: source [%s] has no configuration" %
-                              (module.name, path))
-                return False
+                msg = ("Module [%s]: source [%s] has no configuration" %
+                       (module.name, path))
+                raise Exception(msg)
 
         # OK: all checks passed for this module
         return True
@@ -205,27 +209,32 @@ class Daemon(object):
         tasks += self._start_inserters(loop)
 
         # Factory function to allow the server to build inserters
+        # returns an inserter and unsubscribe function
         def inserter_factory(stream):
             if(not self._validate_stream(stream)):
                 return None
             else:
                 self.path_streams[stream.path] = stream
             
-            return inserter.NilmDbInserter(
-                self.async_nilmdb_client,
-                stream.path,
-                insertion_period=self.NILMDB_INSERTION_PERIOD,
-                cleanup_period=self.NILMDB_CLEANUP_PERIOD,
-                keep_us=stream.keep_us,
-                decimate=stream.decimate)
+            return (
+                inserter.NilmDbInserter(
+                    self.async_nilmdb_client,
+                    stream.path,
+                    insertion_period=self.NILMDB_INSERTION_PERIOD,
+                    cleanup_period=self.NILMDB_CLEANUP_PERIOD,
+                    keep_us=stream.keep_us,
+                    decimate=stream.decimate),
+                lambda: self.path_streams.pop(stream.path)
+            )       
         
-        # Factory function to allow the server to build readers
-        def reader_factory(path, time_range):
+        # Factory function to allow the server to subscribe to queues
+        def subscription_factory(path, time_range):
             if(time_range is None):
                 if path in self.path_workers:
-                    return self.path_workers[path]()
+                    (q, unsubscribe) = self.path_workers[path]()
+                    return (self.path_streams[path], q, unsubscribe)
                 else:
-                    return None
+                    raise Exception("path [%s] is unavailable" % path)
             else:
                 # build a nilmdb reader to retrieve stored data
                 return None
@@ -234,7 +243,7 @@ class Daemon(object):
         coro = server.build_server(
             self.SERVER_IP_ADDRESS,
             self.SERVER_PORT,
-            reader_factory,
+            subscription_factory,
             inserter_factory, loop)
 
         my_server = loop.run_until_complete(coro)
@@ -274,8 +283,8 @@ class Daemon(object):
                     cleanup_period=self.NILMDB_CLEANUP_PERIOD,
                     keep_us=stream.keep_us,
                     decimate=stream.decimate)
-                coro = my_inserter.process(
-                    self.path_workers[path](), loop=loop)
+                (q, _) = self.path_workers[path]()
+                coro = my_inserter.process(q, loop=loop)
                 task = asyncio.ensure_future(coro)
                 self.inserters.append(my_inserter)
                 inserter_tasks.append(task)

@@ -13,14 +13,15 @@ class Counter(ReaderModule):
         super(Counter, self).__init__("Counter")
     
     def custom_args(self, parser):
-        pass
+        parser.add_argument("--step", type=int, default=1,
+                            help="apply an offset")
         
     async def run(self, parsed_args, output):
         count = 0
         while(1):
             await output.write(np.array([[time_now(), count]]))
             await asyncio.sleep(0.01)
-            count += 1
+            count += parsed_args.step
 
             
 if __name__ == "__main__":

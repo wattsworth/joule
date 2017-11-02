@@ -219,7 +219,8 @@ class TestDaemonRun(asynctest.TestCase):
 
         # a mock stream for the module
         my_daemon.path_streams["/worked/path"] = mock.Mock()
-        my_daemon.path_workers["/worked/path"] = mock.Mock()
+        my_daemon.path_workers["/worked/path"] = mock.Mock(
+            return_value=(asyncio.Queue(), None))
         my_inserter = mock_inserter.return_value
         my_inserter.process = asynctest.mock.CoroutineMock()
 
@@ -241,29 +242,34 @@ class TestDaemonRun(asynctest.TestCase):
         # should return a reader for available paths
         self.assertIsNotNone(reader_factory("/worked/path", None))
         # should return None for paths that are not worked by another module
-        self.assertIsNone(reader_factory("/unworked/path", None))
+        with self.assertRaises(Exception):        
+            self.assertIsNone(reader_factory("/unworked/path", None))
 
         # should return an inserter for unworked paths
         unworked_stream = helpers.build_stream("test", path="/unworked/path")
         self.assertIsNotNone(inserter_factory(unworked_stream))
         # should not return more than one inserter per path
-        self.assertIsNone(inserter_factory(unworked_stream))
+        with self.assertRaises(Exception):
+            inserter_factory(unworked_stream)
         worked_stream = helpers.build_stream("worked",
                                              path="/worked/path",
                                              datatype="float32",
                                              num_elements=4)
-        self.assertIsNone(inserter_factory(worked_stream))
+        with self.assertRaises(Exception):
+            self.assertIsNone(inserter_factory(worked_stream))
         # cannot insert stream with datatype mismatch
         dtype_mismatch = helpers.build_stream("mismatch",
                                               path="/exists/float32_4",
                                               datatype="uint32",
                                               num_elements=4)
-        self.assertIsNone(inserter_factory(dtype_mismatch))
+        with self.assertRaises(Exception):
+            self.assertIsNone(inserter_factory(dtype_mismatch))
         nelem_mismatch = helpers.build_stream("mismatch",
                                               path="/exists/float32_4",
                                               datatype="float32",
                                               num_elements=3)
-        self.assertIsNone(inserter_factory(nelem_mismatch))
+        with self.assertRaises(Exception):
+            self.assertIsNone(inserter_factory(nelem_mismatch))
         
     @asynctest.patch("joule.daemon.daemon.Worker", autospec=True)
     @asynctest.patch("joule.daemon.daemon.inserter.NilmDbInserter",
@@ -284,6 +290,7 @@ class TestDaemonRun(asynctest.TestCase):
         my_worker = mock_worker.return_value
         my_worker.run = asynctest.mock.CoroutineMock()
         my_worker.stop = asynctest.mock.CoroutineMock()
+        my_worker.subscribe = lambda path: (asyncio.Queue, mock.Mock())
         my_module = helpers.build_module("mock",
                                          destination_paths={"path1":
                                                             "/mock/path"})

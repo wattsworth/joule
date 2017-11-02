@@ -85,7 +85,8 @@ class Parser(object):
                 raise ConfigError("exec_cmd is missing or blank")
         except KeyError as e:
             raise ConfigError("In [main] missing [%s] setting" % e) from e
-        return Module(name, description, exec_cmd, source_paths, destination_paths)
+        return Module(name, description, exec_cmd,
+                      source_paths, destination_paths)
 
     def _load_paths(self, config):
         paths = {}

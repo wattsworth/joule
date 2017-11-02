@@ -1,4 +1,4 @@
-from joule.client import FilterModule
+from .filter import FilterModule
 import scipy.signal
 import asyncio
 import numpy as np

@@ -49,9 +49,8 @@ class FilterModule:
             )
             self.build_args(parser)
             parsed_args = parser.parse_args()
-            
-        self.task = self.run_as_task(parsed_args)
         loop = asyncio.get_event_loop()
+        self.task = self.run_as_task(parsed_args, loop)
         loop.add_signal_handler(signal.SIGINT, self.stop)
         loop.add_signal_handler(signal.SIGTERM, self.stop)
         try:
@@ -60,8 +59,10 @@ class FilterModule:
             pass
         loop.close()
         
-    def run_as_task(self, parsed_args):
-        (pipes_in, pipes_out) = helpers.build_pipes(parsed_args)
+    def run_as_task(self, parsed_args, loop):
+        coro = helpers.build_pipes(parsed_args)
+        (pipes_in, pipes_out) = loop.run_until_complete(coro)
+
         if(pipes_out == {}):
             return asyncio.ensure_future(
                 self.print_runtime_help(parsed_args))

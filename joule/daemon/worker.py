@@ -45,10 +45,12 @@ class Worker:
         # how long to wait to restart a failed process
         self.RESTART_INTERVAL = 1
 
+    # returns a queue and unsubscribe function
     def subscribe(self, path, loop=None):
         q = asyncio.Queue(loop=loop)
         self.output_queues[path].append(q)
-        return q
+        q_index = len(self.output_queues[path])-1
+        return (q, lambda: self.output_queues[path].pop(q_index))
 
     def register_inputs(self, worked_paths):
         # check if all the module's inputs are available
@@ -60,7 +62,7 @@ class Worker:
             return False  # cannot find all input sources
         # subscribe to inputs
         for path in self.input_queues:
-            self.input_queues[path] = worked_paths[path]()
+            (self.input_queues[path], _) = worked_paths[path]()
         return True
 
     def _validate_inputs(self):
@@ -203,6 +205,10 @@ class Worker:
             npipe.close()
         for task in self.pipe_tasks:
             task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
         # clear out the arrays
         self.npipes = []
         self.pipe_tasks = []
@@ -224,11 +230,13 @@ class Worker:
                 break
 
     async def _pipe_out(self, queue, npipe):
-        while(True):
-            data = await queue.get()
-            # TODO: handle broken intervals
-            if data is not None:
-                await npipe.write(data)
-            # rate limit pipe reads
-            await asyncio.sleep(0.25)
-
+        try:
+            while(True):
+                data = await queue.get()
+                # TODO: handle broken intervals
+                if data is not None:
+                    await npipe.write(data)
+                # rate limit pipe reads
+                await asyncio.sleep(0.25)
+        except ConnectionResetError as e:
+            print("reset error, for ", npipe)

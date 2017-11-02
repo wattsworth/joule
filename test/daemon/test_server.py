@@ -2,6 +2,7 @@
 import asyncio
 import asynctest
 import numpy as np
+from unittest import mock
 from test import helpers 
 from joule.daemon import server
 from joule.utils import network
@@ -60,8 +61,9 @@ class TestSever(asynctest.TestCase):
             mock_inserter = MockInserter()
             test_data = helpers.create_data(LAYOUT, length=LENGTH)
             s = await server.build_server(ADDR, PORT, None,
-                                          lambda stream: mock_inserter)
-            r, w = await asyncio.open_connection(ADDR, PORT, loop=loop)
+                                          lambda stream: (mock_inserter,
+                                                          mock.Mock()))
+#            r, w = await asyncio.open_connection(ADDR, PORT, loop=loop)
             test_stream = helpers.build_stream('test',
                                                datatype=DTYPE,
                                                num_elements=NELEM)
@@ -88,11 +90,21 @@ class TestSever(asynctest.TestCase):
         async def run():
             npipe = LocalNumpyPipe(name='test', layout=LAYOUT)
             test_data = helpers.create_data(LAYOUT, length=LENGTH)
+            test_stream = helpers.build_stream('test', path="/test/path",
+                                               num_elements=NELEM,
+                                               datatype=DTYPE)
+            q = asyncio.Queue()
+            q.put_nowait(test_data)
             npipe.write_nowait(test_data)
+            
+            def mock_reader_factory(path, time_range):
+                # stream, queue, unsubscribe
+                return(test_stream, q, mock.Mock())
+            
             s = await server.build_server(ADDR, PORT,
-                                          lambda path, time_range: npipe,
+                                          mock_reader_factory,
                                           None)
-            r, w = await asyncio.open_connection(ADDR, PORT, loop=loop) 
+#            r, w = await asyncio.open_connection(ADDR, PORT, loop=loop)
             npipe = await request_reader("/test/path")
             rx_data = await npipe.read()
             npipe.consume(len(rx_data))

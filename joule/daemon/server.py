@@ -2,13 +2,16 @@
 import traceback
 import asyncio
 import logging
-from joule.utils.numpypipe import StreamNumpyPipeReader, StreamNumpyPipeWriter
+from joule.utils.numpypipe import (
+    StreamNumpyPipeReader,
+    StreamNumpyPipeWriter,
+    EmptyPipe)
 from joule.utils import network
 
 
 class Server:
-    def __init__(self, reader_factory, inserter_factory, loop=None):
-        self.reader_factory = reader_factory
+    def __init__(self, subscription_factory, inserter_factory, loop=None):
+        self.subscription_factory = subscription_factory
         self.inserter_factory = inserter_factory
         self.loop = loop
         
@@ -28,17 +31,18 @@ class Server:
                     Exception, e, e.__traceback__):
                 logging.warning(line)
             logging.warning("------- END SERVER EXCEPTION LOG ------------")
-            await network.send_error(writer, "Error: [%r]" % e)
+            await network.send_error(writer, "Error: [%r]" % repr(e))
 
         writer.close()
         
     async def handle_input(self, reader, writer, dest_stream):
-        inserter = self.inserter_factory(dest_stream)
+        (inserter, unsubscribe) = self.inserter_factory(dest_stream)
         if(inserter is None):
             raise Exception("cannot write to [%s]" % dest_stream.path)
         
         msg = "write to [%s] authorized" % dest_stream.path
         await network.send_ok(writer, msg)
+        logging.info("server: write to [%s] started" % dest_stream.path)
 
         npipe = StreamNumpyPipeReader(dest_stream.layout, reader=reader)
         q = asyncio.Queue(loop=self.loop)
@@ -50,35 +54,36 @@ class Server:
                 npipe.consume(len(data))
                 q.put_nowait(data)
                 await asyncio.sleep(0.25)
-        except ConnectionResetError:
-            pass
-        inserter.stop()
-        await task
+        except (EmptyPipe, ConnectionResetError):
+            logging.info("server: write to [%s] stopped" % dest_stream.path)
+        finally:
+            inserter.stop()
+            await task
+            unsubscribe()  # allow someone else to write to this stream
         
     async def handle_output(self, reader, writer, config):
-        npipe_r = self.reader_factory(config.path, config.time_range)
-        if(npipe_r is None):
-            raise Exception("path [%s] is unavailable" % config.path)
-
-        msg = "%s" % npipe_r.layout
+        res = self.subscription_factory(config.path, config.time_range)
+        (dest_stream, q, unsubscribe) = res
+        msg = "%s" % dest_stream.layout
         await network.send_ok(writer, msg)
-        npipe_w = StreamNumpyPipeWriter(npipe_r.layout, writer=writer)
+        npipe_w = StreamNumpyPipeWriter(dest_stream.layout, writer=writer)
         try:
             while(True):
-                data = await npipe_r.read()
+                data = await q.get()
                 await npipe_w.write(data)
-                npipe_r.consume(len(data))
                 await asyncio.sleep(0.25)
         except ConnectionResetError:
             pass
+        finally:
+            unsubscribe()
         
         
 def build_server(ip_addr, port,
-                 reader_factory,
+                 subscription_factory,
                  inserter_factory,
                  loop=None):
 
-    server = Server(reader_factory, inserter_factory, loop=loop)
+    server = Server(subscription_factory, inserter_factory, loop=loop)
     coro = asyncio.start_server(server.handle_connection,
                                 ip_addr, port, loop=loop)
     return coro
