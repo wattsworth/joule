@@ -8,6 +8,7 @@ from joule.testing.e2eutils import nilmtool
 
 def main():
     time.sleep(8)  # wait for jouled to boot
+    print( joule.logs("Filter"))
     check_modules()
     check_data()
     check_logs()
@@ -29,8 +30,8 @@ def check_modules():
         title = module[joule.MODULES_TITLE_FIELD]
         status = module[joule.MODULES_STATUS_FIELD]
         if(title['name'] in ['Normal1', 'Normal2', 'Filter']):
-            assert status == joule.MODULES_STATUS_RUNNING, "%s status=%s" % (title[
-                                                                                 'name'], status)
+            msg = "%s status=%s" % (title['name'], status)
+            assert status == joule.MODULES_STATUS_RUNNING, msg
         elif(title['name'] == 'Broken'):
             pass
         else:
@@ -42,7 +43,7 @@ def check_data():
     Test: check data inserted into nilmdb
     Goal:
       /normal1/data is int32_1, has 1 interval with >500 samples
-      /normal2/subpath/data  is int32_1, has multiple intervals each with 100 samples
+      /normal2/subpath/data  is int32_1, >1 intervals each with 100 samples
       /broken/data is float64_1, has separated intervals of data
       /filter3/data is float64_1, has separated intervals of data
       both normal1 and normal2 have decimations
@@ -52,7 +53,6 @@ def check_data():
     broken_path = "/broken/data"
     filter1_path = "/filter1/data"
     filter2_path = "/filter2/data"
-    filter3_path = "/filter3/data"
     for path in [normal1_path, normal2_path, filter1_path, filter2_path]:
         # 1.) check streams have one continuous interval
         base_intervals = nilmtool.intervals(path)
@@ -70,7 +70,7 @@ def check_data():
 
     # the broken module and its filtered output
     # should have multiple intervals (each restart)
-    for path in [broken_path]:  # , filter3_path]:
+    for path in [broken_path]:
         base_intervals = nilmtool.intervals(path)
         decim_intervals = nilmtool.intervals(path + "~decim-16")
         assert len(base_intervals) > 1,\

@@ -7,6 +7,15 @@ from io import StringIO
 NILMDB_URL = "http://nilmdb"
 
 
+def create_stream(path, layout):
+    url = "{url}/stream/create".format(url=NILMDB_URL)
+    data = {"path":   path,
+            "layout": layout}
+    req = requests.post(url, data=data)
+    if(req.status_code != 200):
+        raise Exception('cannot create stream [%s] on nilmdb server' % path)
+
+    
 def data_count(path, interval=None):
     if(interval is None):
         req = requests.get(

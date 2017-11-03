@@ -49,8 +49,12 @@ class Worker:
     def subscribe(self, path, loop=None):
         q = asyncio.Queue(loop=loop)
         self.output_queues[path].append(q)
-        q_index = len(self.output_queues[path])-1
-        return (q, lambda: self.output_queues[path].pop(q_index))
+        
+        def unsubscribe():
+            i = self.output_queues[path].index(q)
+            del self.output_queues[path][i]
+            
+        return (q, unsubscribe)
 
     def register_inputs(self, worked_paths):
         # check if all the module's inputs are available

@@ -29,7 +29,7 @@ class Server:
             logging.warning("------- SERVER EXCEPTION LOG ----------------")
             for line in traceback.format_exception(
                     Exception, e, e.__traceback__):
-                logging.warning(line)
+                logging.warning(line.rstrip())
             logging.warning("------- END SERVER EXCEPTION LOG ------------")
             await network.send_error(writer, "Error: [%r]" % repr(e))
 
