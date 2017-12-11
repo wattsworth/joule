@@ -5,15 +5,17 @@ import subprocess
 import numpy as np
 from joule.testing.e2eutils import joule
 from joule.testing.e2eutils import nilmtool
-
+import sys
 
 def main():
     time.sleep(8)  # wait for jouled to boot
     procs = start_standalone_procs1()
+    print("ran procs1")
     time.sleep(5)  # let procs run
     stop_standalone_procs(procs)
     time.sleep(1)  # make sure procs stop
     procs = start_standalone_procs2()
+    print("ran procs2")
     time.sleep(5)  # let the procs run
     stop_standalone_procs(procs)
     check_modules()
@@ -24,10 +26,12 @@ def main():
 def start_standalone_procs1():
     
     # proc1 reads /counting/base and writes to /counting/plus3
+    sys.stderr.write("started p1\n")
     p1 = subprocess.Popen(build_standalone_args("proc1"))
 
     # proc1a reads /counting/base and writes to /counting/plus3
     #   fails because proc1 is already writing to path
+    sys.stderr.write("started p1a\n")
     p1a = subprocess.run(build_standalone_args("proc1"),
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE,
@@ -35,6 +39,7 @@ def start_standalone_procs1():
     assert p1a.stderr.find("/counting/plus3") != -1
 
     # proc2 tries to read from /bad/path but fails
+    sys.stderr.write("started p2\n")    
     p2 = subprocess.run(build_standalone_args("proc2"),
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,
@@ -46,6 +51,7 @@ def start_standalone_procs1():
 
 def start_standalone_procs2():
     # proc3 tries to write to /counting/plus3 with wrong dtype
+    sys.stderr.write("started p3\n")
     p3 = subprocess.run(build_standalone_args("proc3"),
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,
@@ -53,10 +59,12 @@ def start_standalone_procs2():
     assert p3.stderr.find("/counting/plus3") != -1
 
     # proc4 reads /counting/base and writes to /counting/plus3
+    sys.stderr.write("started p1 again\n")
     p1 = subprocess.Popen(build_standalone_args("proc1"))
 
     nilmtool.create_stream("/exists/int8", "int8_4")
     # proc5 tries to write to /exists/int8 with wrong element count
+    sys.stderr.write("started p4\n")
     p4 = subprocess.run(build_standalone_args("proc4"),
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,

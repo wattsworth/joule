@@ -186,7 +186,8 @@ class Daemon(object):
         # only call this function once, error if called twice
         assert(len(self.workers) == 0)
         tasks = []
-
+        runtime_tasks = []
+        
         # loop through modules until they are all registered and started
         # if a module's inputs have no matching outputs, it can't run
 
@@ -229,6 +230,8 @@ class Daemon(object):
         
         # Factory function to allow the server to subscribe to queues
         def subscription_factory(path, time_range):
+            nonlocal runtime_tasks
+            
             if(time_range is None):
                 if path in self.path_workers:
                     (q, unsubscribe) = self.path_workers[path]()
@@ -237,7 +240,12 @@ class Daemon(object):
                     raise Exception("path [%s] is unavailable" % path)
             else:
                 # build a nilmdb reader to retrieve stored data
-                return None
+                my_reader = nilmdb.Reader(self.async_nilmdb_client,
+                                          path, time_range)
+                task = asyncio.ensure_future(my_reader.run())
+                runtime_tasks.append(task)
+                return (my_reader.get_stream(), my_reader.get_queue(),
+                        lambda: task.cancel())
             
         # add the stream server to the event loop
         coro = server.build_server(
@@ -254,6 +262,12 @@ class Daemon(object):
         # run joule
         loop.run_until_complete(asyncio.gather(*tasks))
 
+        # clean up runtime tasks
+        try:
+            loop.run_until_complete(asyncio.gather(*runtime_tasks))
+        except:
+            pass
+        
         # shut down the server
         my_server.close()
         loop.run_until_complete(my_server.wait_closed())
