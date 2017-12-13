@@ -17,10 +17,8 @@ make sure Joule is installed and the database is accessible:
   <div class="code bash"><b>$> joule --version</b>
    joule 0.1.5
    
-   <b>$> nilmtool info</b>
-   Client version: 1.10.3
-   Server version: 1.10.3
-   <i>#... more output</i>
+   <b>$> nilmtool info</b> Client version: 1.10.3 Server version:
+   1.10.3 <i>#... more output</i>
 
   </div>
 This guide will step through the implementation of the two stage pipeline shown below:

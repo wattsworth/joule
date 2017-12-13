@@ -1,8 +1,8 @@
 .. toctree::
   Introduction
 
-Database Reference
-==================
+Database CLI
+============
 
 Joule uses a NilmDB database instance to store data streams. NilmDB was developed
 at MIT by Dr. James Paris. Full documentation is available in his thesis available

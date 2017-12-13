@@ -4,31 +4,32 @@
    contain the root `toctree` directive.
 
 
-Joule: Decentralized Data Processing
-====================================
+Joule: Modular Data Processing
+=================================
 
-Joule is a framework for decentralized data processing. Joule
-distributes computation into independent executable ``modules`` that are
-connected by timestamped data flows called
-``streams``. Streams can connect modules executing on any device in the
-network enabling complex pipelines that distribute computation from edge
-nodes all the way to the data center. 
 
-.. image:: /images/module_stream.png
-   :width: 400px
-   :align: center
+Joule is a data capture and signal processing engine. It allows you to
+turn a single board computer like the Raspberry Pi into a robust
+sensor platform. Joule uses modules to build complex acquisition and
+signal processing workflows from simple building blocks.  Modules are
+user defined processes that are connected together by data streams.
 
-A typical deployment is shown below. Embedded sensors collect high
-bandwidth data (module 1) and perform feature extraction locally
-(module 2). This lower bandwidth feature data is transmitted to
-local nodes that convert this into actionable information by applying
-machine learning (ML) models (module 3). Aggregation nodes at the
-data center collect streams from a variety of local nodes and perform
-more computationally intensive tasks like training new ML models (module 4).
+Joule acts as a process manager, ensuring that modules start at system
+boot and are restarted if they fail. Joule also collects runtime
+statistics and logs for each module making it easy to detect
+bugs and find bottlenecks in processing pipelines.
 
-.. image:: /images/pipeline_example.png
 
-See the :ref:`getting-started` for an overview of how the system works.
+.. toctree::
+   :maxdepth: 3
+
+   concepts
+   getting_started
+   writing_modules
+   unit_testing
+   integration_testing
+   nilmdb
+   reference
 
 Contributing & Running Tests
 ----------------------------
@@ -40,7 +41,7 @@ Unittests can be run using nose2, see **joule/htmlcov** for code coverage.
 		$> cd joule
 		$> nose2 # run all unittests
 
-End to end tests are run from the ``tests/e2e`` directory and require
+End to end tests are run from the **tests/e2e** directory and require
 docker-compose and the NilmDB container. See
 https://docs.docker.com/compose/install/ for details on installing
 docker-compose. The NilmDB container is available by request on `Docker Hub`_.
@@ -51,14 +52,3 @@ docker-compose. The NilmDB container is available by request on `Docker Hub`_.
 		$> ./runner.sh # run end-to-end tests
 
 .. _Docker Hub: https://hub.docker.com/
-
-
-.. toctree::
-   :maxdepth: 3
-
-   concepts
-   getting_started
-   writing_modules
-   testing_modules
-   nilmdb
-   reference

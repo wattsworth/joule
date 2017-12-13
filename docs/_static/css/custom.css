@@ -58,6 +58,7 @@
     font-size: 14px;
     color: #fff;
     white-space: pre;
+    line-height: normal;
 }
 .bash>i {
     color: #dbdbdb;
