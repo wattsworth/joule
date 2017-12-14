@@ -1,9 +1,9 @@
 
-End-to-End Testing
-------------------
+Integration Testing
+-------------------
 
-End-to-end (E2E) tests run your module in a mock environment that
-mimics a production system.  E2E tests generally run slower than
+Integration or end-to-end (E2E) tests run your module in a mock environment that
+mimics a production system.  Integration tests generally run slower than
 unittests but they provide a high degree of assurance that the module
 operates correctly. The e2e directory in the example_modules
 repository has a complete testing infrastructure that runs your module
@@ -13,34 +13,38 @@ contact donnal@usna.edu for access credentials. The rest of this section
 describes the structure of the e2e directory and how to run the test
 framework.
 
-.. code-block:: none
+.. raw:: html
 
-		e2e
-		\---bootstrap-inner.py
-		    docker-compose.yml
-		    main.conf
-		    runner.sh
-		    test.py
-		    module_configs
-		    \---reader.conf
-		        filter.conf
-		    stream_configs
-		    \---raw.conf
-		        filtered.conf
+	<div class="bash header">e2e directory structure</div>
+	<div class="code bash">e2e
+	\---bootstrap-inner.py
+	    docker-compose.yml
+	    main.conf
+	    runner.sh
+	    test.py
+	    module_configs
+	    \---reader.conf
+	        filter.conf
+	    stream_configs
+	    \---raw.conf
+	        filtered.conf
+	</div>
 
 There are a large number of files in the test directory but you only need
 to customize a few, the rest are boilerplate testing infrastructure. Run
 the tests using the **runner.sh** script:
 
-.. code-block:: bash
+.. raw:: html
 
-		$> cd example_modules/e2e
-		$> ./runner.sh
-		#...output from Docker omitted..
-		joule   | ---------[running e2e test suite]---------
-		joule   | OK
-		e2e_joule_1 exited with code 0
-		#...output from Docker omitted...
+	<div class="bash header">Command Line</div>
+	<div class="code bash"><b>$> cd example_modules/e2e</b>
+	<b>$> ./runner.sh</b>
+	<i>#...output from Docker omitted..</i>
+	joule   | ---------[running e2e test suite]---------
+	joule   | OK
+	e2e_joule_1 exited with code 0
+	<i>#...output from Docker omitted...</i>
+	</div>
 
 When you run this command, you will see several lines of output from Docker as it sets up the test
 environment and then tears down the environment and cleans up. The important lines of output are
@@ -61,16 +65,20 @@ system.
 The example_modules e2e test runs both the reader and filter module. The
 reader module configuration is shown below:
 
-.. code-block:: ini
+.. raw:: html
 
-		[Main]
-		exec_cmd = python3 /joule-modules/reader.py 0.1
-		name = Demo Reader
+  <div class="header ini">
+  e2e/module_configs/reader.conf
+  </div>
+	<div class="code ini"><span>[Main]</span>
+  <b>exec_cmd =</b> python3 /joule-modules/reader.py 0.1
+  <b>name =</b> Demo Reader
 
-		[Source]
+  <span>[Inputs]</span>
 
-		[Destination]
-		output = /demo/raw
+  <span>[Outputs]</span>
+  <b>output =</b> /demo/raw
+  </div>
 
 The reader module has no sources and one destination called **output**
 which is connected to the **/demo/raw** NilmDB stream. Note that the
@@ -83,17 +91,21 @@ access them at a path like
 
 The filter module has a similar configuration:
 
-.. code-block:: ini
+.. raw:: html
 
-		[Main]
-		exec_cmd = python3 /joule-modules/filter.py 2
-		name = Demo Filter
+	<div class="header ini">
+	e2e/module_configs/filter.conf
+	</div>
+	<div class="code ini"><span>[Main]</span>
+	<b>exec_cmd =</b> python3 /joule-modules/filter.py 2
+	<b>name =</b> Demo Filter
 
-		[Source]
-		input = /demo/raw
+	<span>[Inputs]</span>
+	<b>raw =</b> /demo/raw
 
-		[Destination]
-		output = /demo/filtered
+	<span>[Outputs]</span>
+	<b>filtered =</b> /demo/filtered
+	</div>
 
 It has one source, **input** which is attached to the NilmDB stream
 **/demo/raw**. This stream is produced by the reader module. The
@@ -106,29 +118,35 @@ line arguments to the **exec_cmd**.
 The stream configurations for both **/demo/filtered** and **/demo/raw**
 are in the **stream_configs** directory:
 
-.. code-block:: ini
+.. raw:: html
 
-		[Main]
-		name = Raw Data
-		path = /demo/raw
-		datatype = int32
-		keep = 1w
-		decimate = yes
+  <div class="header ini">
+  e2e/stream_configs/raw.conf
+  </div>
+  <div class="code ini"><span>[Main]</span>
+  <b>name</b> = Raw Data
+  <b>path</b> = /demo/raw
+  <b>datatype</b> = int32
+  <b>keep</b> = 1w
 
-		[Element1]
-		name = counter
+  <span>[Element1]</span>
+  <b>name</b> = random
+  </div>
 
-.. code-block:: ini
+.. raw:: html
 
-		[Main]
-		name = Filtered Data
-		path = /demo/filtered
-		datatype = int32
-		keep = 1w
-		decimate = yes
+  <div class="header ini">
+  e2e/stream_configs/filtered.conf
+  </div>
+  <div class="code ini"><span>[Main]</span>
+  <b>name</b> = Raw Data
+  <b>path</b> = /demo/raw
+  <b>datatype</b> = int32
+  <b>keep</b> = 1w
 
-		[Element1]
-		name = filtered counter
+  <span>[Element1]</span>
+  <b>name</b> = filtered
+  </div>
 
 
 

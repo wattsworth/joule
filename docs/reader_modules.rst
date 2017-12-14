@@ -22,8 +22,9 @@ at http://git.wattsworth.net/wattsworth/example_modules.
   <b>$> sudo pip3 install nose2 asynctest</b>
   </div>
 
-Example Reader
---------------
+Example
+-------
+
 The contents of ``example_reader.py`` are shown below:
 
 .. highlight:: python
@@ -164,15 +165,19 @@ The following methods are used to interact with :class:`ReaderModule` instances
       r = ExampleReader()
       r.start() #does not return
 
-Unit Testing
-------------
+Local Execution
+---------------
 
-TODO
+Built-in Readers
+----------------
 
-Integration Testing
--------------------
+Random
+''''''
 
-TODO
+File
+''''
+
+
 
 .. _ArgumentParser: https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser
 .. _Namespace: https://docs.python.org/3/library/argparse.html#argparse.Namespace

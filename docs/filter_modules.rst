@@ -21,8 +21,9 @@ on the Wattsworth `Git Repository`_
   <b>$> sudo pip3 install nose2 asynctest</b>
   </div>
 
-Example Filter
---------------
+Example
+-------
+
 The contents of ``example_filter.py`` are shown below:
 
 .. highlight:: python
@@ -161,13 +162,18 @@ The following methods are used to interact with :class:`FilterModule` instances
       r = ExampleFilter()
       r.start() #does not return
 
-Unit Testing
-------------
+Local Execution
+---------------
 
-TODO
+Built-in Filters
+----------------
 
-Integration Testing
--------------------
+Mean
+'''''
+
+Median
+''''''
+
 
 TODO
 

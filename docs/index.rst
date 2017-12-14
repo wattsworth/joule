@@ -12,7 +12,7 @@ distributes computation into independent executable ``modules`` that are
 connected by timestamped data flows called
 ``streams``. Streams can connect modules executing on any device in the
 network enabling complex pipelines that distribute computation from edge
-nodes all the way to the data center. 
+nodes all the way to the data center.
 
 .. image:: /images/module_stream.png
    :width: 400px
@@ -28,7 +28,8 @@ more computationally intensive tasks like training new ML models (module 4).
 
 .. image:: /images/pipeline_example.png
 
-See the :ref:`getting-started` for an overview of how the system works.
+See the :ref:`getting-started` for quick introduction. Then read
+:ref:`using-joule` for an overview of how the system works.
 
 Contributing & Running Tests
 ----------------------------
@@ -57,6 +58,7 @@ docker-compose. The NilmDB container is available by request on `Docker Hub`_.
    :maxdepth: 3
 
    getting_started
+   using_joule
    reader_modules
    filter_modules
    composite_modules

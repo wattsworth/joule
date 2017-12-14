@@ -23,8 +23,8 @@ on the Wattsworth `Git Repository`_
   <b>$> sudo pip3 install nose2 asynctest</b>
   </div>
 
-Example Composite
------------------
+Example
+-------
 
 The contents of ``example_composite.py`` are shown below:
 
