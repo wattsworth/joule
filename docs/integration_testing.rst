@@ -57,9 +57,8 @@ Configuration Files
 
 The E2E tests run joule just like a production system, therefore you
 must include module and stream configuration files in order for joule
-to recognize and run your module. It provides a type of "live"
-documentation. These file serve as a type of "live" documentation that
-others can use as a guide when setting up your module on other their
+to recognize and run your module. These file provide a type of "live"
+documentation that others can use as a guide when setting up your module on other their
 system.
 
 The example_modules e2e test runs both the reader and filter module. The

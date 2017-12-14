@@ -9,6 +9,7 @@ at MIT by Dr. James Paris. Full documentation is available in his thesis availab
 at `MIT DSpace <https://dspace.mit.edu/handle/1721.1/84720>`_. This documentation
 covers the command line interface for interacting the the Joule NilmDB instance.
 
+
 Command-line arguments can often be supplied in both short and long
 forms, and many arguments are optional. The following documentation uses these
 conventions:
@@ -24,6 +25,15 @@ timestamp is specified as a free-form string, as supported by the **parse_time**
 client library function, described in Section 3.2.2.4 of the NilmDB reference
 guide. Examples of accepted formats are shown in Table 3-19 on page 133 of that
 document.
+
+``Commonly Used Commands``
+--------------------------
+
+* ``nilmtool list -n``
+* ``nilmtool list -En /stream/path``
+* ``nilm-copy /source/path /dest/path``
+* ``nilmtool remove -s min -e max /stream/path``
+* ``nilmtool destroy -R /stream/path``
 
 ``nilmtool``
 ------------
