@@ -26,14 +26,16 @@ client library function, described in Section 3.2.2.4 of the NilmDB reference
 guide. Examples of accepted formats are shown in Table 3-19 on page 133 of that
 document.
 
-``Commonly Used Commands``
---------------------------
+Commonly Used Commands
+----------------------
 
-* ``nilmtool list -n``
-* ``nilmtool list -En /stream/path``
-* ``nilm-copy /source/path /dest/path``
-* ``nilmtool remove -s min -e max /stream/path``
-* ``nilmtool destroy -R /stream/path``
+* ``nilmtool list -n`` -- list all streams in the database ignoring decimations
+* ``nilmtool list -E /stream/path``-- show the range of data stored in **/stream/path**
+* ``nilm-copy /source/path /dest/path`` -- copy data from **/source/path** to **/dest/path**
+    DANGER: The following commands remove data, use caution!!
+
+* ``nilmtool remove -s min -e max /stream/path`` -- remove all data form **/stream/path**
+* ``nilmtool destroy -R /stream/path`` -- remove **/stream/path** from the database
 
 ``nilmtool``
 ------------

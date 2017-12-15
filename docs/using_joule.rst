@@ -26,7 +26,9 @@ Modules
 Modules are executable programs. Joule runs each module as a separate
 process. This enfores isolation and improves resiliency.
 Malfunctioning modules do not affect other parts of the pipeline
-and can be restarted without interrupting the data flow.
+and can be restarted without interrupting the data flow. The client
+API provides three basic module types: Reader Modules, Filter Modules,
+and Composite Modules.
 
 The module configuration format is shown below:
 
@@ -76,7 +78,7 @@ outputs must be unique. All input and output
 Streams
 -------
 Streams are timestamped data flows that connect modules.
-Streams can be visualized as a tabular data
+Modules read and write to streams through Joule Pipes. Streams can be visualized as a tabular data
 structure. Timestamps are in Unix microseconds (elapsed time since
 January 1, 1970).
 
