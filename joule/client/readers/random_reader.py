@@ -1,6 +1,6 @@
 from joule.utils.time import now as time_now
 
-from joule.client import ReaderModule
+from .reader import ReaderModule
 import asyncio
 import numpy as np
 import logging
