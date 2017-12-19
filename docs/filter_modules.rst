@@ -162,8 +162,66 @@ The following methods are used to interact with :class:`FilterModule` instances
       r = ExampleFilter()
       r.start() #does not return
 
-Local Execution
----------------
+Isolated Execution
+-------------------
+
+Filter modules may be executed outside of the Joule environment in
+either **live** or **historic** mode. jouled must be running on the local
+machine in order for the filter to
+to connect to it's input and output streams.  The module and output stream
+configuration files are required for the filter to request and/or create
+the appropriate streams from jouled.
+
+**Live Isolation**
+Connect filter inputs to live streams produced by the jouled pipeline.
+
+.. raw:: html
+
+  <div class="header bash">
+  Command Line:
+  </div>
+
+  <div class="code bash"><i># [module.conf] is a module configuration file
+  # [output_stream_configs] is a directory of stream configuration files</i>
+
+  <b>$>./demo_filter.py --args \
+    --output_configs=output_stream_configs --module_config=module.conf</b>
+  Requesting live stream connections from jouled... [OK]
+  <i>#...stdout/stderr output from filter</i>
+  <i># hit ctrl-c to stop </i>
+
+  </div>
+
+**Historic Isolation**
+Connect filter inputs to a range of stream data saved in NilmDB.
+
+Specify historic execution by including a time range with **--start_time**
+and **--end_time** arguments. The time range may be a date
+string or a Unix microseconds timestamp.
+
+.. warning::
+
+  Running a filter in historic isolation mode will overwrite
+  existing output stream data
+
+.. raw:: html
+
+    <div class="header bash">
+    Command Line:
+    </div>
+
+    <div class="code bash"><i># [module.conf] is a module configuration file
+    # [output_stream_configs] is a directory of stream configuration files</i>
+
+    <b>$>./demo_filter.py --args \
+      --output_configs=output_stream_configs --module_config=module.conf
+      --start_time="12:00 January 3 2017" --end_time="12:30 January 3 2017"</b>
+    Requesting historic stream connections from jouled... [OK]
+    <i>#...stdout/stderr output from filter</i>
+
+    <i># program exits after time range is processed </i>
+
+    </div>
 
 Built-in Filters
 ----------------

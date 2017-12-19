@@ -16,8 +16,9 @@ make sure Joule is installed and the database is accessible:
   </div>
   <div class="code bash"><b>$> joule --version</b>
    joule 0.1.5
-   
-   <b>$> nilmtool info</b> Client version: 1.10.3 Server version:
+
+   <b>$> nilmtool info</b>
+   Client version: 1.10.3 Server version:
    1.10.3 <i>#... more output</i>
 
   </div>
@@ -31,7 +32,7 @@ The Reader Module
 
 The first module is a data reader. Reader modules "read" data into the
 Joule pipeline. This data can come from embedded sensors, HTTP API's,
-system logs, or any other timeseries data source. 
+system logs, or any other timeseries data source.
 
 Our reader will simply produce random values.  Joule provides a
 built-in module specifically for this purpose. Stubbing pipeline
@@ -48,7 +49,7 @@ Try out **random** on the command line:
   </div>
   <div class="code bash"><b>$> joule reader</b>
   <i>#  ... list of reader modules</i>
-  
+
   $> joule reader help random</b>
   <i>#  ... help with the random module</i>
 
@@ -70,7 +71,7 @@ to connect its output. To do this create the following file:
 .. raw:: html
 
   <div class="header ini">
-  /etc/joule/module_configs/my_reader.conf	
+  /etc/joule/module_configs/my_reader.conf
   </div>
   <div class="code ini"><span>[Main]</span>
   <b>exec_cmd =</b> joule reader random 2 10
@@ -78,7 +79,7 @@ to connect its output. To do this create the following file:
 
   <span>[Inputs]</span>
   <i># a reader has no input streams</i>
-		
+
   <span>[Outputs]</span>
   <b>output =</b> /demo/random
   </div>
@@ -95,7 +96,7 @@ stream. Configure the stream by creating the following file:
   </div>
   <div class="code ini"><span>[Main]</span>
   <b>name =</b> Random Data
-  <b>path =</b> /demo/random 
+  <b>path =</b> /demo/random
   <b>datatype =</b> float32
   <b>keep =</b> 1w
 
@@ -108,7 +109,7 @@ stream. Configure the stream by creating the following file:
 
 The stream configuration file specifies what kind of data the stream holds and how
 long to store it in the database. For more details on the configuration format see
-TODO. 
+TODO.
 
 Now the pipeline is ready to execute. Restart joule and check that the
 new module is running:
@@ -119,7 +120,7 @@ new module is running:
   Command Line:
   </div>
   <div class="code bash"><b>$> sudo service jouled restart</b>
-  
+
   <i># check status using the joule CLI</i>
   <b>$> joule modules</b>
   +-------------+---------+--------------+---------+-----+
@@ -139,7 +140,7 @@ new module is running:
   total data: 1559 rows, 155.700002 seconds
 
   </div>
-			  
+
 The Filter Module
 ---------------
 
@@ -157,10 +158,10 @@ Try out **mean** on the command line:
   </div>
   <div class="code bash"><b>$> joule filter</b>
   <i>#  ... list of filter modules</i>
-  
+
   <b>$> joule filter help mean</b>
   <i>#  ... help with the mean module</i>
-  
+
   <b>$> joule filter mean 9</b>
   per-element moving average with a window size of 9
 
@@ -182,7 +183,7 @@ the module to the pipeline create the following file:
 
   <span>[Inputs]</span>
   <b>input =</b> /demo/random
-		
+
   <span>[Outputs]</span>
   <b>output =</b> /demo/smoothed
   </div>
@@ -229,11 +230,11 @@ both modules are running:
   | Demo Reader |              | /demo/random   | running | 0%  |
   | Demo Filter | /demo/random | /demo/smoothed | running | 0%  |
   +-------------+--------------+----------------+---------+-----+
-  
+
   <b>$> joule logs "Demo Reader"</b>
   [27 Jan 2017 18:22:48] ---starting module---
   [27 Jan 2017 18:22:48] Starting random stream: 2 elements @ 10.0Hz
-  
+
   <b>$> joule logs "Demo Filter"</b>
   [27 Jan 2017 18:22:48] ---starting module---
   [27 Jan 2017 18:22:48] Starting moving average filter with window size 9
@@ -248,6 +249,3 @@ both modules are running:
             total data: 147 rows, 14.600001 seconds
 
   </div>
-		    
-			  
-
