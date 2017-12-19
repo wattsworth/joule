@@ -1,91 +1,168 @@
+.header.ini {
+  margin-left: 20px;
+  margin-right: 30px;
+  padding-left: 15px;
+  font-family: monospace;
+  font-size: 15px;
+  color: black;
+  border: 1px;
+  border-style: solid;
+  border-top-left-radius: 3px;
+  border-top-right-radius: 3px;
+  border-bottom: 0px;
+  background: #ececec;
+  padding: 8px;
+  color: #636262;
+}
+
+.code.ini {
+  border-style: solid;
+  border-width: 1px;
+  padding: 15px;
+  margin-left: 20px;
+  margin-right: 30px;
+  white-space: pre;
+  font-family: monospace;
+  font-size: 14px;
+  border-color: black;
+}
+
+.ini>b {
+  color: #1b80e4;
+}
+
+.ini>span {
+  color: #007021;
+  font-weight: bold;
+}
+
+.ini>i {
+  color: gray;
+}
+
+.header.bash {
+  border: 1px;
+  border-style: solid;
+  border-bottom: 0;
+  border-color: grey;
+  padding-left: 10px;
+  background: grey;
+  color: white;
+}
+
+.code.bash {
+  background: #545454;
+  border: 2px;
+  border-style: solid;
+  border-color: grey;
+  padding: 5px;
+  font-family: monospace;
+  font-size: 14px;
+  color: #fff;
+  white-space: pre;
+  line-height: normal;
+}
+
+.bash>i {
+  color: #dbdbdb;
+}
+
+.bash>p>i {
+  color: #dbdbdb;
+}
+
+.bash>p {
+  margin-top: 0px;
+}
+
 .command-title {
-    background: #DDD;
-    padding: 8px;
-    border-radius: 4px;
-    margin-top: 40px;
-    border-top: black;
-    border-style: solid;
-    border-width: 1px
+  background: #DDD;
+  padding: 8px;
+  border-radius: 4px;
+  margin-top: 40px;
+  border-top: black;
+  border-style: solid;
+  border-width: 1px
 }
 
 .command-title>i {
-    font-style: normal;
-    font-weight: bold;
-    font-family: monospace;
+  font-style: normal;
+  font-weight: bold;
+  font-family: monospace;
 }
 
 .text-mono {
-    font-family: monospace;
+  font-family: monospace;
 }
 
 .block-indent {
-    margin-left: 20px;
+  margin-left: 20px;
 }
 
 .text-grey {
-    color: #808080;
+  color: #808080;
 }
 
 .arglist>dd {
-    margin: 0px;
-    margin-left: 30px;
+  margin: 0px;
+  margin-left: 30px;
 }
 
 .arglist>dt {
-    color: #808080;
-    font-weight: normal;
-    font-family: monospace;
+  color: #808080;
+  font-weight: normal;
+  font-family: monospace;
 }
 
 .arglist {
-    margin-top: 0px;
-    margin-bottom: 0px;
+  margin-top: 0px;
+  margin-bottom: 0px;
 }
 
 .plainlist {
-    margin-bottom: 0px;
+  margin-bottom: 0px;
 }
 
 .plainlist>dd {
-    margin-left: 30px;
+  margin-left: 30px;
 }
 
 .plainlist>dt {
-    font-weight: normal;
-    font-family: monospace;
+  font-weight: normal;
+  font-family: monospace;
 }
 
 .plug-cli {
-    font-family: monospace;
-    background: #DDD;
-    display: block;
-    margin: 5px;
-    padding: 5px;
-    border-radius: 4px;
-    border-style: solid;
-    border-width: 1px;
-    border-color: #BBB
+  font-family: monospace;
+  background: #DDD;
+  display: block;
+  margin: 5px;
+  padding: 5px;
+  border-radius: 4px;
+  border-style: solid;
+  border-width: 1px;
+  border-color: #BBB
 }
 
 .mono-dl>dt {
-    font-family: monospace;
+  font-family: monospace;
 }
 
 .arglist.dl-horizontal>dt {
-    width: inherit;
+  width: inherit;
 }
 
 .arglist.dl-horizontal>dd {
-    margin-left: 130px;
+  margin-left: 130px;
 }
 
 .command {
-    font-family: monospace;
-    color: #808080
+  font-family: monospace;
+  color: #808080
 }
 
 .command>em {
-    font-weight: bold;
-    font-style: normal;
-    color: black;
+  font-weight: bold;
+  font-style: normal;
+  color: black;
 }

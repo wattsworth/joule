@@ -1,0 +1,38 @@
+To add nodes to a cluster
+
+joule node add 10.10.2.5 master
+//add 10.10.2.5 with the name "master"
+..then on the 10.10.2.5 machine
+joule node list
+//show all associated nodes
+joule node confirm 10.10.3.6, revDNS
+//or
+joule node deny 10.10.3.6, revDNS
+
+then in the module config:
+
+[Inputs]
+master:/path/to/stream @ 4
+
+[Outputs]
+master:/other/path 
+/local/path
+
+
+Visualizer Mechanism
+
+Module with Python decorators
+
+@endpoint("api/path")
+my_endpoint(params):
+  #do something
+  return json
+
+The module also has a client file
+--javascript--
+
+call_endpoint("api/path",params)
+
+The call_endpoint function is dynamically injected by Joule HTML server
+The iframe has a token that is refreshed by a script in the main page.
+The token is used to authenticate the user for the associated joule module

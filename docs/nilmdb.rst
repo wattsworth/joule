@@ -1,13 +1,14 @@
 .. toctree::
   Introduction
 
-Database Reference
-==================
+Database CLI
+============
 
 Joule uses a NilmDB database instance to store data streams. NilmDB was developed
 at MIT by Dr. James Paris. Full documentation is available in his thesis available
 at `MIT DSpace <https://dspace.mit.edu/handle/1721.1/84720>`_. This documentation
 covers the command line interface for interacting the the Joule NilmDB instance.
+
 
 Command-line arguments can often be supplied in both short and long
 forms, and many arguments are optional. The following documentation uses these
@@ -24,6 +25,17 @@ timestamp is specified as a free-form string, as supported by the **parse_time**
 client library function, described in Section 3.2.2.4 of the NilmDB reference
 guide. Examples of accepted formats are shown in Table 3-19 on page 133 of that
 document.
+
+Commonly Used Commands
+----------------------
+
+* ``nilmtool list -n`` -- list all streams in the database ignoring decimations
+* ``nilmtool list -E /stream/path``-- show the range of data stored in **/stream/path**
+* ``nilm-copy /source/path /dest/path`` -- copy data from **/source/path** to **/dest/path**
+    DANGER: The following commands remove data, use caution!!
+
+* ``nilmtool remove -s min -e max /stream/path`` -- remove all data form **/stream/path**
+* ``nilmtool destroy -R /stream/path`` -- remove **/stream/path** from the database
 
 ``nilmtool``
 ------------
