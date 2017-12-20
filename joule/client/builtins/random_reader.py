@@ -3,18 +3,9 @@ from joule.utils.time import now as time_now
 from .reader import ReaderModule
 import asyncio
 import numpy as np
-import logging
 
 
-class RandomReader(ReaderModule):
-    "Generate a random stream of data"
-
-    def __init__(self, output_rate=4):
-        super(RandomReader, self).__init__("Random Reader")
-        self.stop_requested = False
-        self.output_rate = output_rate  # Hz, how often to push data
-        self.description = "generate a random stream of data"
-        self.help = """
+ARGS_DESC = """
 This is a module that generates random numbers.
 Specify width and the rate:
 Example:
@@ -26,12 +17,17 @@ Example:
         1485274511853066 0.97747567249867184
         # ....more output...
 """
+
+
+class RandomReader(ReaderModule):
+    "Generate a random stream of data"
     
     def custom_args(self, parser):
         parser.add_argument("width", type=int,
                             help="number of elements in output")
         parser.add_argument("rate", type=float,
                             help="rate in Hz")
+        parser.description = ARGS_DESC
 
     async def run(self, parsed_args, output):
         # produce output four times per second
@@ -44,7 +40,7 @@ Example:
         BLOCK_SIZE = rate/self.output_rate
         fraction_remaining = 0
         i = 0
-        logging.info("Starting random stream: %d elements @ %0.1fHz" % (width, rate))
+        print("Starting random stream: %d elements @ %0.1fHz" % (width, rate))
         while(not self.stop_requested):
             float_block_size = BLOCK_SIZE+fraction_remaining
             int_block_size = int(np.floor(float_block_size))
@@ -59,9 +55,7 @@ Example:
             await asyncio.sleep(wait_time)
             i += 1
 
-    def stop(self):
-        self.stop_requested = True
-
+            
 if __name__ == "__main__":
     r = RandomReader()
     r.start()

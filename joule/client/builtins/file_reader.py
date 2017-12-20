@@ -3,15 +3,7 @@ from joule.client import ReaderModule
 import numpy as np
 import asyncio
 
-
-class FileReader(ReaderModule):
-    "Read data from a file"
-
-    def __init__(self):
-        super(FileReader, self).__init__("Random Reader")
-        self.stop_requested = False
-        self.description = "read data from a file"
-        self.help = """
+ARGS_DESC = """
 This is a module that reads data from a file
 Specify -t to add timestamps to data (note, this should only be
 used for real time FIFO's. The 8us difference in example below
@@ -21,8 +13,13 @@ Example:
     $> echo -e "3,4\n5,6" > /tmp/file
     $> joule reader file -t /tmp/file
     1485274825371860 3.0 4.0
-    1485274825371968 5.0 6.0
+    1485274825371868 5.0 6.0
+
 """
+
+
+class FileReader(ReaderModule):
+    "Read data from a file"
 
     def custom_args(self, parser):
         parser.add_argument("file", help="file name")
@@ -31,7 +28,8 @@ Example:
                             help="character between values")
         parser.add_argument("-t", "--timestamp", action="store_true",
                             help="apply timestamps to data")
-
+        parser.description = ARGS_DESC
+        
     async def run(self, parsed_args, output):
         with open(parsed_args.file, 'r') as f:
             for line in f:
@@ -40,17 +38,10 @@ Example:
                 if(parsed_args.timestamp):
                     data = np.insert(data, 0, time_now())
                 await output.write([data])
+                if(self.stop_requested):
+                    break
 
                 
 if __name__ == "__main__":
     r = FileReader()
     r.start()
-    
-"""
-            reader = asyncio.StreamReader()
-            reader_protocol = asyncio.StreamReaderProtocol(reader)
-            loop = asyncio.get_event_loop()
-            await loop.connect_read_pipe(lambda: reader_protocol, f)
-            while(True):
-                line = await reader.readline()
-"""
