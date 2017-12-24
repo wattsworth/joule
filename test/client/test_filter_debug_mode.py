@@ -1,7 +1,5 @@
-from joule.client.filters import FilterModule
+from joule import FilterModule
 import asynctest
-import asyncio
-import numpy as np
 import tempfile
 import os
 import shutil
@@ -80,8 +78,8 @@ class TestFilterDebugMode(asynctest.TestCase):
         os.remove(self.module_config)
         shutil.rmtree(self.stream_config_dir)
 
-    @asynctest.patch("joule.client.helpers.request_reader")
-    @asynctest.patch("joule.client.helpers.request_writer")
+    @asynctest.patch("joule.client.base_module.request_reader")
+    @asynctest.patch("joule.client.base_module.request_writer")
     def test_builds_networked_streams(self, mock_writer, mock_reader):
         myfilter = FilterModule()
         args = argparse.Namespace(

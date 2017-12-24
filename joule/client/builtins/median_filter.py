@@ -23,7 +23,6 @@ class MedianFilter(joule.FilterModule):
 
     def __init__(self):
         super(MedianFilter, self).__init__()
-        self.stop_requested = False
 
     def custom_args(self, parser):
         parser.add_argument("window", type=int,
@@ -54,10 +53,7 @@ class MedianFilter(joule.FilterModule):
             await stream_out.write(sarray_out)
             stream_in.consume(len(sarray_out))
 
-    def stop(self):
-        self.stop_requested = True
 
-        
 if __name__ == "__main__":
     r = MedianFilter()
     r.start()

@@ -1,9 +1,9 @@
 import asyncio
 
-from joule.client import JouleModule
+from . import base_module
 
 
-class CompositeModule(JouleModule):
+class CompositeModule(base_module.BaseModule):
 
     async def setup(self, parsed_args, inputs, outputs):
         # call run for other modules

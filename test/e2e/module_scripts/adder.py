@@ -1,13 +1,10 @@
 #!/usr/bin/python3
 
-from joule.client import FilterModule
+import joule
 
 
-class Adder(FilterModule):
+class Adder(joule.FilterModule):
     " Add DC offset to input "
-
-    def __init__(self):
-        super(Adder, self).__init__("Adder")
     
     def custom_args(self, parser):
         parser.add_argument("offset", type=int, default=0,

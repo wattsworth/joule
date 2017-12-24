@@ -14,7 +14,7 @@ output: N elements
 """
 
 
-class MeanFilter(joule.FIRFilter):
+class MeanFilter(joule.FIRFilterModule):
     "Compute the moving average of the input"
     
     def custom_args(self, parser):
@@ -25,7 +25,7 @@ class MeanFilter(joule.FIRFilter):
 
     def make_filter(self, parsed_args):
         N = parsed_args.window
-        return np.ones((N,))/N,
+        return np.ones((N,))/N
 
     
 if __name__ == "__main__":

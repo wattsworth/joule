@@ -1,9 +1,9 @@
 import asyncio
 
-from joule.client import JouleModule
+from . import base_module
 
 
-class FilterModule(JouleModule):
+class FilterModule(base_module.BaseModule):
         
     async def run(self, parsed_args, inputs, outputs):
         # some logic...

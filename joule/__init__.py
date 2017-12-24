@@ -4,3 +4,4 @@ __version__ = get_versions()['version']
 del get_versions
 
 from .client import *
+from .utils.numpypipe import *

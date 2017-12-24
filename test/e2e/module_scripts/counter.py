@@ -1,17 +1,14 @@
 #!/usr/bin/python3
 
 from joule.utils.time import now as time_now
-from joule.client import ReaderModule
+import joule
 import asyncio
 import numpy as np
 
 
-class Counter(ReaderModule):
+class Counter(joule.ReaderModule):
     "Counts up from 0 at 100Hz"
 
-    def __init__(self):
-        super(Counter, self).__init__("Counter")
-    
     def custom_args(self, parser):
         parser.add_argument("--step", type=int, default=1,
                             help="apply an offset")

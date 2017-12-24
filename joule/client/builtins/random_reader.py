@@ -1,9 +1,10 @@
 from joule.utils.time import now as time_now
 
-from .reader import ReaderModule
+from joule import ReaderModule
 import asyncio
 import numpy as np
 
+OUTPUT_RATE = 1  # run in 1 second blocks
 
 ARGS_DESC = """
 This is a module that generates random numbers.
@@ -36,11 +37,11 @@ class RandomReader(ReaderModule):
         width = parsed_args.width
         data_ts = time_now()
         data_ts_inc = 1/rate*1e6
-        wait_time = 1/self.output_rate
-        BLOCK_SIZE = rate/self.output_rate
+        wait_time = 1/OUTPUT_RATE
+        BLOCK_SIZE = rate/OUTPUT_RATE
         fraction_remaining = 0
         i = 0
-        print("Starting random stream: %d elements @ %0.1fHz" % (width, rate))
+        # print("Starting random stream: %d elements @ %0.1fHz" % (width, rate))
         while(not self.stop_requested):
             float_block_size = BLOCK_SIZE+fraction_remaining
             int_block_size = int(np.floor(float_block_size))

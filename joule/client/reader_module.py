@@ -1,6 +1,7 @@
 import asyncio
 
-import base_module
+from . import base_module
+
 
 class ReaderModule(base_module.BaseModule):
 

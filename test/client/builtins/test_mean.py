@@ -1,10 +1,10 @@
-from joule.utils.numpypipe import LocalNumpyPipe
+from joule import LocalNumpyPipe
 import asynctest
 import asyncio
 import numpy as np
 import numpy.matlib
 import argparse
-from joule.client.filters.mean import MeanFilter
+from joule.client.builtins.mean_filter import MeanFilter
 
 
 class TestMeanFilter(asynctest.TestCase):

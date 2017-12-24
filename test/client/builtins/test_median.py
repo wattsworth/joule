@@ -4,7 +4,7 @@ import asyncio
 import numpy as np
 import numpy.matlib
 import argparse
-from joule.client.filters.median import MedianFilter
+from joule.client.builtins.median_filter import MedianFilter
 
 
 class TestMedianFilter(asynctest.TestCase):

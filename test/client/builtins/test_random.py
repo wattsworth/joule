@@ -3,7 +3,7 @@ import asynctest
 import asyncio
 import numpy as np
 import argparse
-from joule.client.readers.random import RandomReader
+from joule.client.builtins.random_reader import RandomReader
 
 
 class TestRandomReader(asynctest.TestCase):
@@ -11,7 +11,7 @@ class TestRandomReader(asynctest.TestCase):
     def test_generates_random_values(self):
         WIDTH = 2
         RATE = 100
-        my_reader = RandomReader(output_rate=100)
+        my_reader = RandomReader()
         pipe = LocalNumpyPipe("output", layout="float32_%d" % WIDTH)
         args = argparse.Namespace(width=WIDTH, rate=RATE, pipes="unset")
         # run reader in an event loop

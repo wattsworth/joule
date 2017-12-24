@@ -12,16 +12,18 @@ from joule.utils.numpypipe import (StreamNumpyPipeReader,
                                    fd_factory)
 
 
-class JouleModule:
+class BaseModule:
 
+    def __init__(self):
+        self.stop_requested = False
+        
     def custom_args(self, parser):
         # parser.add_argument("--custom_flag")
         pass
         
     def stop(self):
         # override in client for alternate shutdown strategy
-        print("closing...")
-        self.task.cancel()
+        self.stop_requested = True
         
     def build_args(self, parser):
         grp = parser.add_argument_group('joule')
@@ -46,11 +48,20 @@ class JouleModule:
             self.build_args(parser)
             parsed_args = parser.parse_args()
         loop = asyncio.get_event_loop()
-        self.task = self.run_as_task(parsed_args, loop)
-        loop.add_signal_handler(signal.SIGINT, self.stop)
-        loop.add_signal_handler(signal.SIGTERM, self.stop)
+        self.stop_requested = False
+        task = self.run_as_task(parsed_args, loop)
+        
+        def stop_task():
+            loop = asyncio.get_event_loop()
+            # give task no more than 2 seconds to exit
+            loop.call_later(2, task.cancel)
+            # run custom exit routine
+            self.stop()
+            
+        loop.add_signal_handler(signal.SIGINT, stop_task)
+        loop.add_signal_handler(signal.SIGTERM, stop_task)
         try:
-            loop.run_until_complete(self.task)
+            loop.run_until_complete(task)
         except asyncio.CancelledError:
             pass
         loop.close()
