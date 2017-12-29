@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 import joule
-
+import asyncio
 
 class Adder(joule.FilterModule):
     " Add DC offset to input "
@@ -13,11 +13,16 @@ class Adder(joule.FilterModule):
     async def run(self, parsed_args, inputs, outputs):
         stream_in = inputs["input"]
         stream_out = outputs["output"]
-        while(1):
-            sarray = await stream_in.read()
-            sarray["data"] += parsed_args.offset
-            await stream_out.write(sarray)
-            stream_in.consume(len(sarray))
+        while(not self.stop_requested):
+            try:
+                sarray = await stream_in.read()
+                sarray["data"] += parsed_args.offset
+                await asyncio.sleep(0.25)
+                await stream_out.write(sarray)
+                stream_in.consume(len(sarray))
+
+            except joule.EmptyPipe:
+                exit(1)
             
 
 if __name__ == "__main__":

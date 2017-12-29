@@ -37,9 +37,8 @@ class StreamNumpyPipeReader(numpypipe.NumpyPipe):
 
         raw = await self.reader.read(max_rows * rowbytes)
 
-        if(len(raw) == 0):
-            # print("empty read in pipe %s, closing"%self.name)
-            # self.close()
+        # TODO: handle empty pipes, is eof the same as 0 bytes?
+        if(self.reader.at_eof() or (len(raw) == 0)):
             raise numpypipe.EmptyPipe
 
         extra_bytes = (len(raw) + len(self.byte_buffer)) % rowbytes
@@ -87,5 +86,5 @@ async def request_reader(path,
         logging.error(msg)
         raise Exception(msg)
     layout = resp['message']
-    return StreamNumpyPipeReader(layout, reader=r, close_cb=w.close())
+    return StreamNumpyPipeReader(layout, reader=r, close_cb=w.close)
 

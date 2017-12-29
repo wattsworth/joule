@@ -6,9 +6,8 @@ from io import StringIO
 
 NILMDB_URL = "http://nilmdb"
 
-
-def create_stream(path, layout):
-    url = "{url}/stream/create".format(url=NILMDB_URL)
+def create_stream(path, layout, url=NILMDB_URL ):
+    url = "{url}/stream/create".format(url=url)
     data = {"path":   path,
             "layout": layout}
     req = requests.post(url, data=data)
@@ -16,43 +15,43 @@ def create_stream(path, layout):
         raise Exception('cannot create stream [%s] on nilmdb server' % path)
 
     
-def data_count(path, interval=None):
+def data_count(path, interval=None, url=NILMDB_URL):
     if(interval is None):
         req = requests.get(
-            "{url}/stream/extract?path={path}&count=1".format(url=NILMDB_URL, path=path))
+            "{url}/stream/extract?path={path}&count=1".format(url=url, path=path))
     else:
         req = requests.get("{url}/stream/extract?path={path}&start={start}&end={end}&count=1".format(
-            url=NILMDB_URL, path=path, start=interval[0], end=interval[1]))
+            url=url, path=path, start=interval[0], end=interval[1]))
 
     return int(req.text)
 
 
-def layout(path):
+def layout(path, url=NILMDB_URL):
     req = requests.get(
-        "{url}/stream/list?path={path}".format(url=NILMDB_URL, path=path))
+        "{url}/stream/list?path={path}".format(url=url, path=path))
     pathinfo = json.loads(req.text)
     return pathinfo[0][1]  # layout from first entry
 
 
-def data_extract(path, interval=None):
+def data_extract(path, interval=None, url=NILMDB_URL):
     if(interval is None):
         req = requests.get(
-            "{url}/stream/extract?path={path}".format(url=NILMDB_URL, path=path))
+            "{url}/stream/extract?path={path}".format(url=url, path=path))
     else:
         req = requests.get("{url}/stream/extract?path={path}&start={start}&end={end}".format(
-            url=NILMDB_URL, path=path, start=interval[0], end=interval[1]))
+            url=url, path=path, start=interval[0], end=interval[1]))
 
     return np.loadtxt(StringIO(req.text))
 
 
-def intervals(path):
-    all_intervals = list(gen_intervals(path))
+def intervals(path, url=NILMDB_URL):
+    all_intervals = list(gen_intervals(path, url=url))
     return all_intervals
 
 
-def gen_intervals(path):
+def gen_intervals(path, url=NILMDB_URL):
     response = requests.get(
-        "{url}/stream/intervals?path={path}".format(url=NILMDB_URL, path=path),
+        "{url}/stream/intervals?path={path}".format(url=url, path=path),
         stream=True)
 
     def lines(source, ending):
@@ -78,10 +77,10 @@ def gen_intervals(path):
         yield json.loads(line.decode('ascii'))
 
 
-def is_decimated(path, level=16, min_size=10):
+def is_decimated(path, level=16, min_size=10, url=NILMDB_URL):
     dec_path = path + "~decim-%d" % level
     req = requests.get(
-        "{url}/stream/extract?path={path}&count=1".format(url=NILMDB_URL, path=dec_path))
+        "{url}/stream/extract?path={path}&count=1".format(url=url, path=dec_path))
     return int(req.text) > min_size
 
 

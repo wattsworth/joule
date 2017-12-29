@@ -1,4 +1,5 @@
 import json
+import textwrap
 import os
 import configparser
 import argparse
@@ -16,7 +17,10 @@ class BaseModule:
 
     def __init__(self):
         self.stop_requested = False
-        
+
+    def run_as_task(self, parsed_args, loop):
+        assert False, "implement in child class"
+
     def custom_args(self, parser):
         # parser.add_argument("--custom_flag")
         pass
@@ -49,31 +53,23 @@ class BaseModule:
             parsed_args = parser.parse_args()
         loop = asyncio.get_event_loop()
         self.stop_requested = False
-        task = self.run_as_task(parsed_args, loop)
-        
-        def stop_task():
-            loop = asyncio.get_event_loop()
-            # give task no more than 2 seconds to exit
-            loop.call_later(2, task.cancel)
-            # run custom exit routine
-            self.stop()
-            
-        loop.add_signal_handler(signal.SIGINT, stop_task)
-        loop.add_signal_handler(signal.SIGTERM, stop_task)
         try:
+            task = self.run_as_task(parsed_args, loop)
+            def stop_task():
+                loop = asyncio.get_event_loop()
+                # give task no more than 2 seconds to exit
+                loop.call_later(2, task.cancel)
+                # run custom exit routine
+                self.stop()
+            loop.add_signal_handler(signal.SIGINT, stop_task)
+            loop.add_signal_handler(signal.SIGTERM, stop_task)
             loop.run_until_complete(task)
         except asyncio.CancelledError:
             pass
+        except ModuleError as e:
+            print(str(e))
         loop.close()
         
-    def run_as_task(self, parsed_args, loop):
-        coro = self.build_pipes(parsed_args)
-        (pipes_in, pipes_out) = loop.run_until_complete(coro)
-        
-        return asyncio.gather(*self.setup(parsed_args,
-                                          pipes_in,
-                                          pipes_out))
-
     async def build_pipes(self, parsed_args):
         pipe_args = parsed_args.pipes
         module_config_file = parsed_args.module_config
@@ -81,13 +77,16 @@ class BaseModule:
         if(pipe_args == 'unset'):
             if(module_config_file == 'unset' or
                stream_config_dir == 'unset'):
-                msg = """specify --module_config_file and
-                --stream_config_dir or run in joule environment"""
+                msg = "ERROR: specify --module_config_file and --stream_config_dir\n"+\
+                      "\tor run in joule environment"
                 raise ModuleError(msg)
             else:
                 # request pipe sockets from joule server
-                return await self.build_socket_pipes(module_config_file,
-                                                     stream_config_dir)
+                try:
+                    return await self.build_socket_pipes(module_config_file,
+                                                         stream_config_dir)
+                except ConnectionRefusedError as e:
+                    raise ModuleError("%s: (is jouled running?)" % str(e))
         else:
             return self.build_fd_pipes(pipe_args)
 

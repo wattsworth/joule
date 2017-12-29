@@ -51,9 +51,6 @@ async def request_writer(stream,
     await network.send_json(w, msg._asdict())
     resp = await network.read_json(r)
     if(resp['status'] != network.STATUS_OK):
-        msg = "Request to write [%s] failed: %s" %\
-                      (stream.name, resp['message'])
-        logging.error(msg)
-        raise Exception(msg)
+        raise Exception(resp['message'])
     return StreamNumpyPipeWriter(stream.layout, writer=w)
 

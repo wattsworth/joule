@@ -30,19 +30,19 @@ class Server:
             else:
                 await network.send_error(writer, "bad request type")
         except Exception as e:
+            logging.warning("SERVER EXCEPTION: %s" % str(e))
+            """
             logging.warning("------- SERVER EXCEPTION LOG ----------------")
             for line in traceback.format_exception(
                     Exception, e, e.__traceback__):
                 logging.warning(line.rstrip())
             logging.warning("------- END SERVER EXCEPTION LOG ------------")
-            await network.send_error(writer, "Error: [%r]" % repr(e))
-        await writer.close()
+            """
+            await network.send_error(writer, str(e)) #"Error: [%r]" % repr(e))
+        writer.close()
         
     async def handle_input(self, reader, writer, dest_stream):
         (inserter, unsubscribe) = self.inserter_factory(dest_stream)
-        if(inserter is None):
-            raise Exception("cannot write to [%s]" % dest_stream.path)
-        
         msg = "write to [%s] authorized" % dest_stream.path
         await network.send_ok(writer, msg)
         logging.info("server: write to [%s] started" % dest_stream.path)
@@ -58,15 +58,17 @@ class Server:
                 q.put_nowait(data)
                 await asyncio.sleep(0.25)
         except (EmptyPipe, ConnectionResetError):
-            logging.info("server: write to [%s] stopped" % dest_stream.path)
+            pass
         finally:
             inserter.stop()
             await task
+            logging.info("server: write to [%s] stopped" % dest_stream.path)
             unsubscribe()  # allow someone else to write to this stream
         
     async def handle_output(self, reader, writer, config):
         res = self.subscription_factory(config.path, config.time_range)
         (dest_stream, q, unsubscribe) = res
+        logging.info("server: read from [%s] started" % dest_stream.path)
         msg = "%s" % dest_stream.layout
         await network.send_ok(writer, msg)
         npipe_w = StreamNumpyPipeWriter(dest_stream.layout, writer=writer)
@@ -78,6 +80,7 @@ class Server:
         except ConnectionResetError:
             pass
         finally:
+            logging.info("server: read from [%s] stopped" % dest_stream.path)
             unsubscribe()
         
         

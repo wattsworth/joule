@@ -68,7 +68,7 @@ async def send_json(writer, msg):
     try:
         writer.write(len(data).to_bytes(4, byteorder='big'))
         writer.write(data)
-        await writer.drain()
+        #await writer.drain()
     except ConnectionResetError:
         addr = writer.get_extra_info('peername')
         logging.warning('failed to write to closed pipe [%s:%s]' % addr)

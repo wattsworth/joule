@@ -14,8 +14,9 @@ class Counter(joule.ReaderModule):
                             help="apply an offset")
         
     async def run(self, parsed_args, output):
+
         count = 0
-        while(1):
+        while(not self.stop_requested):
             await output.write(np.array([[time_now(), count]]))
             await asyncio.sleep(0.01)
             count += parsed_args.step

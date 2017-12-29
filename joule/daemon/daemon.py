@@ -4,6 +4,7 @@ import os
 import configparser
 import asyncio
 import json
+import sqlite3
 from .worker import Worker
 from .errors import DaemonError
 from . import stream, module
@@ -41,15 +42,17 @@ class Daemon(object):
         self.inserters = []
 
     def initialize(self, config):
-        # Build a NilmDB client
-        self.async_nilmdb_client = nilmdb.AsyncClient(config.nilmdb.url)
-        self.nilmdb_client = nilmdb.Client(config.nilmdb.url)
         # Set up the ProcDB
         self.procdb = procdb_client.SQLClient(config.procdb.db_path,
                                               config.procdb.max_log_lines)
         self.procdb_commit_interval = 5  # commit every 5 seconds
-        self.procdb.clear_db()
-
+        try:
+            self.procdb.clear_db()
+        except sqlite3.OperationalError:
+            raise DaemonError("Cannot write to procdb at %s" % config.procdb.db_path)
+        # Build a NilmDB client
+        self.async_nilmdb_client = nilmdb.AsyncClient(config.nilmdb.url)
+        self.nilmdb_client = nilmdb.Client(config.nilmdb.url)
         # Set up streams
         stream_dir = config.jouled.stream_directory
 
@@ -337,7 +340,8 @@ def main(argv=None):
     log = logging.getLogger()
     log.addFilter(LogDedupFilter())
     logging.basicConfig(
-        format='%(asctime)s %(levelname)s:%(message)s')
+        format='%(asctime)s %(levelname)s:%(message)s',
+        level=logging.INFO)
     try:
         configs = load_configs(args.config)
     except Exception as e:

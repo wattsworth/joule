@@ -139,7 +139,8 @@ class Worker:
         self.stop_requested = True
         if(self.process is None):
             return
-
+        # close pipe connections with module
+        await self._close_npipes()
         self.process.terminate()
         try:
             await asyncio.wait_for(self.process.wait(),
