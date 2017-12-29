@@ -14,6 +14,10 @@ class Server:
         self.subscription_factory = subscription_factory
         self.inserter_factory = inserter_factory
         self.loop = loop
+        self.stop_requested = False
+
+    def stop_readers(self):
+        self.stop_requested = True
         
     async def handle_connection(self, reader, writer):
         try:
@@ -32,8 +36,7 @@ class Server:
                 logging.warning(line.rstrip())
             logging.warning("------- END SERVER EXCEPTION LOG ------------")
             await network.send_error(writer, "Error: [%r]" % repr(e))
-
-        writer.close()
+        await writer.close()
         
     async def handle_input(self, reader, writer, dest_stream):
         (inserter, unsubscribe) = self.inserter_factory(dest_stream)

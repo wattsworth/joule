@@ -2,6 +2,7 @@
 import asyncio
 import asynctest
 import numpy as np
+import logging
 from unittest import mock
 from test import helpers 
 from joule.daemon import server
@@ -17,6 +18,12 @@ PORT = '1234'
 
 class TestSever(asynctest.TestCase):
 
+    def setUp(self):
+        logging.disable(logging.CRITICAL)
+
+    def tearDown(self):
+        logging.disable(logging.NOTSET)
+        
     """
     Open several connections to server, should receive
     JSON responses that the request is not valid
@@ -43,10 +50,9 @@ class TestSever(asynctest.TestCase):
             s.close()
             return s
 
-        with self.assertLogs(level='WARN'):
-            s = loop.run_until_complete(run())
-            loop.run_until_complete(s.wait_closed())
-            loop.close()
+        s = loop.run_until_complete(run())
+        loop.run_until_complete(s.wait_closed())
+        loop.close()
         self.assertEqual(client_connections, NUM_CLIENTS)
         
     def test_can_write_data(self):
@@ -108,6 +114,7 @@ class TestSever(asynctest.TestCase):
             npipe = await request_reader("/test/path")
             rx_data = await npipe.read()
             npipe.consume(len(rx_data))
+            npipe.close()            
             s.close()
             await s.wait_closed()
             np.testing.assert_array_equal(test_data, rx_data)

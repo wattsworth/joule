@@ -18,6 +18,9 @@ class NumpyPipe:
     def consume(self, num_rows):
         raise NumpyPipeError("abstract method must be implemented by child")
 
+    def close(self):
+        pass  # close the pipe, optionally implemented by the child
+    
     def _layout_to_dtype(self, layout):
         ltype = layout.split('_')[0]
         lcount = int(layout.split('_')[1])
