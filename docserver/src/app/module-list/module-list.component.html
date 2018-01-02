@@ -1,6 +1,9 @@
-
-<ul>
-  <li *ngFor="let module of modules | async ">
-    <a routerLink="/modules/{{module.id}}">"{{module.name}}: {{module.description}}</a>
-  </li>
-</ul>
+<div class="row">
+  <div class="col-12">
+      <ul>
+          <li *ngFor="let module of modules | async ">
+            <a routerLink="/modules/{{module.id}}">"{{module.name}}: {{module.description}}</a>
+          </li>
+        </ul>
+  </div>
+</div>
