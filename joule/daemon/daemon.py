@@ -341,7 +341,7 @@ def main(argv=None):
     log.addFilter(LogDedupFilter())
     logging.basicConfig(
         format='%(asctime)s %(levelname)s:%(message)s',
-        level=logging.INFO)
+        level=logging.WARNING)
     try:
         configs = load_configs(args.config)
     except Exception as e:

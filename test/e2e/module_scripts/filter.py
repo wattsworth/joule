@@ -5,9 +5,14 @@ InStream2 ==> x3 ==> OutStream2
 """
 
 import asyncio
-import argparse
-import joule.utils.client
-import sys
+import joule
+
+class MultiplierModule(joule.FilterModule):
+    " Multiply input by a factor "
+
+    def custom_args(self, parser):
+        parser.add_argument("factor", type=int, default=1)
+
 
 
 async def echo_pipe(np_in, np_out, factor=1.0):

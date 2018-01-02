@@ -7,7 +7,7 @@ from joule.testing.e2eutils import nilmtool
 
 
 def main():
-    time.sleep(8)  # wait for jouled to boot
+    #time.sleep(8)  # wait for jouled to boot
     print( joule.logs("Filter"))
     check_modules()
     check_data()
