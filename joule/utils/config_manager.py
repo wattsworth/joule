@@ -16,6 +16,7 @@ NilmDbConfigs = namedtuple('NilmdbConfigs', ['url',
 JouledConfigs = namedtuple(
     'JouledConfigs', ['module_directory',
                       'stream_directory',
+                      'module_doc',
                       'ip_address',
                       'port'])
 
@@ -35,6 +36,7 @@ DEFAULT_CONFIG = {
     {
         "ModuleDirectory": "/etc/joule/module_configs",
         "StreamDirectory": "/etc/joule/stream_configs",
+        "ModuleDocFile": "/etc/joule/module_docs.json",
         "IPAddress": "127.0.0.1",
         "Port": 1234
     }
@@ -63,6 +65,14 @@ def parse_jouled_configs(jouled_parser, verify):
     if(not os.path.isdir(stream_directory) and verify):
         raise InvalidConfiguration(
             "Jouled:StreamDirectory [%s] does not exist" % stream_directory)
+    module_doc = jouled_parser['ModuleDocFile']
+    if(not os.path.isfile(module_doc) and verify):
+        raise InvalidConfiguration(
+            "Jouled:ModuleDocFile [%s] does not exist" % module_doc)
+    if(not os.access(module_doc, os.W_OK) and verify):
+        raise InvalidConfiguration(
+            "Jouled:ModuleDocFile [%s] is not writable" % module_doc)
+
     ip_address = jouled_parser['IPAddress']
     try:
         ipaddress.ip_address(ip_address)
@@ -77,6 +87,7 @@ def parse_jouled_configs(jouled_parser, verify):
     
     return JouledConfigs(module_directory=module_directory,
                          stream_directory=stream_directory,
+                         module_doc=module_doc,
                          ip_address=ip_address,
                          port=port)
 

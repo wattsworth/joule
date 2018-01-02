@@ -7,16 +7,62 @@ import numpy as np
 OUTPUT_RATE = 1  # run in 1 second blocks
 
 ARGS_DESC = """
-This is a module that generates random numbers.
-Specify width and the rate:
-Example:
-    $> joule reader random 3 1
-        1485274511453066 0.29717862865048317
-        1485274511553066 0.88548911551368858
-        1485274511653066 0.099506076011947053
-        1485274511753066 0.23619839742598503
-        1485274511853066 0.97747567249867184
-        # ....more output...
+:name:
+  Random Reader
+
+:author:
+  John Donnal
+
+:license:
+  Open
+
+:url:
+  http://git.wattsworth.net/wattsworth/joule.git
+
+:description: 
+  Generates a random data stream
+
+:usage:
+    This is a module that generates random numbers.
+    Specify width (number of elements) and the rate in Hz.
+
+:inputs:
+  None
+
+:outputs:
+  output
+  :  float32 with N elements specified by [width] argument
+
+:stream_configs:
+  output
+  :  [Main]
+     name = Random Data
+     path = /path/to/output 
+     datatype = float32
+     keep = 1w              
+
+     # [width] number of elements
+     [Element1]
+     name = Random Set 1
+
+     [Element2]
+     name = Random Set 2
+
+     #additional elements...
+
+:module_config:
+    [Main]
+    name = Random Reader
+    exec_cmd = joule modules random-reader
+
+    [Arguments]
+    width = 4
+    rate = 10 #Hz
+
+    [Outputs]
+    output = /path/to/output
+
+
 """
 
 

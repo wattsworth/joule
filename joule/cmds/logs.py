@@ -3,10 +3,6 @@ from joule.procdb import client as procdb_client
 from cliff.command import Command
 from . import helpers
 
-PROC_DB = "/tmp/joule-proc-db.sqlite"
-NILMDB_URL = "http://localhost/nilmdb"
-
-
 class LogsCmd(Command):
     "Print the logs for a module"
 
