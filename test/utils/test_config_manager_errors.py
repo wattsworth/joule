@@ -1,7 +1,9 @@
 
 import unittest
-from joule.utils import config_manager
+import os
 import tempfile
+
+from joule.utils import config_manager
 from test import helpers
 
 
@@ -19,6 +21,19 @@ class TestConfigManagerErrors(unittest.TestCase):
                 'ModuleDirectory'] = "/invalid/path"
             helpers.default_config['Jouled']['StreamDirectory'] = temp
             with self.assertRaisesRegex(config_manager.InvalidConfiguration, "ModuleDirectory"):
+                config_manager.load_configs(helpers.default_config)
+
+            helpers.default_config['Jouled']['StreamDirectory'] = temp
+            helpers.default_config['Jouled']['ModuleDirectory'] = temp
+
+            # module doc file must exist
+            with self.assertRaisesRegex(config_manager.InvalidConfiguration, "ModuleDocFile"):
+                config_manager.load_configs(helpers.default_config)
+            # ...and be writable
+            docfile = tempfile.NamedTemporaryFile()
+            helpers.default_config['Jouled']['ModuleDocs'] = docfile.name
+            os.chmod(docfile.name, 0o444)
+            with self.assertRaisesRegex(config_manager.InvalidConfiguration, "ModuleDocFile"):
                 config_manager.load_configs(helpers.default_config)
 
     def test_errors_on_invalid_procdb_settings(self):

@@ -36,7 +36,7 @@ DEFAULT_CONFIG = {
     {
         "ModuleDirectory": "/etc/joule/module_configs",
         "StreamDirectory": "/etc/joule/stream_configs",
-        "ModuleDocFile": "/etc/joule/module_docs.json",
+        "ModuleDocs": "/etc/joule/module_docs.json",
         "IPAddress": "127.0.0.1",
         "Port": 1234
     }
@@ -65,7 +65,7 @@ def parse_jouled_configs(jouled_parser, verify):
     if(not os.path.isdir(stream_directory) and verify):
         raise InvalidConfiguration(
             "Jouled:StreamDirectory [%s] does not exist" % stream_directory)
-    module_doc = jouled_parser['ModuleDocFile']
+    module_doc = jouled_parser['ModuleDocs']
     if(not os.path.isfile(module_doc) and verify):
         raise InvalidConfiguration(
             "Jouled:ModuleDocFile [%s] does not exist" % module_doc)

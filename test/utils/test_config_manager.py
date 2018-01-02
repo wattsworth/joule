@@ -14,6 +14,7 @@ class TestConfigManager(unittest.TestCase):
                                                      5, 600)
         jouled_config = config_manager.JouledConfigs("/etc/joule/module_configs",
                                                      "/etc/joule/stream_configs",
+                                                     "/etc/joule/module_docs.json",
                                                      '127.0.0.1',
                                                      1234)
         self.defaults = config_manager.Configs(procdb_config,
@@ -45,5 +46,7 @@ class TestConfigManager(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             helpers.default_config['Jouled']['ModuleDirectory'] = temp
             helpers.default_config['Jouled']['StreamDirectory'] = temp
+            docfile = tempfile.NamedTemporaryFile()
+            helpers.default_config['Jouled']['ModuleDocs'] = docfile.name
             my_configs = config_manager.load_configs(helpers.default_config)
             self.assertIsInstance(my_configs, config_manager.Configs)
