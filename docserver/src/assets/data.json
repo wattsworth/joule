@@ -1,0 +1,22 @@
+[
+  { 
+    "id": 1,
+    "name": "Module 1",
+    "description": "test module",
+    "inputs": "some inputs",
+    "outputs": "some outputs",
+    "module_config": "[Main]...",
+    "stream_configs": ["[Main]...","[Main]..."],
+    "info": "lorem ipsum"
+  },
+  { 
+    "id": 2,
+    "name": "Module 2",
+    "description": "another test module",
+    "inputs": "some other inputs",
+    "outputs": "some other outputs",
+    "module_config": "[Main2]...",
+    "stream_configs": ["[Main2]...","[Main2]..."],
+    "info": "lorem ipsum2"
+  }
+]

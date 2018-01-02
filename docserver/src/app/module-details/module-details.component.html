@@ -1,0 +1,8 @@
+<a routerLink="/modules" class="btn btn-outline-primary">
+  <i class="fas fa-chevron-left"></i> Module List
+</a>
+<div *ngFor="let m of [module|async]">
+  <dl *ngIf="m != null">
+    <dt>Name: </dt><dd>{{m.name}}</dd>
+  </dl>
+</div>    
