@@ -83,8 +83,8 @@ class DocsCmd(Command):
                                  delimiter=":")
         
     def text_to_dict(self, text,
-                          section_marker=None,
-                          delimiter=":"):
+                     section_marker=None,
+                     delimiter=":"):
         # return json dictionary of help output
         # find :keys: between start and end marks (---)
         # populate dictionary with [values] between :keys:
@@ -94,7 +94,7 @@ class DocsCmd(Command):
         cur_key = ""
         cur_value = ""
         in_help_section = False
-        
+        regex = "^{0}(.*){0}$".format(delimiter)
         for line in text.split('\n'):
 
             if(section_marker is not None):
@@ -113,7 +113,7 @@ class DocsCmd(Command):
                 continue
 
             # check if this line is a key
-            match = re.search(r"^:(.*):$", line.rstrip().lstrip())
+            match = re.search(regex, line.rstrip().lstrip())
             if(match is not None):
                 key = match.group(1)
                 # save last key:value pair
@@ -132,7 +132,8 @@ class DocsCmd(Command):
         return res
 
     def markdown_values(self, item):
-        plain_items = ["name", "author", "license","module_config"]
+        plain_items = ["name", "author", "license",
+                       "module_config", "stream_configs"]
         for key in item:
             if(key in plain_items):
                 continue
@@ -141,12 +142,11 @@ class DocsCmd(Command):
                                           ['markdown.extensions.extra'])
         if("stream_configs" not in item):
             raise Exception(":stream_configs: is required")
-        stream_configs = self.text_to_dict(item, delimiter="|")
-#        soup = BeautifulSoup(item["stream_configs"], 'html.parser')
-#        stream_configs = []
-#        for d in list(zip(soup.find_all("dt"), soup.find_all("dd"))):
-#            stream_configs.append({"name": d[0].string,
-#                                 "config": textwrap.dedent(d[1].string)})
+        dict_configs = self.text_to_dict(item["stream_configs"],
+                                         delimiter="#")
+        stream_configs = []
+        for key in dict_configs:
+            stream_configs.append({"name": key, "config": dict_configs[key]})
         if(len(stream_configs) == 0):
             raise Exception("invalid :stream_configs:")
         item["stream_configs"] = stream_configs

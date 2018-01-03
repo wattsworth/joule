@@ -54,18 +54,19 @@ class TestDocs(unittest.TestCase):
             """)
         input["stream_configs"] = textwrap.dedent(
             """
-            input1
-            :  [Main]
-               key = value
-               key2 = value2
+            #input1#
+              [Main]
+              key = value
+              key2 = value2
 
-            input2
-            :  [Main]
-               key = value
-               key3 = value3
+            #input2#
+              [Main]
+              key = value
+              key3 = value3
             """
         )
         result = self.my_docs.markdown_values(input)
+        self.assertEqual(len(result["stream_configs"]), 2)
         self.assertEqual(result["usage"], textwrap.dedent(
             """<table>
 <thead>
