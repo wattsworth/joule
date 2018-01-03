@@ -35,7 +35,9 @@ setup(
                       'scipy',
                       'psutil',
                       'requests',
-                      'aiohttp'],
+                      'aiohttp',
+                      'markdown',
+                      'bs4'],
     namespace_packages=[],
     packages=find_packages(),
     include_package_data=True,
@@ -43,15 +45,17 @@ setup(
     entry_points={
         'console_scripts': [
             'joule = joule.main:main',
-            'jouled = joule.daemon.daemon:main'
+            'jouled = joule.daemon.daemon:main',
+            'joule-random-reader = joule.client.builtins.random_reader:main',
+            'joule-file-reader = joule.client.builtins.file_reader:main',
+            'joule-mean-filter = joule.client.builtins.mean_filter:main',
+            'joule-median-filter = joule.client.builtins.median_filter:main'
         ],
         'joule.commands': [
             'modules = joule.cmds.modules:ModulesCmd',
             'logs = joule.cmds.logs:LogsCmd',
             'initialize = joule.cmds.initialize:InitializeCmd',
-            'reader = joule.client.readers.reader_cmd:ReaderCmd',
-            'filter = joule.client.filters.filter_cmd:FilterCmd',
-
+            'docs = joule.cmds.docs:DocsCmd'
         ],
     },
     #options={

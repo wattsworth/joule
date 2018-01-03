@@ -5,6 +5,8 @@ import json
 import subprocess
 import re
 import textwrap
+import markdown
+from bs4 import BeautifulSoup
 
 from . import helpers
 
@@ -18,20 +20,49 @@ class DocsCmd(Command):
     def get_parser(self, prog_name):
         parser = super(DocsCmd, self).get_parser(prog_name)
         parser.add_argument('--config-file', dest="config_file")
-        parser.add_argument('exec_cmd')
+        actions = ["add", "update", "list", "delete"]
+        parser.add_argument('actions', choices=actions)
+        parser.add_argument('value', required=False)
         return parser
 
     def take_action(self, parsed_args):
         configs = helpers.parse_config_file(parsed_args.config_file)
         try:
+            # read module docs in from file
             with open(configs.jouled.module_doc, 'r') as data_file:
                 module_docs = json.load(data_file)
-            help_output = self.get_help_output(parsed_args.exec_cmd)
-            new_doc = self.parsed_help_output(help_output)
-            self.upsert(module_docs, new_doc)
+                
+            # [list]: display names of documented modules
+            if(parsed_args.action == "list"):
+                self.show_docs(module_docs)
+                return
+            # [delete]: remove module doc by name
+            if(parsed_args.action == "delete"):
+                self.remove_doc(module_docs, parsed_args.value)
+                return
+            
+            help_output = self.get_help_output(parsed_args.value)
+            raw_doc = self.parsed_help_output(help_output)
+            html_doc = self.markdown_values(raw_doc)
+            self.validate_doc(html_doc)
 
+            # [add]: insert a new module doc
+            if(parsed_args.action == "add"):
+                self.insert_doc(module_docs, html_doc)
+            # [update]: update an existing module doc
+            if(parsed_args.action == "update"):
+                self.update_doc(module_docs, html_doc)
+
+            # save the module doc back out to file
+            with open(configs.jouled.module_doc, 'w') as data_file:
+                json.dump(module_docs, data_file)
+                
         except (FileNotFoundError, subprocess.CalledProcessError) as e:
-            print("Error invoking [%s -h]: %s" % (parsed_args.exec_cmd, str(e)))
+            print("Error invoking [%s -h]: %s" %
+                  (parsed_args.exec_cmd, str(e)))
+            return 1
+        except Exception as e:
+            print("Error: %s" % str(e))
             return 1
 
     def get_help_output(self, exec_cmd):
@@ -82,6 +113,62 @@ class DocsCmd(Command):
             
         return res
 
-    def upsert(self, collection, item):
-        # update or insert the item into the collection
-        pass
+    def markdown_values(self, item):
+        for key in item:
+            item[key] = markdown.markdown(item[key],
+                                          extensions=
+                                          ['markdown.extensions.extra'])
+        if("stream_configs" not in item):
+            raise Exception(":stream_configs: is required")
+        soup = BeautifulSoup(item["stream_configs"], 'html.parser')
+        stream_configs = {}
+        for d in list(zip(soup.find_all("dt"), soup.find_all("dd"))):
+            stream_configs[d[0].string] = textwrap.dedent(d[1].string)
+        if(len(stream_configs) == 0):
+            raise Exception("invalid :stream_configs:")
+        item["stream_configs"] = stream_configs
+        return item
+
+    def validate_doc(self, item):
+        req_keys = ["name",
+                    "exec_cmd",
+                    "module_config",
+                    "stream_configs"]
+        for k in req_keys:
+            if(k not in item):
+                raise Exception(":%s: is required" % k)
+        # make sure stream_configs is a dictionary
+        
+    def insert_doc(self, collection, item):
+        # insert the item into the collection
+        # raise error if item exists in collection
+        for x in collection:
+            if(x["name"] == item["name"]):
+                raise Exception("[%s] is already documented" +
+                                " specify -u to update")
+        collection.append(item)
+
+    def update_doc(self, collection, item):
+        # update the item in the collection
+        # raise error if item does not exist
+        for i in range(len(collection)):
+            if(collection[i]["name"] == item["name"]):
+                collection[i] = item
+                return
+            
+        raise Exception("[%s] is not documented" +
+                        " specify -a to add")
+
+    def list_docs(self, collection):
+        # display list of modules by name
+        print("Documented modules")
+        for item in collection:
+            print("\t%s" % item["name"])
+
+    def remove_doc(self, collection, name):
+        for i in range(len(collection)):
+            if(collection[i]["name"] == name):
+                del collection[i]
+                return
+        raise Exception("[%s] is not documented")
+        
