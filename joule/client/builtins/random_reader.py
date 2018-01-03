@@ -3,25 +3,23 @@ from joule.utils.time import now as time_now
 from joule import ReaderModule
 import asyncio
 import numpy as np
+import textwrap
+import argparse
 
 OUTPUT_RATE = 1  # run in 1 second blocks
 
 ARGS_DESC = """
+---
 :name:
   Random Reader
-
 :author:
   John Donnal
-
 :license:
   Open
-
 :url:
   http://git.wattsworth.net/wattsworth/joule.git
-
 :description: 
   Generates a random data stream
-
 :usage:
     This is a module that generates random numbers.
     Specify width (number of elements) and the rate in Hz.
@@ -34,8 +32,8 @@ ARGS_DESC = """
   :  float32 with N elements specified by [width] argument
 
 :stream_configs:
-  output
-  :  [Main]
+  |output|
+     [Main]
      name = Random Data
      path = /path/to/output 
      datatype = float32
@@ -61,8 +59,7 @@ ARGS_DESC = """
 
     [Outputs]
     output = /path/to/output
-
-
+---
 """
 
 
@@ -74,7 +71,8 @@ class RandomReader(ReaderModule):
                             help="number of elements in output")
         parser.add_argument("rate", type=float,
                             help="rate in Hz")
-        parser.description = ARGS_DESC
+        parser.description = textwrap.dedent(ARGS_DESC)
+        parser.formatter_class = argparse.RawDescriptionHelpFormatter
 
     async def run(self, parsed_args, output):
         # produce output four times per second
@@ -102,8 +100,9 @@ class RandomReader(ReaderModule):
             await asyncio.sleep(wait_time)
             i += 1
 
-            
-if __name__ == "__main__":
+def main():
     r = RandomReader()
     r.start()
     
+if __name__ == "__main__":
+    main()

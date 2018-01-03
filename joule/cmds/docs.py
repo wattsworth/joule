@@ -20,46 +20,52 @@ class DocsCmd(Command):
     def get_parser(self, prog_name):
         parser = super(DocsCmd, self).get_parser(prog_name)
         parser.add_argument('--config-file', dest="config_file")
-        actions = ["add", "update", "list", "delete"]
-        parser.add_argument('actions', choices=actions)
-        parser.add_argument('value', required=False)
+        actions = ["add", "update", "list", "remove"]
+        parser.add_argument('action', choices=actions)
+        parser.add_argument('value', nargs='?', default="")
         return parser
 
     def take_action(self, parsed_args):
-        configs = helpers.parse_config_file(parsed_args.config_file)
         try:
+            configs = helpers.parse_config_file(parsed_args.config_file)
             # read module docs in from file
             with open(configs.jouled.module_doc, 'r') as data_file:
                 module_docs = json.load(data_file)
                 
             # [list]: display names of documented modules
             if(parsed_args.action == "list"):
-                self.show_docs(module_docs)
+                self.list_docs(module_docs)
                 return
-            # [delete]: remove module doc by name
-            if(parsed_args.action == "delete"):
+            # [remove]: remove module doc by name
+            if(parsed_args.action == "remove"):
                 self.remove_doc(module_docs, parsed_args.value)
+                print("removed documentation for [%s]" % parsed_args.value)
+                with open(configs.jouled.module_doc, 'w') as data_file:
+                    json.dump(module_docs, data_file, indent=4, sort_keys=True)
                 return
             
             help_output = self.get_help_output(parsed_args.value)
-            raw_doc = self.parsed_help_output(help_output)
+            raw_doc = self.parse_help_output(help_output)
             html_doc = self.markdown_values(raw_doc)
             self.validate_doc(html_doc)
 
             # [add]: insert a new module doc
             if(parsed_args.action == "add"):
                 self.insert_doc(module_docs, html_doc)
+                print("added documentation for [%s]" % html_doc['name'])
+                      
             # [update]: update an existing module doc
             if(parsed_args.action == "update"):
                 self.update_doc(module_docs, html_doc)
-
+                print("updated documentation for [%s]" % html_doc['name'])
+                      
             # save the module doc back out to file
             with open(configs.jouled.module_doc, 'w') as data_file:
-                json.dump(module_docs, data_file)
-                
+                json.dump(module_docs, data_file, indent=4, sort_keys=True)
+
         except (FileNotFoundError, subprocess.CalledProcessError) as e:
             print("Error invoking [%s -h]: %s" %
-                  (parsed_args.exec_cmd, str(e)))
+                  (parsed_args.value, str(e)))
             return 1
         except Exception as e:
             print("Error: %s" % str(e))
@@ -72,6 +78,13 @@ class DocsCmd(Command):
         return p.stdout.decode('utf-8')
 
     def parse_help_output(self, text):
+        return self.text_to_dict(text,
+                                 section_marker="---",
+                                 delimiter=":")
+        
+    def text_to_dict(self, text,
+                          section_marker=None,
+                          delimiter=":"):
         # return json dictionary of help output
         # find :keys: between start and end marks (---)
         # populate dictionary with [values] between :keys:
@@ -83,15 +96,18 @@ class DocsCmd(Command):
         in_help_section = False
         
         for line in text.split('\n'):
-            # check for the section marker
-            if(line.lstrip().rstrip() == SECTION_MARKER):
-                if(not in_help_section):
-                    in_help_section = True
-                    continue
-                else:
-                    if(cur_key != ""):
-                        res[cur_key] = textwrap.dedent(cur_value).rstrip()
-                    break  # all done
+
+            if(section_marker is not None):
+                # check for the section marker
+                if(line.lstrip().rstrip() == SECTION_MARKER):
+                    if(not in_help_section):
+                        in_help_section = True
+                        continue
+                    else:
+                        break  # all done
+            else:
+                # no section marker read whole text
+                in_help_section = True
                 
             if(not in_help_section):
                 continue
@@ -110,20 +126,27 @@ class DocsCmd(Command):
 
             # this is part of a value
             cur_value += line + "\n"
-            
+
+        if(cur_key != ""):
+            res[cur_key] = textwrap.dedent(cur_value).rstrip()
         return res
 
     def markdown_values(self, item):
+        plain_items = ["name", "author", "license","module_config"]
         for key in item:
+            if(key in plain_items):
+                continue
             item[key] = markdown.markdown(item[key],
                                           extensions=
                                           ['markdown.extensions.extra'])
         if("stream_configs" not in item):
             raise Exception(":stream_configs: is required")
-        soup = BeautifulSoup(item["stream_configs"], 'html.parser')
-        stream_configs = {}
-        for d in list(zip(soup.find_all("dt"), soup.find_all("dd"))):
-            stream_configs[d[0].string] = textwrap.dedent(d[1].string)
+        stream_configs = self.text_to_dict(item, delimiter="|")
+#        soup = BeautifulSoup(item["stream_configs"], 'html.parser')
+#        stream_configs = []
+#        for d in list(zip(soup.find_all("dt"), soup.find_all("dd"))):
+#            stream_configs.append({"name": d[0].string,
+#                                 "config": textwrap.dedent(d[1].string)})
         if(len(stream_configs) == 0):
             raise Exception("invalid :stream_configs:")
         item["stream_configs"] = stream_configs
@@ -131,7 +154,6 @@ class DocsCmd(Command):
 
     def validate_doc(self, item):
         req_keys = ["name",
-                    "exec_cmd",
                     "module_config",
                     "stream_configs"]
         for k in req_keys:
@@ -144,8 +166,7 @@ class DocsCmd(Command):
         # raise error if item exists in collection
         for x in collection:
             if(x["name"] == item["name"]):
-                raise Exception("[%s] is already documented" +
-                                " specify -u to update")
+                raise Exception("[%s] is already documented" % item["name"])
         collection.append(item)
 
     def update_doc(self, collection, item):
@@ -156,12 +177,15 @@ class DocsCmd(Command):
                 collection[i] = item
                 return
             
-        raise Exception("[%s] is not documented" +
-                        " specify -a to add")
+        raise Exception("[%s] is not documented")
 
     def list_docs(self, collection):
         # display list of modules by name
-        print("Documented modules")
+        if(len(collection) == 0):
+            print("No documented modules")
+            return
+        
+        print("Documented modules:")
         for item in collection:
             print("\t%s" % item["name"])
 
@@ -170,5 +194,5 @@ class DocsCmd(Command):
             if(collection[i]["name"] == name):
                 del collection[i]
                 return
-        raise Exception("[%s] is not documented")
+        raise Exception("[%s] is not documented" % name)
         

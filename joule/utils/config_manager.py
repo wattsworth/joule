@@ -67,8 +67,14 @@ def parse_jouled_configs(jouled_parser, verify):
             "Jouled:StreamDirectory [%s] does not exist" % stream_directory)
     module_doc = jouled_parser['ModuleDocs']
     if(not os.path.isfile(module_doc) and verify):
-        raise InvalidConfiguration(
-            "Jouled:ModuleDocFile [%s] does not exist" % module_doc)
+        # try to create it
+        try:
+            with open(module_doc,'w') as f:
+                f.write('[]')
+        except:
+            raise InvalidConfiguration(
+                "Jouled:ModuleDocFile [%s] does not exist "+
+                "and could not be created" % module_doc)
     if(not os.access(module_doc, os.W_OK) and verify):
         raise InvalidConfiguration(
             "Jouled:ModuleDocFile [%s] is not writable" % module_doc)
