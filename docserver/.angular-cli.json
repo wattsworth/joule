@@ -22,10 +22,10 @@
         "styles.css",
         "css/bootstrap.min.css",
         "css/fontawesome-all.min.css",
-        "css/prism.css"
+        "css/default.css"
       ],
       "scripts": [
-        "scripts/prism.js"
+        "scripts/highlight.pack.js"
       ],
       "environmentSource": "environments/environment.ts",
       "environments": {

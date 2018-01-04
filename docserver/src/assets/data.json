@@ -1,49 +1,57 @@
 [
-  { 
-    "name": "Module 1",
-    "description": "test module",
-    "inputs": "some inputs",
-    "outputs": "some outputs",
-    "module_config": "[Main]...",
-    "stream_configs": [
-      {"name": "input",
-       "config": "[Main]"
-      },
-      { "name": "output2",
-        "config": "[Main]"
-      }],
-      "usage": "lorem ipsum"
-  },
-  { 
-    "name": "Module 2",
-    "description": "another test module",
-    "inputs": "some other inputs",
-    "outputs": "some other outputs",
-    "module_config": "[Main2]...",
-    "stream_configs": [
-      {"name": "output",
-       "config": "[Main]"
-      },
-      { "name": "output2",
-        "config": "[Main]"
-      }],
-    "usage": "lorem ipsum2"
+  {
+      "author": "John Donnal",
+      "description": "read data from file or named pipe",
+      "inputs": "<p>None</p>",
+      "license": "Open",
+      "module_config": "[Main]\nname = Random Reader\nexec_cmd = joule-file-reader /name/of/file\n\n[Arguments]\ntimestamps = yes # [yes|no]\n\n[Outputs]\noutput = /path/to/output",
+      "name": "File Reader",
+      "outputs": "<dl class=\"row\">\n<dt class=\"col-sm-3 text-truncate\">output</dt>\n<dd class=\"col-sm-9\">float32 with N elements auto detected from input source</dd>\n</dl>",
+      "stream_configs": [
+          {
+              "config": "[Main]\nname = File Data\npath = /path/to/output\ndatatype = float32\nkeep = 1w\n\n# [width] number of elements\n[Element1]\nname = Data Column 1\n\n[Element2]\nname = Data Column 2\n\n#additional elements...",
+              "name": "output"
+          }
+      ],
+      "url": "<p>http://git.wattsworth.net/wattsworth/joule.git</p>",
+      "usage": "<p>Read data in from a file or a named pipe.\nOptionally add timestamps to data (note, this should only be\nused for real time sources. The 8us difference in example below\nis the actual time taken to read the file line)</p>\n<p>Example:</p>\n<pre><code class=\"python\">  $&gt; cat /tmp/file\n  3 4\n  4 6\n  $&gt; joule-file-reader --timestamps=yes /tmp/file\n  1485274825371860 3.0 4.0\n  1485274825371868 5.0 6.0\n</code></pre>"
   },
   {
-    "author": "John Donnal",
-    "description": "generate a random data stream",
-    "inputs": "<p>None</p>",
-    "license": "Open",
-    "module_config": "[Main]\nname = Random Reader\nexec_cmd = joule modules random-reader\n\n[Arguments]\nwidth = 4\nrate = 10 #Hz\n\n[Outputs]\noutput = /path/to/output",
-    "name": "Random Reader",
-    "outputs": "<dl class=\"row\">\n<dt class=\"col-sm-3 text-truncate\">output</dt>\n<dd class=\"col-sm-9\">float32 with N elements specified by [width] argument</dd>\n</dl>",
-    "stream_configs": [
-        {
-            "config": "[Main]\nname = Random Data\npath = /path/to/output \ndatatype = float32\nkeep = 1w              \n\n# [width] number of elements\n[Element1]\nname = Random Set 1\n\n[Element2]\nname = Random Set 2\n\n#additional elements...",
-            "name": "output"
-        }
-    ],
-    "url": "<p>http://git.wattsworth.net/wattsworth/joule.git</p>",
-    "usage": "<p>This is a module that generates random numbers.\nSpecify width (number of elements) and the rate in Hz.</p>\n<table class=\"table table-sm table-bordered\">\n<thead>\n<tr>\n<th>Arguments</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td><code>width</code></td>\n<td>number of elements</td>\n</tr>\n<tr>\n<td><code>rate</code></td>\n<td>data rate in Hz</td>\n</tr>\n</tbody>\n</table>"
-}
+      "author": "John Donnal",
+      "description": "generate a random data stream",
+      "inputs": "<p>None</p>",
+      "license": "Open",
+      "module_config": "[Main]\nname = Random Reader\nexec_cmd = joule modules random-reader\n\n[Arguments]\nwidth = 4\nrate = 10 #Hz\n\n[Outputs]\noutput = /path/to/output",
+      "name": "Random Reader",
+      "outputs": "<dl class=\"row\">\n<dt class=\"col-sm-3 text-truncate\">output</dt>\n<dd class=\"col-sm-9\">float32 with N elements specified by [width] argument</dd>\n</dl>",
+      "stream_configs": [
+          {
+              "config": "[Main]\nname = Random Data\npath = /path/to/output\ndatatype = float32\nkeep = 1w\n\n# [width] number of elements\n[Element1]\nname = Random Set 1\n\n[Element2]\nname = Random Set 2\n\n#additional elements...",
+              "name": "output"
+          }
+      ],
+      "url": "<p>http://git.wattsworth.net/wattsworth/joule.git</p>",
+      "usage": "<p>This is a module that generates random numbers.\nSpecify width (number of elements) and the rate in Hz.</p>\n<table class=\"table table-sm table-bordered\">\n<thead>\n<tr>\n<th>Arguments</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td><code>width</code></td>\n<td>number of elements</td>\n</tr>\n<tr>\n<td><code>rate</code></td>\n<td>data rate in Hz</td>\n</tr>\n</tbody>\n</table>"
+  },
+  {
+      "author": "John Donnal",
+      "description": "adjustable moving average",
+      "inputs": "<dl class=\"row\">\n<dt class=\"col-sm-3 text-truncate\">input</dt>\n<dd class=\"col-sm-9\"><strong><any type=\"\"></any></strong> with N elements</dd>\n</dl>",
+      "license": "Open",
+      "module_config": "[Main]\nname = Mean Filter\nexec_cmd = joule-mean-filter\n\n[Arguments]\nwindow = 11 # must be odd\n\n[Inputs]\ninput = /path/to/input \n\n[Outputs]\noutput = /path/to/output",
+      "name": "Mean Filter",
+      "outputs": "<dl class=\"row\">\n<dt class=\"col-sm-3 text-truncate\">output</dt>\n<dd class=\"col-sm-9\"><strong>float32</strong> with N elements</dd>\n</dl>",
+      "stream_configs": [
+          {
+              "config": "[Main]\nname = Raw Data\npath = /path/to/input\ndatatype = int32\nkeep = 1w\n\n[Element1]\nname = Element 1\n\n[Element2]\nname = Element 2\n\n#additional elements...",
+              "name": "input"
+          },
+          {
+              "config": "[Main]\nname = Filtered Data\npath = /path/to/output\ndatatype = float32\nkeep = 1w\n\n#same number of elements as input\n[Element1]\nname = Element 1\n\n[Element2]\nname = Element 2\n\n#additional elements...",
+              "name": "output"
+          }
+      ],
+      "url": "<p>http://git.wattsworth.net/wattsworth/joule.git</p>",
+      "usage": "<p>Apply a moving average to the input stream with an\nadjustable window size</p>\n<table class=\"table table-sm table-bordered\">\n<thead>\n<tr>\n<th>Arguments</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td><code>window</code></td>\n<td>samples to average, must be odd</td>\n</tr>\n</tbody>\n</table>"
+  }
 ]
