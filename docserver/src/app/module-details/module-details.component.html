@@ -1,8 +1,32 @@
-<a routerLink="/modules" class="btn btn-outline-primary">
-  <i class="fas fa-chevron-left"></i> Module List
-</a>
-<div *ngFor="let m of [module|async]">
-  <dl *ngIf="m != null">
-    <dt>Name: </dt><dd>{{m.name}}</dd>
-  </dl>
-</div>    
+<div class="detail-pane" *ngFor="let m of [module|async]">
+  <h3>
+  {{m.name}}
+        <small class="text-muted">{{m.description}}</small>
+  </h3>
+  <div class="group">
+    <h4>Usage:</h4>
+    <p [innerHTML]= "m.usage | safe: 'html'"></p>
+  </div>
+  <div class="group">
+      <h4>Inputs:</h4>
+      <p [innerHTML]= "m.inputs | safe: 'html'"></p>
+    </div>
+  <div class="group">
+    <h4>Outputs:</h4>
+    <p [innerHTML]= "m.outputs | safe: 'html'"></p>
+  </div>
+
+  <div class="group">
+    <h4>Module Configuration:</h4>
+    <pre><code class="language-ini">{{m.module_config}}</code></pre>
+  </div>
+    
+  <div class="group">
+    <h4>Stream Configurations:</h4>
+    <mat-tab-group (selectedTabChange)="highlightCode()">
+      <mat-tab *ngFor="let config of m.stream_configs" label="{{config.name}}">
+        <pre><code class="language-ini">{{config.config}}</code></pre>
+      </mat-tab>
+    </mat-tab-group>   
+  </div>
+</div>

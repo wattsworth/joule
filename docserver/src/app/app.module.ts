@@ -2,11 +2,16 @@ import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import {HttpClientModule } from '@angular/common/http';
+import {NoopAnimationsModule } from '@angular/platform-browser/animations';
+
+import {MatTabsModule} from '@angular/material/tabs';
+import { MatSidenavModule } from '@angular/material/sidenav';
 
 import { AppComponent } from './app.component';
 import { AppService } from './app.service';
 import { ModuleListComponent } from './module-list/module-list.component';
 import { ModuleDetailsComponent } from './module-details/module-details.component';
+import { SafePipe } from './safe-pipe.pipe';
 
 
 const appRoutes: Routes = [
@@ -25,11 +30,15 @@ const appRoutes: Routes = [
   declarations: [
     AppComponent,
     ModuleListComponent,
-    ModuleDetailsComponent
+    ModuleDetailsComponent,
+    SafePipe
   ],
   imports: [
     BrowserModule,
     HttpClientModule,
+    MatTabsModule,
+    MatSidenavModule,
+    NoopAnimationsModule,
     RouterModule.forRoot(
       appRoutes
     )

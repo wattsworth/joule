@@ -21,9 +21,12 @@
       "styles": [
         "styles.css",
         "css/bootstrap.min.css",
-        "css/fontawesome-all.min.css"
+        "css/fontawesome-all.min.css",
+        "css/prism.css"
       ],
-      "scripts": [],
+      "scripts": [
+        "scripts/prism.js"
+      ],
       "environmentSource": "environments/environment.ts",
       "environments": {
         "dev": "environments/environment.ts",

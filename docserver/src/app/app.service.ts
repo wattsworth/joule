@@ -17,16 +17,13 @@ export class AppService {
     this.dataLoaded = false;
   }
 
-  public loadData(): void {
-   
-  }
   public getModules(): Observable<ModuleInfo[]>{
     if(this.dataLoaded){
       return Observable.of(this.data);
     }
     return this.http.get<ModuleInfo[]>('/assets/data.json')
       .do(data => {
-        this.data = data;
+        this.data = this.generateIDs(data);
         this.dataLoaded = true;
       });
   }
@@ -36,21 +33,37 @@ export class AppService {
     }
     return this.http.get<ModuleInfo[]>('/assets/data.json')
       .do(data => {
-        this.data = data;
+        this.data = this.generateIDs(data);
         this.dataLoaded = true;
       })
       .map(data => _.find(this.data, {id: id}));
   }
 
+  private generateIDs(data: ModuleInfo[]): ModuleInfo[]{
+    let id = 0;
+    return data.reduce( (r,m) => {
+      m.id = id;
+      id += 1;
+      r.push(m);
+      return r;
+    },[])
+  }
 }
 
 export interface ModuleInfo {
   id: number;
   name: string;
+  author: string;
+  license: string;
+  url: string;
   description: string;
   inputs: string;
   outputs: string;
-  stream_configs: string[];
+  usage: string;
+  stream_configs: StreamConfig[];
   module_config: string;
-
+}
+export interface StreamConfig {
+  name: string;
+  config: string;
 }

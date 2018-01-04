@@ -1,10 +1,16 @@
-
 <div class="container">
   <div class="row">
-    <div class="col-12 border border-light">
-        <h1 class="display-4">Joule Module Documentation</h1>
+    <div class="col-12 title-bar">
+        <h1 class="display-12">Joule Module Documentation</h1>        
     </div>
   </div>
-  <router-outlet></router-outlet> 
+  <div class="row">
+    <div class="col-3">
+        <app-module-list></app-module-list>        
+    </div>
+    <div class="col-9">
+        <router-outlet></router-outlet>                 
+    </div>
+  </div>
 </div>
    

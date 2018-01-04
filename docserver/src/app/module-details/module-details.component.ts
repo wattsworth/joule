@@ -3,7 +3,9 @@ import {ActivatedRoute} from '@angular/router';
 import {Location} from '@angular/common';
 import {AppService, ModuleInfo} from '../app.service';
 import {Observable} from 'rxjs';
-import 'rxjs/add/operator/do';
+import 'rxjs/add/operator/mergeMap';
+
+declare var Prism: any;
 
 @Component({
   selector: 'app-module-details',
@@ -23,8 +25,19 @@ export class ModuleDetailsComponent implements OnInit {
    }
 
   ngOnInit() {
-    const id = +this.route.snapshot.paramMap.get('id');
-    this.module = this.appService.getModule(id);
+    this.module = this.route.params.flatMap(params => {
+      setTimeout( () => this.highlightCode(),25);
+      return this.appService.getModule(+params["id"]);
+    })
+
+  
+  }
+  ngAfterViewInit(){
+    this.highlightCode();
+  }
+
+  highlightCode(){
+    Prism.highlightAll();
   }
 
 }
