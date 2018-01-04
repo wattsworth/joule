@@ -1,9 +1,5 @@
-<div class="row">
-  <div class="col-12">
-      <ul>
-          <li *ngFor="let module of modules | async ">
-            <a routerLink="/modules/{{module.id}}">"{{module.name}}: {{module.description}}</a>
-          </li>
-        </ul>
-  </div>
-</div>
+<ul class="nav nav-pills flex-column">
+  <li *ngFor="let module of modules | async "  class="nav-item">
+    <a routerLink="/modules/{{module.id}}" [routerLinkActive]="['active']" class="nav-link">{{module.name}}</a>
+  </li>
+</ul>

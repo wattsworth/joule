@@ -1,0 +1,30 @@
+div.detail-pane {
+  height: 90vh;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  border-style: solid;
+  border-width: 1px;
+  padding: 5px;
+  padding-left: 10px;
+}
+
+div.group {
+  border-top-width: 2px;
+  border-color: #d4d1d1;
+  border-top-style: solid;
+}
+div.group > h4 {
+  font-size: 1.2em;
+  font-weight: 100;
+  background: #f5f3f3;
+  padding-left: 10px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+::ng-deep th {
+  background: #f6f9fb 
+}
+pre[class*="language-"]:before,
+pre[class*="language-"]:after {
+    display: none;
+}
