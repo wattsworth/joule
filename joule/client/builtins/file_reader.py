@@ -4,17 +4,68 @@ import numpy as np
 import asyncio
 
 ARGS_DESC = """
-This is a module that reads data from a file
-Specify -t to add timestamps to data (note, this should only be
-used for real time FIFO's. The 8us difference in example below
-is the actual time taken to read the file line)
+---
+:name:
+  File Reader
+:author:
+  John Donnal
+:license:
+  Open
+:url:
+  http://git.wattsworth.net/wattsworth/joule.git
+:description: 
+  read data from file or named pipe
+:usage:
+  Read data in from a file or a named pipe.
+  Optionally add timestamps to data (note, this should only be
+  used for real time sources. The 8us difference in example below
+  is the actual time taken to read the file line)
 
-Example:
-    $> echo -e "3,4\n5,6" > /tmp/file
-    $> joule reader file -t /tmp/file
+  Example:
+
+  ```
+    $> cat /tmp/file
+    3 4
+    4 6
+    $> joule-file-reader --timestamps=yes /tmp/file
     1485274825371860 3.0 4.0
     1485274825371868 5.0 6.0
+  ```
+:inputs:
+  None
 
+:outputs:
+  output
+  :  float32 with N elements auto detected from input source
+
+:stream_configs:
+  #output#
+     [Main]
+     name = File Data
+     path = /path/to/output
+     datatype = float32
+     keep = 1w
+
+     # [width] number of elements
+     [Element1]
+     name = Data Column 1
+
+     [Element2]
+     name = Data Column 2
+
+     #additional elements...
+
+:module_config:
+    [Main]
+    name = Random Reader
+    exec_cmd = joule-file-reader /name/of/file
+
+    [Arguments]
+    timestamps = yes # [yes|no]
+
+    [Outputs]
+    output = /path/to/output
+---
 """
 
 
@@ -42,6 +93,10 @@ class FileReader(ReaderModule):
                     break
 
                 
-if __name__ == "__main__":
+def main():
     r = FileReader()
     r.start()
+
+    
+if __name__ == "__main__":
+    main()

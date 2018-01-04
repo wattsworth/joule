@@ -19,7 +19,8 @@ class DocsCmd(Command):
 
     def get_parser(self, prog_name):
         parser = super(DocsCmd, self).get_parser(prog_name)
-        parser.add_argument('--config-file', dest="config_file")
+        parser.add_argument('--config-file', dest="config_file",
+                            default="/etc/joule/main.conf")
         actions = ["add", "update", "list", "remove"]
         parser.add_argument('action', choices=actions)
         parser.add_argument('value', nargs='?', default="")
@@ -132,14 +133,19 @@ class DocsCmd(Command):
         return res
 
     def markdown_values(self, item):
-        plain_items = ["name", "author", "license",
+        plain_items = ["name", "author", "license", "description",
                        "module_config", "stream_configs"]
         for key in item:
             if(key in plain_items):
                 continue
-            item[key] = markdown.markdown(item[key],
-                                          extensions=
-                                          ['markdown.extensions.extra'])
+            ext = ['markdown.extensions.extra',
+                   'markdown.extensions.fenced_code']
+            print(textwrap.dedent(item[key]))
+            html = markdown.markdown(textwrap.dedent(item[key]),
+                                     extensions=ext)
+            print(html)
+            item[key] = self.apply_classes(html)
+            
         if("stream_configs" not in item):
             raise Exception(":stream_configs: is required")
         dict_configs = self.text_to_dict(item["stream_configs"],
@@ -152,6 +158,20 @@ class DocsCmd(Command):
         item["stream_configs"] = stream_configs
         return item
 
+    def apply_classes(self, html):
+        # add the following classes to the html
+        classes = {
+            "table": "table table-sm table-bordered",
+            "dl": "row",
+            "dt": "col-sm-3 text-truncate",
+            "dd": "col-sm-9"
+        }
+        soup = BeautifulSoup(html, "html.parser")
+        for tag in classes:
+            for item in soup.find_all(tag):
+                item['class'] = classes[tag]
+        return str(soup)
+        
     def validate_doc(self, item):
         req_keys = ["name",
                     "module_config",

@@ -18,11 +18,16 @@ ARGS_DESC = """
   Open
 :url:
   http://git.wattsworth.net/wattsworth/joule.git
-:description: 
-  Generates a random data stream
+:description:
+  generate a random data stream
 :usage:
     This is a module that generates random numbers.
     Specify width (number of elements) and the rate in Hz.
+    
+    | Arguments | Description        |
+    |-----------|--------------------|
+    |``width``      | number of elements |
+    |``rate``       | data rate in Hz    |
 
 :inputs:
   None
@@ -32,12 +37,12 @@ ARGS_DESC = """
   :  float32 with N elements specified by [width] argument
 
 :stream_configs:
-  |output|
+  #output#
      [Main]
      name = Random Data
-     path = /path/to/output 
+     path = /path/to/output
      datatype = float32
-     keep = 1w              
+     keep = 1w
 
      # [width] number of elements
      [Element1]
@@ -72,7 +77,6 @@ class RandomReader(ReaderModule):
         parser.add_argument("rate", type=float,
                             help="rate in Hz")
         parser.description = textwrap.dedent(ARGS_DESC)
-        parser.formatter_class = argparse.RawDescriptionHelpFormatter
 
     async def run(self, parsed_args, output):
         # produce output four times per second

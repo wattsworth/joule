@@ -44,6 +44,7 @@ class BaseModule:
                          default="unset",
                          help="specify directory of stream configs" +
                          "for standalone operation")
+        parser.formatter_class = argparse.RawDescriptionHelpFormatter
         self.custom_args(parser)
         
     def start(self, parsed_args=None):

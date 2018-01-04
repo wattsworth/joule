@@ -86,6 +86,23 @@ class TestDocs(unittest.TestCase):
 </tr>
 </tbody>
 </table>"""))
+
+    def test_adds_classes_to_html(self):
+        html = """
+        <table>
+          <thead>
+            <tr><td>A</td><td>B</td>
+          </thead>
+          <tbody>
+            <tr><td>C</td><td>D</td>
+          </tbody>
+        </table>
+        <dl>
+          <dt>Key</dt><dd>Value</dd>
+        </dl>
+        """
+        res = self.my_docs.apply_classes(html)
+        self.assertTrue("class" in res)
         
     def test_inserts_new_modules(self):
         docs = [{"name": "m1",

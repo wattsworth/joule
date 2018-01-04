@@ -54,6 +54,10 @@ class MedianFilter(joule.FilterModule):
             stream_in.consume(len(sarray_out))
 
 
-if __name__ == "__main__":
+def main():
     r = MedianFilter()
     r.start()
+
+    
+if __name__ == "__main__":
+    main()
