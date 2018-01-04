@@ -3,7 +3,7 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import {HttpClientModule } from '@angular/common/http';
 import {NoopAnimationsModule } from '@angular/platform-browser/animations';
-
+import {HighlightJsModule } from 'angular2-highlight-js';
 import {MatTabsModule} from '@angular/material/tabs';
 import { MatSidenavModule } from '@angular/material/sidenav';
 
@@ -39,6 +39,7 @@ const appRoutes: Routes = [
     MatTabsModule,
     MatSidenavModule,
     NoopAnimationsModule,
+    HighlightJsModule,
     RouterModule.forRoot(
       appRoutes
     )

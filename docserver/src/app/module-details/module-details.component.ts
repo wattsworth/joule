@@ -5,8 +5,6 @@ import {AppService, ModuleInfo} from '../app.service';
 import {Observable} from 'rxjs';
 import 'rxjs/add/operator/mergeMap';
 
-declare var Prism: any;
-
 @Component({
   selector: 'app-module-details',
   templateUrl: './module-details.component.html',
@@ -26,18 +24,9 @@ export class ModuleDetailsComponent implements OnInit {
 
   ngOnInit() {
     this.module = this.route.params.flatMap(params => {
-      setTimeout( () => this.highlightCode(),25);
       return this.appService.getModule(+params["id"]);
     })
-
-  
   }
-  ngAfterViewInit(){
-    this.highlightCode();
-  }
-
-  highlightCode(){
-    Prism.highlightAll();
-  }
-
+ 
+ 
 }
