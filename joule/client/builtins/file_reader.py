@@ -13,7 +13,7 @@ ARGS_DESC = """
   Open
 :url:
   http://git.wattsworth.net/wattsworth/joule.git
-:description: 
+:description:
   read data from file or named pipe
 :usage:
   Read data in from a file or a named pipe.

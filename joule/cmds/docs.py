@@ -140,10 +140,8 @@ class DocsCmd(Command):
                 continue
             ext = ['markdown.extensions.extra',
                    'markdown.extensions.fenced_code']
-            print(textwrap.dedent(item[key]))
             html = markdown.markdown(textwrap.dedent(item[key]),
                                      extensions=ext)
-            print(html)
             item[key] = self.apply_classes(html)
             
         if("stream_configs" not in item):
@@ -197,7 +195,7 @@ class DocsCmd(Command):
                 collection[i] = item
                 return
             
-        raise Exception("[%s] is not documented")
+        raise Exception("[%s] is not documented" % item["name"])
 
     def list_docs(self, collection):
         # display list of modules by name

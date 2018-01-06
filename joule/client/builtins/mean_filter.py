@@ -72,7 +72,7 @@ ARGS_DESC = """
     window = 11 # must be odd
 
     [Inputs]
-    input = /path/to/input 
+    input = /path/to/input
 
     [Outputs]
     output = /path/to/output

@@ -7,14 +7,77 @@ import joule
 
 
 ARGS_DESC = """
-Computes the median of the input stream
-Specify the window length (must be odd)
+---
+:name:
+  Median Filter
+:author:
+  John Donnal
+:license:
+  Open
+:url:
+  http://git.wattsworth.net/wattsworth/joule.git
+:usage:
+    Apply a windowed median filter to the input stream.
+    
+    | Arguments | Description                     |
+    |-----------|---------------------------------|
+    |``window`` | samples to average, must be odd |
 
-Inputs:
-input: N elements
 
-Outputs:
-output: N elements
+:inputs:
+  input
+  :  **<any type>** with N elements
+
+:outputs:
+  output
+  :  **float32** with N elements
+
+:stream_configs:
+  #input#
+     [Main]
+     name = Raw Data
+     path = /path/to/input
+     datatype = int32
+     keep = 1w
+
+     [Element1]
+     name = Element 1
+
+     [Element2]
+     name = Element 2
+
+     #additional elements...
+
+  #output#
+     [Main]
+     name = Filtered Data
+     path = /path/to/output
+     datatype = float32
+     keep = 1w
+
+     #same number of elements as input
+     [Element1]
+     name = Element 1
+
+     [Element2]
+     name = Element 2
+
+     #additional elements...
+
+:module_config:
+    [Main]
+    name = Mean Filter
+    exec_cmd = joule-median-filter
+
+    [Arguments]
+    window = 11 # must be odd
+
+    [Inputs]
+    input = /path/to/input
+
+    [Outputs]
+    output = /path/to/output
+---
 """
 
 
