@@ -23,4 +23,4 @@ livehtml:
 	sphinx-autobuild $(SOURCEDIR) $(BUILDDIR)/html
 
 deploy:
-	rsync -r -v -e 'ssh' $(BUILDDIR)/html/* portal.wattsworth.net:/var/www/docs/joule 
+	rsync -r -v $(BUILDDIR)/html/* portal.wattsworth.net:/var/www/docs/joule 

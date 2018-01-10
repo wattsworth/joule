@@ -1,5 +1,8 @@
+<div class="text-center logo">
+    <img src="assets/doc_logo.png">
+  </div>
 <ul class="nav nav-pills flex-column">
   <li *ngFor="let module of modules | async "  class="nav-item">
-    <a routerLink="/modules/{{module.id}}" [routerLinkActive]="['active']" class="nav-link">{{module.name}}</a>
+    <a routerLink="/{{module.id}}" [routerLinkActive]="['active']" class="nav-link">{{module.name}}</a>
   </li>
 </ul>

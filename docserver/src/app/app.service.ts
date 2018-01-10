@@ -2,6 +2,8 @@
 import {HttpClient} from '@angular/common/http';
 import {Injectable} from '@angular/core';
 import {Observable } from 'rxjs';
+import { environment } from '../environments/environment';
+
 import 'rxjs/add/operator/do';
 import 'rxjs/add/operator/map';
 
@@ -21,7 +23,7 @@ export class AppService {
     if(this.dataLoaded){
       return Observable.of(this.data);
     }
-    return this.http.get<ModuleInfo[]>('/assets/data.json')
+    return this.http.get<ModuleInfo[]>(environment.dataURL)
       .do(data => {
         this.data = this.generateIDs(data);
         this.dataLoaded = true;
@@ -31,7 +33,7 @@ export class AppService {
     if(this.dataLoaded){
       return Observable.of(_.find(this.data, {id: id}))
     }
-    return this.http.get<ModuleInfo[]>('/assets/data.json')
+    return this.http.get<ModuleInfo[]>(environment.dataURL)
       .do(data => {
         this.data = this.generateIDs(data);
         this.dataLoaded = true;

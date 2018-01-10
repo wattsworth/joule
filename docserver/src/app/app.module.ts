@@ -15,16 +15,17 @@ import { SafePipe } from './safe-pipe.pipe';
 
 
 const appRoutes: Routes = [
-  { path: 'modules',
-    component: ModuleListComponent,
-  },
-  { path: 'modules/:id',
+  { path: ':id',
     component: ModuleDetailsComponent
   },
   { path: '',
-    redirectTo: '/modules',
+    redirectTo: '0',
     pathMatch: 'full'
-  }
+  },
+  { path: '**',
+  redirectTo: '0',
+  pathMatch: 'full'
+}
 ]
 @NgModule({
   declarations: [
