@@ -2,7 +2,7 @@
 import unittest
 from joule.utils import config_manager
 import tempfile
-from test import helpers
+from tests import helpers
 
 
 class TestConfigManager(unittest.TestCase):

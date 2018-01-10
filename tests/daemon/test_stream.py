@@ -1,5 +1,5 @@
 from joule.daemon import stream, element
-from test import helpers
+from tests import helpers
 import unittest
 
 

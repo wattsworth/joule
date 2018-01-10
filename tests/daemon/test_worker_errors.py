@@ -4,10 +4,11 @@ Worker should pass fd to child process and close them
 cleanly on exit
 """
 import asynctest
+import unittest
 import asyncio
 from unittest import mock
 import joule.daemon.worker as worker
-from test import helpers
+from tests import helpers
 from joule.procdb.client import SQLClient
 import os
 import psutil
@@ -18,9 +19,11 @@ MODULE_FAILS_ON_ERROR = os.path.join(os.path.dirname(
     __file__), 'worker_scripts', 'fails_on_error.py')
 
 
-class TestWorker(asynctest.TestCase):
+class TestWorker(unittest.TestCase):
 
     def setUp(self):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         self.my_module = helpers.build_module(name="my_module",
                                               exec_cmd="<<TODO>>",
                                               source_paths={

@@ -1,5 +1,5 @@
 from joule.daemon import module
-from test import helpers
+from tests import helpers
 import unittest
 
 

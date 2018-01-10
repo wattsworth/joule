@@ -1,5 +1,7 @@
 from joule import FilterModule
+import asyncio
 import asynctest
+import unittest
 import tempfile
 import os
 import shutil
@@ -55,7 +57,7 @@ pipes from the local jouled instance
 """
 
 
-class TestFilterDebugMode(asynctest.TestCase):
+class TestFilterDebugMode(unittest.TestCase):
 
     def setUp(self):
 
@@ -81,6 +83,8 @@ class TestFilterDebugMode(asynctest.TestCase):
     @asynctest.patch("joule.client.base_module.request_reader")
     @asynctest.patch("joule.client.base_module.request_writer")
     def test_builds_networked_streams(self, mock_writer, mock_reader):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         myfilter = FilterModule()
         args = argparse.Namespace(
             pipes="unset",

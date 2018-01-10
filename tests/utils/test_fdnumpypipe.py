@@ -7,7 +7,7 @@ from joule.utils.numpypipe import (StreamNumpyPipeReader,
 import os
 import numpy as np
 import asyncio
-from test import helpers
+from tests import helpers
 
 """
 Tests NumpyPipes with subprocess pipes 

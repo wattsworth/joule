@@ -1,5 +1,4 @@
 
-import traceback
 import asyncio
 import logging
 from joule.utils.numpypipe import (

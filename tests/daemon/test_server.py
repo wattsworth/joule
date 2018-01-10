@@ -1,10 +1,10 @@
 
 import asyncio
-import asynctest
+import unittest
 import numpy as np
 import logging
 from unittest import mock
-from test import helpers 
+from tests import helpers 
 from joule.daemon import server
 from joule.utils import network
 from joule.utils.numpypipe import (request_reader,
@@ -16,7 +16,7 @@ ADDR = '127.0.0.1'
 PORT = '1234'
 
 
-class TestSever(asynctest.TestCase):
+class TestSever(unittest.TestCase):
 
     def setUp(self):
         logging.disable(logging.CRITICAL)
@@ -31,7 +31,8 @@ class TestSever(asynctest.TestCase):
     def test_clients_can_connect_to_server(self):
         NUM_CLIENTS = 10
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         client_connections = 0
 
         async def client():
@@ -61,7 +62,9 @@ class TestSever(asynctest.TestCase):
         LAYOUT = '%s_%d' % (DTYPE, NELEM)
         LENGTH = 1000
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
         
         async def run():
             mock_inserter = MockInserter()
@@ -91,7 +94,9 @@ class TestSever(asynctest.TestCase):
         LAYOUT = '%s_%d' % (DTYPE, NELEM)
         LENGTH = 1000
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
         
         async def run():
             npipe = LocalNumpyPipe(name='test', layout=LAYOUT)

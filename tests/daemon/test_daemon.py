@@ -6,10 +6,8 @@ import os
 from unittest import mock
 import asyncio
 import asynctest
-import time
-import threading
 import configparser
-from test import helpers
+from tests import helpers
 from joule.utils import config_manager
 
 
@@ -176,10 +174,10 @@ class TestDaemonModuleMethods(unittest.TestCase):
         self.assertTrue(mock_loop.close.called)
 
 
-class TestDaemonRun(asynctest.TestCase):
+class TestDaemonRun(unittest.TestCase):
 
     @mock.patch("joule.daemon.daemon.procdb_client", autospec=True)
-    @mock.patch("joule.daemon.daemon.server.build_server")
+    @asynctest.patch("joule.daemon.daemon.server.build_server", autospec=True)
     @mock.patch("joule.daemon.daemon.nilmdb.AsyncClient", autospec=True)
     @asynctest.patch("joule.daemon.daemon.Worker", autospec=True)
     @asynctest.patch("joule.daemon.daemon.inserter.NilmDbInserter",
@@ -192,8 +190,10 @@ class TestDaemonRun(asynctest.TestCase):
         my_daemon.procdb = mock.Mock()
         
         async def buildit():
-            return asynctest.mock.CoroutineMock()
-        
+            server = asynctest.CoroutineMock()
+            server.wait_closed = asynctest.CoroutineMock()
+            return server
+
         mock_builder.return_value = buildit()
         my_daemon.SERVER_IP_ADDRESS = '127.0.0.1'
         my_daemon.SERVER_PORT = 1234
@@ -213,7 +213,7 @@ class TestDaemonRun(asynctest.TestCase):
             
         # mock AioNilmdb client
         mock_client = mock.Mock(autospec=daemon.nilmdb.Client)
-        mock_client.stream_info = mock_info 
+        mock_client.stream_info = mock_info
         
         my_daemon.nilmdb_client = mock_client
 
@@ -226,13 +226,9 @@ class TestDaemonRun(asynctest.TestCase):
 
         my_daemon.procdb_commit_interval = 0.1  # so we can stop quickly
 
-        loop = asyncio.get_event_loop()
-
-        def stop_daemon():
-            time.sleep(0.2)
-            my_daemon.stop()
-        t = threading.Thread(target=stop_daemon)
-        t.start()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.call_later(0.2, my_daemon.stop)
         my_daemon.run(loop)
 
         # check the reader and inserter factories
@@ -242,7 +238,7 @@ class TestDaemonRun(asynctest.TestCase):
         # should return a reader for available paths
         self.assertIsNotNone(reader_factory("/worked/path", None))
         # should return None for paths that are not worked by another module
-        with self.assertRaises(Exception):        
+        with self.assertRaises(Exception):
             self.assertIsNone(reader_factory("/unworked/path", None))
 
         # should return an inserter for unworked paths
@@ -310,12 +306,7 @@ class TestDaemonRun(asynctest.TestCase):
         my_daemon.procdb_commit_interval = 0.1  # so we can stop quickly
 
         loop = asyncio.get_event_loop()
-
-        def stop_daemon():
-            time.sleep(0.2)
-            my_daemon.stop()
-        t = threading.Thread(target=stop_daemon)
-        t.start()
+        loop.call_later(0.2,my_daemon.stop)
         my_daemon.run(loop)
         # make sure workers were all started and stopped
         self.assertEqual(my_worker.run.call_count, 1)

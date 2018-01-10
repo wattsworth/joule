@@ -68,7 +68,7 @@ class TestDocs(unittest.TestCase):
         result = self.my_docs.markdown_values(input)
         self.assertEqual(len(result["stream_configs"]), 2)
         self.assertEqual(result["usage"], textwrap.dedent(
-            """<table>
+            """<table class="table table-sm table-bordered">
 <thead>
 <tr>
 <th>1</th>

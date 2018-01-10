@@ -1,6 +1,6 @@
 import joule.daemon.element as stream
 
-from test import helpers
+from tests import helpers
 import unittest
 
 

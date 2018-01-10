@@ -2,7 +2,7 @@ from joule.daemon import daemon
 import asyncio
 import asynctest
 from joule.utils import config_manager
-from test import helpers
+from tests import helpers
 import unittest
 from unittest import mock
 
@@ -136,7 +136,7 @@ class TestDaemonModuleMethodErrors(unittest.TestCase):
         self.assertNotEqual(cm.exception.code, 0)
 
 
-class TestDaemonRunErrors(asynctest.TestCase):
+class TestDaemonRunErrors(unittest.TestCase):
 
     def test_does_not_start_modules_with_missing_input_source(self):
         my_daemon = daemon.Daemon()
@@ -162,7 +162,8 @@ class TestDaemonRunErrors(asynctest.TestCase):
         my_daemon.procdb = mock.Mock()
         my_daemon._start_worker = asynctest.mock.CoroutineMock()
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         my_daemon.stop_requested = True
         with self.assertLogs(level="WARNING") as logs:
             my_daemon.run(loop)

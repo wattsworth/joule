@@ -7,10 +7,10 @@ from unittest import mock
 import numpy as np
 import asyncio
 import asynctest
-from test import helpers
-import pdb
+from tests import helpers
 
-class TestNilmDbInserter(asynctest.TestCase):
+
+class TestNilmDbInserter(unittest.TestCase):
 
     def setUp(self):
         self.test_path = "/test/path"
@@ -25,6 +25,9 @@ class TestNilmDbInserter(asynctest.TestCase):
     @mock.patch("joule.daemon.daemon.nilmdb.AsyncClient", autospec=True)
     @mock.patch("joule.daemon.inserter.NilmDbDecimator", autospec=True)
     def test_processes_data_from_queue(self, mock_decimator, mock_client):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
         mock_client.stream_insert = asynctest.mock.CoroutineMock()
 
         my_inserter = inserter.NilmDbInserter(
@@ -43,7 +46,7 @@ class TestNilmDbInserter(asynctest.TestCase):
 
         # insert it by block
         blk_size = 10
-        queue = asyncio.Queue(loop=self.loop)
+        queue = asyncio.Queue(loop=loop)
         for i in range(int(length / blk_size)):
             queue.put_nowait(data[i * blk_size:i * blk_size + blk_size])
 
@@ -51,11 +54,11 @@ class TestNilmDbInserter(asynctest.TestCase):
         async def stop_inserter():
             await asyncio.sleep(0.01)
             my_inserter.stop()
-        loop = asyncio.get_event_loop()
         tasks = [asyncio.ensure_future(stop_inserter()),
                  asyncio.ensure_future(my_inserter.process(queue, loop=loop))]
         loop.run_until_complete(asyncio.gather(*tasks))
-
+        loop.close()
+        
         # check what got inserted
         call = mock_client.stream_insert.call_args
         _, inserted_data = call[0]
@@ -69,6 +72,9 @@ class TestNilmDbInserter(asynctest.TestCase):
 
     @mock.patch("joule.daemon.daemon.nilmdb.AsyncClient", autospec=True)
     def test_detects_interval_breaks(self, mock_client):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
         my_inserter = inserter.NilmDbInserter(
             mock_client, "/test/path", 100, decimate=False)
         mock_client.stream_insert = asynctest.mock.CoroutineMock()
@@ -76,7 +82,7 @@ class TestNilmDbInserter(asynctest.TestCase):
         # missing data between two inserts
         interval1_start = 500
         interval2_start = 1000
-        queue = asyncio.Queue(loop=self.loop)
+        queue = asyncio.Queue(loop=loop)
         queue.put_nowait(helpers.create_data(
             self.my_stream.layout, start=interval1_start, step=1))
         queue.put_nowait(None)  # break in the data
@@ -88,12 +94,11 @@ class TestNilmDbInserter(asynctest.TestCase):
             await asyncio.sleep(0.01)
             my_inserter.stop()
 
-        loop = asyncio.get_event_loop()
         tasks = [asyncio.ensure_future(stop_inserter()),
                  asyncio.ensure_future(my_inserter.process(queue, loop=loop))]
 
         loop.run_until_complete(asyncio.gather(*tasks))
-
+        loop.close()
         # make sure two seperate intervals made it to the database
         interval1 = mock_client.stream_insert.call_args_list[0]
         start = interval1[1]['start']
@@ -105,6 +110,8 @@ class TestNilmDbInserter(asynctest.TestCase):
     @mock.patch("joule.utils.time", autospec=True)
     def test_cleans_up_streams_with_decimations(self, mock_time):
         """Inserter removes data from base and decimations based on keep_us"""
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         
         # Advance time by days after epoch
         ONE_DAY = 24*60*60*1e6  # 1 day
@@ -138,7 +145,7 @@ class TestNilmDbInserter(asynctest.TestCase):
                                    length=length,
                                    start=interval_start,
                                    step=step)
-        queue = asyncio.Queue(loop=self.loop)
+        queue = asyncio.Queue(loop=loop)
         queue.put_nowait(data)
 
         # send everything to the database
@@ -146,7 +153,6 @@ class TestNilmDbInserter(asynctest.TestCase):
             # time advances by 1day=0.01s so cleanup should be called ~5 times
             await asyncio.sleep(0.05)
             my_inserter.stop()
-        loop = asyncio.get_event_loop()
         tasks = [asyncio.ensure_future(stop_inserter()),
                  asyncio.ensure_future(my_inserter.process(queue, loop=loop))]
         loop.run_until_complete(asyncio.gather(*tasks))

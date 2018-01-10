@@ -1,7 +1,7 @@
 
 import json
 import asyncio
-import asynctest
+import unittest
 
 
 from joule.daemon import server
@@ -11,7 +11,7 @@ ADDR = '127.0.0.1'
 PORT = '1234'
 
 
-class TestSeverErrors(asynctest.TestCase):
+class TestSeverErrors(unittest.TestCase):
 
     """
     Logs error if client closes connection early
@@ -30,7 +30,8 @@ class TestSeverErrors(asynctest.TestCase):
             s.close()
             return s
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         with self.assertLogs(level='WARN'):
             s = loop.run_until_complete(run())
             
@@ -50,7 +51,8 @@ class TestSeverErrors(asynctest.TestCase):
             s.close()
             return s
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         with self.assertLogs(level='WARN'):
             s = loop.run_until_complete(run())
             

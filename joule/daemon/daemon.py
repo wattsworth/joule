@@ -268,11 +268,12 @@ class Daemon(object):
         # clean up runtime tasks
         try:
             loop.run_until_complete(asyncio.gather(*runtime_tasks))
-        except:
+        except Exception:
             pass
-        
+
         # shut down the server
         my_server.close()
+
         loop.run_until_complete(my_server.wait_closed())
 
         # shut down the nilmdb connection

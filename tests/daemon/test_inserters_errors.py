@@ -5,7 +5,7 @@ Test the inserter and decimator objects
 from joule.daemon import inserter, daemon
 from joule.utils import nilmdb
 from unittest import mock
-from test import helpers
+from tests import helpers
 import asynctest
 import asyncio
 
