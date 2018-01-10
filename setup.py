@@ -37,7 +37,7 @@ setup(
                       'requests',
                       'aiohttp',
                       'markdown',
-                      'bs4'],
+                      'BeautifulSoup4'],
     namespace_packages=[],
     packages=find_packages(),
     include_package_data=True,

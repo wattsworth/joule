@@ -78,9 +78,9 @@ def start_standalone_procs2():
 
 
 def build_standalone_args(proc_dir):
-    scenario_dir = "/joule/test/e2e/scenarios/a_local_network_streams/"
+    scenario_dir = "/joule/tests/e2e/scenarios/a_local_network_streams/"
     base_dir = scenario_dir+"standalone_modules/"+proc_dir+"/"
-    return ["/joule/test/e2e/module_scripts/adder.py",
+    return ["/joule/tests/e2e/module_scripts/adder.py",
             "3",
             "--module_config", base_dir + "module.conf",
             "--stream_configs", base_dir + "stream_configs"]

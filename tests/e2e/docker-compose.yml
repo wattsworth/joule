@@ -4,7 +4,7 @@ services:
     build: ../../.
     links:
       - nilmdb
-    entrypoint: /joule/test/e2e/bootstrap_inner.py
+    entrypoint: /joule/tests/e2e/bootstrap_inner.py
   nilmdb:
     image: jdonnal/nilmdb
     logging:

@@ -11,8 +11,8 @@ import shutil
 import signal
 
 SOURCE_DIR = "/joule"
-SCENARIO_DIR = "/joule/test/e2e/scenarios"
-MODULE_SCRIPT_DIR = "/joule/test/e2e/module_scripts"
+SCENARIO_DIR = "/joule/tests/e2e/scenarios"
+MODULE_SCRIPT_DIR = "/joule/tests/e2e/module_scripts"
 JOULE_CONF_DIR = "/etc/joule"
 
 FORCE_DUMP = False
