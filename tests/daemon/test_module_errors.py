@@ -13,6 +13,11 @@ class TestModule(unittest.TestCase):
                  name = module name
                  description = optional
                  exec = /path/to/exec --args
+               [Arguments]
+                 arg1 = 4
+                 arg2 = a multiline
+                   argument that goes on
+                   and on
                [Source]
                  path1 = /input/path1
                [Destination]
@@ -31,7 +36,7 @@ class TestModule(unittest.TestCase):
             self.parser.run(self.base_config)
 
     def test_errors_on_missing_name(self):
-        self.base_config.remove_section("Main")
+        del self.base_config['Main']['name']
         with self.assertRaises(DaemonError):
             self.parser.run(self.base_config)
 

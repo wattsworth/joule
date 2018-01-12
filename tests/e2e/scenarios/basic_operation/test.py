@@ -5,10 +5,12 @@ import numpy as np
 from joule.testing.e2eutils import joule
 from joule.testing.e2eutils import nilmtool
 
+#NILMDB_URL = "http://127.0.0.1/nilmdb"
+NILMDB_URL = "http://nilmdb"
+
 
 def main():
-    #time.sleep(8)  # wait for jouled to boot
-    print( joule.logs("Filter"))
+    time.sleep(8)  # wait for jouled to boot
     check_modules()
     check_data()
     check_logs()
@@ -20,7 +22,7 @@ def check_modules():
     Goal:
       normal1: running some nonzero memory
       normal2: running some nonzero memory
-      filter:  running some nonzero memory
+      cadder:  running some nonzero memory
       broken:  present (could be running or failed)
       misconfigured: not present b/c can't be loaded
     """
@@ -29,7 +31,7 @@ def check_modules():
     for module in modules:
         title = module[joule.MODULES_TITLE_FIELD]
         status = module[joule.MODULES_STATUS_FIELD]
-        if(title['name'] in ['Normal1', 'Normal2', 'Filter']):
+        if(title['name'] in ['Normal1', 'Normal2', 'CAdder']):
             msg = "%s status=%s" % (title['name'], status)
             assert status == joule.MODULES_STATUS_RUNNING, msg
         elif(title['name'] == 'Broken'):
@@ -55,53 +57,53 @@ def check_data():
     filter2_path = "/filter2/data"
     for path in [normal1_path, normal2_path, filter1_path, filter2_path]:
         # 1.) check streams have one continuous interval
-        base_intervals = nilmtool.intervals(path)
+        base_intervals = nilmtool.intervals(path, url=NILMDB_URL)
         decim_intervals = nilmtool.intervals(
-            path + "~decim-16")  # check level 2 decimation
+            path + "~decim-16", url=NILMDB_URL)  # check level 2 decimation
         assert len(base_intervals) == 1,\
             "%s has %d intervals" % (path, len(base_intervals))
         assert len(decim_intervals) == 1,\
             "%s has %d intervals" % (path+"~decim-16", len(decim_intervals))
         # 2.) make sure this interval has data in it
-        num_samples = nilmtool.data_count(path)
+        num_samples = nilmtool.data_count(path, url=NILMDB_URL)
         assert(num_samples > 500)
         # 3.) make sure decimations have data
-        assert(nilmtool.is_decimated(path))
+        assert(nilmtool.is_decimated(path, url=NILMDB_URL))
 
     # the broken module and its filtered output
     # should have multiple intervals (each restart)
     for path in [broken_path]:
-        base_intervals = nilmtool.intervals(path)
-        decim_intervals = nilmtool.intervals(path + "~decim-16")
+        base_intervals = nilmtool.intervals(path, url=NILMDB_URL)
+        decim_intervals = nilmtool.intervals(path + "~decim-16", url=NILMDB_URL)
         assert len(base_intervals) > 1,\
             "%s has %d intervals" % (path, len(base_intervals))
         assert len(decim_intervals) > 1,\
             "%s has %d intervals" % (path+"~decim-16", len(decim_intervals))
 
         for interval in base_intervals:
-            num_samples = nilmtool.data_count(path, interval)
+            num_samples = nilmtool.data_count(path, interval, url=NILMDB_URL)
             assert(num_samples == 100)
-        assert(nilmtool.is_decimated(path))
+        assert(nilmtool.is_decimated(path, url=NILMDB_URL))
 
     # verify stream layouts
     assert nilmtool.layout(
-        normal1_path) == "int32_1", nilmtool.layout(normal1_path)
-    assert nilmtool.layout(normal2_path) == "int32_1"
-    assert nilmtool.layout(filter1_path) == "float32_1"
-    assert nilmtool.layout(filter2_path) == "float64_1"
+        normal1_path, url=NILMDB_URL) == "int32_1", nilmtool.layout(normal1_path)
+    assert nilmtool.layout(normal2_path, url=NILMDB_URL) == "int32_1"
+    assert nilmtool.layout(filter1_path, url=NILMDB_URL) == "int32_1"
+    assert nilmtool.layout(filter2_path, url=NILMDB_URL) == "int32_1"
 
     # verify the filter module executed correctly
     # check the first 2000 rows, the filter won't
     # have all the source data because the process was stopped
-    expected_data = nilmtool.data_extract(normal1_path)
-    expected_data[:, 1:] *= 2.0
-    actual_data = nilmtool.data_extract(filter1_path)
+    expected_data = nilmtool.data_extract(normal1_path, url=NILMDB_URL)
+    expected_data[:, 1:] += 10.0
+    actual_data = nilmtool.data_extract(filter1_path, url=NILMDB_URL)
     np.testing.assert_almost_equal(
         actual_data[:2000, :], expected_data[:2000, :])
 
-    expected_data = nilmtool.data_extract(normal2_path)
-    expected_data[:, 1:] *= 3.0
-    actual_data = nilmtool.data_extract(filter2_path)
+    expected_data = nilmtool.data_extract(normal2_path, url=NILMDB_URL)
+    expected_data[:, 1:] += 11.0
+    actual_data = nilmtool.data_extract(filter2_path, url=NILMDB_URL)
     np.testing.assert_almost_equal(
         actual_data[:2000, :], expected_data[:2000, :])
 
@@ -116,7 +118,7 @@ def check_logs():
       Broken: says "starting" and more than one "restarting"
       Misconfigured: no logs
     """
-    for module_name in ["Normal1", "Normal2", "Filter"]:
+    for module_name in ["Normal1", "Normal2", "CAdder"]:
         logs = joule.logs(module_name)
         num_starts = len(re.findall(joule.LOG_STARTING_STRING, logs))
         assert(num_starts == 1)

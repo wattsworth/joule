@@ -13,7 +13,8 @@ class CompositeModule(base_module.BaseModule):
     def run_as_task(self, parsed_args, loop):
         coro = self.build_pipes(parsed_args)
         (pipes_in, pipes_out) = loop.run_until_complete(coro)
-
-        return asyncio.gather(*self.setup(parsed_args,
-                                          pipes_in,
-                                          pipes_out))
+        coro = self.setup(parsed_args,
+                          pipes_in,
+                          pipes_out)
+        tasks = loop.run_until_complete(coro)
+        return asyncio.gather(*tasks)

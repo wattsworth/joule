@@ -39,7 +39,9 @@ class NumpyPipe:
         if data.ndim == 1:
             # already a structured array just verify its data type
             if data.dtype != self.dtype:
-                raise NumpyPipeError("wrong dtype for 1D (structured) array")
+                raise NumpyPipeError("wrong dtype for 1D (structured) array" +
+                                     "[%s] != req type [%s]" % (data.dtype,
+                                                                self.dtype))
             return data
         elif data.ndim == 2:
                 # Convert to structured array

@@ -3,6 +3,7 @@
 import joule
 import asyncio
 
+
 class Adder(joule.FilterModule):
     " Add DC offset to input "
     

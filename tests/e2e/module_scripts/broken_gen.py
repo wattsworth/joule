@@ -26,6 +26,7 @@ class NormalGen(joule.ReaderModule):
                 data_ts = top_ts
                 await asyncio.sleep(1 / freq)
                 raise ValueError
+
             
 if __name__ == "__main__":
     r = NormalGen()

@@ -5,19 +5,18 @@ import subprocess
 import numpy as np
 from joule.testing.e2eutils import joule
 from joule.testing.e2eutils import nilmtool
-import sys
 
-# NILMDB_URL = "http://127.0.0.1/nilmdb"
+
+#NILMDB_URL = "http://127.0.0.1/nilmdb"
 NILMDB_URL = "http://nilmdb"
 
-def main():
-#    time.sleep(8)  # wait for jouled to boot
 
+def main():
+    time.sleep(8)  # wait for jouled to boot
     procs = start_standalone_procs1()
     time.sleep(4)  # let procs run
     stop_standalone_procs(procs)
     time.sleep(8) # close sockets
-    print("ready for round 2")
     procs = start_standalone_procs2()
     time.sleep(1) # let procs run
     stop_standalone_procs(procs)

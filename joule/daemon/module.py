@@ -8,6 +8,9 @@ name = module name
 description = module description
 exec_cmd = /path/to/file --args [joule adds --pipes arg]
 
+[Arguments]
+key = value
+
 [Source]
 path1 = /nilmdb/input/stream1
 path2 = /nilmdb/input/stream2
@@ -83,11 +86,24 @@ class Parser(object):
             exec_cmd = main_configs["exec_cmd"]
             if(exec_cmd == ''):
                 raise ConfigError("exec_cmd is missing or blank")
+            if "Arguments" in configs:
+                exec_cmd += self._compile_arguments(configs["Arguments"])
         except KeyError as e:
             raise ConfigError("In [main] missing [%s] setting" % e) from e
         return Module(name, description, exec_cmd,
                       source_paths, destination_paths)
 
+    def _compile_arguments(self, args):
+        arg_list = ""
+        if args is None:
+            return arg_list
+        for key in args:
+            arg_list += ' --%s' % key
+            if(args[key] is not None and
+               len(args[key]) > 0):
+                arg_list += '="%s"' % args[key]
+        return arg_list
+    
     def _load_paths(self, config):
         paths = {}
         for name in config:
