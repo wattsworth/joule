@@ -44,11 +44,11 @@ class StreamNumpyPipeReader(numpypipe.NumpyPipe):
         extra_bytes = (len(raw) + len(self.byte_buffer)) % rowbytes
         # TODO: optimize for common case where byte_buffer is empty
         if(extra_bytes > 0):
-            data = np.fromstring(
+            data = np.frombuffer(
                 self.byte_buffer + raw[:-extra_bytes], dtype=self.dtype)
             self.byte_buffer = raw[-extra_bytes:]
         else:
-            data = np.fromstring(self.byte_buffer + raw, dtype=self.dtype)
+            data = np.frombuffer(self.byte_buffer + raw, dtype=self.dtype)
             self.byte_buffer = b''
         # append data onto buffer
         self.buffer[
