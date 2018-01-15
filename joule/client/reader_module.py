@@ -12,7 +12,6 @@ class ReaderModule(base_module.BaseModule):
 
     def run_as_task(self, parsed_args, loop):
         # check if we should use stdout (no fd's and no configs)
-        print("here")
         if(parsed_args.pipes=="unset" and parsed_args.module_config=="unset"):
             output = StdoutPipe()
         else:
