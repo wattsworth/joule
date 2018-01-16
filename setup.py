@@ -13,7 +13,7 @@ except IOError:
 
 setup(
     name=PROJECT,
-    version='0.1.6',  # versioneer.get_version(),
+    version='0.2.0',  # versioneer.get_version(),
     #cmdclass=versioneer.get_cmdclass(),
     description='Process manager for embedded systems',
     long_description=long_description,
