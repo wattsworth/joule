@@ -57,7 +57,7 @@ class ModulesCmd(Lister):
             if(formatter == 'json'):
                 mem = [pmem, pct]
             else:
-                mem = "%d MB (%d%%)" % (pmem // (1024 * 1024), pct * 100)
+                mem = "%d MB (%.1f%%)" % (pmem // (1024 * 1024), pct)
             # retrieve and format CPU usage
             c = process.cpu_percent(interval=1.0)
             if(formatter == 'json'):
