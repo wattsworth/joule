@@ -20,7 +20,7 @@ class ModulesCmd(Lister):
     def take_action(self, parsed_args):
 
         configs = helpers.parse_config_file(parsed_args.config_file)
-        headers = ('Module', 'Sources', 'Destinations', 'Status', 'CPU', 'mem')
+        headers = ('Module', 'Inputs', 'Outputs', 'Status', 'CPU', 'mem')
         format_type = parsed_args.formatter  # print differently if json output
 
         procdb = procdb_client.SQLClient(configs.procdb.db_path,
@@ -30,9 +30,9 @@ class ModulesCmd(Lister):
         for m in modules:
             (status, cpu, mem) = self._get_info(m, format_type)
             name = self._get_name(m, format_type)
-            dests = self._list_paths(m.destination_paths.values(), format_type)
-            sources = self._list_paths(m.source_paths.values(), format_type)
-            module_stats.append([name, sources, dests, status, cpu, mem])
+            dests = self._list_paths(m.output_paths.values(), format_type)
+            inputs = self._list_paths(m.input_paths.values(), format_type)
+            module_stats.append([name, inputs, dests, status, cpu, mem])
 
         return (headers, module_stats)
 

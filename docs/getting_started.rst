@@ -129,7 +129,7 @@ new module is running:
   <i># check status using the joule CLI</i>
   <b>$> joule modules</b>
   +-------------+---------+--------------+---------+-----+
-  | Module      | Sources | Destinations | Status  | CPU |
+  | Module      | Inputs | Outputs | Status  | CPU |
   +-------------+---------+--------------+---------+-----+
   | Demo Reader |         | /demo/random | running | 0%  |
   +-------------+---------+--------------+---------+-----+
@@ -215,7 +215,7 @@ both modules are running:
   <i># check status using joule CLI</i>
   <b>$> joule modules</b>
   +-------------+--------------+----------------+---------+-----+
-  | Module      | Sources      | Destinations   | Status  | CPU |
+  | Module      | Inputs      | Outputs   | Status  | CPU |
   +-------------+--------------+----------------+---------+-----+
   | Demo Reader |              | /demo/random   | running | 0%  |
   | Demo Filter | /demo/random | /demo/smoothed | running | 0%  |

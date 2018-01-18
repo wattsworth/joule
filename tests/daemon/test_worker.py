@@ -24,10 +24,10 @@ class TestWorker(asynctest.TestCase):
     def setUp(self):
         self.my_module = helpers.build_module(name="my_module",
                                               exec_cmd="<<TODO>>",
-                                              source_paths={
+                                              input_paths={
                                                   'path1': '/data/path1',
                                                   'path2': '/data/path2'},
-                                              destination_paths={
+                                              output_paths={
                                                   'path1': '/output/path1',
                                                   'path2': '/output/path2'})
 
@@ -38,7 +38,7 @@ class TestWorker(asynctest.TestCase):
             mock.Mock(return_value=helpers.build_stream(name="stub",
                                                         datatype="int32",
                                                         num_elements=4))
-        # build data sources for module
+        # build data inputs for module
         self.q_in1 = asyncio.Queue()
         mock_worker1 = mock.create_autospec(spec=worker.Worker)
         mock_worker1.subscribe = mock.Mock(

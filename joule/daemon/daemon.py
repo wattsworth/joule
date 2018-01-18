@@ -161,23 +161,23 @@ class Daemon(object):
 
     def _validate_module(self, module):
 
-        for path in module.destination_paths.values():
-            # 1.) Make sure all destinations have matching streams
+        for path in module.output_paths.values():
+            # 1.) Make sure all outputs have matching streams
             if(path not in self.path_streams):
-                msg = ("Module [%s]: destination [%s] has no configuration" %
+                msg = ("Module [%s]: output [%s] has no configuration" %
                        (module.name, path))
                 raise Exception(msg)
-            # 2.) Make sure destinations are unique among modules
-            used_paths = [m.destination_paths.values() for m in self.modules]
+            # 2.) Make sure outputs are unique among modules
+            used_paths = [m.output_paths.values() for m in self.modules]
             for paths in used_paths:
                 if(path in paths):
-                    msg = ("Module [%s]: destination [%s] is already used" %
+                    msg = ("Module [%s]: output [%s] is already used" %
                            (module.name, path))
                     raise Exception(msg)
-        for path in module.source_paths.values():
-            # 1.) Make sure all sources have matching streams
+        for path in module.input_paths.values():
+            # 1.) Make sure all inputs have matching streams
             if(path not in self.path_streams):
-                msg = ("Module [%s]: source [%s] has no configuration" %
+                msg = ("Module [%s]: input [%s] has no configuration" %
                        (module.name, path))
                 raise Exception(msg)
 
@@ -311,7 +311,7 @@ class Daemon(object):
     def _start_worker(self, worker, loop):
         self.workers.append(worker)
         module = worker.module
-        for path in module.destination_paths.values():
+        for path in module.output_paths.values():
             self.path_workers[path] = functools.partial(worker.subscribe, path)
         # waits here while worker runs
         return asyncio.ensure_future(worker.run())

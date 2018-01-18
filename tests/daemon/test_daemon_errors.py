@@ -63,39 +63,39 @@ class TestDaemonErrors(unittest.TestCase):
             my_daemon._build_stream(bad_config)
         self.assertRegex("/n".join(logs.output), "config")
 
-    def test_validate_module_fails_on_duplicate_destinations(self):
-        """Cannot register modules with duplicate destinations"""
+    def test_validate_module_fails_on_duplicate_outputs(self):
+        """Cannot register modules with duplicate outputs"""
         my_daemon = daemon.Daemon()
         my_daemon.path_streams = {"/path1/exists", mock.Mock(),
                                   "/path2/exists", mock.Mock()}
         module1 = mock.Mock()
-        module1.destination_paths = {"path1": "/path1/exists"}
+        module1.output_paths = {"path1": "/path1/exists"}
         my_daemon.modules = [module1]
         module2 = mock.Mock()
-        module2.destination_paths = {"path2": "/path2/exists",
+        module2.output_paths = {"path2": "/path2/exists",
                                      "duplicate_path": "/path1/exists"}
         with self.assertRaisesRegex(Exception, "/path1/exists"):
             my_daemon._validate_module(module2)
 
     def test_validate_module_fails_on_missing_stream(self):
-        """Module's sources and destinations must have matching streams"""
+        """Module's inputs and outputs must have matching streams"""
         my_daemon = daemon.Daemon()
         my_daemon.path_streams = {"/path/exists", mock.Mock()}
-        module_missing_destination = mock.Mock()
-        module_missing_destination.source_paths = {}
-        module_missing_destination.destination_paths = {"path1": "/path/exists",
+        module_missing_output = mock.Mock()
+        module_missing_output.input_paths = {}
+        module_missing_output.output_paths = {"path1": "/path/exists",
                                                         "path2": "/path/not/configured"}
 
-        module_missing_source = mock.Mock()
-        module_missing_source.source_paths = {"path1": "/path/exists",
+        module_missing_input = mock.Mock()
+        module_missing_input.input_paths = {"path1": "/path/exists",
                                               "path2": "/path/not/configured"}
-        module_missing_source.destination_paths = {}
+        module_missing_input.output_paths = {}
 
         with self.assertRaisesRegex(Exception, "not/configured"):
-            my_daemon._validate_module(module_missing_destination)
+            my_daemon._validate_module(module_missing_output)
 
         with self.assertRaisesRegex(Exception, "not/configured"):
-            my_daemon._validate_module(module_missing_source)
+            my_daemon._validate_module(module_missing_input)
 
     def test_build_module_fails_on_bad_configs(self):
         with self.assertLogs(level='ERROR') as logs:
@@ -146,12 +146,12 @@ class TestDaemonRunErrors(unittest.TestCase):
                    helpers.build_stream(name="out2",    path="/data/out2",    num_elements=4)]
 
         modules = [helpers.build_module(name="module1",
-                                        source_paths={},
-                                        destination_paths={"path1": "/module1/output"}),
+                                        input_paths={},
+                                        output_paths={"path1": "/module1/output"}),
                    helpers.build_module(name="module2",
-                                        source_paths={
+                                        input_paths={
                                              "path1": "/nobody_writing_to/module2/input"},
-                                        destination_paths={"path1": "/module2/output"})]
+                                        output_paths={"path1": "/module2/output"})]
 
         for my_stream in streams:
             my_daemon.path_streams[my_stream.path] = my_stream

@@ -26,8 +26,8 @@ class TestDaemon(unittest.TestCase):
         and ignores others"""
         module_names = ['module1.conf', 'ignored',
                         'temp.conf~', 'module2.conf']
-        stream_names = ['destination1.conf', 'otherfile',
-                        'backup.conf~', 'destination2.conf', 'd3.conf']
+        stream_names = ['output1.conf', 'otherfile',
+                        'backup.conf~', 'output2.conf', 'd3.conf']
         MODULE_COUNT = 2
         STREAM_COUNT = 3
 
@@ -68,12 +68,12 @@ class TestDaemon(unittest.TestCase):
                                         path="/data/out2",
                                         num_elements=4)]
         modules = [helpers.build_module(name="m1",
-                                        source_paths={'in1': "/data/in1"},
-                                        destination_paths={'out1':
+                                        input_paths={'in1': "/data/in1"},
+                                        output_paths={'out1':
                                                            "/data/o1in2"}),
                    helpers.build_module(name="m2",
-                                        source_paths={'in2': "/data/o1in2"},
-                                        destination_paths={'out2':
+                                        input_paths={'in2': "/data/o1in2"},
+                                        output_paths={'out2':
                                                            "/data/out2"})]
         # all streams exist in the database
         info = mock.Mock(layout="float32_4", layout_type="float32",
@@ -288,7 +288,7 @@ class TestDaemonRun(unittest.TestCase):
         my_worker.stop = asynctest.mock.CoroutineMock()
         my_worker.subscribe = lambda path: (asyncio.Queue, mock.Mock())
         my_module = helpers.build_module("mock",
-                                         destination_paths={"path1":
+                                         output_paths={"path1":
                                                             "/mock/path"})
         my_daemon = daemon.Daemon()
         my_daemon.SERVER_IP_ADDRESS = '127.0.0.1'

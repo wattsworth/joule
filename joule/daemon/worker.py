@@ -21,11 +21,11 @@ class Worker:
         self.output_queues = {}
         self.input_queues = {}  # no inputs
 
-        for path in self.module.destination_paths.values():
-            # add output_queues for each destination
+        for path in self.module.output_paths.values():
+            # add output_queues for each output
             self.output_queues[path] = []
 
-        for path in self.module.source_paths.values():
+        for path in self.module.input_paths.values():
             # add the path as an input
             self.input_queues[path] = None
 
@@ -34,8 +34,8 @@ class Worker:
         self.stop_requested = False
         self.npipes = []
         self.child_pipes = {
-            'destinations': {},
-            'sources': {}
+            'outputs': {},
+            'inputs': {}
         }
         self.pipe_tasks = []
 
@@ -63,7 +63,7 @@ class Worker:
             if path not in worked_paths:
                 missing_input = True
         if(missing_input):
-            return False  # cannot find all input sources
+            return False  # cannot find all input inputs
         # subscribe to inputs
         for path in self.input_queues:
             (self.input_queues[path], _) = worked_paths[path]()
@@ -72,7 +72,7 @@ class Worker:
     def _validate_inputs(self):
         for key, value in self.input_queues.items():
             if value is None:
-                logging.error("Cannot start %s: no input source for [%s]" %
+                logging.error("Cannot start %s: no input input for [%s]" %
                               (self.module, key))
                 return False
         return True
@@ -163,24 +163,24 @@ class Worker:
             self.procdb_client.add_log_by_module(line, self.module.id)
 
     async def _start_pipe_tasks(self):
-        # configure destination pipes          [module]==>[jouled]
-        for name, path in self.module.destination_paths.items():
+        # configure output pipes          [module]==>[jouled]
+        for name, path in self.module.output_paths.items():
             stream = self.procdb_client.find_stream_by_path(path)
             assert stream is not None, "procdb missing stream %s" % path
             (npipe, fd) = self._build_numpy_pipe(stream, 'output')
-            self.child_pipes['destinations'][name] = {
+            self.child_pipes['outputs'][name] = {
                 'fd': fd, 'layout': stream.layout}
             self.npipes.append(npipe)
             task = asyncio.ensure_future(
                 self._pipe_in(npipe, self.output_queues[path]))
             self.pipe_tasks.append(task)
 
-        # configure source pipes               [jouled]==>[module]
-        for name, path in self.module.source_paths.items():
+        # configure input pipes               [jouled]==>[module]
+        for name, path in self.module.input_paths.items():
             stream = self.procdb_client.find_stream_by_path(path)
             assert stream is not None, "procdb missing stream %s" % path
             (fd, npipe) = self._build_numpy_pipe(stream, 'input')
-            self.child_pipes['sources'][name] = {
+            self.child_pipes['inputs'][name] = {
                 'fd': fd, 'layout': stream.layout}
             self.npipes.append(npipe)
             task = asyncio.ensure_future(

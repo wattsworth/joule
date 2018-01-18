@@ -54,12 +54,12 @@ Reader modules should extend the base ``ReaderModule`` class. The
 child class must implement the ``run`` coroutine which should perform
 the following in a loop:
 
-  1. Read data from the source
+  1. Read data from the input
   2. Timestamp data with Unix microseconds
   3. Insert data into the output stream
   4. Sleep to create the data rate
 
-Line 11 reads data from the source (a random number function). Line 12
+Line 11 reads data from the input (a random number function). Line 12
 timestamps the data and inserts it into the output stream. Line 13
 sleeps for one second creating a 1Hz sample rate. Note that the
 asyncio.sleep coroutine is used instead of the time.sleep function.

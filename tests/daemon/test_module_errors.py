@@ -18,15 +18,15 @@ class TestModule(unittest.TestCase):
                  arg2 = a multiline
                    argument that goes on
                    and on
-               [Source]
+               [Inputs]
                  path1 = /input/path1
-               [Destination]
+               [Outputs]
                  path1 = /output/path1
 
             """)
 
     def test_errors_on_missing_dest_section(self):
-        self.base_config.remove_section("Destination")
+        self.base_config.remove_section("Output")
         with self.assertRaises(DaemonError):
             self.parser.run(self.base_config)
 
@@ -55,26 +55,26 @@ class TestModule(unittest.TestCase):
         with self.assertRaisesRegex(DaemonError, "exec_cmd"):
             self.parser.run(self.base_config)
 
-    def test_errors_on_invalid_source_streams_format(self):
+    def test_errors_on_invalid_input_streams_format(self):
         bad_input_streams = "/path/to/stream1,adfasdf,adf"
-        self.base_config['Source']['streams'] = bad_input_streams
+        self.base_config['Inputs']['streams'] = bad_input_streams
         with self.assertRaisesRegex(DaemonError, 'adfasdf'):
             self.parser.run(self.base_config)
 
-    def test_errors_on_invalid_destination_streams_format(self):
+    def test_errors_on_invalid_output_streams_format(self):
         bad_input_streams = "/path/to/stream1,adfasdf,adf"
-        self.base_config['Destination']['streams'] = bad_input_streams
+        self.base_config['Outputs']['streams'] = bad_input_streams
         with self.assertRaisesRegex(DaemonError, 'adfasdf'):
             self.parser.run(self.base_config)
 
     @unittest.skip("TODO")
-    def test_errors_on_duplicate_destinations(self):
+    def test_errors_on_duplicate_outputs(self):
         pass
 
     @unittest.skip("TODO")
-    def test_errors_on_duplicate_sources(self):
+    def test_errors_on_duplicate_inputs(self):
         pass
 
     @unittest.skip("TODO")
-    def test_errors_on_same_path_in_source_and_destination(self):
+    def test_errors_on_same_path_in_input_and_output(self):
         pass

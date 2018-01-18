@@ -11,13 +11,13 @@ exec_cmd = /path/to/file --args [joule adds --pipes arg]
 [Arguments]
 key = value
 
-[Source]
+[Input]
 path1 = /nilmdb/input/stream1
 path2 = /nilmdb/input/stream2
   ....
 pathN = /nilmdb/input/streamN
 
-[Destination]
+[Outputs]
 path1 = /nilmdb/output/stream1
 path2 = /nilmdb/output/stream2
   ....
@@ -39,15 +39,15 @@ class Module(object):
 
     def __init__(self, name, description,
                  exec_cmd,
-                 source_paths,
-                 destination_paths,
+                 input_paths,
+                 output_paths,
                  status=STATUS_UNKNOWN, pid=-1, id=None):
 
         self.name = name
         self.description = description
         self.exec_cmd = exec_cmd
-        self.source_paths = source_paths
-        self.destination_paths = destination_paths
+        self.input_paths = input_paths
+        self.output_paths = output_paths
 
         self.status = status
         self.pid = pid
@@ -74,8 +74,8 @@ class Parser(object):
     def run(self, configs):
         try:
             main_configs = configs["Main"]
-            source_paths = self._load_paths(configs['Source'])
-            destination_paths = self._load_paths(configs['Destination'])
+            input_paths = self._load_paths(configs['Inputs'])
+            output_paths = self._load_paths(configs['Outputs'])
         except KeyError as e:
             raise ConfigError("Missing section [%s]" % e) from e
         try:
@@ -91,7 +91,7 @@ class Parser(object):
         except KeyError as e:
             raise ConfigError("In [main] missing [%s] setting" % e) from e
         return Module(name, description, exec_cmd,
-                      source_paths, destination_paths)
+                      input_paths, output_paths)
 
     def _compile_arguments(self, args):
         arg_list = ""

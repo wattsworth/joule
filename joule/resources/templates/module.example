@@ -5,12 +5,12 @@ exec_cmd = /path/to/executable --args
 #optional
 description = a short description
 
-[Source]
+[Input]
 path1 = /nilmdb/input/stream1
 path2 = /nilmdb/input/stream2
-# additional sources...
+# additional inputs...
 
-[Destination]
+[Outputs]
 path1 = /nilmdb/output/stream1
 path2 = /nilmdb/output/stream2
-# additional destinations...
+# additional outputs...

@@ -21,17 +21,17 @@ class TestModulesError(unittest.TestCase):
         my_pid = os.getpid()
         self.m1 = helpers.build_module("m1",
                                        description="test m1",
-                                       source_paths={},
-                                       destination_paths={"path1": "/m1/path/1",
+                                       input_paths={},
+                                       output_paths={"path1": "/m1/path/1",
                                                           "path2": "/m1/path/2"},
                                        status=module.STATUS_RUNNING,
                                        pid=my_pid)
 
         self.m2 = helpers.build_module("m2",
                                        description="",
-                                       source_paths={"path1": "/m2/path/1",
+                                       input_paths={"path1": "/m2/path/1",
                                                      "path2": "/m2/path/2"},
-                                       destination_paths={
+                                       output_paths={
                                            "path1": "/m2/path/3"},
                                        status=module.STATUS_RUNNING,
                                        pid=my_pid)

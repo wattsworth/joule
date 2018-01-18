@@ -1,6 +1,6 @@
 pi@raspberrypi:~ $ joule modules
 +--------------------------------+----------------+-----------------+---------+-----+--------------+
-| Module                         | Sources        | Destinations    | Status  | CPU | mem          |
+| Module                         | Inputs        | Outputs    | Status  | CPU | mem          |
 +--------------------------------+----------------+-----------------+---------+-----+--------------+
 | meter4 process:                | /meter4/sensor | /meter4/prep    | running | 39% | 30 MB (355%) |
 | reconstruct -> sinefit -> prep |                | /meter4/iv      |         |     |              |

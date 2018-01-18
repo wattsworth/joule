@@ -15,8 +15,8 @@ class TestCommits(unittest.TestCase):
 
     def test_commits_data(self):
         m = helpers.build_module(name="test",
-                                 destination_paths={'path1': "/some/path/1"},
-                                 source_paths={'path2': "/some/path/2"})
+                                 output_paths={'path1': "/some/path/1"},
+                                 input_paths={'path2': "/some/path/2"})
         s1 = helpers.build_stream(name="s1", path="/some/path/1")
         s2 = helpers.build_stream(name="s2", path="/some/path/2")
 

@@ -552,7 +552,7 @@ decimate_factor
 Automatically create multiple decimation levels using from a single source
 stream, continuing until the last decimated level contains fewer than 500 rows
 total. Decimations are performed using nilm-decimate (Section 3.4.2.4).
-Wildcards and multiple paths are accepted. Destination streams are automatically
+Wildcards and multiple paths are accepted. Output streams are automatically
 named based on the source stream name and the total decimation factor; for
 example, ``/test/raw~decim-4``, ``/test/raw~decim-16``, etc. Streams containing
 the string "``~decim-``" are ignored when matching wildcards.

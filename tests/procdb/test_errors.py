@@ -25,7 +25,7 @@ class TestClient(unittest.TestCase):
 
     def test_warns_on_missing_streams(self):
         m = helpers.build_module(
-            destination_paths={"path1": "/does/not/exist"})
+            output_paths={"path1": "/does/not/exist"})
         with self.assertLogs(level='ERROR'):
             self.procdb.register_module(m)
 

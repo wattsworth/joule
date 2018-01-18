@@ -19,13 +19,13 @@ class TestNormalOperation(unittest.TestCase):
         self.procdb.register_stream(self.s3)
 
         self.m1 = helpers.build_module(name="m1",
-                                       destination_paths={
+                                       output_paths={
                                            "path1": "/some/path/1",
                                            "path2": "/some/path/2"})
         self.m2 = helpers.build_module(name="m2",
-                                       destination_paths={
+                                       output_paths={
                                            "path3": "/some/path/3"},
-                                       source_paths={
+                                       input_paths={
                                            "path1": "/some/path/1",
                                            "path2": "/some/path/2"})
         self.procdb.register_module(self.m1)
@@ -47,7 +47,7 @@ class TestNormalOperation(unittest.TestCase):
         self.assertEqual(self.s3, s3_r)
 
         m1_streams = self.procdb.find_streams_by_module(
-            self.m1.id, "destination")
+            self.m1.id, "output")
         helpers.assertUnorderedListEqual(self, [self.s2, self.s1], m1_streams)
 
         streams = self.procdb.find_all_streams()

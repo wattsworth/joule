@@ -7,8 +7,8 @@ from joule.testing.e2eutils import joule
 from joule.testing.e2eutils import nilmtool
 
 
-#NILMDB_URL = "http://127.0.0.1/nilmdb"
-NILMDB_URL = "http://nilmdb"
+NILMDB_URL = "http://127.0.0.1/nilmdb"
+#NILMDB_URL = "http://nilmdb"
 
 
 def main():
@@ -156,7 +156,7 @@ def check_data():
 
     # verify the filter module executed correctly
     # check the first 2000 rows, the filter won't
-    # have all the source data because the process was stopped
+    # have all the input data because the process was stopped
     expected_data = nilmtool.data_extract(base_path, url=NILMDB_URL)
     expected_data[:, 1:] += 1.0
     actual_data = nilmtool.data_extract(plus1_path, url=NILMDB_URL)

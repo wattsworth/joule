@@ -26,10 +26,10 @@ class TestWorker(unittest.TestCase):
         asyncio.set_event_loop(loop)
         self.my_module = helpers.build_module(name="my_module",
                                               exec_cmd="<<TODO>>",
-                                              source_paths={
+                                              input_paths={
                                                   'path1': '/data/path1',
                                                   'path2': '/data/path2'},
-                                              destination_paths={
+                                              output_paths={
                                                   'path1': '/output/path1',
                                                   'path2': '/output/path2'})
 
@@ -38,7 +38,7 @@ class TestWorker(unittest.TestCase):
         # correctly
         self.myprocdb.find_stream_by_path = mock.Mock(
             return_value=helpers.build_stream(name="stub", num_elements=1))
-        # build data sources for module
+        # build data inputs for module
         self.q_in1 = asyncio.Queue()
         mock_worker1 = mock.create_autospec(spec=worker.Worker)
         mock_worker1.subscribe = mock.Mock(
@@ -70,7 +70,7 @@ class TestWorker(unittest.TestCase):
 
     def test_all_inputs_must_be_registered(self):
         loop = asyncio.get_event_loop()
-        self.my_module.source_paths['missing'] = '/unregistered/input'
+        self.my_module.input_paths['missing'] = '/unregistered/input'
         self.myworker = worker.Worker(self.my_module, self.myprocdb)
 
         with self.assertLogs(level='ERROR'):

@@ -24,7 +24,7 @@ streams_modules = {'table': "streams_modules",
                        ["name",        "integer"],
                        ["stream_id",   "integer"],
                        ["module_id",   "integer"],
-                       ["direction",   "string"]]  # source,destination
+                       ["direction",   "string"]]  # input,output
                    }
 elements = {'table': "elements",
             'columns': [

@@ -79,7 +79,7 @@ reader module configuration is shown below:
   <b>output =</b> /demo/raw
   </div>
 
-The reader module has no sources and one destination called **output**
+The reader module has no sources and one output called **output**
 which is connected to the **/demo/raw** NilmDB stream. Note that the
 exec command uses the **python3** interpreter and the module script is in
 the **/joule-modules/** directory. The e2e bootstrap process copies
@@ -108,7 +108,7 @@ The filter module has a similar configuration:
 
 It has one source, **input** which is attached to the NilmDB stream
 **/demo/raw**. This stream is produced by the reader module. The
-filter has one destination, **output** which is attached to the NilmDB
+filter has one output, **output** which is attached to the NilmDB
 stream **/demo/filtered**. The **exec_cmd** has the same structure as
 the reader module. Note that any arguments you added to the
 ``custom_args`` function in your module should be specified as command

@@ -11,9 +11,9 @@ MODULE_CONFIG = """
 [Main]
   name = test
   exec_cmd = ignored
-[Source]
-  source = /myfilter/source
-[Destination]
+[Inputs]
+  input = /myfilter/input
+[Outputs]
   dest1 = /myfilter/dest1
   dest2 = /myfilter/dest2
 """
@@ -21,8 +21,8 @@ MODULE_CONFIG = """
 STREAM_CONFIGS = [
     """
 [Main]
-  name = source
-  path = /myfilter/source
+  name = input
+  path = /myfilter/input
   datatype = float32
   decimate = yes
   keep = 1w
@@ -96,7 +96,7 @@ class TestFilterDebugMode(unittest.TestCase):
         args, kwargs = myfilter.run.call_args
         inputs = args[1]
         outputs = args[2]
-        self.assertTrue('source' in inputs)
+        self.assertTrue('input' in inputs)
         self.assertTrue('dest1' in outputs)
         self.assertTrue('dest2' in outputs)
 

@@ -99,20 +99,20 @@ class BaseModule:
         my_module = parser.run(module_config)
         # build the input pipes (must already exist)
         pipes_in = {}
-        for name in my_module.source_paths.keys():
-            path = my_module.source_paths[name]
+        for name in my_module.input_paths.keys():
+            path = my_module.input_paths[name]
             npipe = await request_reader(path)
             pipes_in[name] = npipe
         # build the output pipes (must have matching stream.conf)
         pipes_out = {}
         streams = self.parse_streams(stream_config_dir)
-        for name in my_module.destination_paths.keys():
-            path = my_module.destination_paths[name]
+        for name in my_module.output_paths.keys():
+            path = my_module.output_paths[name]
             try:
                 npipe = await request_writer(streams[path])
             except KeyError:
                 raise ModuleError(
-                    "Missing configuration for destination [%s]" % path)
+                    "Missing configuration for output [%s]" % path)
             pipes_out[name] = npipe
         return (pipes_in, pipes_out)
 
@@ -134,8 +134,8 @@ class BaseModule:
 
     def build_fd_pipes(self, pipe_args):
         pipe_json = json.loads(pipe_args)
-        dest_args = pipe_json['destinations']
-        src_args = pipe_json['sources']
+        dest_args = pipe_json['outputs']
+        src_args = pipe_json['inputs']
         pipes_out = {}
         pipes_in = {}
         for name, arg in dest_args.items():

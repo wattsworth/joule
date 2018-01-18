@@ -15,7 +15,7 @@ class TestNilmDbDecimatorErrors(asynctest.TestCase):
     def setUp(self):
         pass
 
-    def test_error_if_source_does_not_exist(self):
+    def test_error_if_input_does_not_exist(self):
 
         # only /other/path exists in the database
         mock_info = helpers.mock_stream_info([["/other/path", "uint8_1"]])

@@ -193,7 +193,7 @@ Command Line Interface
       </div>
       <div class="code bash"><b>$>joule modules</b>
       +-------------+--------------+----------------+---------+-----+
-      | Module      | Sources      | Destinations   | Status  | CPU |
+      | Module      | Inputs      | Outputs   | Status  | CPU |
       +-------------+--------------+----------------+---------+-----+
       | Demo Reader |              | /demo/random   | running | 0%  |
       | Demo Filter | /demo/random | /demo/smoothed | running | 0%  |

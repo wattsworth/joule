@@ -90,10 +90,10 @@ class NilmDbInserter:
             
 class NilmDbDecimator:
 
-    def __init__(self, client, source_path, factor=4):
+    def __init__(self, client, input_path, factor=4):
         self.factor = factor
         self.client = client
-        self.source_path = source_path
+        self.input_path = input_path
         self.path = None # configured by initialze
         self.child = None
         self.initialized = False
@@ -106,44 +106,44 @@ class NilmDbDecimator:
         return paths
     
     async def _initialize(self):
-        # get source info
-        source_path = self.source_path
+        # get input info
+        input_path = self.input_path
         try:
-            stream_list = await self.client.stream_list(path=source_path)
-            _, source_layout = stream_list[0]
+            stream_list = await self.client.stream_list(path=input_path)
+            _, input_layout = stream_list[0]
         except IndexError:
-            raise DaemonError("the decimator source [{path}] is not in the database".
-                              format(path=source_path))
-        if(self._is_decimated(source_path)):
-            destination_layout = source_layout
+            raise DaemonError("the decimator input [{path}] is not in the database".
+                              format(path=input_path))
+        if(self._is_decimated(input_path)):
+            output_layout = input_layout
             self.again = True
-            (base_path, source_level) = self._parse_path(source_path)
-            level = source_level * self.factor
+            (base_path, input_level) = self._parse_path(input_path)
+            level = input_level * self.factor
         else:
             self.again = False
-            destination_layout = "float32_{width}".\
+            output_layout = "float32_{width}".\
                                  format(width=self._stream_width(
-                                     source_layout) * 3)
-            base_path = source_path
+                                     input_layout) * 3)
+            base_path = input_path
             level = self.factor
-        destination_path = "{base}~decim-{level}".format(
+        output_path = "{base}~decim-{level}".format(
             base=base_path, level=level)
 
-        # create the destination if it doesn't exist
-        stream_list = await self.client.stream_list(path=destination_path)
+        # create the output if it doesn't exist
+        stream_list = await self.client.stream_list(path=output_path)
 
         if(len(stream_list) == 0):
-            await self.client.stream_create(destination_path, destination_layout)
+            await self.client.stream_create(output_path, output_layout)
 
         self.last_ts = None
         self.buffer = []
-        self.path = destination_path
+        self.path = output_path
         self.initialized = True
 
     def _parse_path(self, path):
         """return the base path and the decimation level"""
         res = re.search("^([/\w-]*)~decim-(\d*)$", path)
-        # this function is only called if the source path is decimated
+        # this function is only called if the input path is decimated
         # so it is garaunteed to match this regex, implicitly raise an error
         # o.w.
         return [res.group(1), int(res.group(2))]
@@ -178,7 +178,7 @@ class NilmDbDecimator:
             data = np.concatenate((self.buffer, data))
         (n, m) = data.shape
 
-        # Figure out which columns to use as the source for mean, min, and max,
+        # Figure out which columns to use as the input for mean, min, and max,
         # depending on whether this is the first decimation or we're decimating
         # again.  Note that we include the timestamp in the means.
         if self.again:

@@ -49,12 +49,12 @@ class SQLClient():
                   format(table=schema.modules["table"]), data)
         my_module.id = c.lastrowid
 
-        # link this module's destinations with existing streams
+        # link this module's outputs with existing streams
 
-        for (name, path) in my_module.destination_paths.items():
-            self._link_by_path(my_module, name, path, "destination")
-        for (name, path) in my_module.source_paths.items():
-            self._link_by_path(my_module, name, path, "source")
+        for (name, path) in my_module.output_paths.items():
+            self._link_by_path(my_module, name, path, "output")
+        for (name, path) in my_module.input_paths.items():
+            self._link_by_path(my_module, name, path, "input")
 
 #        print("added module %d with name [%s]"%(my_module.id,my_module.name))
     def update_module(self, my_module):
@@ -99,8 +99,8 @@ class SQLClient():
             "SELECT * FROM {table}".format(table=schema.modules['table']))
         for row in c.fetchall():
             attribs = {**row}
-            attribs['source_paths'] = {}
-            attribs['destination_paths'] = {}
+            attribs['input_paths'] = {}
+            attribs['output_paths'] = {}
             my_module = module.Module(**attribs)
             self._set_module_paths(my_module)
             modules.append(my_module)
@@ -134,9 +134,9 @@ class SQLClient():
 
     def find_streams_by_module(self, module_id, direction):
         c = self.db.cursor()
-        if(direction != "source" and direction != "destination"):
+        if(direction != "input" and direction != "output"):
             raise ProcDbError(
-                "[direction] is invalid, must be soure|destination")
+                "[direction] is invalid, must be soure|output")
 
         c.execute("SELECT streams.* FROM streams_modules " +
                   "JOIN modules ON streams_modules.module_id=modules.id " +  # TODO: remove?
@@ -196,8 +196,8 @@ class SQLClient():
         if row is None:
             return None
         attribs = {**row}
-        attribs['source_paths'] = {}
-        attribs['destination_paths'] = {}
+        attribs['input_paths'] = {}
+        attribs['output_paths'] = {}
         my_module = module.Module(**attribs)
         self._set_module_paths(my_module)
         return my_module
@@ -222,10 +222,10 @@ class SQLClient():
         for row in c.fetchall():
             name = row['name']
             path = row['path']
-            if(row['direction'] == 'source'):
-                my_module.source_paths[name] = path
+            if(row['direction'] == 'input'):
+                my_module.input_paths[name] = path
             else:
-                my_module.destination_paths[name] = path
+                my_module.output_paths[name] = path
 
     def _link_by_path(self, my_module, name, path, direction):
         c = self.db.cursor()

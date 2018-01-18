@@ -1,5 +1,5 @@
 """
-Take in 2 sources and add them 
+Take in 2 inputs and add them 
 """
 import json
 import argparse
@@ -13,13 +13,13 @@ def main():
     args = parser.parse_args()
 
     pipes = json.loads(args.pipes)
-    fd1_in = pipes['sources']['path1']['fd']
-    fd1_out = pipes['destinations']['path1']['fd']
+    fd1_in = pipes['inputs']['path1']['fd']
+    fd1_out = pipes['outputs']['path1']['fd']
     x = os.read(fd1_in, 100000)
     os.write(fd1_out, x)
 
-    fd2_in = pipes['sources']['path2']['fd']
-    fd2_out = pipes['destinations']['path2']['fd']
+    fd2_in = pipes['inputs']['path2']['fd']
+    fd2_out = pipes['outputs']['path2']['fd']
     x = os.read(fd2_in, 100000)
     os.write(fd2_out, x)
 

@@ -13,16 +13,16 @@ def build_stream(name="stream", description="",
 
 
 def build_module(name="module", description="", exec_cmd="/bin/true",
-                 destination_paths=None,
-                 source_paths=None):
-    if(destination_paths is None):
-        destination_paths = {}
-    if(source_paths is None):
-        source_paths = {}
+                 output_paths=None,
+                 input_paths=None):
+    if(output_paths is None):
+        output_paths = {}
+    if(input_paths is None):
+        input_paths = {}
     m = module.Module(name, description, exec_cmd,
-                      source_paths, destination_paths)
-    m.destination_paths = destination_paths
-    m.source_paths = source_paths
+                      input_paths, output_paths)
+    m.output_paths = output_paths
+    m.input_paths = input_paths
     return m
 
 
