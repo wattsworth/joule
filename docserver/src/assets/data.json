@@ -18,23 +18,6 @@
     },
     {
         "author": "John Donnal",
-        "description": "generate a random data stream",
-        "inputs": "<p>None</p>",
-        "license": "Open",
-        "module_config": "[Main]\nname = Random Reader\nexec_cmd = joule modules random-reader\n\n[Arguments]\nwidth = 4\nrate = 10 #Hz\n\n[Outputs]\noutput = /path/to/output",
-        "name": "Random Reader",
-        "outputs": "<dl class=\"row\">\n<dt class=\"col-sm-3 text-truncate\">output</dt>\n<dd class=\"col-sm-9\">float32 with N elements specified by [width] argument</dd>\n</dl>",
-        "stream_configs": [
-            {
-                "config": "[Main]\nname = Random Data\npath = /path/to/output\ndatatype = float32\nkeep = 1w\n\n# [width] number of elements\n[Element1]\nname = Random Set 1\n\n[Element2]\nname = Random Set 2\n\n#additional elements...",
-                "name": "output"
-            }
-        ],
-        "url": "<p>http://git.wattsworth.net/wattsworth/joule.git</p>",
-        "usage": "<p>This is a module that generates random numbers.\nSpecify width (number of elements) and the rate in Hz.</p>\n<table class=\"table table-sm table-bordered\">\n<thead>\n<tr>\n<th>Arguments</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td><code>width</code></td>\n<td>number of elements</td>\n</tr>\n<tr>\n<td><code>rate</code></td>\n<td>data rate in Hz</td>\n</tr>\n</tbody>\n</table>"
-    },
-    {
-        "author": "John Donnal",
         "description": "adjustable moving average",
         "inputs": "<dl class=\"row\">\n<dt class=\"col-sm-3 text-truncate\">input</dt>\n<dd class=\"col-sm-9\"><strong><any type=\"\"></any></strong> with N elements</dd>\n</dl>",
         "license": "Open",
@@ -177,5 +160,22 @@
         ],
         "url": "<p>http://git.wattsworth.net/wattsworth/nilm.git</p>",
         "usage": "<p>This is a composite module that runs nilm-reconstructor, nilm-sinefit,\nand nilm-prep. It uses the settings in meters.yml to\ninitialize the modules. In most use cases this is preferred over\nrunning the modules individually</p>\n<table class=\"table table-sm table-bordered\">\n<thead>\n<tr>\n<th>Arguments</th>\n<th>Default</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td><code>meter</code></td>\n<td>--</td>\n<td>meter name in meters.yml</td>\n</tr>\n<tr>\n<td><code>config-file</code></td>\n<td>/opt/configs/meters.yml</td>\n<td>location of meters.yml</td>\n</tr>\n<tr>\n<td><code>calibration-file</code></td>\n<td>--</td>\n<td>(optional) specify calibration file directly</td>\n</tr>\n<tr>\n<td><code>calibration-directory</code></td>\n<td>/opt/configs/meters</td>\n<td>location of calibration files</td>\n</tr>\n<tr>\n<td><code>merge-prep</code></td>\n<td>yes</td>\n<td>[yes</td>\n</tr>\n<tr>\n<td><code>polar</code></td>\n<td>no</td>\n<td>[yes</td>\n</tr>\n</tbody>\n</table>"
+    },
+    {
+        "author": "John Donnal",
+        "description": "generate a random data stream",
+        "inputs": "<p>None</p>",
+        "license": "Open",
+        "module_config": "[Main]\nname = Random Reader\nexec_cmd = joule modules random-reader\n\n[Arguments]\nwidth = 4\nrate = 10 #Hz\n\n[Outputs]\noutput = /path/to/output",
+        "name": "Random Reader",
+        "outputs": "<dl class=\"row\">\n<dt class=\"col-sm-3 text-truncate\">output</dt>\n<dd class=\"col-sm-9\">float32 with N elements specified by [width] argument</dd>\n</dl>",
+        "stream_configs": [
+            {
+                "config": "[Main]\nname = Random Data\npath = /path/to/output\ndatatype = float32\nkeep = 1w\n\n# [width] number of elements\n[Element1]\nname = Random Set 1\n\n[Element2]\nname = Random Set 2\n\n#additional elements...",
+                "name": "output"
+            }
+        ],
+        "url": "<p>http://git.wattsworth.net/wattsworth/joule.git</p>",
+        "usage": "<p>This is a module that generates random numbers.\nSpecify width (number of elements) and the rate in Hz.</p>\n<table class=\"table table-sm table-bordered\">\n<thead>\n<tr>\n<th>Arguments</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td><code>width</code></td>\n<td>number of elements</td>\n</tr>\n<tr>\n<td><code>rate</code></td>\n<td>data rate in Hz</td>\n</tr>\n</tbody>\n</table>"
     }
 ]

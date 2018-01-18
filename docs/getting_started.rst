@@ -5,7 +5,7 @@ Getting Started
 ===============
 
 Joule is part of the Wattsworth software stack. See
-http://docs.wattsworth.net for installation details. Before continuing
+http://wattsworth.net/install.html for installation details. Before continuing
 make sure Joule is installed and the database is accessible:
 
 
@@ -22,13 +22,14 @@ make sure Joule is installed and the database is accessible:
    1.10.3 <i>#... more output</i>
 
   </div>
+  
 This guide will step through the implementation of the two stage pipeline shown below:
 
 .. image:: /images/getting_started_pipeline.png
 
 
 The Reader Module
----------------
+-----------------
 
 The first module is a data reader. Reader modules "read" data into the
 Joule pipeline. This data can come from embedded sensors, HTTP API's,
@@ -37,8 +38,11 @@ system logs, or any other timeseries data source.
 Our reader will simply produce random values.  Joule provides a
 built-in module specifically for this purpose. Stubbing pipeline
 inputs with a random data source can simplify unit testing and expose
-logic errors similar to fuzzing.  For more information on **random**
-and the other built-in readers see TODO
+logic errors.  See the `Module Documentation`_ page
+for more details on this and other Joule modules.
+
+.. _Module Documentation: /modules
+
 
 Try out **random** on the command line:
 
@@ -47,14 +51,10 @@ Try out **random** on the command line:
   <div class="header bash">
   Command Line:
   </div>
-  <div class="code bash"><b>$> joule reader</b>
-  <i>#  ... list of reader modules</i>
+  <div class="code bash"><b>$> joule-random-reader -h</b>
+  <i>#  ... module documentation (available at http://docs.wattsworth.net/modules)</i>
 
-  $> joule reader help random</b>
-  <i>#  ... help with the random module</i>
-
-  <b>$> joule reader random 2 10</b>
-  Starting random stream: 2 elements @ 10.0Hz
+  <b>$> joule-random-reader --width 2 --rate 10</b>
   1485188853650944 0.32359053067687582 0.70028608966895545
   1485188853750944 0.72139550945715136 0.39218791387411422
   1485188853850944 0.40728044378612194 0.26446072057019654
@@ -74,9 +74,13 @@ to connect its output. To do this create the following file:
   /etc/joule/module_configs/my_reader.conf
   </div>
   <div class="code ini"><span>[Main]</span>
-  <b>exec_cmd =</b> joule reader random 2 10
+  <b>exec_cmd =</b> joule-random-reader
   <b>name =</b> Random Data
 
+  <span>[Arguments]</span>
+  <b>width = </b>2
+  <b>rate  = </b>10
+  
   <span>[Inputs]</span>
   <i># a reader has no input streams</i>
 
@@ -84,8 +88,9 @@ to connect its output. To do this create the following file:
   <b>output =</b> /demo/random
   </div>
 
-This connects the module to a stream called ``/demo/random``. Joule
-will throw an error if a module is connected to an unconfigured
+This connects the module to a stream called ``/demo/random``. For more
+details on the configuration format see :ref:`sec-modules`. Joule
+will generate an error if a module is connected to an unconfigured
 stream. Configure the stream by creating the following file:
 
 
@@ -109,7 +114,7 @@ stream. Configure the stream by creating the following file:
 
 The stream configuration file specifies what kind of data the stream holds and how
 long to store it in the database. For more details on the configuration format see
-TODO.
+:ref:`sec-streams`.
 
 Now the pipeline is ready to execute. Restart joule and check that the
 new module is running:
@@ -142,30 +147,12 @@ new module is running:
   </div>
 
 The Filter Module
----------------
+-----------------
 
 Now let's add a filter to smooth out the random data produced by the
 reader. Joule provides a built-in moving average filter, **mean**,
-that does exactly this. For more information on **mean** and the other
-built-in filters see TODO
-
-Try out **mean** on the command line:
-
-.. raw:: html
-
-  <div class="header bash">
-  Command Line:
-  </div>
-  <div class="code bash"><b>$> joule filter</b>
-  <i>#  ... list of filter modules</i>
-
-  <b>$> joule filter help mean</b>
-  <i>#  ... help with the mean module</i>
-
-  <b>$> joule filter mean 9</b>
-  per-element moving average with a window size of 9
-
-  </div>
+that does exactly this.  See the `Module Documentation`_ page
+for more details on this and other Joule modules.
 
 Joule filters can execute as standalone programs but require extra
 configuration to do so because they can have multiple inputs and
@@ -178,9 +165,12 @@ the module to the pipeline create the following file:
   /etc/joule/module_configs/demo_filter.conf
   </div>
   <div class="code ini"><span>[Main]</span>
-  <b>exec_cmd =</b> joule filter mean 9
+  <b>exec_cmd =</b> joule-mean-filter
   <b>name =</b> Demo Filter
 
+  <span>[Arguments]</span>
+  <b>window =</b> 11
+  
   <span>[Inputs]</span>
   <b>input =</b> /demo/random
 
@@ -249,3 +239,12 @@ both modules are running:
             total data: 147 rows, 14.600001 seconds
 
   </div>
+
+Next Steps
+----------
+
+For more details on modules and streams read :ref:`using-joule` or
+visit the `Lumen Documentation`_ to start visualizing your data.
+
+.. _Lumen Documentation: /lumen/getting_started.html
+

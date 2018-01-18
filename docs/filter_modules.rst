@@ -102,7 +102,12 @@ The following methods are available for the child class to override. The
      class FilterDemo(FilterModule):
        def custom_args(self, parser):
          parser.description = "**module description**"
-         parser.add_argument("arg", help="custom argument")
+	 # add optional help text to the argument
+         parser.add_argument("--arg", help="custom argument")
+	 # parse json input
+	 parser.add_argument("--json_arg", type=json)
+	 # a yes|no argument that resolves to True|False
+	 parser.add_argument("--flag_arg", type=joule.yesno)
        #... other module code
 
    .. raw:: html
@@ -115,20 +120,33 @@ The following methods are available for the child class to override. The
 
       **module description**
 
-      positional arguments:
+      optional arguments:
         arg            custom argument
       <i>#more output...</i>
       </div>
+
+   *Note*:
+     Always use keyword arguments with modules so they can be specified
+     in the **[Arguments]** section  of module configuration file
+     
+   *Tip*:
+     Use the ``type`` parameter to specify a parser function. The parser
+     accepts a string input and produces the associated object. 
 
 .. method:: run(parsed_args, inputs, outputs)
 
     * ``parsed_args`` -- `Namespace`_ object with the parsed command line arguments.
       Customize the argument structure by overriding :meth:`~custom_args`.
-    * ``inputs`` -- Dictionary of :class:`JoulePipe` connections to input streams.
-      Dictionary keys are the configuration file :ref:`input names`.
-    * ``outputs`` -- Dictionary of :class:`JoulePipe` connections to output streams.
-      Dictionary keys are the configuration file :ref:`output names`.
-  This coroutine should run indefinitley. See ExampleFilter for typical usage.
+    * ``inputs`` -- Dictionary of :class:`joule.NumpyPipe` connections to
+      input streams.  These should match the **[Inputs]** in the module
+      configuration file (see :ref:`sec-modules` for example
+      configuration file)
+    * ``outputs`` -- Dictionary of :class:`joule.NumpyPipe` connections to
+      output streams.  These should match the **[Outputs]** in the
+      module configuration file (see :ref:`sec-modules` for example
+      configuration file)
+
+   This coroutine should run indefinitley. See ExampleFilter for typical usage.
 
 .. method:: stop()
 
@@ -223,17 +241,6 @@ string or a Unix microseconds timestamp.
 
     </div>
 
-Built-in Filters
-----------------
-
-Mean
-'''''
-
-Median
-''''''
-
-
-TODO
 
 .. _Git Repository: http://git.wattsworth.net/wattsworth/example_modules
 .. _structured array: https://docs.scipy.org/doc/numpy-1.13.0/user/basics.rec.html

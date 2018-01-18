@@ -1,7 +1,7 @@
-Joule Pipes
+Numpy Pipes
 -----------
 
-Joule Pipes provide a protocol independent interface to data
+Numpy Pipes provide a protocol independent interface to data
 streams. This decouples module design from pipeline
 implementation. The same module can run as a remote instance, local
 process, or composite coroutine without modification. The figure below
@@ -27,9 +27,9 @@ compute an output value.
   cannot keep up with the input and the Joule Pipe buffers are
   accumulating data.
 
-.. currentmodule:: joule.client
+.. currentmodule:: joule
 
-.. class:: JoulePipe
+.. class:: NumpyPipe
 
   .. method:: read(flatten=False)
 
@@ -53,7 +53,7 @@ compute an output value.
 
 
 
-.. class:: LocalPipe(JoulePipe)
+.. class:: LocalPipe(NumpyPipe)
 
   .. method:: read_nowait(flatten=False)
 
@@ -66,4 +66,4 @@ compute an output value.
 
   .. method:: add_subscriber(pipe)
 
-    Replicate stream data to [pipe]. [pipe] must be a writeable :class:`JoulePipe`
+    Replicate stream data to [pipe]. [pipe] must be a writeable :class:`joule.NumpyPipe`

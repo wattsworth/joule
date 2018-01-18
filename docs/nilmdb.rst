@@ -1,5 +1,3 @@
-.. toctree::
-  Introduction
 
 Database CLI
 ============
@@ -55,6 +53,7 @@ Usage::
   nilmtool [-h] [-v] [-u URL]
            {help,info,create,rename,list,intervals,metadata,insert,extract,remove,destroy}
            ...
+
 Arguments
 
 .. raw:: html
@@ -133,7 +132,7 @@ Arguments
     <dl class="arglist">
       <dt>PATH</dt><dd>Path of the new stream. Stream paths are similar to filesystem paths and must contain at least two components. For example, /foo/bar.</dd>
       <dt>LAYOUT</dt><dd>Layout for the new stream. Layouts are of the form &lt;type&gt;_&lt;count&gt;. The &lt;type&gt; is one of those described in Section 2.2.3 of the <a href="#">NilmDB Reference Guide</a>, such as uint16, int64, or float32. &lt;count&gt; is a numeric count of how many data elements there are, per row. Streams store rows of homogeneous data only, and the largest supported &lt;count&gt; is 1024. Generally, counts should fall within a much lower range, typically between 1 and 32. For example, float32_8.</dd>
-  ￼￼￼</dl>
+  </dl>
   </div>
 
 
@@ -415,6 +414,7 @@ Usage::
 Arguments
 
 .. raw:: html
+
   <div class="block-indent" style="padding-bottom: 30px">
     <dl class="arglist">
       <dt>PATH</dt><dd>Path(s) of streams. Wildcards are supported. At least one path must provided.</dd>
@@ -441,7 +441,7 @@ Usage::
 
 Arguments
 
-.. raw-html::
+.. raw:: html
 
   <div class="block-indent">
     <dl class="arglist">
@@ -478,7 +478,7 @@ Usage::
 
 Arguments
 
-.. raw-html::
+.. raw:: html
 
   <div class="block-indent">
   Most arguments are identical to those of nilm-copy (reference it for more details).
@@ -653,6 +653,7 @@ Usage::
 
   nilmdb-server [-h] [-v] [-a ADDRESS] [-p PORT] [-d DATABASE] [-q] [-t]
                      [-y]
+
 Arguments
 
 .. raw:: html
@@ -718,6 +719,7 @@ to remove. The configuration file is a text file in the following format::
 
 Stream paths are specified inside square brackets (``[]``) and are followed by configuration
 keywords for the matching streams. Paths can contain wildcards. Supported keywords are:
+
 ``keep``
   How much data to keep. Supported suffixes are h for hours, d for days, w for weeks, m for months, and y for years.
 ``rate``
@@ -738,6 +740,7 @@ Usage::
 Arguments
 
 .. raw:: html
+	 
   <div class="block-indent">
     <dl class="arglist">
       <dt>-u URL, --url URL</dt><dd> (default: http://localhost/nilmdb/) NilmDB server URL.</dd>

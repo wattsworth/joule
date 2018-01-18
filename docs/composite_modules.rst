@@ -54,10 +54,10 @@ The contents of ``example_composite.py`` are shown below:
       pipe = LocalPipe()
 
       #3.) convert modules into tasks
-      #  *output is an interior stream (write-end)
+      #  output is an interior stream (write-end)
       task1 = my_reader.run(parsed_args, pipe)
-      #  *raw input is an interior stream (read-end)
-      #  *filtered output is an exterior stream
+      #  raw is an interior stream (read-end)
+      #  filtered is an exterior stream
       task2 = my_filter.run(parsed_args,
                             {"raw": pipe},
                             {"filtered": outputs["filtered"]})
@@ -78,16 +78,34 @@ the following:
   3. Convert modules into tasks by calling ``run`` with the appropriate parameters
   4. Return tasks for execution in the main event loop
 
-Because this module is a composite of a ReaderModule and a FilterModule it has no
-inputs and a single output. In this example the nested modules receive parsed_args directly. In more
-complex scenario you should manually construct a Namespace object for each module
-with the particular arguments it requires.
+Because this module is a composite of a ReaderModule and a
+FilterModule it has no inputs and a single output. In this example the
+nested modules receive parsed_args directly. In more complex scenario
+you should manually construct a Namespace object for each module with
+the particular arguments it requires as shown below:
+
+.. code:: python
+	  
+  """
+  How to Create parsed_args for a Module:
+  
+    make sure *all* arguments are specified
+    and match the types produced by ArgumentParser.parse_args()
+  """
+  import argarse
+  module_args = argparse.Namespace(**{
+  "arg1": "a string",  # type not specified
+  "arg2": 100,         # type=int
+  "arg3": [100,10,4]   # type=json
+  })
+
 
 ``CompositeModule`` API
 -----------------------
 
 The following methods are available for the child class to override. The
 ``setup`` method must be implemented in the child, others are optional.
+
 
 .. method:: custom_args(parser)
 
@@ -101,7 +119,12 @@ The following methods are available for the child class to override. The
      class CompositeDemo(CompositeModule):
        def custom_args(self, parser):
          parser.description = "**module description**"
-         parser.add_argument("arg", help="custom argument")
+	 # add optional help text to the argument
+         parser.add_argument("--arg", help="custom argument")
+	 # parse json input
+	 parser.add_argument("--json_arg", type=json)
+	 # a yes|no argument that resolves to True|False
+	 parser.add_argument("--flag_arg", type=joule.yesno)
        #... other module code
 
    .. raw:: html
@@ -114,23 +137,37 @@ The following methods are available for the child class to override. The
 
       **module description**
 
-      positional arguments:
+      optional arguments:
         arg            custom argument
       <i>#more output...</i>
       </div>
+
+   *Note*:
+     Always use keyword arguments with modules so they can be specified
+     in the **[Arguments]** section  of module configuration file
+     
+   *Tip*:
+     Use the ``type`` parameter to specify a parser function. The parser
+     accepts a string input and produces the associated object. 
+
 
 .. method:: setup(parsed_args, inputs, outputs)
 
   * ``parsed_args`` -- `Namespace`_ object with the parsed command line arguments.
     Customize the argument structure by overriding :meth:`~custom_args`.
-  * ``inputs`` -- Dictionary of :class:`JoulePipe` connections to input streams.
-    Dictionary keys are the configuration file :ref:`input names`.
-  * ``outputs`` -- Dictionary of :class:`JoulePipe` connections to output streams.
-    Dictionary keys are the configuration file :ref:`output names`.
+  * ``inputs`` -- Dictionary of :class:`joule.NumpyPipe` connections to
+    input streams.  These should match the **[Inputs]** in the module
+    configuration file (see :ref:`sec-modules` for example
+    configuration file)
+  * ``outputs`` -- Dictionary of :class:`joule.NumpyPipe` connections to
+    output streams.  These should match the **[Outputs]** in the
+    module configuration file (see :ref:`sec-modules` for example
+    configuration file)
+    
   This should return an array of coroutine objects (tasks). See ExampleComposite for typical usage.
 
 
-The following methods are used to interact with :class:`CompositeModule` instances
+The following methods are used to interact with :class:`joule.CompositeModule` instances
 
 .. method:: start()
 

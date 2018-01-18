@@ -82,7 +82,12 @@ The following methods are available for the child class to override. The
      class ReaderDemo(ReaderModule):
        def custom_args(self, parser):
          parser.description = "**module description**"
+	 # add optional help text to the argument
          parser.add_argument("arg", help="custom argument")
+	 # parse json input
+	 parser.add_argument("json_arg", type=json)
+	 # a yes|no argument that resolves to True|False
+	 parser.add_argument("flag_arg", type=joule.yesno)
        #... other module code
 
    .. raw:: html
@@ -95,11 +100,20 @@ The following methods are available for the child class to override. The
 
       **module description**
 
-      positional arguments:
+      optional arguments:
         arg            custom argument
       <i>#more output...</i>
       </div>
 
+      
+   *Note*:
+     Always use keyword arguments with modules so they can be specified
+     in the **[Arguments]** section  of module configuration file
+     
+   *Tip*:
+     Use the ``type`` parameter to specify a parser function. The parser
+     accepts a string input and produces the associated object. 
+     
 .. method:: run(parsed_args, output)
 
   ``parsed_args`` is a `Namespace`_ object with the parsed command line arguments.
@@ -110,7 +124,7 @@ The following methods are available for the child class to override. The
 
   .. note::
 
-    The :ref:`Example Reader` loop structure should only be used for low bandwidth
+    The loop structure in shown above in ``ExampleReader`` should only be used for low bandwidth
     data sources. Higher bandwidth data should be timestamped and written in chunks.
     This reduces the IPC overhead between modules.
 

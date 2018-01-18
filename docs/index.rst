@@ -62,7 +62,8 @@ docker-compose. The NilmDB container is available by request on `Docker Hub`_.
    reader_modules
    filter_modules
    composite_modules
+   Module Docs <module_docs>
    streams
    integration_testing
    nilmdb
-   reference
+

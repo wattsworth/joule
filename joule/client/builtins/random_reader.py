@@ -72,9 +72,11 @@ class RandomReader(ReaderModule):
     "Generate a random stream of data"
     
     def custom_args(self, parser):
-        parser.add_argument("width", type=int,
+        parser.add_argument("--width", type=int,
+                            required=True,
                             help="number of elements in output")
-        parser.add_argument("rate", type=float,
+        parser.add_argument("--rate", type=float,
+                            required=True,
                             help="rate in Hz")
         parser.description = textwrap.dedent(ARGS_DESC)
 

@@ -20,6 +20,8 @@ Files must end with the **.conf** suffix and by default should be placed in
 The pipeline must form a directed acyclic graph (DAG). Circular paths are
 not allowed.
 
+.. _sec-modules:
+
 Modules
 -------
 
@@ -74,6 +76,8 @@ The input and output **names** should be provided by the module author.
 Inputs may be reused between modules, but
 outputs must be unique. All input and output
 **streams** must have corresponding configuration files.
+
+.. _sec-streams:
 
 Streams
 -------
@@ -200,7 +204,8 @@ Command Line Interface
 ``joule logs`` -- view stdout and stderr from a module
 
   Joule keeps a rolling log of module output. By default the last 100 lines
-  are stored, this can be configured in :ref:`main.conf`
+  are stored, see :ref:`sec-system-configuration` to customize
+  this value.
 
   .. raw:: html
 
@@ -213,6 +218,36 @@ Command Line Interface
       #... additional output
       </div>
 
+``joule docs`` -- manage module documentation
+
+  Manage the contents of the `Module Documentation`_. See
+  :ref:`sec-module-documentation` for details on writing module
+  documentation.
+
+  .. raw:: html
+
+      <div class="header bash">
+      Command Line:
+      </div>
+      <div class="code bash"><b>$>joule docs add joule-random-reader</b>
+      added documentation for [Random Reader]
+      
+      <b>$>joule docs update joule-random-reader</b>
+      updated documentation for [Random Reader]
+      
+      <b>$>joule docs list</b>
+      Documented modules:
+	Random Reader
+	...other modules
+	
+      <b>$>joule docs remove "Random Reader"</b>
+      removed documentation for [Random Reader]
+      </div>
+
+.. _Module Documentation: /modules
+  
+  
+.. _sec-system-configuration:
 
 System Configuration
 --------------------
@@ -232,6 +267,7 @@ full set of options and their default settings:
   <span>[NilmDB]</span>
   <b>url =</b> http://localhost/nilmdb
   <b>InsertionPeriod =</b> 5
+  <b>CleanupPeriod =</b> 600
 
   <span>[ProcDB]</span>
   <b>DbPath =</b> /tmp/joule-proc-db.sqlite
@@ -240,6 +276,9 @@ full set of options and their default settings:
   <span>[Jouled]</span>
   <b>ModuleDirectory =</b> /etc/joule/module_configs
   <b>StreamDirectory =</b> /etc/joule/stream_configs
+  <b>ModuleDocs =</b> /etc/joule/module_docs.json
+  <b>IPAddress =</b> 127.0.0.1
+  <b>Port =</b> 1234
   </div>
 
 See the list below for information on each setting.
@@ -247,9 +286,13 @@ See the list below for information on each setting.
 ``NilmDB``
   * ``url`` -- address of NilmDB server
   * ``InsertionPeriod`` -- how often to send stream data to NilmDB (in seconds)
+  * ``CleanupPeriod`` -- how often to remove old data as specified by stream **keep** parameters
 ``ProcDB``
   * ``DbPath`` -- path to sqlite database used internally by joule
   * ``MaxLogLines`` -- max number of lines to keep in a module log file (automatically rolls)
 ``Jouled``
   * ``ModuleDirectory`` -- folder with module configuration files (absolute path)
   * ``StreamDirectory`` -- folder with stream configuration files (absolute path)
+  * ``ModulesDocs`` -- JSON data file for module documentation
+  * ``IPAddress`` -- address to listen for standalone modules
+  * ``Port`` -- port to listen for standalone modules
