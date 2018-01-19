@@ -26,7 +26,7 @@ class NilmDbInserter:
         self.last_ts = None
         self.buffer = None
         self.stop_requested = False
-
+        
     async def process(self, queue, loop=None):
         cleanup_task = self._start_cleanup_task(loop)
         while(not self.stop_requested):
@@ -94,12 +94,14 @@ class NilmDbDecimator:
         self.factor = factor
         self.client = client
         self.input_path = input_path
-        self.path = None # configured by initialze
+        self.path = None  # configured by initialze
         self.child = None
         self.initialized = False
 
     def get_paths(self):
         """return an array of decimated paths (recursive)"""
+        if(self.path is None):
+            return []  # nothing has been decimated yet
         paths = [self.path]
         if(self.child is not None):
             paths += self.child.get_paths()
