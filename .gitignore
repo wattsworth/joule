@@ -15,3 +15,4 @@ joule/daemon/test.py
 test/e2e/nilmdb
 docs/_build
 .DS_Store
+.vscode
