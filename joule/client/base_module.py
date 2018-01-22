@@ -1,5 +1,6 @@
 import json
 import textwrap
+import sys
 import os
 import configparser
 import argparse
@@ -30,7 +31,8 @@ class BaseModule:
         self.stop_requested = True
         
     def build_args(self, parser):
-        grp = parser.add_argument_group('joule')
+        grp = parser.add_argument_group('joule',
+                                        'control module execution')
         # --pipes: JSON argument set by jouled
         grp.add_argument("--pipes",
                          default="unset",
@@ -44,6 +46,15 @@ class BaseModule:
                          default="unset",
                          help="specify directory of stream configs" +
                          "for standalone operation")
+        # --start_time: historical isolation mode
+        grp.add_argument("--start_time",
+                         type=int,
+                         help="input start time for historic isolation")
+        # --end_time: historical isolation mode
+        grp.add_argument("--end_time",
+                         type=int,
+                         help="input end time for historic isolation")
+
         parser.formatter_class = argparse.RawDescriptionHelpFormatter
         self.custom_args(parser)
         
@@ -56,12 +67,14 @@ class BaseModule:
         self.stop_requested = False
         try:
             task = self.run_as_task(parsed_args, loop)
+
             def stop_task():
                 loop = asyncio.get_event_loop()
                 # give task no more than 2 seconds to exit
                 loop.call_later(2, task.cancel)
                 # run custom exit routine
                 self.stop()
+                
             loop.add_signal_handler(signal.SIGINT, stop_task)
             loop.add_signal_handler(signal.SIGTERM, stop_task)
             loop.run_until_complete(task)
@@ -75,28 +88,57 @@ class BaseModule:
         pipe_args = parsed_args.pipes
         module_config_file = parsed_args.module_config
         stream_config_dir = parsed_args.stream_configs
-        if(pipe_args == 'unset'):
-            if(module_config_file == 'unset' or
-               stream_config_dir == 'unset'):
-                msg = "ERROR: specify --module_config_file and --stream_config_dir\n"+\
-                      "\tor run in joule environment"
-                raise ModuleError(msg)
-            else:
-                # request pipe sockets from joule server
-                try:
-                    return await self.build_socket_pipes(module_config_file,
-                                                         stream_config_dir)
-                except ConnectionRefusedError as e:
-                    raise ModuleError("%s: (is jouled running?)" % str(e))
-        else:
-            return self.build_fd_pipes(pipe_args)
 
-    async def build_socket_pipes(self, module_config_file, stream_config_dir):
+        # run the module within joule
+        if(pipe_args != 'unset'):
+            return self.build_fd_pipes(pipe_args)
+        
+        # run the module in isolation mode
+        if(module_config_file == 'unset' or
+           stream_config_dir == 'unset'):
+            msg = "ERROR: specify --module_config_file and --stream_config_dir\n"+\
+                  "\tor run in joule environment"
+            raise ModuleError(msg)
+        
+        # if time bounds are set make sure they are valid
+        start_time = parsed_args.start_time
+        end_time = parsed_args.end_time
+        if((start_time is not None and end_time is None) or
+           (end_time is not None and start_time is None)):
+            raise ModuleError("Must specify start_time AND end_time")
+        if((start_time is not None and end_time is not None) and
+           end_time <= start_time):
+            raise ModuleError("end_time <= start_time")
+            
+        # request pipe sockets from joule server
+        try:
+            return await self.build_socket_pipes(module_config_file,
+                                                 stream_config_dir,
+                                                 start_time,
+                                                 end_time)
+        except ConnectionRefusedError as e:
+            raise ModuleError("%s: (is jouled running?)" % str(e))
+
+    async def build_socket_pipes(self, module_config_file, stream_config_dir,
+                                 start_time=None, end_time=None):
         module_config = configparser.ConfigParser()
         with open(module_config_file, 'r') as f:
             module_config.read_file(f)
         parser = module.Parser()
         my_module = parser.run(module_config)
+
+        # historic isolation mode warning
+        if(start_time is not None and end_time is not None):
+            print("Running in historic isolation mode")
+            print("This will ERASE data from [%s to %s] in the input streams:")
+            for (name, path) in my_module.input_paths:
+                print("\t%s" % path)
+
+            self._check_for_OK()
+            sys.stdout.write("\nRequesting historic stream connection from jouled... ")
+        else:
+            sys.stdout.write("Requesting live stream connections from jouled... ")
+            
         # build the input pipes (must already exist)
         pipes_in = {}
         for name in my_module.input_paths.keys():
@@ -114,6 +156,7 @@ class BaseModule:
                 raise ModuleError(
                     "Missing configuration for output [%s]" % path)
             pipes_out[name] = npipe
+        print("[OK]")
         return (pipes_in, pipes_out)
 
     def parse_streams(self, stream_config_dir):
@@ -149,7 +192,12 @@ class BaseModule:
                                                    reader_factory=rf)
         return (pipes_in, pipes_out)
 
+    def _check_for_OK(self):
+        # raise error is user does not enter OK
+        if (input("Type OK to continue: ") != "OK"):
+            raise ModuleError("must type OK to continue execution")
 
+        
 class ModuleError(Exception):
     pass
 

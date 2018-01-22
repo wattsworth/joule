@@ -242,12 +242,19 @@ class Daemon(object):
                 else:
                     raise Exception("path [%s] is unavailable" % path)
             else:
-                # build a nilmdb reader to retrieve stored data
-                my_reader = nilmdb.Reader(self.async_nilmdb_client,
-                                          path, time_range)
-                task = asyncio.ensure_future(my_reader.run())
+                # Run in historical isolation mode
+                # TODO: test this!
+                coro = self.async_nilmdb_client.\
+                  stream_extract(q, path,
+                                 time_range.start,
+                                 time_range.end)
+                info = self.nilmdb_client.stream_info(path)
+                source_stream = stream.Stream(info.path, '',
+                                              path, info.layout_type,
+                                              0, False)
+                task = asyncio.ensure_future(coro)
                 runtime_tasks.append(task)
-                return (my_reader.get_stream(), my_reader.get_queue(),
+                return (source_stream, q,
                         lambda: task.cancel())
             
         # add the stream server to the event loop
