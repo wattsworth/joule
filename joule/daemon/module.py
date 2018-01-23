@@ -91,10 +91,12 @@ class Parser(object):
             if "Arguments" in configs:
                 args = self._compile_arguments(configs["Arguments"])
                 exec_cmd += self._stringify_arguments(configs["Arguments"])
+            else:
+                args = []
+            return Module(name, description, exec_cmd, args,
+                          input_paths, output_paths)
         except KeyError as e:
             raise ConfigError("In [main] missing [%s] setting" % e) from e
-        return Module(name, description, exec_cmd, args,
-                      input_paths, output_paths)
 
     def _compile_arguments(self, args):
         arg_list = []

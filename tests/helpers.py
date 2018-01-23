@@ -26,7 +26,8 @@ def build_module(name,
                  status=module.STATUS_UNKNOWN,
                  pid=-1,
                  id=None):
-    return module.Module(name, description, exec_cmd, input_paths, output_paths,
+    # pass empty args array
+    return module.Module(name, description, exec_cmd, [], input_paths, output_paths,
                          status=status, pid=pid, id=id)
 
 

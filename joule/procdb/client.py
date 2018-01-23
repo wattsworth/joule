@@ -99,6 +99,7 @@ class SQLClient():
             "SELECT * FROM {table}".format(table=schema.modules['table']))
         for row in c.fetchall():
             attribs = {**row}
+            attribs['args'] = []
             attribs['input_paths'] = {}
             attribs['output_paths'] = {}
             my_module = module.Module(**attribs)
@@ -196,6 +197,7 @@ class SQLClient():
         if row is None:
             return None
         attribs = {**row}
+        attribs['args'] = []
         attribs['input_paths'] = {}
         attribs['output_paths'] = {}
         my_module = module.Module(**attribs)

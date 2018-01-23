@@ -10,10 +10,11 @@ class TestModule(unittest.TestCase):
         self.my_module = module.Module(name="test",
                                        description="test_description",
                                        exec_cmd='/path/to/exec --arg1 --arg2="a long multiline\nargument that goes on\nand on"',
+                                       args=["--arg1","--arg2","a long multiline\nargument that goes on\nand on"],
                                        input_paths={"path1": "/input/path1",
-                                                     "path2": "/input/path2"},
+                                                    "path2": "/input/path2"},
                                        output_paths={"path1": "/output/path1",
-                                                          "path2": "/output/path2"})
+                                                     "path2": "/output/path2"})
         self.base_config = helpers.parse_configs(
             """[Main]
                  name = test

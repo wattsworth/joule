@@ -243,29 +243,37 @@ class TestDaemonRun(unittest.TestCase):
 
         # should return an inserter for unworked paths
         unworked_stream = helpers.build_stream("test", path="/unworked/path")
-        self.assertIsNotNone(inserter_factory(unworked_stream))
+        coro = inserter_factory(unworked_stream, None)
+        self.assertIsNotNone(loop.run_until_complete(coro))
         # should not return more than one inserter per path
         with self.assertRaises(Exception):
-            inserter_factory(unworked_stream)
+            coro = inserter_factory(unworked_stream, None)
+            loop.run_until_complete(coro)
+            
         worked_stream = helpers.build_stream("worked",
                                              path="/worked/path",
                                              datatype="float32",
                                              num_elements=4)
         with self.assertRaises(Exception):
-            self.assertIsNone(inserter_factory(worked_stream))
+            coro = inserter_factory(worked_stream, None)
+            self.assertIsNone(loop.run_until_complete(coro))
+            
         # cannot insert stream with datatype mismatch
         dtype_mismatch = helpers.build_stream("mismatch",
                                               path="/exists/float32_4",
                                               datatype="uint32",
                                               num_elements=4)
         with self.assertRaises(Exception):
-            self.assertIsNone(inserter_factory(dtype_mismatch))
+            coro = inserter_factory(dtype_mismatch, None)
+            self.assertIsNone(loop.run_until_complete(coro))
+            
         nelem_mismatch = helpers.build_stream("mismatch",
                                               path="/exists/float32_4",
                                               datatype="float32",
                                               num_elements=3)
         with self.assertRaises(Exception):
-            self.assertIsNone(inserter_factory(nelem_mismatch))
+            coro = inserter_factory(nelem_mismatch, None)
+            self.assertIsNone(loop.run_until_complete(coro))
         
     @asynctest.patch("joule.daemon.daemon.Worker", autospec=True)
     @asynctest.patch("joule.daemon.daemon.inserter.NilmDbInserter",
