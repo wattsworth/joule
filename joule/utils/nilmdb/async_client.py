@@ -76,7 +76,7 @@ class AsyncClient:
        """ remove [start,end] in path and all decimations """
        all_streams = await self.stream_list()
        all_paths = [x[0] for x in all_streams]
-       regex=re.compile("%s~decim(\d)+$"%path)       
+       regex=re.compile("%s~decim-(\d)+$"%path)       
        decim_paths = list(filter(regex.match, all_paths))
        return await self.streams_remove([path]+decim_paths, start, end, retry)
    

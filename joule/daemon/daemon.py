@@ -216,11 +216,10 @@ class Daemon(object):
         # returns an inserter and unsubscribe function
         async def inserter_factory(stream, time_range):
             if(not self._validate_stream(stream)):
-                return None
-            else:
-                self.path_streams[stream.path] = stream
-            
+                raise Exception("Invalid stream configuration")
 
+            self.path_streams[stream.path] = stream
+            if(time_range is not None):
                 #remove time_range data
                 await self.async_nilmdb_client.\
                           stream_auto_remove(stream.path,
