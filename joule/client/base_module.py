@@ -6,6 +6,7 @@ import configparser
 import argparse
 import asyncio
 import signal
+import dateparser
 from joule.daemon import module, stream
 from joule.utils.numpypipe import (StreamNumpyPipeReader,
                                    StreamNumpyPipeWriter,
@@ -40,19 +41,17 @@ class BaseModule:
         # --module_config: set to run module standalone
         grp.add_argument("--module_config",
                          default="unset",
-                         help='specify *.conf file for standalone operation')
+                         help='specify *.conf file for isolated execution')
         # --stream_configs: set to run module standalone
         grp.add_argument("--stream_configs",
                          default="unset",
-                         help="specify directory of stream configs" +
-                         "for standalone operation")
+                         help="specify directory of stream configs " +
+                         "for isolated execution")
         # --start_time: historical isolation mode
         grp.add_argument("--start_time",
-                         type=int,
                          help="input start time for historic isolation")
         # --end_time: historical isolation mode
         grp.add_argument("--end_time",
-                         type=int,
                          help="input end time for historic isolation")
 
         parser.formatter_class = argparse.RawDescriptionHelpFormatter
@@ -81,7 +80,7 @@ class BaseModule:
         except asyncio.CancelledError:
             pass
         except ModuleError as e:
-            print(str(e))
+            print("ERROR:",str(e))
         loop.close()
         
     async def build_pipes(self, parsed_args):
@@ -96,7 +95,7 @@ class BaseModule:
         # run the module in isolation mode
         if(module_config_file == 'unset' or
            stream_config_dir == 'unset'):
-            msg = "ERROR: specify --module_config_file and --stream_config_dir\n"+\
+            msg = "Specify module_config_file AND stream_config_dir\n"+\
                   "\tor run in joule environment"
             raise ModuleError(msg)
         
@@ -105,11 +104,8 @@ class BaseModule:
         end_time = parsed_args.end_time
         if((start_time is not None and end_time is None) or
            (end_time is not None and start_time is None)):
-            raise ModuleError("Must specify start_time AND end_time")
-        if((start_time is not None and end_time is not None) and
-           end_time <= start_time):
-            raise ModuleError("end_time <= start_time")
-            
+            raise ModuleError("Specify start_time AND end_time or neither")
+
         # request pipe sockets from joule server
         try:
             return await self.build_socket_pipes(module_config_file,
@@ -126,24 +122,37 @@ class BaseModule:
             module_config.read_file(f)
         parser = module.Parser()
         my_module = parser.run(module_config)
-
+        
         # historic isolation mode warning
         if(start_time is not None and end_time is not None):
-            print("Running in historic isolation mode")
-            print("This will ERASE data from [%s to %s] in the input streams:")
-            for (name, path) in my_module.input_paths:
-                print("\t%s" % path)
+            #convert start_time and end_time into us timestamps
+            start_ts = int(dateparser.parse(start_time).timestamp()*1e6)
+            end_ts = int(dateparser.parse(end_time).timestamp()*1e6)
+            time_range = [start_ts, end_ts]
+            if(start_ts >= end_ts):
+               raise ModuleError("start_time [%s] is after end_time [%s]" %
+                                 (dateparser.parse(start_time),
+                                 dateparser.parse(end_time)))
 
+            print("Running in historic isolation mode")
+            print("This will ERASE data from [%s to %s] in the output streams:" %
+                  (dateparser.parse(start_time),
+                   dateparser.parse(end_time)))
+            for (name, path) in my_module.output_paths.items():
+                print("\t%s" % path)
+            
             self._check_for_OK()
             sys.stdout.write("\nRequesting historic stream connection from jouled... ")
         else:
+            time_range=None
             sys.stdout.write("Requesting live stream connections from jouled... ")
             
         # build the input pipes (must already exist)
         pipes_in = {}
         for name in my_module.input_paths.keys():
             path = my_module.input_paths[name]
-            npipe = await request_reader(path)
+            npipe = await request_reader(path,
+                                         time_range=time_range)
             pipes_in[name] = npipe
         # build the output pipes (must have matching stream.conf)
         pipes_out = {}
@@ -151,7 +160,8 @@ class BaseModule:
         for name in my_module.output_paths.keys():
             path = my_module.output_paths[name]
             try:
-                npipe = await request_writer(streams[path])
+                npipe = await request_writer(streams[path],
+                                             time_range=time_range)
             except KeyError:
                 raise ModuleError(
                     "Missing configuration for output [%s]" % path)
@@ -193,6 +203,7 @@ class BaseModule:
         return (pipes_in, pipes_out)
 
     def _check_for_OK(self):
+        return # BYPASS
         # raise error is user does not enter OK
         if (input("Type OK to continue: ") != "OK"):
             raise ModuleError("must type OK to continue execution")

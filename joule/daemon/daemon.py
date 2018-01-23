@@ -214,12 +214,18 @@ class Daemon(object):
 
         # Factory function to allow the server to build inserters
         # returns an inserter and unsubscribe function
-        def inserter_factory(stream):
+        async def inserter_factory(stream, time_range):
             if(not self._validate_stream(stream)):
                 return None
             else:
                 self.path_streams[stream.path] = stream
             
+
+                #remove time_range data
+                await self.async_nilmdb_client.\
+                          stream_auto_remove(stream.path,
+                                             time_range[0],
+                                             time_range[1])
             return (
                 inserter.NilmDbInserter(
                     self.async_nilmdb_client,
@@ -238,23 +244,21 @@ class Daemon(object):
             if(time_range is None):
                 if path in self.path_workers:
                     (q, unsubscribe) = self.path_workers[path]()
-                    return (self.path_streams[path], q, unsubscribe)
+                    return (self.path_streams[path].layout, q, unsubscribe)
                 else:
                     raise Exception("path [%s] is unavailable" % path)
             else:
                 # Run in historical isolation mode
-                # TODO: test this!
+                q = asyncio.Queue()
+                info = self.nilmdb_client.stream_info(path)
                 coro = self.async_nilmdb_client.\
                   stream_extract(q, path,
-                                 time_range.start,
-                                 time_range.end)
-                info = self.nilmdb_client.stream_info(path)
-                source_stream = stream.Stream(info.path, '',
-                                              path, info.layout_type,
-                                              0, False)
+                                 info.layout,
+                                 time_range[0],
+                                 time_range[1])
                 task = asyncio.ensure_future(coro)
                 runtime_tasks.append(task)
-                return (source_stream, q,
+                return (info.layout, q,
                         lambda: task.cancel())
             
         # add the stream server to the event loop

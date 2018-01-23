@@ -2,7 +2,10 @@ import json
 import aiohttp
 import logging
 import asyncio
+import re
+import traceback
 
+from .. import numpypipe
 
 class AsyncClient:
 
@@ -47,17 +50,36 @@ class AsyncClient:
                     logging.error("nilmdb error: [%s], retrying" % e)
                     await asyncio.sleep(0.1)
 
-    async def stream_extract(self, dest_queue, path, start, end):
+    async def stream_extract(self, dest_queue, path, layout, start, end):
         url = "{server}/stream/extract".format(server=self.server)
         params = {"path":   path,
                   "start":  start,
-                  "end":    end}
-        async with self.session.get(url, params=params) as resp:
-            async for data, _ in resp.content.iter_chunks():
-                await dest_queue.put(data)
+                  "end":    end,
+                  "binary": 1}
+        try:
+            async with self.session.get(url, params=params) as resp:
+                reader = numpypipe.StreamNumpyPipeReader(layout, resp.content)
+                while(True):
+                    try:
+                        data = await reader.read()
+                        await dest_queue.put(data)
+                        reader.consume(len(data))
+                    except numpypipe.EmptyPipe:
+                        break
+        except Exception as e:
+            for line in traceback.format_exception(
+                    Exception, e, e.__traceback__):
+                print(line)
         await dest_queue.put(None)
         
-    
+    async def stream_auto_remove(self, path, start, end, retry=True):
+       """ remove [start,end] in path and all decimations """
+       all_streams = await self.stream_list()
+       all_paths = [x[0] for x in all_streams]
+       regex=re.compile("%s~decim(\d)+$"%path)       
+       decim_paths = list(filter(regex.match, all_paths))
+       return await self.streams_remove([path]+decim_paths, start, end, retry)
+   
     async def streams_remove(self, paths, start, end, retry=True):
         """ remove data from an array of paths (eg base+decimations)"""
         for path in paths:
@@ -90,9 +112,14 @@ class AsyncClient:
                     logging.error("nilmdb error: [%s], retrying" % e)
                     await asyncio.sleep(0.1)
                     
-    async def stream_list(self, path, layout=None, extended=False):
+    async def stream_list(self, path=None, layout=None, extended=False):
+        """ set path to None to list all streams """
         url = "{server}/stream/list".format(server=self.server)
-        params = {"path":   path}
+        if(path is not None):
+            params = {"path":   path}
+        else:
+            params = {}
+            
         async with self.session.get(url, params=params) as resp:
             body = await resp.text()
             if(resp.status != 200):

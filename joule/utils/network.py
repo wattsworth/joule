@@ -16,10 +16,16 @@ DataRequest = collections.namedtuple("DataRequest", ["type", "config"])
 
 """
 Request a stream to write into
-config: stream object as JSON
+config: 
+   { 
+     stream: stream object as JSON,
+     time_range: [start, end]
+   }
 """
 REQ_WRITE = 'write'
 
+WriterConfig = collections.namedtuple("WriterConfig",
+                                      ["stream", "time_range"])
 """
 Request a stream to read from
 config:
@@ -43,11 +49,12 @@ def parse_data_request(data_request):
                                                   req_config['decimation'],
                                                   req_config['time_range']))
     elif(req_type == REQ_WRITE):
-        config = configparser.ConfigParser()
-        config.read_dict(req_config)
+        stream_config = configparser.ConfigParser()
+        stream_config.read_dict(req_config['stream'])
         streamparser = stream.Parser()
-        req_stream = streamparser.run(config)
-        return DataRequest(REQ_WRITE, req_stream)
+        req_stream = streamparser.run(stream_config)
+        return DataRequest(REQ_WRITE, WriterConfig(req_stream,
+                                                   req_config['time_range']))
     else:
         raise Exception("invalid request type: %s" % type)
 

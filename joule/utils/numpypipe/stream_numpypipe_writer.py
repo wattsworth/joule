@@ -41,13 +41,15 @@ class StreamNumpyPipeWriter(numpypipe.NumpyPipe):
 
             
 async def request_writer(stream,
+                         time_range=None,
                          address='127.0.0.1',
                          port='1234',
                          loop=None):
 
     r, w = await asyncio.open_connection(address, port, loop=loop)
-    msg = network.DataRequest(network.REQ_WRITE,
-                                   stream.to_json(ini_format=True))
+    config = network.WriterConfig(stream.to_json(ini_format=True),
+                                  time_range)
+    msg = network.DataRequest(network.REQ_WRITE, config._asdict())
     await network.send_json(w, msg._asdict())
     resp = await network.read_json(r)
     if(resp['status'] != network.STATUS_OK):

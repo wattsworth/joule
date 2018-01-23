@@ -6,6 +6,11 @@ class StreamInfo(object):
     def __init__(self, url, info):
         self.url = url
         self.info = info
+        self.total_count = 0
+        self.timestamp_min = 0
+        self.timestamp_max = 0
+        self.rows = 0
+        self.seconds = 0
         try:
             self.path = info[0]
             self.layout = info[1]

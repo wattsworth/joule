@@ -36,9 +36,8 @@ class StreamNumpyPipeReader(numpypipe.NumpyPipe):
             return self._format_data(self.buffer[:self.last_index], flatten)
 
         raw = await self.reader.read(max_rows * rowbytes)
-
         # TODO: handle empty pipes, is eof the same as 0 bytes?
-        if(self.reader.at_eof() or (len(raw) == 0)):
+        if(self.reader.at_eof() and (len(raw) == 0)):
             raise numpypipe.EmptyPipe
 
         extra_bytes = (len(raw) + len(self.byte_buffer)) % rowbytes
