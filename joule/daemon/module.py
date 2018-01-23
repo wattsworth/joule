@@ -6,7 +6,7 @@ Configuration File:
 [Main]
 name = module name
 description = module description
-exec_cmd = /path/to/file --args [joule adds --pipes arg]
+exec_cmd = /path/to/file
 
 [Arguments]
 key = value
@@ -39,13 +39,15 @@ class Module(object):
 
     def __init__(self, name, description,
                  exec_cmd,
+                 args,
                  input_paths,
                  output_paths,
                  status=STATUS_UNKNOWN, pid=-1, id=None):
 
         self.name = name
         self.description = description
-        self.exec_cmd = exec_cmd
+        self.exec_cmd = exec_cmd #this should have args built-in
+        self.args = args #--arg=value
         self.input_paths = input_paths
         self.output_paths = output_paths
 
@@ -87,13 +89,25 @@ class Parser(object):
             if(exec_cmd == ''):
                 raise ConfigError("exec_cmd is missing or blank")
             if "Arguments" in configs:
-                exec_cmd += self._compile_arguments(configs["Arguments"])
+                args = self._compile_arguments(configs["Arguments"])
+                exec_cmd += self._stringify_arguments(configs["Arguments"])
         except KeyError as e:
             raise ConfigError("In [main] missing [%s] setting" % e) from e
-        return Module(name, description, exec_cmd,
+        return Module(name, description, exec_cmd, args,
                       input_paths, output_paths)
 
     def _compile_arguments(self, args):
+        arg_list = []
+        if args is None:
+            return arg_list
+        for key in args:
+            arg_list.append('--%s' % key)
+            if(args[key] is not None and
+               len(args[key]) > 0):
+                arg_list.append("%s" % args[key])
+        return arg_list
+        
+    def _stringify_arguments(self, args):
         arg_list = ""
         if args is None:
             return arg_list

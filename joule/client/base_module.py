@@ -59,9 +59,8 @@ class BaseModule:
         
     def start(self, parsed_args=None):
         if(parsed_args is None):
-            parser = argparse.ArgumentParser()
-            self.build_args(parser)
-            parsed_args = parser.parse_args()
+            parsed_args = self._parse_args()
+                
         loop = asyncio.get_event_loop()
         self.stop_requested = False
         try:
@@ -208,6 +207,38 @@ class BaseModule:
         if (input("Type OK to continue: ") != "OK"):
             raise ModuleError("must type OK to continue execution")
 
+    def _parse_args(self):
+        """ Complicated because we want to look for module_config
+            and add these args but this should be transparent
+            (eg, the -h flag should show the real help)
+        """
+        # build a dummy parser to look for module_config
+        temp_parser = argparse.ArgumentParser()
+        temp_parser.add_argument("--module_config", default="unset")
+        arg_list = sys.argv[1:]  # ignore the program name
+        stdout = sys.stdout
+        sys.stdout = open(os.devnull, 'w')
+        try:
+            args = temp_parser.parse_known_args()[0]
+            if(args.module_config != "unset"):
+                arg_list += self._append_args(args.module_config)
+        except SystemExit:
+            pass
+        finally:
+            sys.stdout.close()
+            sys.stdout = stdout
+        main_parser = argparse.ArgumentParser()
+        self.build_args(main_parser)
+        return main_parser.parse_args(arg_list)
+
+    def _append_args(self, module_config_file):
+        # if a module_config is specified add its args
+        module_config = configparser.ConfigParser()
+        with open(module_config_file, 'r') as f:
+            module_config.read_file(f)
+        parser = module.Parser()
+        my_module = parser.run(module_config)
+        return my_module.args
         
 class ModuleError(Exception):
     pass
