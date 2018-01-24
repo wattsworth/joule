@@ -1,10 +1,11 @@
 
+
 from cliff.command import Command
 import pkg_resources
 import shutil
 import os
 import sys
-
+import requests
 
 
 ESC_SEQ="\x1b["
@@ -54,6 +55,21 @@ class InitializeCmd(Command):
         # set ownership to joule user
         shutil.chown("/etc/joule/main.conf", user="joule", group="joule")
 
+        # check if module_docs.json exists
+        MODULE_DOCS = "/etc/joule/module_docs.json"
+        if(not os.path.isfile(MODULE_DOCS)):
+            # try to get the latest copy from wattsworth.net
+            r = requests.get('http://docs.wattsworth.net/store/data.json')
+            with open(MODULE_DOCS, 'w') as f:
+                if(r.status_code == 200):
+                    f.write(r.text)
+                else:
+                    f.write("[]")
+        # set ownership to joule user
+        shutil.chown(MODULE_DOCS, user="joule", group="joule")
+        # give everyone rw access
+        os.chmod(MODULE_DOCS, 0o666)
+        
         # setup stream config directory
         self.make_joule_directory("/etc/joule/stream_configs")
         example_file = pkg_resources.resource_filename(
