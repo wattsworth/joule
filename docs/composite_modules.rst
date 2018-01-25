@@ -33,10 +33,10 @@ The contents of ``example_composite.py`` are shown below:
 
 .. code:: python
 
-  from joule.client import CompositeModule,
-                           LocalPipe
+  import argparse
+  from joule import CompositeModule, LocalNumpyPipe
 
-  from example_reader import ExampleReader
+  from high_bandwidth_reader import HighBandwidthReader
   from example_filter import ExampleFilter
 
   class ExampleComposite(CompositeModule):
@@ -45,19 +45,21 @@ The contents of ``example_composite.py`` are shown below:
     """
     async def setup(self, parsed_args,
                     inputs, outputs):
-
+  
       #1.) create nested modules
-      my_reader = ExampleReader()
+      my_reader = HighBandwidthReader()
       my_filter = ExampleFilter()
 
       #2.) create local pipes for interior streams
-      pipe = LocalPipe()
+      pipe = LocalNumpyPipe(name="raw", layout="float32_1")
 
       #3.) convert modules into tasks
       #  output is an interior stream (write-end)
+      parsed_args = argparse.Namespace(rate=100)
       task1 = my_reader.run(parsed_args, pipe)
       #  raw is an interior stream (read-end)
       #  filtered is an exterior stream
+      parsed_args = argparse.Namespace()
       task2 = my_filter.run(parsed_args,
                             {"raw": pipe},
                             {"filtered": outputs["filtered"]})
@@ -66,8 +68,8 @@ The contents of ``example_composite.py`` are shown below:
       return [task1, task2]
 
   if __name__ == "__main__":
-      r = ExampleComposite()
-      r.start()
+    r = ExampleComposite()
+    r.start()
 
 Composite modules should extend the base ``CompositeModule`` class. The
 child class must implement the ``setup`` coroutine which should perform
@@ -122,7 +124,7 @@ The following methods are available for the child class to override. The
 	 # add optional help text to the argument
          parser.add_argument("--arg", help="custom argument")
 	 # parse json input
-	 parser.add_argument("--json_arg", type=json)
+	 parser.add_argument("--json_arg", type=json.loads)
 	 # a yes|no argument that resolves to True|False
 	 parser.add_argument("--flag_arg", type=joule.yesno)
        #... other module code

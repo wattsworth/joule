@@ -31,36 +31,40 @@ The contents of ``example_filter.py`` are shown below:
 
 .. code:: python
 
-  from joule.client import FilterModule
+  from joule import FilterModule, EmptyPipe
   from scipy.signal import medfilt
+  import asyncio
+
   WINDOW = 21
-  EDGE = (WINDOW-1)/2
+  EDGE = (WINDOW-1)//2
 
   class ExampleFilter(FilterModule):
     #Implement a WINDOW sized median filter
-
+            
     async def run(self, parsed_args, inputs, outputs):
-      #retrieve JoulePipes
       raw = inputs["raw"]
       filtered = outputs["filtered"]
-
       while(1):
         #read new data
-        vals= await raw.read()
-
+        try:
+          vals= await raw.read()
+        except EmptyPipe:
+          break
         #execute median filter in place
-        data = raw["data"]
-        data = np.medfilt(data,WINDOW)
-
+        vals["data"] = medfilt(vals["data"],WINDOW)
         #write out valid samples
-        await filtered.write(vals[EDGE:-EDGE,:])
-
+        await filtered.write(vals[EDGE:-EDGE])
         #prepend trailing samples to next read
-        raw.consume(len(vals)-2*EDGE)
-
+        nsamples = len(vals)-2*EDGE
+        if(nsamples>0):
+  	  raw.consume(nsamples)
+        #allow other routines to execute
+         await asyncio.sleep(0.5)
+            
   if __name__ == "__main__":
-    r = MedianFilter()
+    r = ExampleFilter()
     r.start()
+
 
 Filter modules should extend the base ``FilterModule`` class. The
 child class must implement the ``run`` coroutine which should perform
@@ -105,7 +109,7 @@ The following methods are available for the child class to override. The
 	 # add optional help text to the argument
          parser.add_argument("--arg", help="custom argument")
 	 # parse json input
-	 parser.add_argument("--json_arg", type=json)
+	 parser.add_argument("--json_arg", type=json.loads)
 	 # a yes|no argument that resolves to True|False
 	 parser.add_argument("--flag_arg", type=joule.yesno)
        #... other module code
@@ -192,6 +196,8 @@ the appropriate streams from jouled.
 
 **Live Isolation**
 Connect filter inputs to live streams produced by the jouled pipeline.
+Specify the module configuration file and a directory with configurations
+for each output stream.
 
 .. raw:: html
 
@@ -200,10 +206,10 @@ Connect filter inputs to live streams produced by the jouled pipeline.
   </div>
 
   <div class="code bash"><i># [module.conf] is a module configuration file
-  # [output_stream_configs] is a directory of stream configuration files</i>
+  # [stream_configs] is a directory of stream configuration files</i>
 
   <b>$>./demo_filter.py --args \
-    --output_configs=output_stream_configs --module_config=module.conf</b>
+    --stream_configs=stream_configs --module_config=module.conf</b>
   Requesting live stream connections from jouled... [OK]
   <i>#...stdout/stderr output from filter</i>
   <i># hit ctrl-c to stop </i>
@@ -213,9 +219,10 @@ Connect filter inputs to live streams produced by the jouled pipeline.
 **Historic Isolation**
 Connect filter inputs to a range of stream data saved in NilmDB.
 
-Specify historic execution by including a time range with **--start_time**
-and **--end_time** arguments. The time range may be a date
-string or a Unix microseconds timestamp.
+Specify historic execution by including a time range with **--start**
+and **--end** arguments. The time range may be a date
+string or a Unix microseconds timestamp. Common phrases are also supported
+such as "2 hours ago" or "today".
 
 .. warning::
 
@@ -229,11 +236,11 @@ string or a Unix microseconds timestamp.
     </div>
 
     <div class="code bash"><i># [module.conf] is a module configuration file
-    # [output_stream_configs] is a directory of stream configuration files</i>
+    # [stream_configs] is a directory of stream configuration files</i>
 
     <b>$>./demo_filter.py --args \
-      --output_configs=output_stream_configs --module_config=module.conf
-      --start_time="12:00 January 3 2017" --end_time="12:30 January 3 2017"</b>
+      --stream_configs=output_stream_configs --module_config=module.conf
+      --start="12:00 January 3 2017" --end="12:30 January 3 2017"</b>
     Requesting historic stream connections from jouled... [OK]
     <i>#...stdout/stderr output from filter</i>
 
