@@ -73,8 +73,7 @@ def parse_jouled_configs(jouled_parser, verify):
                 f.write('[]')
         except:
             raise InvalidConfiguration(
-                "Jouled:ModuleDocFile [%s] does not exist "+
-                "and could not be created" % module_doc)
+                "Jouled:ModuleDocFile [%s] does not exist or is not writable" % module_doc)
     if(not os.access(module_doc, os.W_OK) and verify):
         raise InvalidConfiguration(
             "Jouled:ModuleDocFile [%s] is not writable" % module_doc)
