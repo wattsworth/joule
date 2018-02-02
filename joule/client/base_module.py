@@ -94,7 +94,7 @@ class BaseModule:
         # run the module in isolation mode
         if(module_config_file == 'unset' or
            stream_config_dir == 'unset'):
-            msg = "Specify module_config_file AND stream_config_dir\n"+\
+            msg = "Specify module_config AND stream_configs\n"+\
                   "\tor run in joule environment"
             raise ModuleError(msg)
         
@@ -202,7 +202,6 @@ class BaseModule:
         return (pipes_in, pipes_out)
 
     def _check_for_OK(self):
-        return # BYPASS
         # raise error is user does not enter OK
         if (input("Type OK to continue: ") != "OK"):
             raise ModuleError("must type OK to continue execution")
