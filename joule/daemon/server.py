@@ -77,7 +77,6 @@ class Server:
                 if(data is None):
                     break
                 await npipe_w.write(data)
-                print("!!!sent data!!!")
                 await asyncio.sleep(0.25)
         except ConnectionResetError:
             pass

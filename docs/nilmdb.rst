@@ -24,6 +24,44 @@ client library function, described in Section 3.2.2.4 of the NilmDB reference
 guide. Examples of accepted formats are shown in Table 3-19 on page 133 of that
 document.
 
+Storage Volumes
+---------------
+
+It is usually a good idea to place the database on a separate disk or partition to ensure
+that the system does not run out of disk space due to excessive NilmDB data. By default
+the database is located in ``/opt/data``. 
+
+.. warning::
+
+  Set the journal mode to ``data=journal`` on the NilmDB drive. This will prevent data corruption
+  if the system shuts down unexpectedly (eg a power failure)
+
+To configure the journal mode edit the fstab entry for the nilmdb disk similar to the following:
+
+.. raw:: html
+
+  <div class="header ini">
+  /etc/fstab
+  </div>
+  <div class="code ini"><i>#example fstab entry for database on separate partition (recommended)</i>
+  /dev/sdXX  /opt/data  ext4  errors=remount-ro,data=journal 0 2
+
+  <i>#example fstab entry for a single root partition (not recommended)</i>
+  /dev/sdXX  /  ext4  errors=remount-ro<b>,data=journal</b> 0 1
+                          <i>#   add this --^</i>
+  </div>
+
+If the partition is the root partition you must add this option directly to the volume
+as well, otherwise the system will not boot properly. For example if your
+root partition is on ``/dev/sda2``:
+
+.. raw:: html
+
+  <div class="header bash">
+  Command Line:
+  </div>
+  <div class="code bash">$> sudo tune2fs -o journal_data /dev/sda2</div>
+
 Commonly Used Commands
 ----------------------
 

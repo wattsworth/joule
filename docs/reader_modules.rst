@@ -32,23 +32,22 @@ The contents of ``example_reader.py`` are shown below:
 
 .. code:: python
 
-  from joule.utils import time_now
-  from joule.client import ReaderModule
-  import asyncio
-  import numpy as np
+   from joule import ReaderModule, time_now
+   import asyncio
+   import numpy as np
 
-  class ExampleReader(ReaderModule):
-    "Example reader: generates random values"
-
-    async def run(self, parsed_args, output):
-      while(1):
-        value = np.rand() #data from sensor
-        await output.write(np.array([[time_now(), value]]))
-        await asyncio.sleep(1)
-
-  if __name__ == "__main__":
-      r = ExampleReader()
-      r.start()
+   class ExampleReader(ReaderModule):
+     "Example reader: generates random values"
+    
+     async def run(self, parsed_args, output):
+        while(1):
+          value = np.random.rand()  # data from sensor
+          await output.write(np.array([[time_now(), value]]))
+          await asyncio.sleep(1)
+            
+   if __name__ == "__main__":
+     r = ExampleReader()
+     r.start()
 
 Reader modules should extend the base ``ReaderModule`` class. The
 child class must implement the ``run`` coroutine which should perform
@@ -85,7 +84,7 @@ The following methods are available for the child class to override. The
 	 # add optional help text to the argument
          parser.add_argument("arg", help="custom argument")
 	 # parse json input
-	 parser.add_argument("json_arg", type=json)
+	 parser.add_argument("json_arg", type=json.loads)
 	 # a yes|no argument that resolves to True|False
 	 parser.add_argument("flag_arg", type=joule.yesno)
        #... other module code

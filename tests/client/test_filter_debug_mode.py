@@ -1,11 +1,13 @@
 from joule import FilterModule
 import asyncio
+import io
 import asynctest
 import unittest
 import tempfile
 import os
 import shutil
 import argparse
+from contextlib import redirect_stdout
 
 MODULE_CONFIG = """
 [Main]
@@ -88,10 +90,15 @@ class TestFilterDebugMode(unittest.TestCase):
         myfilter = FilterModule()
         args = argparse.Namespace(
             pipes="unset",
+            start_time=None,
+            end_time=None,
             module_config=self.module_config,
             stream_configs=self.stream_config_dir)
+        
         myfilter.run = asynctest.CoroutineMock()
-        myfilter.start(parsed_args=args)
+        f = io.StringIO()
+        with redirect_stdout(f):
+            myfilter.start(parsed_args=args)
         # check to make sure the run function is called with pipes
         args, kwargs = myfilter.run.call_args
         inputs = args[1]

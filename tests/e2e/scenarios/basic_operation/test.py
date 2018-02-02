@@ -44,17 +44,17 @@ def check_data():
     """
     Test: check data inserted into nilmdb
     Goal:
-      /normal1/data is int32_1, has 1 interval with >500 samples
-      /normal2/subpath/data  is int32_1, >1 intervals each with 100 samples
-      /broken/data is float64_1, has separated intervals of data
-      /filter3/data is float64_1, has separated intervals of data
+      /bc/normal1/data is int32_1, has 1 interval with >500 samples
+      /bc/normal2/subpath/data  is int32_1, >1 intervals each with 100 samples
+      /bc/broken/data is float64_1, has separated intervals of data
+      /bc/filter3/data is float64_1, has separated intervals of data
       both normal1 and normal2 have decimations
     """
-    normal1_path = "/normal1/data"
-    normal2_path = "/normal2/subpath/data"
-    broken_path = "/broken/data"
-    filter1_path = "/filter1/data"
-    filter2_path = "/filter2/data"
+    normal1_path = "/bc/normal1/data"
+    normal2_path = "/bc/normal2/subpath/data"
+    broken_path = "/bc/broken/data"
+    filter1_path = "/bc/filter1/data"
+    filter2_path = "/bc/filter2/data"
     for path in [normal1_path, normal2_path, filter1_path, filter2_path]:
         # 1.) check streams have one continuous interval
         base_intervals = nilmtool.intervals(path, url=NILMDB_URL)
