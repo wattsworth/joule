@@ -113,6 +113,7 @@ class Daemon(object):
         return my_stream
 
     def _validate_stream(self, my_stream):
+        
         client = self.nilmdb_client
         info = client.stream_info(my_stream.path)
         # 1.) Validate or create the stream in NilmDB
@@ -133,11 +134,6 @@ class Daemon(object):
             # datatype and element count match so we are ok
         else:
             self._create_stream(my_stream)
-        # 2.) Make sure no other stream config is using this path
-        if my_stream.path in self.path_streams:
-            msg = ("Stream [%s]: The path [%s] is already in use" %
-                   (my_stream.name, my_stream.path))
-            raise Exception(msg)
         # OK, all checks passed for this stream
         return True
 
@@ -215,8 +211,10 @@ class Daemon(object):
         # Factory function to allow the server to build inserters
         # returns an inserter and unsubscribe function
         async def inserter_factory(stream, time_range):
-            if(not self._validate_stream(stream)):
-                raise Exception("Invalid stream configuration")
+            self._validate_stream(stream)
+            
+            if(stream.path in self.path_workers):
+                raise Exception("[%s] is in use by another module " % stream.path)
 
             self.path_streams[stream.path] = stream
             if(time_range is not None):
