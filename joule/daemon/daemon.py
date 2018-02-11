@@ -38,6 +38,7 @@ class Daemon(object):
         # runtime structures
         self.path_workers = {}  # key: path, value: fn_subscribe()
         self.path_streams = {}  # key: path, value: stream
+        self.write_locked_streams = []  # paths that have a writer
         self.workers = []
         self.inserters = []
 
@@ -61,6 +62,10 @@ class Daemon(object):
         self._register_items(streams, self._validate_stream, valid_streams)
         # set up dictionary to find stream by path
         for my_stream in valid_streams:
+            if(my_stream.path in self.path_streams):
+                logging.error("Duplicate configuration for [%s]" % my_stream.path)
+                continue
+            self.write_locked_streams.append(my_stream.path)
             self.path_streams[my_stream.path] = my_stream
             self.procdb.register_stream(my_stream)
         # Set up modules
@@ -213,10 +218,11 @@ class Daemon(object):
         async def inserter_factory(stream, time_range):
             self._validate_stream(stream)
             
-            if(stream.path in self.path_workers):
+            if(stream.path in self.write_locked_streams):
                 raise Exception("[%s] is in use by another module " % stream.path)
 
-            self.path_streams[stream.path] = stream
+            self.write_locked_streams.append(stream.path)
+
             if(time_range is not None):
                 #remove time_range data
                 await self.async_nilmdb_client.\
@@ -231,7 +237,7 @@ class Daemon(object):
                     cleanup_period=self.NILMDB_CLEANUP_PERIOD,
                     keep_us=stream.keep_us,
                     decimate=stream.decimate),
-                lambda: self.path_streams.pop(stream.path)
+                lambda: self.write_locked_streams.remove(stream.path)
             )       
         
         # Factory function to allow the server to subscribe to queues

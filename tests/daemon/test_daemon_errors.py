@@ -38,6 +38,7 @@ class TestDaemonErrors(unittest.TestCase):
         with self.assertRaisesRegex(Exception, "uint8"):
             my_daemon._validate_stream(my_stream)
 
+    @unittest.skip("we do skip duplicates but not in _validate_stream")
     def test_stream_validation_fails_if_duplicate_path(self):
         """Cannot register stream with duplicate path"""
         info = mock.Mock(layout="float32_1", layout_type="float32",

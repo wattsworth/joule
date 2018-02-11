@@ -5,8 +5,8 @@ import numpy as np
 from joule.testing.e2eutils import joule
 from joule.testing.e2eutils import nilmtool
 
-NILMDB_URL = "http://127.0.0.1/nilmdb"
-#NILMDB_URL = "http://nilmdb"
+#NILMDB_URL = "http://127.0.0.1/nilmdb"
+NILMDB_URL = "http://nilmdb"
 
 
 def main():
