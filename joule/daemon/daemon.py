@@ -15,7 +15,7 @@ import functools
 import argparse
 import signal
 from joule.utils import config_manager, nilmdb, time
-from . import inserter, server
+from . import inserter, server, api
 
 
 class Daemon(object):
@@ -80,6 +80,7 @@ class Daemon(object):
         self.NILMDB_CLEANUP_PERIOD = config.nilmdb.cleanup_period
         self.SERVER_IP_ADDRESS = config.jouled.ip_address
         self.SERVER_PORT = config.jouled.port
+        self.NILMDB_URL = config.nilmdb.url
         
     def _load_configs(self, path, factory):
         objects = []
@@ -272,6 +273,10 @@ class Daemon(object):
             inserter_factory, loop)
 
         my_server = loop.run_until_complete(coro)
+
+        # add the API server to the event loop
+        my_api = api.build_server(loop, '127.0.0.1', port=8081,
+                                nilmdb_url=self.NILMDB_URL)
         
         # commit records to database
         self.procdb.commit()
@@ -285,7 +290,9 @@ class Daemon(object):
         except Exception:
             pass
 
-        # shut down the server
+        # shut down the servers
+        loop.run_until_complete(my_api.shutdown())
+        loop.run_until_complete(my_api.cleanup())
         my_server.close()
 
         loop.run_until_complete(my_server.wait_closed())
