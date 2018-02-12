@@ -20,7 +20,7 @@ class APIServer:
     async def proxy_get(self, request):
         url = URL(self.nilmdb_url + request.rel_url.path)\
               .with_query(request.rel_url.query)
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(auto_decompress=False) as session:
             async with session.get(url) as resp:
                 raw = await resp.read()
                 return web.Response(body=raw,
@@ -30,17 +30,11 @@ class APIServer:
     async def proxy_get_stream(self, request):
         url = URL(self.nilmdb_url + request.rel_url.path)\
               .with_query(request.rel_url.query)
-        print(url)
-        print("Here!")
-        async with aiohttp.ClientSession() as session:
-            print("session")
+        async with aiohttp.ClientSession(auto_decompress=False) as session:
             async with session.get(url) as resp:
-                print("resp")
                 # check if this is actually a streaming response
                 if('Content-Length' in resp.headers):
-                    raw = await resp.read()
-                    print("non-streaming")
-                    print(raw)
+                    raw = await resp.content.read()
                     return web.Response(body=raw,
                                         status=resp.status,
                                         headers=resp.headers)
@@ -48,19 +42,15 @@ class APIServer:
                 proxy_resp = web.StreamResponse(headers=resp.headers,
                                                 status=resp.status)
                 proxy_resp.enable_chunked_encoding()
-                proxy_resp.enable_compression()
                 await proxy_resp.prepare(request)
-                print("beginning transmission")
                 async for data, b in resp.content.iter_chunks():
-                    print("sending chunk")
                     await proxy_resp.write(data)
                 await proxy_resp.write_eof()
-                print("all done")
                 return proxy_resp
 
     async def proxy_post(self, request):
         url = URL(self.nilmdb_url + request.rel_url.path)
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(auto_decompress=False) as session:
             data = await request.read()
             json_data = json.loads(data.decode('utf-8'))
             async with session.post(url, json=json_data) as resp:
