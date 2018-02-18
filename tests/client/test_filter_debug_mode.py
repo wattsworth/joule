@@ -82,8 +82,8 @@ class TestFilterDebugMode(unittest.TestCase):
         os.remove(self.module_config)
         shutil.rmtree(self.stream_config_dir)
 
-    @asynctest.patch("joule.client.base_module.request_reader")
-    @asynctest.patch("joule.client.base_module.request_writer")
+    @asynctest.patch("joule.client.helpers.pipes.request_reader")
+    @asynctest.patch("joule.client.helpers.pipes.request_writer")
     def test_builds_networked_streams(self, mock_writer, mock_reader):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)

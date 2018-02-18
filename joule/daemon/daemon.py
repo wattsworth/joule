@@ -63,7 +63,7 @@ class Daemon(object):
         # set up dictionary to find stream by path
         for my_stream in valid_streams:
             if(my_stream.path in self.path_streams):
-                logging.error("Duplicate configuration for [%s]" % my_stream.path)
+                logging.warning("Duplicate configuration for [%s]" % my_stream.path)
                 continue
             self.write_locked_streams.append(my_stream.path)
             self.path_streams[my_stream.path] = my_stream

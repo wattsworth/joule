@@ -52,7 +52,9 @@ class TestDaemon(unittest.TestCase):
                 my_daemon = daemon.Daemon()
                 my_daemon._validate_module = mock.Mock(return_value=True)
                 my_daemon._validate_stream = mock.Mock(return_value=True)
-                my_daemon.initialize(configs)
+                #ignore duplication configuration warning
+                with self.assertLogs(level='WARNING'):
+                    my_daemon.initialize(configs)
                 self.assertEqual(MODULE_COUNT, len(my_daemon.modules))
                 self.assertEqual(STREAM_COUNT,
                                  my_daemon._validate_stream.call_count)
@@ -197,6 +199,7 @@ class TestDaemonRun(unittest.TestCase):
         mock_builder.return_value = buildit()
         my_daemon.SERVER_IP_ADDRESS = '127.0.0.1'
         my_daemon.SERVER_PORT = 1234
+        my_daemon.NILMDB_URL = 'http://localhost/nilmdb'
         my_daemon.modules = []
 
         nilmdb_paths = ["/worked/path", "/exists/float32_4"]
@@ -301,7 +304,8 @@ class TestDaemonRun(unittest.TestCase):
         my_daemon = daemon.Daemon()
         my_daemon.SERVER_IP_ADDRESS = '127.0.0.1'
         my_daemon.SERVER_PORT = 1234
-
+        my_daemon.NILMDB_URL = 'http://localhost/nilmdb'
+        
         my_daemon.procdb = mock.Mock()
         my_daemon.modules = [mock.Mock()]
         # a mock stream for the module
