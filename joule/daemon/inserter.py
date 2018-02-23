@@ -84,6 +84,8 @@ class NilmDbInserter:
         while(True):
             await asyncio.sleep(self.cleanup_period, loop=loop)
             keep_time = joule.utils.time.now()-self.keep_us
+            if(keep_time < 0):  # TODO add keep ALL as an option
+                continue
             paths = [self.path] + self.decimator.get_paths()
             await self.client.streams_remove(paths, start=0, end=keep_time)
 
