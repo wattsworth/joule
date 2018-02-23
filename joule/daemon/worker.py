@@ -98,11 +98,14 @@ class Worker:
                 break
 
     async def _run_once(self, loop):
-
         cmd = shlex.split(self.module.exec_cmd)
         await popen_lock.acquire()
         await self._start_pipe_tasks()
         cmd += ["--pipes", json.dumps(self.child_pipes)]
+        # add a socket if the module has a web interface
+        if self.module.web_interface:
+            self.module.socket = "/tmp/wattsworth.joule.%d" % self.module.id
+            cmd += ["--socket", self.module.socket]
         # logging.warn(cmd)
         create = asyncio.create_subprocess_exec(
             *cmd,
@@ -247,3 +250,12 @@ class Worker:
                 await asyncio.sleep(0.25)
         except ConnectionResetError as e:
             print("reset error, for ", npipe)
+
+    def _socket_path(id):
+        path = "/tmp/joule-module-%d" % id
+        try:
+            os.unlink(path)
+        except OSError:
+            if os.path.exists(path):
+                raise
+            

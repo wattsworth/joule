@@ -6,7 +6,8 @@ modules = {'table': "modules",
                ["status",       "string"],
                ["name",         "string"],
                ["description", "string"],
-               ["exec_cmd", "string"]]
+               ["exec_cmd", "string"],
+               ["web_interface", "integer"]]
            }
 streams = {'table': "streams",
            'columns': [

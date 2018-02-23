@@ -44,8 +44,9 @@ class SQLClient():
         c = self.db.cursor()
         # use string substitution to escape db_input_module insert
         data = [None,  my_module.pid, my_module.status,
-                my_module.name, my_module.description, my_module.exec_cmd]
-        c.execute("INSERT INTO {table} VALUES (?,?,?,?,?,?)".
+                my_module.name, my_module.description, my_module.exec_cmd,
+                my_module.web_interface]
+        c.execute("INSERT INTO {table} VALUES (?,?,?,?,?,?,?)".
                   format(table=schema.modules["table"]), data)
         my_module.id = c.lastrowid
 

@@ -41,7 +41,10 @@ class Daemon(object):
         self.write_locked_streams = []  # paths that have a writer
         self.workers = []
         self.inserters = []
-
+        # unique id's for modules and streams
+        self.stream_id = 0
+        self.module_id = 0
+        
     def initialize(self, config):
         # Set up the ProcDB
         self.procdb = procdb_client.SQLClient(config.procdb.db_path,
@@ -50,7 +53,8 @@ class Daemon(object):
         try:
             self.procdb.clear_db()
         except sqlite3.OperationalError:
-            raise DaemonError("Cannot write to procdb at %s" % config.procdb.db_path)
+            raise DaemonError("Cannot write to procdb at %s"
+                              % config.procdb.db_path)
         # Build a NilmDB client
         self.async_nilmdb_client = nilmdb.AsyncClient(config.nilmdb.url)
         self.nilmdb_client = nilmdb.Client(config.nilmdb.url)
@@ -63,7 +67,8 @@ class Daemon(object):
         # set up dictionary to find stream by path
         for my_stream in valid_streams:
             if(my_stream.path in self.path_streams):
-                logging.warning("Duplicate configuration for [%s]" % my_stream.path)
+                logging.warning("Duplicate configuration for [%s]"
+                                % my_stream.path)
                 continue
             self.write_locked_streams.append(my_stream.path)
             self.path_streams[my_stream.path] = my_stream
@@ -156,6 +161,8 @@ class Daemon(object):
         parser = module.Parser()
         try:
             my_module = parser.run(config)
+            my_module.id = self.module_id
+            self.module_id += 1
         except module.ConfigError as e:
             logging.error("Cannot load module config: %s" % (e))
             return None
@@ -275,8 +282,8 @@ class Daemon(object):
         my_server = loop.run_until_complete(coro)
 
         # add the API server to the event loop
-        my_api = api.build_server(loop, '127.0.0.1', port=8081,
-                                nilmdb_url=self.NILMDB_URL)
+        my_api = api.build_server(loop, '0.0.0.0', port=8080,
+                                  nilmdb_url=self.NILMDB_URL)
         
         # commit records to database
         self.procdb.commit()

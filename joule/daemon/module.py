@@ -7,11 +7,12 @@ Configuration File:
 name = module name
 description = module description
 exec_cmd = /path/to/file
+web_interface = no
 
 [Arguments]
 key = value
 
-[Input]
+[Inputs]
 path1 = /nilmdb/input/stream1
 path2 = /nilmdb/input/stream2
   ....
@@ -37,23 +38,31 @@ STATUS_UNKNOWN = 'unknown'
 class Module(object):
     log = logging.getLogger(__name__)
 
-    def __init__(self, name, description,
+    def __init__(self,
+                 name,
+                 description,
+                 web_interface,
                  exec_cmd,
                  args,
                  input_paths,
                  output_paths,
-                 status=STATUS_UNKNOWN, pid=-1, id=None):
+                 status=STATUS_UNKNOWN,
+                 pid=-1,
+                 id=None,
+                 socket=None):
 
         self.name = name
         self.description = description
-        self.exec_cmd = exec_cmd #this should have args built-in
-        self.args = args #--arg=value
+        self.web_interface = web_interface
+        self.exec_cmd = exec_cmd  # this should have args built-in
+        self.args = args  # --arg=value
         self.input_paths = input_paths
         self.output_paths = output_paths
 
         self.status = status
         self.pid = pid
         self.id = id
+        self.socket = socket
 
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
@@ -85,6 +94,7 @@ class Parser(object):
             if(name == ''):
                 raise ConfigError("name is missing or blank")
             description = main_configs.get('description', '')
+            web_interface = main_configs.getboolean('web_interface', False)
             exec_cmd = main_configs["exec_cmd"]
             if(exec_cmd == ''):
                 raise ConfigError("exec_cmd is missing or blank")
@@ -93,8 +103,8 @@ class Parser(object):
                 exec_cmd += self._stringify_arguments(configs["Arguments"])
             else:
                 args = []
-            return Module(name, description, exec_cmd, args,
-                          input_paths, output_paths)
+            return Module(name, description, web_interface,
+                          exec_cmd, args, input_paths, output_paths)
         except KeyError as e:
             raise ConfigError("In [main] missing [%s] setting" % e) from e
 

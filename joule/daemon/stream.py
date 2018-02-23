@@ -47,7 +47,8 @@ class Stream(object):
         return self.__dict__ == other.__dict__
 
     def __str__(self):
-        return "Stream [{name}] @ [{path}]".format(name=self.name, path=self.path)
+        return "Stream [{name}] @ [{path}]".format(name=self.name,
+                                                   path=self.path)
 
     def __lt__(a, b):
         return a.id < b.id
