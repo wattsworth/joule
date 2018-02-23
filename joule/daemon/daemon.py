@@ -283,7 +283,8 @@ class Daemon(object):
 
         # add the API server to the event loop
         my_api = api.build_server(loop, '0.0.0.0', port=8080,
-                                  nilmdb_url=self.NILMDB_URL)
+                                  nilmdb_url=self.NILMDB_URL,
+                                  modules=self.modules)
         
         # commit records to database
         self.procdb.commit()

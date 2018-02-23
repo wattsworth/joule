@@ -1,6 +1,12 @@
 from yarl import URL
 from aiohttp import web
 import aiohttp
+import json
+
+
+async def get_list(request, modules):
+    json_modules = [m.to_json() for m in modules]
+    return web.json_response(json_modules)
 
 
 async def get(request, socket_base):

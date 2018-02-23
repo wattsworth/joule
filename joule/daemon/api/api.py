@@ -34,17 +34,20 @@ def _add_nilmdb_routes(app, nilmdb_url):
     app.router.add_post('/stream/update_metadata', nilmdb_post)
 
     
-def _add_module_routes(app):
+def _add_module_routes(app, modules):
+    module_list = functools.partial(module.get_list,
+                                    modules=modules)
+    app.router.add_get('/module/list', module_list)
     module_get = functools.partial(module.get,
                                    socket_base="/tmp/wattsworth.joule.")
     app.router.add_get(r'/module/{id}', module_get)
     app.router.add_get(r'/module/{id}/{path:.*}', module_get)
 
                        
-def build_server(loop, addr, port, nilmdb_url):
+def build_server(loop, addr, port, nilmdb_url, modules):
     app = aiohttp.web.Application()
     _add_nilmdb_routes(app, nilmdb_url)
-    _add_module_routes(app)
+    _add_module_routes(app, modules)
     # proxy the dbinfo route
     app.router.add_get('/', _index)
     app.router.add_get('/version', _version)

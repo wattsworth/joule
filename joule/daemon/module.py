@@ -64,6 +64,9 @@ class Module(object):
         self.id = id
         self.socket = socket
 
+    def to_json(self):
+        return self.__dict__
+    
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
 
