@@ -84,17 +84,12 @@ ARGS_DESC = """
 class MedianFilter(joule.FilterModule):
     "Compute the median of the input"
 
-    def __init__(self):
-        super(MedianFilter, self).__init__()
-
     def custom_args(self, parser):
-        parser.add_argument("window", type=int,
-                            help="window length")
+        grp = parser.add_argument_group("module",
+                                        "module specific arguments")
+        grp.add_argument("--window", type=int, required=True,
+                         help="window length")
         parser.description = ARGS_DESC
-        parser.formatter_class = argparse.RawDescriptionHelpFormatter
-
-    def runtime_help(self, parsed_args):
-        return "median filter with a window size of %d" % parsed_args.window
 
     async def run(self, parsed_args, inputs, outputs):
         N = parsed_args.window

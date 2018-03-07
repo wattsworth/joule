@@ -84,10 +84,12 @@ class MeanFilter(joule.FIRFilterModule):
     "Compute the moving average of the input"
     
     def custom_args(self, parser):
-        parser.add_argument("window", type=int,
-                            help="window length (odd)")
+        grp = parser.add_argument_group("module",
+                                        "module specific arguments")
+        
+        grp.add_argument("--window", type=int, required=True,
+                         help="window length (odd)")
         parser.description = ARGS_DESC
-        parser.formatter_class = argparse.RawDescriptionHelpFormatter
 
     def make_filter(self, parsed_args):
         N = parsed_args.window

@@ -1,7 +1,5 @@
-from joule.utils.time import now as time_now
-from joule.client import ReaderModule
 import numpy as np
-import asyncio
+import joule
 
 ARGS_DESC = """
 ---
@@ -27,7 +25,7 @@ ARGS_DESC = """
     $> cat /tmp/file
     3 4
     4 6
-    $> joule-file-reader --timestamps=yes /tmp/file
+    $> joule-file-reader --timestamps=yes --file=/tmp/file
     1485274825371860 3.0 4.0
     1485274825371868 5.0 6.0
   ```
@@ -58,10 +56,11 @@ ARGS_DESC = """
 :module_config:
     [Main]
     name = Random Reader
-    exec_cmd = joule-file-reader /name/of/file
+    exec_cmd = joule-file-reader
 
     [Arguments]
     timestamps = yes # [yes|no]
+    file = /absolute/file/path
 
     [Outputs]
     output = /path/to/output
@@ -69,16 +68,21 @@ ARGS_DESC = """
 """
 
 
-class FileReader(ReaderModule):
+class FileReader(joule.ReaderModule):
     "Read data from a file"
 
     def custom_args(self, parser):
-        parser.add_argument("file", help="file name")
-        parser.add_argument("-d", "--delimiter", default=",",
-                            choices=[" ", ","],
-                            help="character between values")
-        parser.add_argument("-t", "--timestamp", action="store_true",
-                            help="apply timestamps to data")
+        grp = parser.add_argument_group("module",
+                                        "module specific arguments")
+
+        grp.add_argument("--file",
+                         required=True,
+                         help="file name")
+        grp.add_argument("--delimiter", default=",",
+                         choices=[" ", ","],
+                         help="character between values")
+        grp.add_argument("--timestamp", type=joule.yesno,
+                         help="apply timestamps to data")
         parser.description = ARGS_DESC
         
     async def run(self, parsed_args, output):
@@ -87,7 +91,7 @@ class FileReader(ReaderModule):
                 data = np.fromstring(line, dtype=float,
                                      sep=parsed_args.delimiter)
                 if(parsed_args.timestamp):
-                    data = np.insert(data, 0, time_now())
+                    data = np.insert(data, 0, joule.time_now())
                 await output.write([data])
                 if(self.stop_requested):
                     break

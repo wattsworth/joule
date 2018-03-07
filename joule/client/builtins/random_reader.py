@@ -72,13 +72,15 @@ class RandomReader(ReaderModule):
     "Generate a random stream of data"
     
     def custom_args(self, parser):
-        parser.add_argument("--width", type=int,
-                            required=True,
-                            help="number of elements in output")
-        parser.add_argument("--rate", type=float,
-                            required=True,
-                            help="rate in Hz")
-        parser.description = textwrap.dedent(ARGS_DESC)
+        grp = parser.add_argument_group("module",
+                                        "module specific arguments")
+        grp.add_argument("--width", type=int,
+                         required=True,
+                         help="number of elements in output")
+        grp.add_argument("--rate", type=float,
+                         required=True,
+                         help="rate in Hz")
+        parser.description = ARGS_DESC
 
     async def run(self, parsed_args, output):
         # produce output four times per second
@@ -106,9 +108,11 @@ class RandomReader(ReaderModule):
             await asyncio.sleep(wait_time)
             i += 1
 
+            
 def main():
     r = RandomReader()
     r.start()
+
     
 if __name__ == "__main__":
     main()

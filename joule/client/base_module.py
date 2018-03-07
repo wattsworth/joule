@@ -79,7 +79,7 @@ class BaseModule:
         except asyncio.CancelledError:
             pass
         except ModuleError as e:
-            print("ERROR:",str(e))
+            print("ERROR:", str(e))
         loop.close()
         
     async def build_pipes(self, parsed_args):
@@ -94,7 +94,7 @@ class BaseModule:
         # run the module in isolation mode
         if(module_config_file == 'unset' or
            stream_config_dir == 'unset'):
-            msg = "Specify module_config AND stream_configs\n"+\
+            msg = "Specify module_config AND stream_configs\n" +\
                   "\tor run in joule environment"
             raise ModuleError(msg)
         
@@ -124,14 +124,14 @@ class BaseModule:
         
         # historic isolation mode warning
         if(start_time is not None and end_time is not None):
-            #convert start_time and end_time into us timestamps
+            # convert start_time and end_time into us timestamps
             start_ts = int(dateparser.parse(start_time).timestamp()*1e6)
             end_ts = int(dateparser.parse(end_time).timestamp()*1e6)
             time_range = [start_ts, end_ts]
             if(start_ts >= end_ts):
-               raise ModuleError("start_time [%s] is after end_time [%s]" %
-                                 (dateparser.parse(start_time),
-                                 dateparser.parse(end_time)))
+                raise ModuleError("start_time [%s] is after end_time [%s]" %
+                                  (dateparser.parse(start_time),
+                                   dateparser.parse(end_time)))
 
             print("Running in historic isolation mode")
             print("This will ERASE data from [%s to %s] in the output streams:" %
@@ -143,7 +143,7 @@ class BaseModule:
             self._check_for_OK()
             sys.stdout.write("\nRequesting historic stream connection from jouled... ")
         else:
-            time_range=None
+            time_range = None
             sys.stdout.write("Requesting live stream connections from jouled... ")
             
         # build the input pipes (must already exist)
