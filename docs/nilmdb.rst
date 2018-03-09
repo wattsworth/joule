@@ -1,11 +1,175 @@
 
-Database CLI
-============
+Database
+========
 
-Joule uses a NilmDB database instance to store data streams. NilmDB was developed
-at MIT by Dr. James Paris. Full documentation is available in his thesis available
-at `MIT DSpace <https://dspace.mit.edu/handle/1721.1/84720>`_. This documentation
-covers the command line interface for interacting the the Joule NilmDB instance.
+Joule uses a NilmDB database instance to store data streams. NilmDB
+was developed at MIT by Dr. James Paris. Full documentation is
+available in his thesis available at `MIT DSpace
+<https://dspace.mit.edu/handle/1721.1/84720>`_. This documentation
+covers the command line interface for interacting the the Joule NilmDB
+instance.
+
+
+
+Data Storage
+------------
+
+It is usually a good idea to place the database on a separate disk or
+partition to ensure that the system does not run out of disk space due
+to excessive NilmDB data. By default the database is located in ``/opt/data``.
+This section explains how to properly configure your storage volume.
+
+Primary Drive
++++++++++++++
+
+While this is not recommended you may keep the data on the main root
+partition. This is the default and will work without any further
+configuration. **Enable data journaling to prevent data corruption
+if the system shuts down unexpectedly (eg a power failure)**
+
+To enable data journaling on the root partition use ``tune2fs``. For
+example if your root partition is on ``/dev/sda2``:
+
+.. raw:: html
+
+  <div class="header bash">
+  Command Line:
+  </div>
+  <div class="code bash">$> sudo tune2fs -o journal_data /dev/sda2</div>
+
+
+Secondary drive
+++++++++++++++++
+
+The recommended configuration is to store the database to an secondary
+drive or at least separate partition. These instructions will show you
+how to format and configure a secondary drive for data storage. After
+connecting the drive, the first step is to place a usable filesystem
+on it. There are many tools that can be used for this but one of the
+easiest is GParted. This program must be run as root. From the command
+line type type the following:
+
+**Warning!** Be very careful with gparted, formatting the primary drive will destroy the installation
+
+
+.. raw:: html
+
+  <div class="header bash">
+  Command Line:
+  </div>
+  <div class="code bash"><b>$> sudo gparted</b>
+  </div>
+
+Select the extra drive from the dropdown menu as shown. If you are
+unsure about the drive name run gparted *without* your drive connected
+and see which name is no longer in the list. Tip: if the drive already
+has multiple partitions this most likely means it is *not* your secondary
+drive and is probably your primary disk.
+
+.. figure:: _static/nilmdb/hdd_gparted_1.png
+  :align: center
+
+  Carefully select the device node for the extra drive
+
+.. figure:: _static/nilmdb/hdd_gparted_2.png
+  :align: center
+
+  Create a new msdos partition table. This will erase the drive.
+
+Select *Device* > *Create Partition Table* to bring up the Create
+Partition dialog. Select ``msdos`` and click Apply. Select
+*Partition* > *New* to bring up the New Partition
+dialog. Add a new ``ext4`` partition to the drive and assign it the
+full extents of the disk (this is the default). Click **Add** to close the
+dialog. Finally click **Apply** to format the disk and then close
+the program.
+
+.. figure:: _static/nilmdb/hdd_gparted_3.png
+  :align: center
+
+  Add an ``ext4`` partition to fill the disk
+
+To use the drive for the database it must be mounted to the correct
+location in the filesystem. If the secondary drive is internal you may use the
+drive name directly. When using an external drive (connected by USB)
+the drive letters cannot be used since they change. The UUID is a
+unique drive partition identifier that should be used instead. Determine
+the UUID of the storage volume by running the following changing ``sdX1`` to the
+correct partition name:
+
+.. raw:: html
+
+  <div class="header bash">
+  Command Line:
+  </div>
+  <div class="code bash"><b>$> blkid /dev/sdX1 </b>
+  /dev/sda1: UUID="2b9d3e2e-2520-4a99-9b13-61e67cf470a6" <i># continues...</i>
+  </div>
+
+Edit ``/etc/fstab`` and insert one of the following lines depending on the
+drive type. Note that you will need to run the word processor as
+root (sudo) in order to edit this file.
+
+.. raw:: html
+
+  <div class="header ini">
+  /etc/fstab
+  </div>
+  <div class="code ini"># /etc/fstab: static file system information.
+  #
+  # &lt;file system&gt; &lt;mount point&gt;   &lt;type&gt;  &lt;options&gt;  &lt;dump&gt;  &lt;pass&gt;
+  # ...other entries...
+  
+  # mount internal drives by name
+  /dev/sdX1       /opt/data   ext4    errors=remount-ro,data=journal 0 2
+  
+  # mount external (USB) drives using UUID for consistent mapping
+  UUID=XXXXXX... /opt/data    ext4    errors=remount-ro,data=journal 0 2
+  </div>
+
+The final step is to mount the drive and change the permissions so the
+nilmdb process can use it. 
+
+.. raw:: html
+
+  <div class="header bash">
+  Command Line:
+  </div>
+  <div class="code bash"><i>#stop data capture if it is already running</i>
+  <b>$> sudo service jouled stop</b>
+  <b>$> sudo apache2ctl stop</b>
+
+  <i># mount the drive using the fstab entry</i>
+  <b>$> sudo mount -a</b>
+
+  <i># assign the drive to the nilmdb user</i>
+  <b>$> sudo chown -R nilmdb:nilmdb /opt/data</b>
+
+  <i># output of df should show a mount point at /opt/data:</i>
+  <b>$ df -h</b>
+  Filesystem      Size  Used Avail Use% Mounted on
+  /dev/sdb1       917G   72M  871G   1% /opt/data
+
+  <i># restart joule to begin using the new drive</i>
+  <b>$> sudo apache2ctl restart</b>
+  <b>$> sudo service jouled restart</b>
+  </div>
+.. warning::
+
+Command Line Interface
+----------------------
+
+The following are commonly used commands for interacting with 
+the NilmDB database. The full list of command line tools are documented
+below.
+
+* ``nilmtool list -n`` -- list all streams in the database ignoring decimations
+* ``nilmtool list -E /stream/path``-- show the range of data stored in **/stream/path**
+* ``nilm-copy /source/path /dest/path`` -- copy data from **/source/path** to **/dest/path**
+    DANGER: The following commands remove data, use caution!!
+
+* ``nilmtool remove -s min -e max /stream/path`` -- remove all data form **/stream/path**
+* ``nilmtool destroy -R /stream/path`` -- remove **/stream/path** from the database
 
 
 Command-line arguments can often be supplied in both short and long
@@ -23,55 +187,6 @@ timestamp is specified as a free-form string, as supported by the **parse_time**
 client library function, described in Section 3.2.2.4 of the NilmDB reference
 guide. Examples of accepted formats are shown in Table 3-19 on page 133 of that
 document.
-
-Storage Volumes
----------------
-
-It is usually a good idea to place the database on a separate disk or partition to ensure
-that the system does not run out of disk space due to excessive NilmDB data. By default
-the database is located in ``/opt/data``. 
-
-.. warning::
-
-  Set the journal mode to ``data=journal`` on the NilmDB drive. This will prevent data corruption
-  if the system shuts down unexpectedly (eg a power failure)
-
-To configure the journal mode edit the fstab entry for the nilmdb disk similar to the following:
-
-.. raw:: html
-
-  <div class="header ini">
-  /etc/fstab
-  </div>
-  <div class="code ini"><i>#example fstab entry for database on separate partition (recommended)</i>
-  /dev/sdXX  /opt/data  ext4  errors=remount-ro,data=journal 0 2
-
-  <i>#example fstab entry for a single root partition (not recommended)</i>
-  /dev/sdXX  /  ext4  errors=remount-ro<b>,data=journal</b> 0 1
-                          <i>#   add this --^</i>
-  </div>
-
-If the partition is the root partition you must add this option directly to the volume
-as well, otherwise the system will not boot properly. For example if your
-root partition is on ``/dev/sda2``:
-
-.. raw:: html
-
-  <div class="header bash">
-  Command Line:
-  </div>
-  <div class="code bash">$> sudo tune2fs -o journal_data /dev/sda2</div>
-
-Commonly Used Commands
-----------------------
-
-* ``nilmtool list -n`` -- list all streams in the database ignoring decimations
-* ``nilmtool list -E /stream/path``-- show the range of data stored in **/stream/path**
-* ``nilm-copy /source/path /dest/path`` -- copy data from **/source/path** to **/dest/path**
-    DANGER: The following commands remove data, use caution!!
-
-* ``nilmtool remove -s min -e max /stream/path`` -- remove all data form **/stream/path**
-* ``nilmtool destroy -R /stream/path`` -- remove **/stream/path** from the database
 
 ``nilmtool``
 ------------
