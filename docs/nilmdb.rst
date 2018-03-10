@@ -153,8 +153,19 @@ nilmdb process can use it.
   <i># restart joule to begin using the new drive</i>
   <b>$> sudo apache2ctl restart</b>
   <b>$> sudo service jouled restart</b>
+
+  <i># check to make sure the drive is collecting data</i>
+  <b>$> nilmtool info</b>
+  Client version: 1.10.3
+  Server version: 1.10.3
+  Server URL: http://localhost/nilmdb/
+  ...output continues
+
+  <b>$> nilmtool list -E</b>
+  ...check that streams are collecting data
   </div>
-.. warning::
+
+
 
 Command Line Interface
 ----------------------
