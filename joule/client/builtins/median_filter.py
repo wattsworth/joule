@@ -70,7 +70,8 @@ ARGS_DESC = """
     exec_cmd = joule-median-filter
 
     [Arguments]
-    window = 11 # must be odd
+    # must be odd
+    window = 11
 
     [Inputs]
     input = /path/to/input

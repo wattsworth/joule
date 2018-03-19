@@ -59,8 +59,10 @@ ARGS_DESC = """
     exec_cmd = joule modules random-reader
 
     [Arguments]
+    # number of elements
     width = 4
-    rate = 10 #Hz
+    # data rate in Hz
+    rate = 10 
 
     [Outputs]
     output = /path/to/output

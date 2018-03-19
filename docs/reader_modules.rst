@@ -199,18 +199,6 @@ This is useful for debugging problems during module development.
 
   </div>
 
-
-Built-in Readers
-----------------
-
-Random
-''''''
-TODO
-
-File
-''''
-TODO
-
 Unit Tests
 ----------
 

@@ -59,7 +59,7 @@ ARGS_DESC = """
     exec_cmd = joule-file-reader
 
     [Arguments]
-    timestamps = yes # [yes|no]
+    timestamps = yes 
     file = /absolute/file/path
 
     [Outputs]
