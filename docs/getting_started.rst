@@ -71,11 +71,11 @@ to connect its output. To do this create the following file:
 .. raw:: html
 
   <div class="header ini">
-  /etc/joule/module_configs/my_reader.conf
+  /etc/joule/module_configs/demo_reader.conf
   </div>
   <div class="code ini"><span>[Main]</span>
   <b>exec_cmd =</b> joule-random-reader
-  <b>name =</b> Random Data
+  <b>name =</b> Demo Reader
 
   <span>[Arguments]</span>
   <b>width = </b>2
@@ -97,7 +97,7 @@ stream. Configure the stream by creating the following file:
 .. raw:: html
 
   <div class="header ini">
-  /etc/joule/stream_configs/demo_reader.conf
+  /etc/joule/stream_configs/random.conf
   </div>
   <div class="code ini"><span>[Main]</span>
   <b>name =</b> Random Data
@@ -187,7 +187,7 @@ following file:
 .. raw:: html
 
   <div class="header ini">
-  /etc/joule/stream_configs/my_filter.conf
+  /etc/joule/stream_configs/smoothed.conf
   </div>
   <div class="code ini"><span>[Main]</span>
   <b>name =</b> Filtered Data
@@ -210,9 +210,9 @@ both modules are running:
   <div class="header bash">
   Command Line:
   </div>
-  <div class="code bash"><b>$> sudo systemctl restart joule.service</b>
+  <div class="code bash"><b>$> sudo service jouled restart</b>
 
-  <i># check status using joule CLI</i>
+  <i># wait a few seconds then check status using joule CLI</i>
   <b>$> joule modules</b>
   +-------------+--------------+----------------+---------+-----+
   | Module      | Inputs      | Outputs   | Status  | CPU |
@@ -223,11 +223,9 @@ both modules are running:
 
   <b>$> joule logs "Demo Reader"</b>
   [27 Jan 2017 18:22:48] ---starting module---
-  [27 Jan 2017 18:22:48] Starting random stream: 2 elements @ 10.0Hz
 
   <b>$> joule logs "Demo Filter"</b>
   [27 Jan 2017 18:22:48] ---starting module---
-  [27 Jan 2017 18:22:48] Starting moving average filter with window size 9
 
   <i># confirm data is entering NilmDB</i>
   <b>$> nilmtool list -E -n /demo/*</b>
