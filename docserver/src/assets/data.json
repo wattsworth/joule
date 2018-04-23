@@ -177,5 +177,22 @@
         ],
         "url": "<p>http://git.wattsworth.net/wattsworth/joule.git</p>",
         "usage": "<p>This is a module that generates random numbers.\nSpecify width (number of elements) and the rate in Hz.</p>\n<table class=\"table table-sm table-bordered\">\n<thead>\n<tr>\n<th>Arguments</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td><code>width</code></td>\n<td>number of elements</td>\n</tr>\n<tr>\n<td><code>rate</code></td>\n<td>data rate in Hz</td>\n</tr>\n</tbody>\n</table>"
+    },
+    {
+        "author": "John Donnal",
+        "description": "Read analog FIO/EIO channels on U3 LabJack",
+        "inputs": "<p>None</p>",
+        "license": "Open",
+        "module_config": "[Main]\nname = LabJack U3 Reader\nexec_cmd = labjack_u3\n\n[Arguments]\n#valid values are [0-15]\nchannels = 0,1,2 \n#data rate in Hz\nrate = 500\n\n[Inputs]\n#none\n\n[Outputs]\noutput = /path/to/output",
+        "name": "LabJack U3 Reader",
+        "outputs": "<dl class=\"row\">\n<dt class=\"col-sm-3 text-truncate\">output</dt>\n<dd class=\"col-sm-9\">float32 with N elements specified by [channels] argument</dd>\n</dl>",
+        "stream_configs": [
+            {
+                "config": "[Main]\nname = LabJack Data\npath = /path/to/output\ndatatype = float32\nkeep = 1w\n\n# [channels] number of elements\n# units are voltages\n[Element1]\nname = Channel 0\nunits = V \n\n[Element2]\nname = Channel 1\nunits = V \n\n[Element3]\nname = Channel 2\nunits = V \n\n#additional elements...",
+                "name": "output"
+            }
+        ],
+        "url": "<p>http://git.wattsworth.net/wattsworth/labjack_modules.git</p>",
+        "usage": "<p>Read analog data from FIO and EIO channels on the U3 LabJack. The\nFIO channels are on screw terminals and the EIO channels are available \non the expansion board connector. On the HV model FIO0-3\nare marked AIN0-3 and accept voltages between +/- 10V. All other channels\nare 0-2.44V. <em>Specify at least 2 channels</em></p>\n<table class=\"table table-sm table-bordered\">\n<thead>\n<tr>\n<th>Arguments</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td><code>channels</code></td>\n<td>comma separated channel numbers (0-15)</td>\n</tr>\n<tr>\n<td><code>rate</code></td>\n<td>data rate in Hz</td>\n</tr>\n</tbody>\n</table>"
     }
 ]
