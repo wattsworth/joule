@@ -37,7 +37,7 @@ def _add_nilmdb_routes(app, nilmdb_url):
 def _add_module_routes(app, modules):
     module_list = functools.partial(module.get_list,
                                     modules=modules)
-    app.router.add_get('/module/list', module_list)
+    app.router.add_get('/modules.json', module_list)
     module_get = functools.partial(module.get,
                                    socket_base="/tmp/wattsworth.joule.")
     app.router.add_get(r'/module/{id}', module_get)
