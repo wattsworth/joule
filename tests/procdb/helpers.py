@@ -19,7 +19,7 @@ def build_module(name="module", description="", exec_cmd="/bin/true",
         output_paths = {}
     if(input_paths is None):
         input_paths = {}
-    m = module.Module(name, description, exec_cmd, [],
+    m = module.Module(name, description, False, exec_cmd, [],
                       input_paths, output_paths)
     m.output_paths = output_paths
     m.input_paths = input_paths

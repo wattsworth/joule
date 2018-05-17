@@ -1,12 +1,13 @@
 import asyncio
 import functools
-from aiohttp import web
+
 import aiohttp
+from aiohttp import web
 
-from . import nilmdb
 from . import module
+from . import nilmdb
 
-        
+
 async def _index(request):
     return web.Response(text="Joule API Server")
 

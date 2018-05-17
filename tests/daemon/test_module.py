@@ -9,6 +9,7 @@ class TestModule(unittest.TestCase):
         self.parser = module.Parser()
         self.my_module = module.Module(name="test",
                                        description="test_description",
+                                       web_interface=False,
                                        exec_cmd='/path/to/exec --arg1 --arg2="a long multiline\nargument that goes on\nand on"',
                                        args=["--arg1","--arg2","a long multiline\nargument that goes on\nand on"],
                                        input_paths={"path1": "/input/path1",
