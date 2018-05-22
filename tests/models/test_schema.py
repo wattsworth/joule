@@ -1,5 +1,4 @@
 import unittest
-
 from joule.models import (Element, Stream, Folder)
 
 
@@ -34,7 +33,6 @@ class TestSchema(unittest.TestCase):
         root = Folder(name="root")
         root.children = [folder1, folder2]
         root.streams = [stream1, stream2]
-
         # check downward navigation
         self.assertEqual(len(root.children[0].streams[0].elements), 4)
         # check upward navigation

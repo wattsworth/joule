@@ -86,8 +86,3 @@ class TestStream(unittest.TestCase):
     def test_has_string_representation(self):
         self.assertRegex("%s" % self.my_stream, self.my_stream.name)
 
-    def test_sorts_by_id(self):
-        s2 = helpers.build_stream(name='s2', id=2)
-        s1 = helpers.build_stream(name='s1', id=1)
-        self.assertGreater(s2, s1)
-        self.assertLess(s1, s2)

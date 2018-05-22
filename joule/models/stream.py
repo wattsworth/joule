@@ -44,15 +44,6 @@ class Stream(Base):
     folder: "Folder" = relationship("Folder", back_populates="streams")
     elements: List[element.Element] = relationship("Element", back_populates="stream")
 
-    def __eq__(self, other):
-        return self.to_json() == other.to_json()
-
-    def __lt__(self, other):
-        return self.id < other.id
-
-    def __gt__(self, other):
-        return self.id > other.id
-
     def __str__(self):
         return "Stream [{name}] @ [{path}]".format(name=self.name,
                                                    path=self.path)
