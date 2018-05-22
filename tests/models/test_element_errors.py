@@ -1,13 +1,13 @@
-import joule.daemon.element as stream
-from joule.daemon.errors import ConfigError
-from tests import helpers
 import unittest
+
+from joule.models import (Element, ConfigurationError)
+from joule.models import element
+from tests import helpers
 
 
 class TestElementErrors(unittest.TestCase):
 
     def setUp(self):
-        self.parser = stream.Parser()
         config = helpers.parse_configs(
             """[Element1]
                  name = test
@@ -18,15 +18,15 @@ class TestElementErrors(unittest.TestCase):
 
     def test_must_have_name(self):
         self.base_config['name'] = ""
-        with self.assertRaisesRegex(ConfigError, "name"):
-            self.parser.run(self.base_config)
+        with self.assertRaisesRegex(ConfigurationError, "name"):
+            element.from_config(self.base_config)
 
     def test_sensible_bounds(self):
         """default_min<default_max or both == 0 for autoscale"""
         self.base_config['default_min'] = '10'
         self.base_config['default_max'] = '-10'
-        with self.assertRaisesRegex(ConfigError, "default_min"):
-            self.parser.run(self.base_config)
+        with self.assertRaisesRegex(ConfigurationError, "default_min"):
+            element.from_config(self.base_config)
 
     def test_errors_on_bad_offsets(self):
         bad_offsets = ['a', '*', '0y']
@@ -48,9 +48,13 @@ class TestElementErrors(unittest.TestCase):
         bad_values = ['asdf', 'not_valid']
         self.evaluate_bad_values("plottable", bad_values)
 
+    def test_errors_on_bad_display_type(self):
+        bad_values = ['lollipops', '', 'circles']
+        self.evaluate_bad_values("display_type", bad_values)
+
     def evaluate_bad_values(self, setting_name, bad_settings):
         for setting in bad_settings:
             with self.subTest(setting=setting):
                 self.base_config[setting_name] = setting
-                with self.assertRaisesRegex(ConfigError, setting_name):
-                    self.parser.run(self.base_config)
+                with self.assertRaisesRegex(ConfigurationError, setting_name):
+                    element.from_config(self.base_config)
