@@ -15,13 +15,13 @@ class TestSchema(unittest.TestCase):
 
         stream11 = Stream(name="stream11", datatype=Stream.DATATYPE.FLOAT32)
         stream11.elements = [Element(name="e%d" % x,
-                                     type=Element.TYPE.DISCRETE) for x in range(4)]
+                                     display_type=Element.DISPLAYTYPE.DISCRETE) for x in range(4)]
         folder1 = Folder(name="folder1")
         folder1.streams.append(stream11)
 
         stream21 = Stream(name="stream21", datatype=Stream.DATATYPE.UINT8)
         stream21.elements = [Element(name="e%d" % x,
-                                     type=Element.TYPE.CONTINUOUS) for x in range(4)]
+                                     display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(4)]
         folder2 = Folder(name="folder2")
         folder2.streams.append(stream21)
 

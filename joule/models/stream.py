@@ -2,10 +2,13 @@ from sqlalchemy.orm import relationship
 from sqlalchemy import (Column, Integer, String,
                         Boolean, Enum, ForeignKey)
 from typing import List, TYPE_CHECKING
+import configparser
 import enum
+import re
 
-from joule.models.element import Element
 from joule.models.meta import Base
+from joule.models.errors import ConfigurationError
+from joule.models import element
 
 if TYPE_CHECKING:
     from joule.models.folder import Folder
@@ -14,6 +17,7 @@ if TYPE_CHECKING:
 class Stream(Base):
     __tablename__ = 'stream'
     name: str = Column(String, nullable=False)
+    path: str = Column(String, nullable=False)
 
     class DATATYPE(enum.Enum):
         FLOAT64 = enum.auto()
@@ -26,8 +30,8 @@ class Stream(Base):
         UINT32 = enum.auto()
         UINT16 = enum.auto()
         UINT8 = enum.auto()
-    datatype: DATATYPE = Column(Enum(DATATYPE), nullable=False)
 
+    datatype: DATATYPE = Column(Enum(DATATYPE), nullable=False)
     decimate: bool = Column(Boolean, default=True)
 
     KEEP_ALL = -1
@@ -38,7 +42,20 @@ class Stream(Base):
     id: int = Column(Integer, primary_key=True)
     folder_id: int = Column(Integer, ForeignKey('folder.id'))
     folder: "Folder" = relationship("Folder", back_populates="streams")
-    elements: List[Element] = relationship("Element", back_populates="stream")
+    elements: List[element.Element] = relationship("Element", back_populates="stream")
+
+    def __eq__(self, other):
+        return self.to_json() == other.to_json()
+
+    def __lt__(self, other):
+        return self.id < other.id
+
+    def __gt__(self, other):
+        return self.id > other.id
+
+    def __str__(self):
+        return "Stream [{name}] @ [{path}]".format(name=self.name,
+                                                   path=self.path)
 
     def __repr__(self):
         return "<Stream('%s','%s','%s',%r)>" % (self.name,
@@ -46,12 +63,96 @@ class Stream(Base):
                                                 self.datatype,
                                                 self.decimate)
 
+    @property
+    def layout(self):
+        return "%s_%d" % (self.datatype.name.lower(), len(self.elements))
+
+    @property
+    def data_width(self):
+        return len(self.elements) + 1
+
     def to_json(self):
         return {
             'name': self.name,
+            'path': self.path,
             'description': self.description,
             'datatype': self.datatype,
             'keep_us': self.keep_us,
             'decimate': self.decimate,
             'elements': [e.to_json() for e in self.elements]
         }
+
+
+def from_config(config: configparser.ConfigParser):
+    try:
+        main_configs = config["Main"]
+    except KeyError as e:
+        raise ConfigurationError("Missing section [%s]" % e) from e
+    try:
+        path = validate_path(main_configs["path"])
+        datatype = validate_datatype(main_configs["datatype"])
+        keep_us = validate_keep(main_configs["keep"])
+        decimate = main_configs.getboolean("decimate", fallback=True)
+        name = main_configs["name"]
+        description = main_configs.get("description", fallback="")
+        stream = Stream(name=name, description=description, path=path,
+                        datatype=datatype, keep_us=keep_us, decimate=decimate)
+    except KeyError as e:
+        raise ConfigurationError("[Main] missing %s" % e.args[0]) from e
+    # now try to load the elements
+    element_configs = filter(lambda sec: re.match("Element\d", sec),
+                             config.sections())
+    for name in element_configs:
+        try:
+            e = element.from_config(config[name])
+            stream.elements.append(e)
+        except ConfigurationError as e:
+            raise ConfigurationError("element <%s> %s" % (name, e)) from e
+    # make sure we have at least one element
+    if len(stream.elements) == 0:
+        raise ConfigurationError(
+            "missing element configurations, must have at least one")
+    return stream
+
+
+def validate_path(path: str) -> str:
+    if re.fullmatch('^(/[\w -]+)(/[\w -]+)+$', path) is None:
+        raise ConfigurationError(
+            "invalid path, use format: /dir/subdir/../file. "
+            "valid characters: [0-9,A-Z,a-z,_,-, ]")
+
+    return path
+
+
+def validate_datatype(datatype: str) -> Stream.DATATYPE:
+    try:
+        return Stream.DATATYPE[datatype.upper()]
+    except KeyError as e:
+        valid_types = ", ".join([m.name.lower() for m in Stream.DATATYPE])
+        raise ConfigurationError("invalid datatype [%s], choose from [%s]" %
+                                 (datatype, valid_types)) from e
+
+
+def validate_keep(keep: str) -> int:
+    if keep.lower() == "none":
+        return Stream.KEEP_NONE
+    if keep.lower() == "all":
+        return Stream.KEEP_ALL
+    match = re.fullmatch('^(\d+)([hdwmy])$', keep)
+    if match is None:
+        raise ConfigurationError("invalid [Stream] keep"
+                                 "use format #unit (eg 1w), none or all")
+
+    units = {
+        'h': 60 * 60 * 1e6,  # hours
+        'd': 24 * 60 * 60 * 1e6,  # days
+        'w': 7 * 24 * 60 * 60 * 1e6,  # weeks
+        'm': 4 * 7 * 24 * 60 * 60 * 1e6,  # months
+        'y': 365 * 24 * 60 * 60 * 1e6  # years
+    }
+    unit = match.group(2)
+    time = int(match.group(1))
+    if time <= 0:
+        raise ConfigurationError("invalid [Stream] keep"
+                                 "use format #unit (eg 1w), none or all")
+    return int(time * units[unit])

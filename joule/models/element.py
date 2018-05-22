@@ -1,9 +1,11 @@
 from sqlalchemy.orm import relationship
 from sqlalchemy import Column, Integer, Enum, Float, String, Boolean, ForeignKey
+import configparser
 import enum
 from typing import Optional, TYPE_CHECKING
 
 from joule.models.meta import Base
+from joule.models.errors import ConfigurationError
 
 if TYPE_CHECKING:
     from joule.models.folder import Stream
@@ -16,11 +18,13 @@ class Element(Base):
     units: str = Column(String)
     plottable: bool = Column(Boolean)
 
-    class TYPE(enum.Enum):
+    class DISPLAYTYPE(enum.Enum):
         DISCRETE = enum.auto()
         CONTINUOUS = enum.auto()
         EVENT = enum.auto()
-    type: TYPE = Column(Enum(TYPE), default=2)
+
+    display_type: DISPLAYTYPE = Column(Enum(DISPLAYTYPE),
+                                       default=DISPLAYTYPE.CONTINUOUS)
 
     offset: float = Column(Float, default=0, nullable=False)
     scale_factor: float = Column(Float, default=1.0, nullable=False)
@@ -37,9 +41,70 @@ class Element(Base):
             'name': self.name,
             'units': self.units,
             'plottable': self.plottable,
-            'type': self.type,
+            'display_type': self.display_type,
             'offset': self.offset,
             'scale_factor': self.scale_factor,
             'default_max': self.default_max,
             'default_min': self.default_min
         }
+
+
+def from_config(config: configparser.ConfigParser):
+    name = validate_name(config["name"])
+    if "display_type" in config:
+        display_type = validate_type(config["display_type"])
+    else:
+        display_type = Element.DISPLAYTYPE.CONTINUOUS
+    # default to empty units
+    if "units" in config:
+        units = config["units"]
+    else:
+        units = None
+    plottable = _get_bool("plottable", config, True)
+    offset = _get_float("offset", config, 0.0)
+    scale_factor = _get_float("scale_factor", config, 1.0)
+    default_max = _get_float("default_max", config, None)
+    default_min = _get_float("default_min", config, None)
+    # make sure min<=max if set
+    if ((default_max is not None and default_min is not None) and
+            (default_min >= default_max)):
+        raise ConfigurationError("set default_min<default_max or omit for autoscale")
+    return Element(name=name, units=units, plottable=plottable,
+                   display_type=display_type, offset=offset,
+                   scale_factor=scale_factor,
+                   default_max=default_max,
+                   default_min=default_min)
+
+
+def validate_name(name: str) -> str:
+    if name == "":
+        raise ConfigurationError("missing name")
+    return name
+
+
+def validate_type(display_type: str) -> Element.DISPLAYTYPE:
+    try:
+        return Element.DISPLAYTYPE[display_type.upper()]
+    except KeyError as e:
+        valid_types = ", ".join([m.name.lower() for m in Element.DISPLAYTYPE])
+        raise ConfigurationError("invalid display_type [%s], choose from [%s]" %
+                                 (display_type, valid_types)) from e
+
+
+def _get_bool(setting: str, config: configparser.ConfigParser, default: bool):
+    try:
+        return config.getboolean(setting, default)
+    except ValueError as e:
+        raise ConfigurationError("[%s] invalid value, use True/False" % setting) from e
+
+
+def _get_float(setting: str, config: configparser.ConfigParser, default):
+    try:
+        if config[setting] == "None":
+            return default
+        return config.getfloat(setting, default)
+    except KeyError:
+        return default
+    except ValueError as e:
+        raise ConfigurationError("[%s] invalid value, must be a number" %
+                                 setting) from e

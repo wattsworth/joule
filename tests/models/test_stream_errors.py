@@ -1,13 +1,13 @@
-from joule.daemon import stream
-from joule.daemon.errors import ConfigError
-from tests import helpers
 import unittest
+
+from joule.models import (Stream, ConfigurationError)
+from joule.models import stream   # for helper functions
+from tests import helpers
 
 
 class TestStreamErrors(unittest.TestCase):
 
     def setUp(self):
-        self.parser = stream.Parser()
         self.base_config = helpers.parse_configs(
             """[Main]
                  name = test
@@ -22,15 +22,15 @@ class TestStreamErrors(unittest.TestCase):
 
     def test_errors_on_missing_info(self):
         self.base_config.remove_option("Main", "name")
-        with self.assertRaisesRegex(ConfigError, 'name'):
-            self.parser.run(self.base_config)
+        with self.assertRaisesRegex(ConfigurationError, 'name'):
+            stream.from_config(self.base_config)
 
     def test_errors_on_bad_path(self):
         """path must be of form /dir/subdir/../file"""
         bad_paths = ["", "bad name", "/tooshort", "/*bad&symb()ls"]
         self.evaluate_bad_values("path", bad_paths)
         # but allows paths with _ and -
-        good_paths = ["/meters-4/prep-a", "/meter_4/prep-b"]
+        good_paths = ["/meters-4/prep-a", "/meter_4/prep-b", "/path  with/ spaces"]
         self.evaluate_good_values("path", good_paths)
         
     def test_errors_on_bad_keep(self):
@@ -45,26 +45,19 @@ class TestStreamErrors(unittest.TestCase):
     def test_errors_on_missing_elements_sections(self):
         """Must have at least one element"""
         self.base_config.remove_section("Element1")
-        with self.assertRaises(ConfigError):
-            self.parser.run(self.base_config)
-
-    def test_errors_on_duplicate_element_names(self):
-        """each element must have a unique name"""
-        self.base_config.add_section("Element2")
-        self.base_config["Element2"]["name"] = "e1"
-        with self.assertRaisesRegex(ConfigError, 'unique'):
-            self.parser.run(self.base_config)
+        with self.assertRaises(ConfigurationError):
+            stream.from_config(self.base_config)
 
     def evaluate_bad_values(self, setting_name, bad_settings, section="Main"):
         for setting in bad_settings:
             with self.subTest(setting=setting):
                 self.base_config[section][setting_name] = setting
-                with self.assertRaisesRegex(ConfigError, setting_name):
-                    self.parser.run(self.base_config)
+                with self.assertRaisesRegex(ConfigurationError, setting_name):
+                    stream.from_config(self.base_config)
 
     def evaluate_good_values(self, setting_name, settings, section="Main"):
         for setting in settings:
             with self.subTest(setting=setting):
                 self.base_config[section][setting_name] = setting
-                self.parser.run(self.base_config)
-                    
+                stream.from_config(self.base_config)
+
