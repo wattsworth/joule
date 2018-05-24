@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 class Element(Base):
     __tablename__ = 'element'
     id: int = Column(Integer, primary_key=True)
+    index: int = Column(Integer, nullable=False)
     name: str = Column(String)
     units: str = Column(String)
     plottable: bool = Column(Boolean)
@@ -34,7 +35,7 @@ class Element(Base):
     stream: 'Stream' = relationship("Stream", back_populates="elements")
 
     def __repr__(self):
-        return "<Element('%s', '%s')>" % (self.name, self.units)
+        return "<Element(name='%s', units='%s', display_type=%s)>" % (self.name, self.units, self.display_type)
 
     def to_json(self):
         return {
@@ -51,15 +52,8 @@ class Element(Base):
 
 def from_config(config: configparser.ConfigParser):
     name = validate_name(config["name"])
-    if "display_type" in config:
-        display_type = validate_type(config["display_type"])
-    else:
-        display_type = Element.DISPLAYTYPE.CONTINUOUS
-    # default to empty units
-    if "units" in config:
-        units = config["units"]
-    else:
-        units = None
+    display_type = validate_type(config.get("display_type", fallback="continuous"))
+    units = config.get("units", fallback=None)
     plottable = _get_bool("plottable", config, True)
     offset = _get_float("offset", config, 0.0)
     scale_factor = _get_float("scale_factor", config, 1.0)

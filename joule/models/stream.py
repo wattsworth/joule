@@ -5,6 +5,8 @@ from typing import List, TYPE_CHECKING
 import configparser
 import enum
 import re
+from operator import attrgetter
+import pdb
 
 from joule.models.meta import Base
 from joule.models.errors import ConfigurationError
@@ -42,21 +44,32 @@ class Stream(Base):
     id: int = Column(Integer, primary_key=True)
     folder_id: int = Column(Integer, ForeignKey('folder.id'))
     folder: "Folder" = relationship("Folder", back_populates="streams")
-    elements: List[element.Element] = relationship("Element", back_populates="stream")
+    elements: List[element.Element] = relationship("Element",
+                                                   cascade="all, delete-orphan",
+                                                   back_populates="stream")
+
+    def merge_configs(self, other: 'Stream') -> None:
+        # replace configurable attributes with other's values
+        self.keep_us = other.keep_us
+        self.decimate = other.decimate
+        self.description = other.description
+        self.elements = other.elements
 
     def __str__(self):
         return "Stream [{name}] @ [{path}]".format(name=self.name,
                                                    path=self.path)
 
     def __repr__(self):
-        return "<Stream('%s','%s','%s',%r)>" % (self.name,
-                                                self.description,
-                                                self.datatype,
-                                                self.decimate)
+        return "<Stream('%s','%s','%s',%r)>" % (
+            self.id, self.name, self.path, self.datatype)
 
     @property
     def layout(self):
         return "%s_%d" % (self.datatype.name.lower(), len(self.elements))
+
+    @property
+    def full_path(self):
+        return "%s/%s" % (self.path, self.name)
 
     @property
     def data_width(self):
@@ -70,7 +83,7 @@ class Stream(Base):
             'datatype': self.datatype,
             'keep_us': self.keep_us,
             'decimate': self.decimate,
-            'elements': [e.to_json() for e in self.elements]
+            'elements': [e.to_json() for e in sorted(self.elements, key=attrgetter('index'))]
         }
 
 
@@ -82,7 +95,7 @@ def from_config(config: configparser.ConfigParser):
     try:
         path = validate_path(main_configs["path"])
         datatype = validate_datatype(main_configs["datatype"])
-        keep_us = validate_keep(main_configs["keep"])
+        keep_us = validate_keep(main_configs.get("keep", fallback="all"))
         decimate = main_configs.getboolean("decimate", fallback=True)
         name = main_configs["name"]
         description = main_configs.get("description", fallback="")
@@ -93,9 +106,12 @@ def from_config(config: configparser.ConfigParser):
     # now try to load the elements
     element_configs = filter(lambda sec: re.match("Element\d", sec),
                              config.sections())
+    index = 0
     for name in element_configs:
         try:
             e = element.from_config(config[name])
+            e.index = index
+            index += 1
             stream.elements.append(e)
         except ConfigurationError as e:
             raise ConfigurationError("element <%s> %s" % (name, e)) from e
@@ -107,7 +123,8 @@ def from_config(config: configparser.ConfigParser):
 
 
 def validate_path(path: str) -> str:
-    if re.fullmatch('^(/[\w -]+)(/[\w -]+)+$', path) is None:
+    #
+    if path != '/' and re.fullmatch('^(/[\w -]+)+$', path) is None:
         raise ConfigurationError(
             "invalid path, use format: /dir/subdir/../file. "
             "valid characters: [0-9,A-Z,a-z,_,-, ]")
