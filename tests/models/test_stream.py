@@ -10,7 +10,6 @@ class TestStream(unittest.TestCase):
         us_in_week = int(7 * 24 * 60 * 60 * 1e6)
         self.my_stream = stream.Stream(name="test",
                                        description="test_description",
-                                       path="/some/path/to/data",
                                        datatype=Stream.DATATYPE.FLOAT32,
                                        keep_us=us_in_week,
                                        decimate=True)

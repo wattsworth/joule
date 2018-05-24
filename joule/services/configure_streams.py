@@ -3,22 +3,26 @@ from typing import Dict, List
 import logging
 import configparser
 import os
-import pdb
+import re
 
-from joule.models import (stream, Stream, Folder,
+from joule.models import (Stream, Folder,
                           ConfigurationError)
+from joule.models.stream import from_config
 
 logger = logging.getLogger('joule')
 
 # types
 Configurations = Dict[str, configparser.ConfigParser]
-Streams = List[Stream]
+Streams = Dict[str, Stream]
 
 
 def run(path: str, db: Session):
     configs = _load_configs(path)
     configured_streams = _parse_configs(configs)
-    _update_db(configured_streams, db)
+    root = db.query(Folder).filter_by(parent=None).one()
+    for path, stream in configured_streams.items():
+        _save_stream(stream, path, root, db)
+    db.commit()
 
 
 def _load_configs(path: str) -> Configurations:
@@ -39,36 +43,55 @@ def _load_configs(path: str) -> Configurations:
 
 
 def _parse_configs(configs: Configurations) -> Streams:
-    streams: Streams = []
+    streams: Streams = {}
     for path, data in configs.items():
         try:
-            s = stream.from_config(data)
-            streams.append(s)
+            s = from_config(data)
+            stream_path = _validate_path(data['Main']['path'])
+            streams[stream_path] = s
+        except KeyError as e:
+            logger.error("Invalid stream [%s]: [Main] missing %s" %
+                         (path, e.args[0]))
         except ConfigurationError as e:
             logger.error("Invalid stream [%s]: %s" % (path, e))
     return streams
 
 
-def _update_db(streams: Streams, db: Session) -> None:
-    # check if the stream is already in the database
-    for new_stream in streams:
-        cur_stream: Stream = db.query(Stream) \
-            .filter_by(path=new_stream.path) \
-            .filter_by(name=new_stream.name)\
-            .first()
-        if cur_stream is not None:
-            if cur_stream.layout != new_stream.layout:
-                logger.error("Invalid layout %s for [%s/%s], existing stream has layout %s" % (
-                    new_stream.layout, cur_stream.path, cur_stream.name, cur_stream.layout))
-            else:
-                cur_stream.merge_configs(new_stream)
-                db.add(cur_stream)
-                db.expunge(new_stream)
+def _validate_path(path: str) -> str:
+    #
+    if path != '/' and re.fullmatch('^(/[\w -]+)+$', path) is None:
+        raise ConfigurationError(
+            "invalid path, use format: /dir/subdir/../file. "
+            "valid characters: [0-9,A-Z,a-z,_,-, ]")
+
+    return path
+
+
+def _save_stream(new_stream: Stream, path: str, root: Folder, db: Session) -> None:
+    path_chunks = list(reversed(path.split('/')[1:]))
+    folder = _find_or_create_folder(path_chunks, root, db)
+    cur_stream: Stream = db.query(Stream) \
+        .filter_by(folder=folder, name=new_stream.name) \
+        .one_or_none()
+    if cur_stream is not None:
+        if cur_stream.layout != new_stream.layout:
+            logger.error("Invalid layout %s for [%s/%s], existing stream has layout %s" % (
+                new_stream.layout, cur_stream.path, cur_stream.name, cur_stream.layout))
         else:
-            folders = new_stream.path.split("/")
-            #cur_folder = db.query(Folder).filter_by(path="/")
-            #for f in folders:
-            #    if cur_folder.children.filter_by(name=f).none?
-            #    cur_folder.children.append(Folder(name=f))
-            db.add(new_stream)
-    db.commit()
+            cur_stream.merge_configs(new_stream)
+            db.add(cur_stream)
+            db.expunge(new_stream)
+    else:
+        folder.streams.append(new_stream)
+
+
+def _find_or_create_folder(path_chunks: List[str], parent: Folder, db: Session) -> Folder:
+    assert(parent is not None)
+    if len(path_chunks) == 0:
+        return parent
+    name = path_chunks.pop()
+    folder = db.query(Folder).filter_by(parent=parent, name=name).one_or_none()
+    if folder is None:
+        folder = Folder(name=name)
+        parent.children.append(folder)
+    return _find_or_create_folder(path_chunks, folder, db)

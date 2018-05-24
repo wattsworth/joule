@@ -25,15 +25,6 @@ class TestStreamErrors(unittest.TestCase):
         with self.assertRaisesRegex(ConfigurationError, 'name'):
             stream.from_config(self.base_config)
 
-    def test_errors_on_bad_path(self):
-        """path must be of form /dir/subdir/../subsubdir"""
-        bad_paths = ["", "/slash/at/end/", "bad name", "/double/end//",
-                     "//double/start", "/*bad&symb()ls"]
-        self.evaluate_bad_values("path", bad_paths)
-        # but allows paths with _ and -
-        good_paths = ["/", "/short", "/meters-4/prep-a", "/meter_4/prep-b", "/path  with/ spaces"]
-        self.evaluate_good_values("path", good_paths)
-        
     def test_errors_on_bad_keep(self):
         """keep is # and timeunit (eg 1w, 30h, 2y) or False"""
         bad_keeps = ["0w", "3", "w", "something random", "-2h"]

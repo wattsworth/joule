@@ -20,7 +20,10 @@ class Folder(Base):
         parent: 'Folder'
 
     def __repr__(self):
-        return "<Folder('%s', '%s')>" % (self.name, self.description)
+        if self.id is None:
+            return "<Folder(id=<not assigned>, name='%s')>" % self.name
+        else:
+            return "<Folder(id=%d, name='%s')>" % (self.id, self.name)
 
     def to_json(self):
         return {

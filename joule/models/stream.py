@@ -6,7 +6,6 @@ import configparser
 import enum
 import re
 from operator import attrgetter
-import pdb
 
 from joule.models.meta import Base
 from joule.models.errors import ConfigurationError
@@ -19,7 +18,6 @@ if TYPE_CHECKING:
 class Stream(Base):
     __tablename__ = 'stream'
     name: str = Column(String, nullable=False)
-    path: str = Column(String, nullable=False)
 
     class DATATYPE(enum.Enum):
         FLOAT64 = enum.auto()
@@ -75,6 +73,10 @@ class Stream(Base):
     def data_width(self):
         return len(self.elements) + 1
 
+    @property
+    def path(self):
+        return "TODO"
+
     def to_json(self):
         return {
             'name': self.name,
@@ -93,13 +95,12 @@ def from_config(config: configparser.ConfigParser):
     except KeyError as e:
         raise ConfigurationError("Missing section [%s]" % e) from e
     try:
-        path = validate_path(main_configs["path"])
         datatype = validate_datatype(main_configs["datatype"])
         keep_us = validate_keep(main_configs.get("keep", fallback="all"))
         decimate = main_configs.getboolean("decimate", fallback=True)
         name = main_configs["name"]
         description = main_configs.get("description", fallback="")
-        stream = Stream(name=name, description=description, path=path,
+        stream = Stream(name=name, description=description,
                         datatype=datatype, keep_us=keep_us, decimate=decimate)
     except KeyError as e:
         raise ConfigurationError("[Main] missing %s" % e.args[0]) from e
@@ -120,16 +121,6 @@ def from_config(config: configparser.ConfigParser):
         raise ConfigurationError(
             "missing element configurations, must have at least one")
     return stream
-
-
-def validate_path(path: str) -> str:
-    #
-    if path != '/' and re.fullmatch('^(/[\w -]+)+$', path) is None:
-        raise ConfigurationError(
-            "invalid path, use format: /dir/subdir/../file. "
-            "valid characters: [0-9,A-Z,a-z,_,-, ]")
-
-    return path
 
 
 def validate_datatype(datatype: str) -> Stream.DATATYPE:
