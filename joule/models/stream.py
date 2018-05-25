@@ -12,11 +12,12 @@ from joule.models.errors import ConfigurationError
 from joule.models import element
 
 if TYPE_CHECKING:
-    from joule.models.folder import Folder
+    from joule.models import (Folder, Pipe)
 
 
 class Stream(Base):
     __tablename__ = 'stream'
+    id: int = Column(Integer, primary_key=True)
     name: str = Column(String, nullable=False)
 
     class DATATYPE(enum.Enum):
@@ -33,24 +34,26 @@ class Stream(Base):
 
     datatype: DATATYPE = Column(Enum(DATATYPE), nullable=False)
     decimate: bool = Column(Boolean, default=True)
+    locked: bool = Column(Boolean, default=False)
 
     KEEP_ALL = -1
     KEEP_NONE = 0
     keep_us: int = Column(Integer, default=KEEP_ALL)
 
     description: str = Column(String)
-    id: int = Column(Integer, primary_key=True)
     folder_id: int = Column(Integer, ForeignKey('folder.id'))
     folder: "Folder" = relationship("Folder", back_populates="streams")
     elements: List[element.Element] = relationship("Element",
                                                    cascade="all, delete-orphan",
                                                    back_populates="stream")
+    pipes: List['Pipe'] = relationship("Pipe", back_populates="stream")
 
     def merge_configs(self, other: 'Stream') -> None:
         # replace configurable attributes with other's values
         self.keep_us = other.keep_us
         self.decimate = other.decimate
         self.description = other.description
+        self.locked = other.locked
         self.elements = other.elements
 
     def __str__(self):
@@ -89,7 +92,7 @@ class Stream(Base):
         }
 
 
-def from_config(config: configparser.ConfigParser):
+def from_config(config: configparser.ConfigParser) -> Stream:
     try:
         main_configs = config["Main"]
     except KeyError as e:
@@ -98,7 +101,7 @@ def from_config(config: configparser.ConfigParser):
         datatype = validate_datatype(main_configs["datatype"])
         keep_us = validate_keep(main_configs.get("keep", fallback="all"))
         decimate = main_configs.getboolean("decimate", fallback=True)
-        name = main_configs["name"]
+        name = validate_name(main_configs["name"])
         description = main_configs.get("description", fallback="")
         stream = Stream(name=name, description=description,
                         datatype=datatype, keep_us=keep_us, decimate=decimate)
@@ -121,6 +124,14 @@ def from_config(config: configparser.ConfigParser):
         raise ConfigurationError(
             "missing element configurations, must have at least one")
     return stream
+
+
+def validate_name(name: str) -> str:
+    if len(name) == 0:
+        raise ConfigurationError("missing name")
+    if '/' in name:
+        raise ConfigurationError("invalid name, '\' not allowed")
+    return name
 
 
 def validate_datatype(datatype: str) -> Stream.DATATYPE:

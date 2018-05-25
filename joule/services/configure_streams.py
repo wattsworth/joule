@@ -47,6 +47,7 @@ def _parse_configs(configs: Configurations) -> Streams:
     for path, data in configs.items():
         try:
             s = from_config(data)
+            s.locked = True
             stream_path = _validate_path(data['Main']['path'])
             streams[stream_path] = s
         except KeyError as e:
@@ -86,7 +87,7 @@ def _save_stream(new_stream: Stream, path: str, root: Folder, db: Session) -> No
 
 
 def _find_or_create_folder(path_chunks: List[str], parent: Folder, db: Session) -> Folder:
-    assert(parent is not None)
+    assert (parent is not None)
     if len(path_chunks) == 0:
         return parent
     name = path_chunks.pop()

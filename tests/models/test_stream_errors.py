@@ -1,7 +1,7 @@
 import unittest
 
 from joule.models import (ConfigurationError)
-from joule.models import stream   # for helper functions
+from joule.models import stream  # for helper functions
 from tests import helpers
 
 
@@ -19,6 +19,10 @@ class TestStreamErrors(unittest.TestCase):
                [Element1]
                  name = e1
             """)
+
+    def test_errors_on_bad_name(self):
+        bad_names = ["", "has/slash", "/other"]
+        self.evaluate_bad_values("name", bad_names)
 
     def test_errors_on_missing_info(self):
         self.base_config.remove_option("Main", "name")
@@ -52,4 +56,3 @@ class TestStreamErrors(unittest.TestCase):
             with self.subTest(setting=setting):
                 self.base_config[section][setting_name] = setting
                 stream.from_config(self.base_config)
-
