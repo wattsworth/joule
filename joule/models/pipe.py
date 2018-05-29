@@ -1,5 +1,5 @@
 from sqlalchemy.orm import relationship
-from sqlalchemy import (Column, Enum, Integer, ForeignKey)
+from sqlalchemy import (Column, Enum, Integer, String, ForeignKey)
 import enum
 from typing import TYPE_CHECKING
 
@@ -17,6 +17,7 @@ class Pipe(Base):
         INPUT = enum.auto()
         OUTPUT = enum.auto()
 
+    name: str = Column(String)
     direction: DIRECTION = Column(Enum(DIRECTION))
     module_id: int = Column(Integer, ForeignKey('module.id'))
     module: 'Module' = relationship("Module", back_populates="pipes")

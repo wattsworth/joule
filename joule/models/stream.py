@@ -61,7 +61,7 @@ class Stream(Base):
                                                    path=self.path)
 
     def __repr__(self):
-        return "<Stream('%s','%s','%s',%r)>" % (
+        return "<Stream(id=%r, name='%s',path='%s',datatype=%r)>" % (
             self.id, self.name, self.path, self.datatype)
 
     @property
@@ -78,10 +78,11 @@ class Stream(Base):
 
     @property
     def path(self):
-        return "TODO"
+        return "property Stream::path not implmented in stream.py"
 
     def to_json(self):
         return {
+            'id': self.id,
             'name': self.name,
             'path': self.path,
             'description': self.description,
@@ -94,7 +95,7 @@ class Stream(Base):
 
 def from_config(config: configparser.ConfigParser) -> Stream:
     try:
-        main_configs = config["Main"]
+        main_configs: configparser.ConfigParser = config["Main"]
     except KeyError as e:
         raise ConfigurationError("Missing section [%s]" % e) from e
     try:

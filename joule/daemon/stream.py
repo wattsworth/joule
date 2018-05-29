@@ -59,7 +59,7 @@ class Stream(object):
     def add_element(self, new_element):
         # make sure the element name is unique
         for s in self.elements:
-            if(s.name == new_element.name):
+            if s.name == new_element.name:
                 raise ConfigError(
                     "the name setting for each element must be unique")
         self.elements.append(new_element)
@@ -68,9 +68,9 @@ class Stream(object):
     # or turning into a dictionary equivalent to the *.conf setup
     # set ini_format to True to send as *.conf setup
     def to_json(self, ini_format=False):
-        if(ini_format):
+        if ini_format:
             # convert keep_us to hours
-            if(self.keep_us == 0):
+            if self.keep_us == 0:
                 keep = "none"
             else:
                 keep = "%dh" % (self.keep_us//(60 * 60 * 1e6))

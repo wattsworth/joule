@@ -7,9 +7,10 @@ import configparser
 
 from joule.models.meta import Base
 from joule.models.errors import ConfigurationError
+from joule.models import Argument
 
 if TYPE_CHECKING:
-    from joule.models import (Pipe, LogEntry, Argument)
+    from joule.models import (Pipe, LogEntry)
 
 """
 Configuration File:
@@ -41,7 +42,7 @@ pathN = /nilmdb/output/streamN:uint16_10
 class Module(Base):
     __tablename__ = 'module'
     id: int = Column(Integer, primary_key=True)
-    name: str = Column(String, nullable=False, unique=True)
+    name: str = Column(String, nullable=False)
     exec_cmd: str = Column(String, nullable=False)
     description: str = Column(String, default="")
     locked: bool = Column(Boolean, default=False)
@@ -68,10 +69,49 @@ class Module(Base):
     def __repr__(self):
         return "<Module(id=%r, name=%s)>" % (self.id, self.name)
 
+    @property
+    def inputs(self):
+        return filter(lambda p: p.direction == Pipe.DIRECTION.INPUT, self.pipes)
+
+    @property
+    def outputs(self):
+        return filter(lambda p: p.direction == Pipe.DIRECTION.OUTPUT, self.pipes)
+
+    def to_json(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'exec_cmd': self.exec_cmd,
+            'has_interface': self.has_interface,
+            'arguments': dict((a.name, a.value) for a in self.arguments),
+            'inputs': dict((p.name, p.stream_id) for p in self.inputs),
+            'outputs': dict((p.name, p.stream_id) for p in self.outputs)
+        }
+
 
 def from_config(config: configparser.ConfigParser) -> Module:
     try:
-        main_configs = config["Main"]
+        main_configs: configparser.ConfigParser = config["Main"]
     except KeyError as e:
         raise ConfigurationError("Missing section [%s]" % e.args[0]) from e
-    return Module(name=main_configs["name"], description=main_configs["description"])
+    try:
+        name = validate_name(main_configs["name"])
+        description = main_configs.get("description", fallback="")
+        exec_cmd = main_configs["exec_cmd"]
+        has_interface = main_configs.getboolean("has_interface", fallback=False)
+    except KeyError as e:
+        raise ConfigurationError("[Main] missing %s" % e.args[0]) from e
+    my_module = Module(name=name, description=description, exec_cmd=exec_cmd,
+                       has_interface=has_interface)
+    # parse the arguments
+    if 'Arguments' in config:
+        for name, value in config['Arguments'].items():
+            my_module.arguments.append(Argument(name=name, value=value))
+    return my_module
+
+
+def validate_name(name: str) -> str:
+    if len(name) == 0:
+        raise ConfigurationError("missing name")
+    return name

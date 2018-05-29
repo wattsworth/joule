@@ -1,31 +1,20 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 import unittest
-import tempfile
 import logging
+import tempfile
 import os
 
 from joule.models import (Base, Stream, Folder, Element, ConfigurationError)
-from joule.services import configure_streams
+from joule.services import configure_modules
 
 logger = logging.getLogger('joule')
 
 
 class TestConfigureModules(unittest.TestCase):
 
-    def test_errors_on_bad_path(self):
-        """path must be of form /dir/subdir/../subsubdir"""
-        for bad_path in ["", "/slash/at/end/", "bad name", "/double/end//",
-                     "//double/start", "/*bad&symb()ls"]:
-            with self.assertRaisesRegex(ConfigurationError, "path"):
-                configure_streams._validate_path(bad_path)
-        # but allows paths with _ and -
-        for good_path in ["/", "/short", "/meters-4/prep-a",
-                          "/meter_4/prep-b", "/path  with/ spaces"]:
-            configure_streams._validate_path(good_path)
-
-    def test_merges_config_and_db_streams(self):
-        """e2e stream configuration service test"""
+    def test_parses_configs(self):
+        """e2e module configuration service test"""
         # create a database
         engine = create_engine('sqlite://')
         Base.metadata.create_all(engine)
@@ -51,51 +40,58 @@ class TestConfigureModules(unittest.TestCase):
 
         session.commit()
         configs = [
-            # /test/stream1:float32_3 <different element configs and keep>
+            # writes to /test/stream1
             """
             [Main] 
-              name = stream1
-              path = /test
-              datatype = float32
-              keep = all
-            [Element1]
-              name=new_e1
-              display_type=discrete
-            [Element2]
-              name=new_e2
-              display_type=event
-            [Element3]
-              name=new_e3
-              default_min=-10
+              name = module1
+              exec_cmd = runit.sh
+            [Arguments]
+              key = value
+            [Inputs]
+              # reader
+            [Outputs]
+              raw = /test/stream1
             """,
-            # /new/path/stream3: uint8_2 <a new stream>
+            # reads from /test/stream1, writes to /test/deeper/stream2 and /test/stream3
             """
             [Main]
-              name = stream3
-              path = /new/path
-              datatype = uint8
-            [Element1]
-              name=1
-            [Element2]
-              name=2
+              name = module2
+              exec_cmd = runit2.sh
+            [Inputs]
+              source = /test/stream1:float32[e0,e1, e2]
+            [Outputs]
+              sink1 = /test/deeper/stream2
+              sink2 = /test/stream3:uint8[ x, y ]
             """,
-            # /test/deeper/stream2: float32_1 <conflicting layout>
+            # ignored: unconfigured input
             """
             [Main]
-              name = stream2
-              path = /test/deeper
-              datatype = float32
-            [Element1]
-              name = 1
+              name = bad_module
+              exec_cmd = runit3.sh
+            [Inputs]
+              source = /missing/stream
+            [Outputs]
             """,
-            # /invalid path//invalid: int64_1 <invalid config (ignored)>
+            # ignored: mismatched stream config
             """
             [Main] 
-              name = invalid
-              path = /invalid path//
-              datatype = uint8
-              keep = all
-            [Element1]
-              name=e1
+              name = bad_module2
+              exec_cmd = runit4.sh
+            [Inputs]
+              source = /test/stream3:uint8[x,y,z]
+            [Outputs]
             """,
         ]
+        with tempfile.TemporaryDirectory() as conf_dir:
+            # write the configs in 0.conf, 1.conf, ...
+            i = 0
+            for conf in configs:
+                with open(os.path.join(conf_dir, "%d.conf" % i), 'w') as f:
+                    f.write(conf)
+                i += 1
+            with self.assertLogs(logger=logger, level=logging.ERROR) as logs:
+                configure_modules.run(conf_dir, session)
+                # log the missing stream configuration
+                self.assertRegex(logs.output[0], '/missing/stream')
+                # log the incompatible stream configuration
+                self.assertRegex(logs.output[1], 'different elements')

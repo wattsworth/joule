@@ -16,7 +16,7 @@ class TestConfigureStreams(unittest.TestCase):
     def test_errors_on_bad_path(self):
         """path must be of form /dir/subdir/../subsubdir"""
         for bad_path in ["", "/slash/at/end/", "bad name", "/double/end//",
-                     "//double/start", "/*bad&symb()ls"]:
+                         "//double/start", "/*bad&symb()ls"]:
             with self.assertRaisesRegex(ConfigurationError, "path"):
                 configure_streams._validate_path(bad_path)
         # but allows paths with _ and -
@@ -99,7 +99,6 @@ class TestConfigureStreams(unittest.TestCase):
               name=e1
             """,
         ]
-        print(folder_deeper)
         with tempfile.TemporaryDirectory() as conf_dir:
             # write the configs in 0.conf, 1.conf, ...
             i = 0

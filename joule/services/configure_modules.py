@@ -1,10 +1,10 @@
 from sqlalchemy.orm import Session
 from typing import List, TYPE_CHECKING
-import re
+import pdb
 import logging
 
 from joule.models import (Module, Stream,
-                          Element,
+                          Element, Pipe,
                           ConfigurationError,
                           stream, folder)
 from joule.models.module import from_config as module_from_config
@@ -19,14 +19,12 @@ logger = logging.getLogger('joule')
 
 # types
 Modules = List[Module]
-Streams = List[Stream]
+Pipes = List[Pipe]
 
 
 def run(path: str, db: Session):
     configs = load_configs(path)
     configured_modules = _parse_configs(configs, db)
-    # first connect all outputs
-    # then connect all inputs
     for module in configured_modules:
         db.add(module)
 
@@ -36,54 +34,58 @@ def _parse_configs(configs: Configurations, db: Session) -> Modules:
     # Pass 1: parse module parameters
     for file_path, config in configs.items():
         try:
-            m = module_from_config(config)
-            m.locked = True
-            stage1_modules.append((m, config, file_path))
+            module = module_from_config(config)
+            module.locked = True
+            stage1_modules.append((module, config, file_path))
         except ConfigurationError as e:
             logger.error("Invalid module [%s]: %s" % (file_path, e))
-    # Pass 2: parse inputs
+    # Pass 2: parse outputs
     stage2_modules: List[(Module, ConfigParser, str)] = []
     for module, config, file_path in stage1_modules:
         try:
-            module.inputs = _find_inputs(config, db)
+            module.pipes = _find_outputs(config, db)
             stage2_modules.append((module, config, file_path))
         except ConfigurationError as e:
             logger.error("Invalid module [%s]: %s" % (file_path, e))
-    # Pass 3: parse outputs
+    # Pass 3: parse inputs
     parsed_modules: Modules = []
     for module, config, file_path in stage2_modules:
         try:
-            module.outputs = _find_outputs(config, db)
+            module.pipes += _find_inputs(config, db)
             parsed_modules.append(module)
         except ConfigurationError as e:
             logger.error("Invalid module [%s]: %s" % (file_path, e))
     return parsed_modules
 
 
-def _find_inputs(config: ConfigParser, db: Session) -> Streams:
-    inputs = []
-    if 'Inputs' not in config:
-        raise ConfigurationError("Missing section [Inputs]")
-    for name, path_config in config['Inputs'].items():
-        try:
-            inputs.append(_stream_from_path_config(path_config, db))
-        except ConfigurationError as e:
-            raise ConfigurationError("Input [%s=%s]: %s" %
-                                     (name, path_config, e))
-    return inputs
-
-
-def _find_outputs(config: ConfigParser, db: Session) -> Streams:
+def _find_outputs(config: 'ConfigParser', db: Session) -> Pipes:
     outputs = []
     if 'Outputs' not in config:
         raise ConfigurationError("Missing section [Outputs]")
-    for name, path_config in config['Inputs'].items():
+    for name, pipe_config in config['Outputs'].items():
         try:
-            outputs.append(_stream_from_path_config(path_config, db))
+            my_stream = _stream_from_pipe_config(pipe_config, db)
+            outputs.append(Pipe(name=name, stream_id=my_stream.id,
+                                direction=Pipe.DIRECTION.OUTPUT))
         except ConfigurationError as e:
             raise ConfigurationError("Output [%s=%s]: %s" %
-                                     (name, path_config, e))
+                                     (name, pipe_config, e))
     return outputs
+
+
+def _find_inputs(config: 'ConfigParser', db: Session) -> Pipes:
+    inputs = []
+    if 'Inputs' not in config:
+        raise ConfigurationError("Missing section [Inputs]")
+    for name, pipe_config in config['Inputs'].items():
+        try:
+            my_stream = _stream_from_pipe_config(pipe_config, db)
+            inputs.append(Pipe(name=name, stream=my_stream,
+                               direction=Pipe.DIRECTION.INPUT))
+        except ConfigurationError as e:
+            raise ConfigurationError("Input [%s=%s]: %s" %
+                                     (name, pipe_config, e))
+    return inputs
 
 
 # basic format of stream is just the full_path
@@ -92,43 +94,65 @@ def _find_outputs(config: ConfigParser, db: Session) -> Streams:
 # /file/path/stream_name:datatype[e1, e2, e3, ...]
 #  where e1, e2, e2, ... are the element names
 #
-def _stream_from_path_config(path_config, db):
+def _stream_from_pipe_config(pipe_config: str, db: Session) -> Stream:
     # separate the configuration pieces
-    (path, name, inline_config) = re.match("/TODO/", path_config)
+    (path, name, inline_config) = _parse_pipe_config(pipe_config)
     if path is None or name is None:
-        raise ConfigurationError("invalid configuration [%s]" % path_config)
+        raise ConfigurationError("invalid configuration [%s]" % pipe_config)
     name = stream.validate_name(name)
     # parse the inline configuration
     (datatype, element_names) = _parse_inline_config(inline_config)
     my_folder = folder.find_or_create(path, db)
     # check if the stream exists in the database
     existing_stream = db.query(Stream). \
-        filter_by(folder=my_folder, name=name)
-    if existing_stream is not None and len(inline_config) > 0:
-        _validate_config_match(existing_stream, datatype, element_names)
+        filter_by(folder=my_folder, name=name). \
+        one_or_none()
+    if existing_stream is not None:
+        if len(inline_config) > 0:
+            _validate_config_match(existing_stream, datatype, element_names)
         return existing_stream
     # if the stream doesn't exist it *must* have inline configuration
-    if inline_config is None:
-        raise ConfigurationError("no stream configuration for [%s]" % path_config)
+    if len(inline_config) == 0:
+        raise ConfigurationError("no stream configuration for [%s]" % pipe_config)
     # build the stream from inline config
     my_stream = stream.Stream(name=name,
                               datatype=datatype)
+    i = 0
     for e in element_names:
-        my_stream.elements.append(Element(name=e))
+        my_stream.elements.append(Element(name=e, index=i))
+        i += 1
     my_folder.streams.append(my_stream)
     db.add(my_stream)
     return my_stream
+
+
+def _parse_pipe_config(pipe_config: str) -> (str, str, str):
+    # convert /path/name:datatype[e0,e1,e2] into (/path, name, datatype[e0,e1,e2])
+    if ':' in pipe_config:
+        full_path = pipe_config.split(':')[0]
+        inline_config = pipe_config.split(':')[1]
+    else:
+        full_path = pipe_config
+        inline_config = ""
+    if '/' not in full_path:
+        raise ConfigurationError("invalid path [%s]" % pipe_config)
+    path_chunks = full_path.split('/')
+    name = path_chunks.pop()
+    if name == "":
+        raise ConfigurationError("invalid stream name [%s]" % pipe_config)
+    path = '/'.join(path_chunks)
+    return path, name, inline_config
 
 
 def _parse_inline_config(inline_config: str) -> (Stream.DATATYPE, List[str]):
     if len(inline_config) == 0:
         return None, None
     try:
-        config = inline_config.split(':')
+        config = inline_config.split('[')
         if len(config) != 2:
-            raise ConfigurationError("format is datatype:[e1,e2,e3,...]")
-        datatype = stream.validate_datatype(config[0])
-        element_names = [e.rstrip().lstrip() for e in config[1][1:-1].split(",")]
+            raise ConfigurationError("format is datatype[e1,e2,e3,...]")
+        datatype = stream.validate_datatype(config[0].strip())
+        element_names = [e.strip() for e in config[1].strip()[:-1].split(",")]
         return datatype, element_names
     except ConfigurationError as e:
         raise ConfigurationError("invalid inline configuration") from e
@@ -147,9 +171,7 @@ def _validate_config_match(existing_stream: Stream,
     # verify elem_names
     existing_names = [e.name for e in existing_stream.elements]
     if len(existing_names) != len(elem_names):
-        raise ConfigurationError("Stream [%s] exists with different elements" %
-                                 existing_stream.full_path)
+        raise ConfigurationError("Stream exists with different elements")
     for name in elem_names:
         if name not in existing_names:
-            raise ConfigurationError("Stream [%s] exists with different elements" %
-                                     existing_stream.full_path)
+            raise ConfigurationError("Stream exists with different elements")

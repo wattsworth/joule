@@ -30,6 +30,7 @@ class Folder(Base):
 
     def to_json(self):
         return {
+            'id': self.id,
             'name': self.name,
             'description': self.description,
             'children': [c.to_json() for c in self.children],
@@ -53,7 +54,6 @@ def root(db: Session) -> Folder:
 
 
 def find_or_create(path: str, db: Session, parent=None) -> Folder:
-    pdb.set_trace()
     if len(path) == 0 or path[0] != '/':
         raise FolderError("invalid path [%s]" % path)
     if parent is None:
