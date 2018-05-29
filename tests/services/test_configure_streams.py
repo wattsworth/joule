@@ -12,22 +12,6 @@ logger = logging.getLogger('joule')
 
 
 class TestConfigureStreams(unittest.TestCase):
-    def test_parses_conf_files_in_path(self):
-        """parses files ending in *.conf and ignores others"""
-        file_names = ['stream1.conf', 'ignored',
-                      'temp.conf~', 'streamA-3.conf']
-
-        with tempfile.TemporaryDirectory() as conf_dir:
-            for name in file_names:
-                # create a stub stream configuration (needed for
-                # configparser)
-                with open(os.path.join(conf_dir, name), 'w') as f:
-                    f.write('[Main]\n')
-
-            configs = configure_streams._load_configs(conf_dir)
-        self.assertEqual(2, len(configs))
-        self.assertTrue('stream1.conf' in configs.keys())
-        self.assertTrue('streamA-3.conf' in configs.keys())
 
     def test_errors_on_bad_path(self):
         """path must be of form /dir/subdir/../subsubdir"""

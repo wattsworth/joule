@@ -1,60 +1,42 @@
 from sqlalchemy.orm import Session
-from typing import Dict, List
+from typing import Dict
 import logging
-import configparser
-import os
 import re
 
-from joule.models import (Stream, Folder,
-                          ConfigurationError)
-from joule.models.stream import from_config
+from joule.models import (Stream, ConfigurationError)
+from joule.models.folder import find_or_create as find_or_create_folder
+
+from joule.models.stream import from_config as stream_from_config
+from joule.services.helpers import (Configurations,
+                                    load_configs)
 
 logger = logging.getLogger('joule')
 
 # types
-Configurations = Dict[str, configparser.ConfigParser]
 Streams = Dict[str, Stream]
 
 
 def run(path: str, db: Session):
-    configs = _load_configs(path)
+    configs = load_configs(path)
     configured_streams = _parse_configs(configs)
-    root = db.query(Folder).filter_by(parent=None).one()
     for path, stream in configured_streams.items():
-        _save_stream(stream, path, root, db)
+        _save_stream(stream, path, db)
     db.commit()
-
-
-def _load_configs(path: str) -> Configurations:
-    configs: Configurations = {}
-    for file in os.listdir(path):
-        if not file.endswith(".conf"):
-            continue
-        file_path = os.path.join(path, file)
-        config = configparser.ConfigParser()
-        try:
-            if len(config.read(file_path)) != 1:
-                logger.error("Cannot read file [%s]" % file_path)
-                continue
-            configs[file] = config
-        except configparser.Error as e:
-            logger.error(e)
-    return configs
 
 
 def _parse_configs(configs: Configurations) -> Streams:
     streams: Streams = {}
-    for path, data in configs.items():
+    for file_path, data in configs.items():
         try:
-            s = from_config(data)
+            s = stream_from_config(data)
             s.locked = True
             stream_path = _validate_path(data['Main']['path'])
             streams[stream_path] = s
         except KeyError as e:
             logger.error("Invalid stream [%s]: [Main] missing %s" %
-                         (path, e.args[0]))
+                         (file_path, e.args[0]))
         except ConfigurationError as e:
-            logger.error("Invalid stream [%s]: %s" % (path, e))
+            logger.error("Invalid stream [%s]: %s" % (file_path, e))
     return streams
 
 
@@ -68,11 +50,10 @@ def _validate_path(path: str) -> str:
     return path
 
 
-def _save_stream(new_stream: Stream, path: str, root: Folder, db: Session) -> None:
-    path_chunks = list(reversed(path.split('/')[1:]))
-    folder = _find_or_create_folder(path_chunks, root, db)
+def _save_stream(new_stream: Stream, path: str, db: Session) -> None:
+    my_folder = find_or_create_folder(path, db)
     cur_stream: Stream = db.query(Stream) \
-        .filter_by(folder=folder, name=new_stream.name) \
+        .filter_by(folder=my_folder, name=new_stream.name) \
         .one_or_none()
     if cur_stream is not None:
         if cur_stream.layout != new_stream.layout:
@@ -83,16 +64,4 @@ def _save_stream(new_stream: Stream, path: str, root: Folder, db: Session) -> No
             db.add(cur_stream)
             db.expunge(new_stream)
     else:
-        folder.streams.append(new_stream)
-
-
-def _find_or_create_folder(path_chunks: List[str], parent: Folder, db: Session) -> Folder:
-    assert (parent is not None)
-    if len(path_chunks) == 0:
-        return parent
-    name = path_chunks.pop()
-    folder = db.query(Folder).filter_by(parent=parent, name=name).one_or_none()
-    if folder is None:
-        folder = Folder(name=name)
-        parent.children.append(folder)
-    return _find_or_create_folder(path_chunks, folder, db)
+        my_folder.streams.append(new_stream)

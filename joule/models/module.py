@@ -73,5 +73,5 @@ def from_config(config: configparser.ConfigParser) -> Module:
     try:
         main_configs = config["Main"]
     except KeyError as e:
-        raise ConfigurationError("Missing section [%s]" % e) from e
+        raise ConfigurationError("Missing section [%s]" % e.args[0]) from e
     return Module(name=main_configs["name"], description=main_configs["description"])
