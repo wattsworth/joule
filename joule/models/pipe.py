@@ -8,6 +8,7 @@ from joule.models.meta import Base
 if TYPE_CHECKING:
     from joule.models import (Module, Stream)
 
+print("I'm imported!!!!!!!!!!!")
 
 class Pipe(Base):
     __tablename__ = 'pipe'
@@ -25,13 +26,20 @@ class Pipe(Base):
     stream: 'Stream' = relationship("Stream", back_populates="pipes")
 
     def __repr__(self):
-        msg = "<Pipe(direction=%r, module=" % self.direction
+        msg = "<Pipe(name='%s', direction=" % self.name
+        if self.direction == Pipe.DIRECTION.INPUT:
+            msg += 'INPUT'
+        else:
+            msg += 'OUTPUT'
+        msg += ", module="
         if self.module is not None:
             msg += self.module.name
         else:
             msg += "[None]"
-        msg += " stream="
+        msg += ", stream="
         if self.stream is not None:
-            msg += self.stream.full_path
+            msg += self.stream.name
         else:
             msg += "[None]"
+        msg +='>'
+        return msg

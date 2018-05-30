@@ -21,7 +21,7 @@ def run(path: str, db: Session):
     configured_streams = _parse_configs(configs)
     for path, stream in configured_streams.items():
         _save_stream(stream, path, db)
-    db.commit()
+    return [stream for _, stream in configured_streams.items()]
 
 
 def _parse_configs(configs: Configurations) -> Streams:

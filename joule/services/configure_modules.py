@@ -1,6 +1,5 @@
 from sqlalchemy.orm import Session
 from typing import List, TYPE_CHECKING
-import pdb
 import logging
 
 from joule.models import (Module, Stream,
@@ -27,6 +26,7 @@ def run(path: str, db: Session):
     configured_modules = _parse_configs(configs, db)
     for module in configured_modules:
         db.add(module)
+    return configured_modules
 
 
 def _parse_configs(configs: Configurations, db: Session) -> Modules:
@@ -65,7 +65,7 @@ def _find_outputs(config: 'ConfigParser', db: Session) -> Pipes:
     for name, pipe_config in config['Outputs'].items():
         try:
             my_stream = _stream_from_pipe_config(pipe_config, db)
-            outputs.append(Pipe(name=name, stream_id=my_stream.id,
+            outputs.append(Pipe(name=name, stream=my_stream,
                                 direction=Pipe.DIRECTION.OUTPUT))
         except ConfigurationError as e:
             raise ConfigurationError("Output [%s=%s]: %s" %
@@ -165,7 +165,7 @@ def _validate_config_match(existing_stream: Stream,
     if (datatype is not None and
             datatype != existing_stream.datatype):
         raise ConfigurationError("Stream [%s] exists with data_type %s" %
-                                 (existing_stream.full_path,
+                                 (existing_stream.name,
                                   existing_stream.datatype))
 
     # verify elem_names

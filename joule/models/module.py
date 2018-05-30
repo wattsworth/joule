@@ -7,10 +7,10 @@ import configparser
 
 from joule.models.meta import Base
 from joule.models.errors import ConfigurationError
-from joule.models import Argument
-
+from joule.models import (Argument)
+from joule.models.pipe import Pipe
 if TYPE_CHECKING:
-    from joule.models import (Pipe, LogEntry)
+    from joule.models import (LogEntry)
 
 """
 Configuration File:
@@ -71,11 +71,11 @@ class Module(Base):
 
     @property
     def inputs(self):
-        return filter(lambda p: p.direction == Pipe.DIRECTION.INPUT, self.pipes)
+        return [p for p in self.pipes if p.direction == Pipe.DIRECTION.INPUT]
 
     @property
     def outputs(self):
-        return filter(lambda p: p.direction == Pipe.DIRECTION.OUTPUT, self.pipes)
+        return [p for p in self.pipes if p.direction == Pipe.DIRECTION.OUTPUT]
 
     def to_json(self):
         return {

@@ -57,34 +57,24 @@ class Stream(Base):
         self.elements = other.elements
 
     def __str__(self):
-        return "Stream [{name}] @ [{path}]".format(name=self.name,
-                                                   path=self.path)
+        return "Stream [{name}]".format(name=self.name)
 
     def __repr__(self):
-        return "<Stream(id=%r, name='%s',path='%s',datatype=%r)>" % (
-            self.id, self.name, self.path, self.datatype)
+        return "<Stream(id=%r, name='%s', datatype=%r)>" % (
+            self.id, self.name, self.datatype)
 
     @property
     def layout(self):
         return "%s_%d" % (self.datatype.name.lower(), len(self.elements))
 
     @property
-    def full_path(self):
-        return "%s/%s" % (self.path, self.name)
-
-    @property
     def data_width(self):
         return len(self.elements) + 1
-
-    @property
-    def path(self):
-        return "property Stream::path not implmented in stream.py"
 
     def to_json(self):
         return {
             'id': self.id,
             'name': self.name,
-            'path': self.path,
             'description': self.description,
             'datatype': self.datatype,
             'keep_us': self.keep_us,

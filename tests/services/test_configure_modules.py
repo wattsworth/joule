@@ -4,8 +4,8 @@ import unittest
 import logging
 import tempfile
 import os
-
-from joule.models import (Base, Stream, Folder, Element, ConfigurationError)
+from joule.models import (Base, Stream, Folder,
+                          Element, Module, Pipe)
 from joule.services import configure_modules
 
 logger = logging.getLogger('joule')
@@ -95,3 +95,26 @@ class TestConfigureModules(unittest.TestCase):
                 self.assertRegex(logs.output[0], '/missing/stream')
                 # log the incompatible stream configuration
                 self.assertRegex(logs.output[1], 'different elements')
+        # now check the database:
+        # should have three streams
+        self.assertEqual(session.query(Stream).count(), 3)
+        # and two modules
+        self.assertEqual(session.query(Module).count(), 2)
+        # module1 should have no inputs and one output
+        m1: Module = session.query(Module).filter_by(name="module1").one()
+        self.assertEqual(len(m1.pipes), 1)
+        p_raw: Pipe = m1.pipes[0]
+        self.assertEqual(p_raw.name, 'raw')
+        self.assertEqual(p_raw.stream, stream1)
+        # module2 should have 1 input and 2 outputs
+        m2: Module = session.query(Module).filter_by(name="module2").one()
+        self.assertEqual(len(m2.inputs), 1)
+        self.assertEqual(len(m2.outputs), 2)
+        p_source: Pipe = [p for p in m2.inputs if p.name == 'source'][0]
+        self.assertEqual(p_source.stream, stream1)
+        p_sink1 = [p for p in m2.outputs if p.name == 'sink1'][0]
+        self.assertEqual(p_sink1.stream, stream2)
+        # sink2 goes to a new stream
+        stream3 = session.query(Stream).filter_by(name="stream3").one()
+        p_sink2 = [p for p in m2.outputs if p.name == 'sink2'][0]
+        self.assertEqual(p_sink2.stream, stream3)
