@@ -1,5 +1,5 @@
 
-from joule.daemon import daemon
+from joule.daemon import daemon, config
 import tempfile
 import unittest
 import os
@@ -8,7 +8,6 @@ import asyncio
 import asynctest
 import configparser
 from tests import helpers
-from joule.utils import config_manager
 
 
 class TestDaemon(unittest.TestCase):
@@ -47,7 +46,7 @@ class TestDaemon(unittest.TestCase):
                 custom_config = {'Jouled':
                                  {'ModuleDirectory': module_dir,
                                   'StreamDirectory': stream_dir}}
-                configs = config_manager.load_configs(
+                configs = config.load_configs(
                     custom_config, verify=False)
                 my_daemon = daemon.Daemon()
                 my_daemon._validate_module = mock.Mock(return_value=True)
@@ -234,7 +233,7 @@ class TestDaemonRun(unittest.TestCase):
         loop.call_later(0.2, my_daemon.stop)
         my_daemon.run(loop)
 
-        # check the reader and inserter factories
+        # check the reader and inserter factories.py
         reader_factory = mock_builder.call_args[0][2]
         inserter_factory = mock_builder.call_args[0][3]
 

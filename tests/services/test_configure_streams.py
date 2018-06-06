@@ -6,7 +6,7 @@ import logging
 import os
 
 from joule.models import (Base, Stream, Folder, Element, ConfigurationError)
-from joule.services import configure_streams
+from joule.services import load_streams
 
 logger = logging.getLogger('joule')
 
@@ -18,11 +18,11 @@ class TestConfigureStreams(unittest.TestCase):
         for bad_path in ["", "/slash/at/end/", "bad name", "/double/end//",
                          "//double/start", "/*bad&symb()ls"]:
             with self.assertRaisesRegex(ConfigurationError, "path"):
-                configure_streams._validate_path(bad_path)
+                load_streams._validate_path(bad_path)
         # but allows paths with _ and -
         for good_path in ["/", "/short", "/meters-4/prep-a",
                           "/meter_4/prep-b", "/path  with/ spaces"]:
-            configure_streams._validate_path(good_path)
+            load_streams._validate_path(good_path)
 
     def test_merges_config_and_db_streams(self):
         """e2e stream configuration service test"""
@@ -107,7 +107,7 @@ class TestConfigureStreams(unittest.TestCase):
                     f.write(conf)
                 i += 1
             with self.assertLogs(logger=logger, level=logging.ERROR) as logs:
-                configure_streams.run(conf_dir, session)
+                load_streams.run(conf_dir, session)
                 # log the bad path error
                 self.assertRegex(logs.output[0], 'path')
                 # log the incompatible layout error

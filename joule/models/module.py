@@ -1,16 +1,11 @@
-from sqlalchemy.orm import relationship
-from sqlalchemy import (Column, String, Integer,
-                        Boolean, Enum)
+
 import enum
-from typing import List, TYPE_CHECKING
+from typing import List
 import configparser
 
-from joule.models.meta import Base
 from joule.models.errors import ConfigurationError
 from joule.models import (Argument)
-from joule.models.pipe import Pipe
-if TYPE_CHECKING:
-    from joule.models import (LogEntry)
+from joule.models.pipes import InputPipe, OutputPipe
 
 """
 Configuration File:
@@ -24,62 +19,47 @@ has_interface = no
 key = value
 
 [Inputs]
-#name = full_path:layout
-labjack = /labjack/device3/data:float32_6
-path2 = /nilmdb/input/stream2:int8_2
+#name = full_path:<stream config>
+labjack = /labjack/device3/data:float32[e0,e1,e2]
+path2 = /nilmdb/input/stream2
   ....
-pathN = /nilmdb/input/streamN:int8_3
+pathN = /nilmdb/input/streamN
 
 [Outputs]
-#name = full_path:layout
-path1 = /nilmdb/output/stream1:float32_8
-path2 = /nilmdb/output/stream2:float64_2
+#name = full_path:<stream config>
+path1 = /nilmdb/output/stream1:float32[x,y,z]
+path2 = /nilmdb/output/stream2
   ....
-pathN = /nilmdb/output/streamN:uint16_10
+pathN = /nilmdb/output/streamN
 """
 
 
-class Module(Base):
-    __tablename__ = 'module'
-    id: int = Column(Integer, primary_key=True)
-    name: str = Column(String, nullable=False)
-    exec_cmd: str = Column(String, nullable=False)
-    description: str = Column(String, default="")
-    locked: bool = Column(Boolean, default=False)
-
+class Module:
     class STATUS(enum.Enum):
         LOADED = enum.auto()
         RUNNING = enum.auto()
         FAILED = enum.auto()
         UNKNOWN = enum.auto()
 
-    status: STATUS = Column(Enum(STATUS), default=STATUS.UNKNOWN)
-    has_interface: bool = Column(Boolean, default=False)
-    interface_socket: str = Column(String, default="")
-    pipes: List['Pipe'] = relationship("Pipe",
-                                       cascade="all, delete-orphan",
-                                       back_populates="module")
-    arguments: List['Argument'] = relationship("Argument",
-                                               cascade="all, delete-orphan",
-                                               back_populates="module")
-    log_entries: List['LogEntry'] = relationship("LogEntry",
-                                                 cascade="all, delete-orphan",
-                                                 back_populates="module")
+    def __init__(self, name: str, exec_cmd: str, description: str = "",
+                 has_interface: bool = False, uuid: int = None):
+        self.name = name
+        self.exec_cmd = exec_cmd
+        self.description = description
+        self.has_interface = has_interface
+        self.interface_socket: int = None
+        self.arguments: List[Argument] = []
+        self.inputs: List[OutputPipe] = []
+        self.outputs: List[InputPipe] = []
+        self.uuid: int = uuid
+        self.status: Module.STATUS = Module.STATUS.UNKNOWN
 
     def __repr__(self):
-        return "<Module(id=%r, name=%s)>" % (self.id, self.name)
-
-    @property
-    def inputs(self):
-        return [p for p in self.pipes if p.direction == Pipe.DIRECTION.INPUT]
-
-    @property
-    def outputs(self):
-        return [p for p in self.pipes if p.direction == Pipe.DIRECTION.OUTPUT]
+        return "<Module(uuid=%r, name=%s)>" % (self.uuid, self.name)
 
     def to_json(self):
         return {
-            'id': self.id,
+            'id': self.uuid,
             'name': self.name,
             'description': self.description,
             'exec_cmd': self.exec_cmd,

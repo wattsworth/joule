@@ -1,7 +1,6 @@
-from joule.daemon import daemon
+from joule.daemon import daemon, config
 import asyncio
 import asynctest
-from joule.utils import config_manager
 from tests import helpers
 import unittest
 from unittest import mock
@@ -109,13 +108,13 @@ class TestDaemonErrors(unittest.TestCase):
 class TestDaemonModuleMethodErrors(unittest.TestCase):
 
     def test_raises_error_with_nonexistent_config_file(self):
-        with self.assertRaisesRegex(config_manager.InvalidConfiguration,
+        with self.assertRaisesRegex(config.InvalidConfiguration,
                                     "file/does/not/exist"):
             daemon.load_configs("file/does/not/exist")
 
     @mock.patch("joule.daemon.daemon.load_configs")
     def test_exits_on_error_with_bad_configs(self, mock_load_configs):
-        mock_load_configs.side_effect = config_manager.InvalidConfiguration(
+        mock_load_configs.side_effect = config.InvalidConfiguration(
             "[fail]")
         with self.assertRaises(SystemExit) as cm:
             with self.assertLogs(level="ERROR"):

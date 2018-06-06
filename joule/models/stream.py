@@ -46,7 +46,6 @@ class Stream(Base):
     elements: List[element.Element] = relationship("Element",
                                                    cascade="all, delete-orphan",
                                                    back_populates="stream")
-    pipes: List['Pipe'] = relationship("Pipe", back_populates="stream")
 
     def merge_configs(self, other: 'Stream') -> None:
         # replace configurable attributes with other's values

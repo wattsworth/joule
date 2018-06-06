@@ -1,92 +1,8 @@
 from sqlalchemy.orm import Session
-from typing import List, TYPE_CHECKING
-import logging
+from typing import List
 
-from joule.models import (Module, Stream,
-                          Element, Pipe,
-                          ConfigurationError,
-                          stream, folder)
-from joule.models.module import from_config as module_from_config
-
-from joule.services.helpers import (load_configs,
-                                    Configurations)
-
-if TYPE_CHECKING:
-    from configparser import ConfigParser
-
-logger = logging.getLogger('joule')
-
-# types
-Modules = List[Module]
-Pipes = List[Pipe]
-
-
-def run(path: str, db: Session):
-    configs = load_configs(path)
-    configured_modules = _parse_configs(configs, db)
-    for module in configured_modules:
-        db.add(module)
-    return configured_modules
-
-
-def _parse_configs(configs: Configurations, db: Session) -> Modules:
-    stage1_modules: List[(Module, ConfigParser, str)] = []
-    # Pass 1: parse module parameters
-    for file_path, config in configs.items():
-        try:
-            module = module_from_config(config)
-            module.locked = True
-            stage1_modules.append((module, config, file_path))
-        except ConfigurationError as e:
-            logger.error("Invalid module [%s]: %s" % (file_path, e))
-    # Pass 2: parse outputs
-    stage2_modules: List[(Module, ConfigParser, str)] = []
-    for module, config, file_path in stage1_modules:
-        try:
-            module.pipes = _find_outputs(config, db)
-            stage2_modules.append((module, config, file_path))
-        except ConfigurationError as e:
-            logger.error("Invalid module [%s]: %s" % (file_path, e))
-    # Pass 3: parse inputs
-    parsed_modules: Modules = []
-    for module, config, file_path in stage2_modules:
-        try:
-            module.pipes += _find_inputs(config, db)
-            parsed_modules.append(module)
-        except ConfigurationError as e:
-            logger.error("Invalid module [%s]: %s" % (file_path, e))
-    return parsed_modules
-
-
-def _find_outputs(config: 'ConfigParser', db: Session) -> Pipes:
-    outputs = []
-    if 'Outputs' not in config:
-        raise ConfigurationError("Missing section [Outputs]")
-    for name, pipe_config in config['Outputs'].items():
-        try:
-            my_stream = _stream_from_pipe_config(pipe_config, db)
-            outputs.append(Pipe(name=name, stream=my_stream,
-                                direction=Pipe.DIRECTION.OUTPUT))
-        except ConfigurationError as e:
-            raise ConfigurationError("Output [%s=%s]: %s" %
-                                     (name, pipe_config, e))
-    return outputs
-
-
-def _find_inputs(config: 'ConfigParser', db: Session) -> Pipes:
-    inputs = []
-    if 'Inputs' not in config:
-        raise ConfigurationError("Missing section [Inputs]")
-    for name, pipe_config in config['Inputs'].items():
-        try:
-            my_stream = _stream_from_pipe_config(pipe_config, db)
-            inputs.append(Pipe(name=name, stream=my_stream,
-                               direction=Pipe.DIRECTION.INPUT))
-        except ConfigurationError as e:
-            raise ConfigurationError("Input [%s=%s]: %s" %
-                                     (name, pipe_config, e))
-    return inputs
-
+from joule.models import Stream, ConfigurationError, Element
+from joule.models import stream, folder
 
 # basic format of stream is just the full_path
 # /file/path/stream_name
@@ -94,7 +10,9 @@ def _find_inputs(config: 'ConfigParser', db: Session) -> Pipes:
 # /file/path/stream_name:datatype[e1, e2, e3, ...]
 #  where e1, e2, e2, ... are the element names
 #
-def _stream_from_pipe_config(pipe_config: str, db: Session) -> Stream:
+
+
+def run(pipe_config: str, db: Session) -> Stream:
     # separate the configuration pieces
     (path, name, inline_config) = _parse_pipe_config(pipe_config)
     if path is None or name is None:

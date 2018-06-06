@@ -6,7 +6,7 @@ import tempfile
 import os
 from joule.models import (Base, Stream, Folder,
                           Element, Module, Pipe)
-from joule.services import configure_modules
+from joule.services import load_modules
 
 logger = logging.getLogger('joule')
 
@@ -90,7 +90,7 @@ class TestConfigureModules(unittest.TestCase):
                     f.write(conf)
                 i += 1
             with self.assertLogs(logger=logger, level=logging.ERROR) as logs:
-                configure_modules.run(conf_dir, session)
+                modules = load_modules.run(conf_dir, session, None)
                 # log the missing stream configuration
                 self.assertRegex(logs.output[0], '/missing/stream')
                 # log the incompatible stream configuration
@@ -99,15 +99,16 @@ class TestConfigureModules(unittest.TestCase):
         # should have three streams
         self.assertEqual(session.query(Stream).count(), 3)
         # and two modules
-        self.assertEqual(session.query(Module).count(), 2)
+        self.assertEqual(len(modules), 2)
         # module1 should have no inputs and one output
-        m1: Module = session.query(Module).filter_by(name="module1").one()
-        self.assertEqual(len(m1.pipes), 1)
-        p_raw: Pipe = m1.pipes[0]
+        m1: Module = [m for m in modules if m.name == "module1"][0]
+        self.assertEqual(len(m1.inputs),0)
+        self.assertEqual(len(m1.outputs), 1)
+        p_raw: Pipe = m1.outputs[0]
         self.assertEqual(p_raw.name, 'raw')
         self.assertEqual(p_raw.stream, stream1)
         # module2 should have 1 input and 2 outputs
-        m2: Module = session.query(Module).filter_by(name="module2").one()
+        m2: Module = [m for m in modules if m.name == "module2"][0]
         self.assertEqual(len(m2.inputs), 1)
         self.assertEqual(len(m2.outputs), 2)
         p_source: Pipe = [p for p in m2.inputs if p.name == 'source'][0]

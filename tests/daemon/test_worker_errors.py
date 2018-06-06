@@ -7,7 +7,7 @@ import asynctest
 import unittest
 import asyncio
 from unittest import mock
-import joule.daemon.worker as worker
+import joule.models.worker as worker
 from tests import helpers
 from joule.procdb.client import SQLClient
 import os
