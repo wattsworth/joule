@@ -19,7 +19,7 @@ def writer_factory(fd, loop: asyncio.AbstractEventLoop):
     async def f():
         write_protocol = asyncio.StreamReaderProtocol(asyncio.StreamReader())
         dest = open(fd, 'wb')
-        (transport, _) = await loop.connect_write_pipe(
+        (transport, p) = await loop.connect_write_pipe(
             lambda: write_protocol, dest)
         writer = asyncio.StreamWriter(
             transport, write_protocol, None, loop)

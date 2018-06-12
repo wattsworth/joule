@@ -6,16 +6,13 @@ from joule.models.pipes.errors import PipeError, EmptyPipe
 
 class InputPipe(Pipe):
 
-    def __init__(self, name=None, stream=None, fd=None,
+    def __init__(self, name=None, stream=None,
                  reader=None, reader_factory=None,
                  close_cb=None, buffer_size=3000):
         super().__init__(name=name, stream=stream, direction=Pipe.DIRECTION.INPUT)
         self.reader_factory = reader_factory
         self.reader = reader
         self.close_cb = close_cb
-        # write fd to send to a producer process
-        # should be marked as inheritable to surrive fork
-        self.fd = fd
         self.byte_buffer = b''
         # tunable constant
         self.BUFFER_SIZE = buffer_size

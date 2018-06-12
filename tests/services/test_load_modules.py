@@ -90,7 +90,7 @@ class TestConfigureModules(unittest.TestCase):
                     f.write(conf)
                 i += 1
             with self.assertLogs(logger=logger, level=logging.ERROR) as logs:
-                modules = load_modules.run(conf_dir, session, None)
+                modules = load_modules.run(conf_dir, session)
                 # log the missing stream configuration
                 self.assertRegex(logs.output[0], '/missing/stream')
                 # log the incompatible stream configuration
@@ -102,20 +102,16 @@ class TestConfigureModules(unittest.TestCase):
         self.assertEqual(len(modules), 2)
         # module1 should have no inputs and one output
         m1: Module = [m for m in modules if m.name == "module1"][0]
-        self.assertEqual(len(m1.inputs),0)
+        self.assertEqual(len(m1.inputs), 0)
         self.assertEqual(len(m1.outputs), 1)
-        p_raw: Pipe = m1.outputs[0]
-        self.assertEqual(p_raw.name, 'raw')
-        self.assertEqual(p_raw.stream, stream1)
+        self.assertEqual(m1.outputs["raw"], stream1)
         # module2 should have 1 input and 2 outputs
         m2: Module = [m for m in modules if m.name == "module2"][0]
         self.assertEqual(len(m2.inputs), 1)
         self.assertEqual(len(m2.outputs), 2)
-        p_source: Pipe = [p for p in m2.inputs if p.name == 'source'][0]
-        self.assertEqual(p_source.stream, stream1)
-        p_sink1 = [p for p in m2.outputs if p.name == 'sink1'][0]
-        self.assertEqual(p_sink1.stream, stream2)
+        self.assertEqual(m2.inputs["source"], stream1)
+        self.assertEqual(m2.outputs['sink1'], stream2)
         # sink2 goes to a new stream
         stream3 = session.query(Stream).filter_by(name="stream3").one()
-        p_sink2 = [p for p in m2.outputs if p.name == 'sink2'][0]
-        self.assertEqual(p_sink2.stream, stream3)
+        self.assertEqual(m2.outputs['sink2'], stream3)
+

@@ -2,7 +2,7 @@ from sqlalchemy.orm import relationship, backref, Session
 from sqlalchemy import Column, Integer, String, ForeignKey
 from typing import List, TYPE_CHECKING
 import logging
-import pdb
+from joule.models.errors import ConfigurationError
 from joule.models.stream import Stream
 from joule.models.meta import Base
 
@@ -38,10 +38,6 @@ class Folder(Base):
         }
 
 
-class FolderError(Exception):
-    pass
-
-
 def root(db: Session) -> Folder:
     root_folder = db.query(Folder). \
         filter_by(parent=None). \
@@ -55,7 +51,7 @@ def root(db: Session) -> Folder:
 
 def find_or_create(path: str, db: Session, parent=None) -> Folder:
     if len(path) == 0 or path[0] != '/':
-        raise FolderError("invalid path [%s]" % path)
+        raise ConfigurationError("invalid path [%s]" % path)
     if parent is None:
         parent = root(db)
     if path == '/':

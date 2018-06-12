@@ -17,6 +17,7 @@ from joule.services import (load_modules, load_streams)
 log = logging.getLogger('joule')
 Loop = asyncio.AbstractEventLoop
 
+
 class Daemon(object):
 
     def __init__(self, my_config: config.JouleConfig, loop: Loop):
@@ -32,22 +33,20 @@ class Daemon(object):
         load_streams.run(self.config.stream_directory, self.db)
         modules = load_modules.run(self.config.module_directory, self.db)
 
-        pending_workers = [Worker(m, self.db) for m in modules]
+        pending_workers = [Worker(m) for m in modules]
         registered_workers = []
         while len(pending_workers) > 0:
             for worker in pending_workers:
-                if worker.register_inputs(registered_workers):
+                if worker.subscribe_to_inputs(registered_workers, self.loop):
                     pending_workers.remove(worker)
                     break
             else:
                 for w in pending_workers:
-                    logging.warning("[%s] is missing inputs" % w.module)
+                    log.warning("[%s] is missing inputs" % w.module)
         self.supervisor = Supervisor(registered_workers)
 
     async def run(self):
         await self.supervisor.run()
-
-
 
 
 def main(argv=None):
@@ -94,7 +93,7 @@ class LogDedupFilter:
             self.last_msg = record.msg
             self.last_time = now
             if now-prev < self.max_gap:
-                if(self.first_repeat):
+                if self.first_repeat:
                     record.msg = "[...repeats]"
                     self.first_repeat = False
                     return True

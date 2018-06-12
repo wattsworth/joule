@@ -15,11 +15,12 @@ class Pipe:
         OUTPUT = enum.auto()
         TWOWAY = enum.auto()
 
-    def __init__(self, name=None, direction=None, module=None, stream=None):
+    def __init__(self, name=None, direction=None, module=None, stream=None, layout=None):
         self.name: str = name
         self.direction: Pipe.DIRECTION = direction
         self.module: 'Module' = module
         self.stream: 'Stream' = stream
+        self._layout=layout
 
     def read(self, flatten=False):
         if self.direction == Pipe.DIRECTION.OUTPUT:
@@ -42,7 +43,9 @@ class Pipe:
 
     @property
     def layout(self):
-        return self.stream.layout
+        if self.stream is not None:
+            return self.stream.layout
+        return self._layout
 
     @property
     def dtype(self):

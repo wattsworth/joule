@@ -1,12 +1,11 @@
 
 import enum
-from typing import List
+from typing import List, Dict
 import configparser
 
 from joule.models.errors import ConfigurationError
 from joule.models import (Argument)
-from joule.models.pipes import InputPipe, OutputPipe
-
+from joule.models.stream import Stream
 """
 Configuration File:
 [Main]
@@ -47,10 +46,11 @@ class Module:
         self.exec_cmd = exec_cmd
         self.description = description
         self.has_interface = has_interface
-        self.interface_socket: int = None
-        self.arguments: List[Argument] = []
-        self.inputs: List[OutputPipe] = []
-        self.outputs: List[InputPipe] = []
+        # arg_name => value
+        self.arguments: Dict[str, str] = {}
+        # pipe name (from config) => stream object
+        self.inputs: Dict[str, Stream] = {}
+        self.outputs: Dict[str, Stream] = {}
         self.uuid: int = uuid
         self.status: Module.STATUS = Module.STATUS.UNKNOWN
 
@@ -64,9 +64,9 @@ class Module:
             'description': self.description,
             'exec_cmd': self.exec_cmd,
             'has_interface': self.has_interface,
-            'arguments': dict((a.name, a.value) for a in self.arguments),
-            'inputs': dict((p.name, p.stream_id) for p in self.inputs),
-            'outputs': dict((p.name, p.stream_id) for p in self.outputs)
+            'arguments': self.arguments,
+            'inputs': dict((name, stream.id) for (name, stream) in self.inputs.items()),
+            'outputs': dict((name, stream.id) for (name, stream) in self.outputs.items())
         }
 
 
@@ -87,7 +87,7 @@ def from_config(config: configparser.ConfigParser) -> Module:
     # parse the arguments
     if 'Arguments' in config:
         for name, value in config['Arguments'].items():
-            my_module.arguments.append(Argument(name=name, value=value))
+            my_module.arguments[name] = value
     return my_module
 
 

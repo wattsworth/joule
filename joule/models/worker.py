@@ -1,5 +1,4 @@
-from sqlalchemy.orm import Session
-from typing import Dict, List
+from typing import Dict, List, Optional
 import logging
 import asyncio
 import shlex
@@ -7,10 +6,8 @@ from joule.models.module import Module
 from joule.models.stream import Stream
 from joule.models.subscription import Subscription
 from joule.models.errors import SubscriptionError
-from joule.utils.numpypipe import (StreamNumpyPipeReader,
-                                   StreamNumpyPipeWriter,
-                                   EmptyPipe, fd_factory)
-
+from joule.models import pipes
+from joule.models.pipes.errors import EmptyPipe
 import os
 import json
 
@@ -19,41 +16,94 @@ Loop = asyncio.AbstractEventLoop
 StreamQueues = Dict[Stream, List[asyncio.Queue]]
 
 popen_lock = asyncio.Lock()
+log = logging.getLogger('joule')
 
 
 class Worker:
 
-    def __init__(self, my_module: Module, db: Session):
+    def __init__(self, my_module: Module):
 
         self.module: Module = my_module
-        # map of output subscribers (1-many)
-        self.subscribers: Dict(Stream, List[asyncio.Queue]) = {}
-        # map of input subscriptions (1-1)
-        self.subscriptions: Dict(Stream, Subscription) = {}
+        # map of subscribers (1-many) that consume module outputs
+        self.subscribers: Dict[Stream, List[asyncio.Queue]] = {}
+        # map of subscriptions (1-1) to feed module inputs
+        self.subscriptions: Dict[Stream, Optional[Subscription]] = {}
+        # map of (fd,pipe) connections to module input names
+        self.input_connections: Dict[str, (int, pipes.Pipe)] = {}
+        # map of (fd,pipe) connections to module output names
+        self.output_connections: Dict[str, (int, pipes.Pipe)] = {}
 
-        for stream in self.module.outputs:
-            # add an entry for each output
+        for (name, stream) in self.module.outputs.items():
+            # add a subscriber array and an empty output connection
             self.subscribers[stream] = []
+            self.output_connections[name] = None
 
-        for stream in self.module.inputs:
-            # add an entry for each input
+        for (name, stream) in self.module.inputs.items():
+            # add an empty subscription and an empty input connection
             self.subscriptions[stream] = None
+            self.input_connections[name] = None
 
-        self.db = db
-        self.process = None
+        self.process: asyncio.subprocess.Process = None
         self.stop_requested = False
-        self.npipes = []
-        self.child_pipes = {
-            'outputs': {},
-            'inputs': {}
-        }
-        self.pipe_tasks = []
 
         # tunable constants
         # how long to wait for proc to stop nicely
         self.SIGTERM_TIMEOUT = 2
         # how long to wait to restart a failed process
         self.RESTART_INTERVAL = 1
+
+    def subscribe_to_inputs(self, workers: List['Worker'], loop: Loop) -> bool:
+        # check if all the module's inputs are available
+        for stream in self.subscriptions.keys():
+            for worker in workers:
+                try:
+                    self.subscriptions[stream] = worker.subscribe(stream, loop)
+                    break
+                except SubscriptionError:
+                    pass
+            else:
+                # unwind the subscriptions
+                [s.unsubscribe() for s in self.subscriptions.values() if s is not None]
+                return False  # cannot find all input inputs
+        return True
+
+    async def run(self, loop: Loop, restart: bool = True):
+        if not self._validate_inputs():
+            return
+        self.stop_requested = False
+        while True:
+            await self._spawn_child(loop)
+            if restart and not self.stop_requested:
+                log.error("Restarting failed module: %s" % self.module.name)
+                await asyncio.sleep(self.RESTART_INTERVAL)
+                # insert an empty block in output_queues to indicate end of
+                # interval
+                for queues in self.subscribers.values():
+                    for queue in queues:
+                        queue.put_nowait(None)
+            else:
+                break
+
+    async def stop(self, loop: Loop):
+        self.stop_requested = True
+        if self.process is None:
+            return
+        try:
+            self.process.terminate()
+        except ProcessLookupError:
+            return  # process is already terminated
+        try:
+            await asyncio.wait_for(self.process.wait(),
+                                   timeout=self.SIGTERM_TIMEOUT,
+                                   loop=loop)
+        except asyncio.TimeoutError:
+            log.warning(
+                "Cannot stop %s with SIGTERM, killing process" % self.module)
+            self.process.kill()
+
+    def log(self, msg):
+        pass
+        #print(msg)
 
     # returns a queue and unsubscribe function
     def subscribe(self, stream: Stream, loop: Loop) -> Subscription:
@@ -69,82 +119,19 @@ class Worker:
 
         return Subscription(q, unsubscribe)
 
-    def register_inputs(self, workers: List['Worker'], loop: Loop) -> bool:
-        # check if all the module's inputs are available
-        for stream in self.subscriptions.keys():
-            for worker in workers:
-                try:
-                    self.subscriptions[stream] = worker.subscribe(stream, loop)
-                    break
-                except SubscriptionError:
-                    pass
-            else:
-                # unwind the subscriptions
-                for subscription in self.input_queues.values():
-                    subscription.unsubscribe()
-                return False  # cannot find all input inputs
-        return True
-
-    # TODO: inserters should be built and added to the output queues:
-    def _start_inserters(self, loop):
-        inserter_tasks = []
-        for path in self.path_workers:
-            stream = self.path_streams[path]
-            # build inserters for any paths that have non-zero keeps
-            if (stream.keep_us):
-                my_inserter = inserter.NilmDbInserter(
-                    self.async_nilmdb_client,
-                    path,
-                    insertion_period=self.NILMDB_INSERTION_PERIOD,
-                    cleanup_period=self.NILMDB_CLEANUP_PERIOD,
-                    keep_us=stream.keep_us,
-                    decimate=stream.decimate)
-                (q, _) = self.path_workers[path]()
-                coro = my_inserter.process(q, loop=loop)
-                task = asyncio.ensure_future(coro)
-                self.inserters.append(my_inserter)
-                inserter_tasks.append(task)
-        return inserter_tasks
-
-    # ----------------------------
-
-
-    async def run(self, loop: Loop, restart: bool =True):
-        if not self._validate_inputs():
-            return
-        self.stop_requested = False
-        while True:
-            await self._run_once(loop)
-            # only gets here if process terminates
-            if restart and not self.stop_requested:
-                logging.error("Restarting failed module: %s" % self.module.name)
-                await asyncio.sleep(self.RESTART_INTERVAL)
-                # insert an empty block in output_queues to indicate end of
-                # interval
-                for queues in self.subscribers.values():
-                    for queue in queues:
-                        queue.put_nowait(None)
-            else:
-                break
-
     def _validate_inputs(self):
         for key, value in self.subscriptions.items():
             if value is None:
-                logging.error("Cannot start %s: no source for input [%s]" %
-                              (self.module, key))
+                log.error("Cannot start %s: no source for input [%s]" %
+                          (self.module, key))
                 return False
         return True
 
-    async def _run_once(self, loop):
-        cmd = shlex.split(self.module.exec_cmd)
+    async def _spawn_child(self, loop) -> None:
+        # lock so fd's don't pollute other modules
         await popen_lock.acquire()
-        await self._start_pipe_tasks()
-        cmd += ["--pipes", json.dumps(self.child_pipes)]
-        # add a socket if the module has a web interface
-        if self.module.has_interface:
-            self.module.socket = "/tmp/wattsworth.joule.%d" % self.module.id
-            cmd += ["--socket", self.module.socket]
-        # logging.warn(cmd)
+        pipe_task = await self._build_pipes(loop)
+        cmd = self._compose_cmd()
         create = asyncio.create_subprocess_exec(
             *cmd,
             stdin=asyncio.subprocess.DEVNULL,
@@ -153,111 +140,87 @@ class Worker:
         try:
             self.process = await create
         except Exception as e:
-            self.module.log("ERROR: cannot start module: \n\t%s" % e)
-            self.module.status = Module.STATUS.FAILED
-            logging.error("Cannot start [%s]" % self.module.name)
-            popen_lock.release()
             self.process = None
-            self._close_child_pipes()
-            await self._close_npipes()
+            self.log("ERROR: cannot start module: \n\t%s" % e)
+            self.module.status = Module.STATUS.FAILED
+            log.error("Cannot start [%s]" % self.module.name)
+            self._close_child_fds()
+            popen_lock.release()
+            await self._close_pipes()
             return
-        self._close_child_pipes()
+        self._close_child_fds()
         popen_lock.release()
-        self.module.status = Module.STATUS.RUNNING
-        self.module.pid = self.process.pid
-        self.module.log("---starting module---")
-        self.logger_task = asyncio.ensure_future(
-            self._logger(self.process.stdout), loop=loop)
-
+        logger_task = loop.create_task(self._logger())
         await self.process.wait()
-        self.process = None
-        await self._close_npipes()
+        # Unwind the tasks
+        await self._close_pipes()
+        pipe_task.cancel()
+        logger_task.cancel()
 
-    async def stop(self, loop: Loop):
-        self.stop_requested = True
-        if self.process is None:
-            return
-        # close pipe connections with module
-        await self._close_npipes()
-        if self.process is None:
-            return
-        self.process.terminate()
-        try:
-            await asyncio.wait_for(self.process.wait(),
-                                   timeout=self.SIGTERM_TIMEOUT,
-                                   loop=loop)
-        except asyncio.TimeoutError:
-            logging.warning(
-                "Cannot stop %s with SIGTERM, killing process" % self.module)
-            self.process.kill()
-        await self.logger_task
-
-    async def _logger(self, stream):
+    async def _logger(self):
+        stream = self.process.stdout
         while True:
             bline = await stream.readline()
             if len(bline) == 0:
                 break
             line = bline.decode('UTF-8').rstrip()
-            self.module.log(line)
+            self.log(line)
 
-    async def _start_pipe_tasks(self):
-        # configure output pipes          [module]==>[jouled]
-        for pipe in self.module.outputs:
-            (npipe, fd) = self._build_numpy_pipe(stream, 'output')
-            self.child_pipes['outputs'][stream] = {
-                'fd': pipe.fd, 'layout': stream.layout}
-            self.npipes.append(npipe)
-            task = asyncio.ensure_future(
-                self._pipe_in(npipe, self.subscribers[stream]))
-            self.pipe_tasks.append(task)
-
-        # configure input pipes               [jouled]==>[module]
-        for pipe in self.module.inputs:
-            (fd, npipe) = self._build_numpy_pipe(stream, 'input')
-            self.child_pipes['inputs'][stream] = {
-                'fd': fd, 'layout': stream.layout}
-            self.npipes.append(npipe)
-            task = asyncio.ensure_future(
-                self._pipe_out(self.input_queues[path], npipe))
-            self.pipe_tasks.append(task)
-
-    def _build_numpy_pipe(self, stream, direction):
-        (r, w) = os.pipe()
-        if (direction == 'output'):  # fd    ==> npipe
+    async def _build_pipes(self, loop: Loop) -> asyncio.Task:
+        tasks: List[asyncio.Task] = []
+        # configure output pipes          [module]==>[worker]
+        for (name, stream) in self.module.outputs.items():
+            (r, w) = os.pipe()
+            rf = pipes.reader_factory(r, loop)
             os.set_inheritable(w, True)
-            npipe = StreamNumpyPipeReader(stream.layout,
-                                          reader_factory=fd_factory.reader_factory(r))
-
-            return (npipe, w)
-        else:  # npipe ==> fd
+            module_output = pipes.InputPipe(name=name, stream=stream,
+                                            reader_factory=rf)
+            self.output_connections[name] = (w, module_output)
+            tasks.append(loop.create_task(
+                self._pipe_in(module_output, self.subscribers[stream])))
+        # configure input pipes            [module]<==[worker]
+        for (name, stream) in self.module.inputs.items():
+            (r, w) = os.pipe()
+            wf = pipes.writer_factory(w, loop)
+            writer = await wf()
             os.set_inheritable(r, True)
-            npipe = StreamNumpyPipeWriter(stream.layout,
-                                          writer_factory=fd_factory.writer_factory(w))
+            module_input = pipes.OutputPipe(name=name, stream=stream,
+                                            writer=writer)
+            self.input_connections[name] = (r, module_input)
+            tasks.append(loop.create_task(
+                self._pipe_out(self.subscriptions[stream].queue, module_input)))
+        return asyncio.gather(*tasks)
 
-            return (r, npipe)
+    def _compose_cmd(self) -> str:
+        cmd = shlex.split(self.module.exec_cmd)
+        output_args = {}
+        for (name, (fd, stream)) in self.output_connections.items():
+            output_args[name] = {'fd': fd, 'layout': stream.layout}
+        input_args = {}
+        for (name, (fd, stream)) in self.input_connections.items():
+            input_args[name] = {'fd': fd, 'layout': stream.layout}
+        cmd += ["--pipes", json.dumps({'outputs': output_args, 'inputs': input_args})]
+        # add a socket if the module has a web interface
+        if self.module.has_interface:
+            cmd += ["--socket", self._socket_path()]
+        return cmd
 
-    def _close_child_pipes(self):
-        for pipe_set in self.child_pipes.values():
-            for pipe in pipe_set.values():
-                os.close(pipe['fd'])
+    def _close_child_fds(self):
+        for (name, (fd, pipe)) in self.output_connections.items():
+            os.close(fd)
+        for (name, (fd, pipe)) in self.input_connections.items():
+            os.close(fd)
 
-    async def _close_npipes(self):
-        for npipe in self.npipes:
-            npipe.close()
-        for task in self.pipe_tasks:
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
-        # clear out the arrays
-        self.npipes = []
-        self.pipe_tasks = []
+    async def _close_pipes(self):
+        for (name, (fd, pipe)) in self.output_connections.items():
+            pipe.close()
+        for (name, (fd, pipe)) in self.input_connections.items():
+            pipe.close()
 
     async def _pipe_in(self, npipe, queues):
         """given a numpy pipe, get data and put it
            into each queue in [output_queues] """
-        while (True):
+        while True:
             try:
                 data = await npipe.read()
                 npipe.consume(len(data))
@@ -272,7 +235,7 @@ class Worker:
 
     async def _pipe_out(self, queue, npipe):
         try:
-            while (True):
+            while True:
                 data = await queue.get()
                 # TODO: handle broken intervals
                 if data is not None:
@@ -282,10 +245,10 @@ class Worker:
         except ConnectionResetError as e:
             print("reset error, for ", npipe)
 
-    def _socket_path(id):
-        path = "/tmp/joule-module-%d" % id
+    def _socket_path(self):
+        path = "/tmp/joule-module-%d" % self.module.uuid
         try:
             os.unlink(path)
         except OSError:
             if os.path.exists(path):
-                raise
+                print("file exists!")
