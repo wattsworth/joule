@@ -1,5 +1,3 @@
-
-
 import os
 import configparser
 import asyncio
@@ -9,6 +7,7 @@ import argparse
 import signal
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
+from typing import List
 
 from joule.models import (Base, Module, Worker, Supervisor)
 from joule.daemon import (config)
@@ -20,24 +19,28 @@ Loop = asyncio.AbstractEventLoop
 
 class Daemon(object):
 
-    def __init__(self, my_config: config.JouleConfig, loop: Loop):
-        self.config = my_config
-        self.loop = loop
+    def __init__(self, my_config: config.JouleConfig):
+        self.config: config.JouleConfig = my_config
         self.db: Session = None
-        self.supervisor = None
-        
-    def initialize(self):
+        self.supervisor: Supervisor = None
+        self.tasks: List[asyncio.Task] = []
+
+    def initialize(self, loop: Loop):
+        # connect to the database
         engine = create_engine('sqlite://')
         Base.metadata.create_all(engine)
         self.db = Session(bind=engine)
+
+        # load modules and streams from configs
         load_streams.run(self.config.stream_directory, self.db)
         modules = load_modules.run(self.config.module_directory, self.db)
 
+        # configure workers
         pending_workers = [Worker(m) for m in modules]
         registered_workers = []
         while len(pending_workers) > 0:
             for worker in pending_workers:
-                if worker.subscribe_to_inputs(registered_workers, self.loop):
+                if worker.subscribe_to_inputs(registered_workers, loop):
                     pending_workers.remove(worker)
                     break
             else:
@@ -45,8 +48,17 @@ class Daemon(object):
                     log.warning("[%s] is missing inputs" % w.module)
         self.supervisor = Supervisor(registered_workers)
 
-    async def run(self):
-        await self.supervisor.run()
+    async def run(self, loop: Loop):
+        # start the supervisor (runs the workers)
+        self.tasks.append(loop.create_task(self.supervisor.start(loop)))
+        # start the API server
+
+        for task in self.tasks:
+            await task
+
+    def stop(self):
+        for task in self.tasks:
+            task.cancel()
 
 
 def main(argv=None):
@@ -60,7 +72,8 @@ def main(argv=None):
         level=logging.WARNING)
     if args.config is not None:
         if os.path.isfile(args.config) is False:
-            raise errors.InvalidConfiguration("cannot load file [%s]" % args.config)
+            log.error("Invalid configuration: cannot load file [%s]" % args.config)
+            exit(1)
     parser = configparser.ConfigParser()
     parser.read(args.config)
     my_config = config.build(custom_values=parser)
@@ -92,7 +105,7 @@ class LogDedupFilter:
             prev = self.last_time
             self.last_msg = record.msg
             self.last_time = now
-            if now-prev < self.max_gap:
+            if now - prev < self.max_gap:
                 if self.first_repeat:
                     record.msg = "[...repeats]"
                     self.first_repeat = False
@@ -105,4 +118,3 @@ class LogDedupFilter:
         self.last_msg = record.msg
         self.first_repeat = True
         return True
-
