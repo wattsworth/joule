@@ -6,10 +6,10 @@ from joule.models.pipes.errors import PipeError, EmptyPipe
 
 class InputPipe(Pipe):
 
-    def __init__(self, name=None, stream=None,
+    def __init__(self, name=None, stream=None, layout=None,
                  reader=None, reader_factory=None,
                  close_cb=None, buffer_size=3000):
-        super().__init__(name=name, stream=stream, direction=Pipe.DIRECTION.INPUT)
+        super().__init__(name=name, stream=stream, direction=Pipe.DIRECTION.INPUT, layout=layout)
         self.reader_factory = reader_factory
         self.reader = reader
         self.close_cb = close_cb

@@ -1,11 +1,12 @@
 from joule.models.pipes import Pipe
 
+import pdb
 
 class OutputPipe(Pipe):
 
-    def __init__(self, name=None, stream=None,
+    def __init__(self, name=None, stream=None, layout=None,
                  writer=None, writer_factory=None):
-        super().__init__(name=name, stream=stream,
+        super().__init__(name=name, stream=stream, layout=layout,
                          direction=Pipe.DIRECTION.OUTPUT)
         self.writer_factory = writer_factory
         self.writer = writer
@@ -13,7 +14,6 @@ class OutputPipe(Pipe):
     async def write(self, data):
         if self.writer is None:
             self.writer = await self.writer_factory()
-
         # make sure dtype is structured
         sdata = self._apply_dtype(data)
         self.writer.write(sdata.tostring())
@@ -23,4 +23,3 @@ class OutputPipe(Pipe):
         if self.writer is not None:
             self.writer.close()
             self.writer = None
-

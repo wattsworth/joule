@@ -41,11 +41,13 @@ class Module:
         UNKNOWN = enum.auto()
 
     def __init__(self, name: str, exec_cmd: str, description: str = "",
+                 log_size: int = 100,
                  has_interface: bool = False, uuid: int = None):
         self.name = name
         self.exec_cmd = exec_cmd
         self.description = description
         self.has_interface = has_interface
+        self.log_size = log_size
         # arg_name => value
         self.arguments: Dict[str, str] = {}
         # pipe name (from config) => stream object

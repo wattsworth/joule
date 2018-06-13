@@ -2,14 +2,18 @@ from typing import Dict, List, Optional
 import logging
 import asyncio
 import shlex
+import os
+import json
+import collections
+import datetime
+
 from joule.models.module import Module
 from joule.models.stream import Stream
 from joule.models.subscription import Subscription
 from joule.models.errors import SubscriptionError
 from joule.models import pipes
 from joule.models.pipes.errors import EmptyPipe
-import os
-import json
+
 
 # custom types
 Loop = asyncio.AbstractEventLoop
@@ -43,6 +47,7 @@ class Worker:
             self.subscriptions[stream] = None
             self.input_connections[name] = None
 
+        self._logs = collections.deque([], maxlen=my_module.log_size)
         self.process: asyncio.subprocess.Process = None
         self.stop_requested = False
 
@@ -67,12 +72,14 @@ class Worker:
                 return False  # cannot find all input inputs
         return True
 
-    async def run(self, loop: Loop, restart: bool = True):
+    async def run(self, loop: Loop, restart: bool = True) -> None:
         if not self._validate_inputs():
             return
         self.stop_requested = False
         while True:
+            self.log("---starting module---")
             await self._spawn_child(loop)
+            self.log("---module terminated---")
             if restart and not self.stop_requested:
                 log.error("Restarting failed module: %s" % self.module.name)
                 await asyncio.sleep(self.RESTART_INTERVAL)
@@ -84,7 +91,7 @@ class Worker:
             else:
                 break
 
-    async def stop(self, loop: Loop):
+    async def stop(self, loop: Loop) -> None:
         self.stop_requested = True
         if self.process is None:
             return
@@ -102,8 +109,12 @@ class Worker:
             self.process.kill()
 
     def log(self, msg):
-        pass
-        #print(msg)
+        timestamp = datetime.datetime.now().isoformat()
+        self._logs.append("[%s]: %s" % (timestamp, msg))
+
+    @property
+    def logs(self) -> List[str]:
+        return list(self._logs)
 
     # returns a queue and unsubscribe function
     def subscribe(self, stream: Stream, loop: Loop) -> Subscription:
@@ -153,18 +164,24 @@ class Worker:
         logger_task = loop.create_task(self._logger())
         await self.process.wait()
         # Unwind the tasks
-        await self._close_pipes()
+        self._close_pipes()
         pipe_task.cancel()
         logger_task.cancel()
+        # collect any errors
+        await pipe_task
+        await logger_task
 
     async def _logger(self):
         stream = self.process.stdout
-        while True:
-            bline = await stream.readline()
-            if len(bline) == 0:
-                break
-            line = bline.decode('UTF-8').rstrip()
-            self.log(line)
+        try:
+            while True:
+                bline = await stream.readline()
+                if len(bline) == 0:
+                    break
+                line = bline.decode('UTF-8').rstrip()
+                self.log(line)
+        except asyncio.CancelledError:
+            return
 
     async def _build_pipes(self, loop: Loop) -> asyncio.Task:
         tasks: List[asyncio.Task] = []
@@ -199,7 +216,8 @@ class Worker:
         input_args = {}
         for (name, (fd, stream)) in self.input_connections.items():
             input_args[name] = {'fd': fd, 'layout': stream.layout}
-        cmd += ["--pipes", json.dumps({'outputs': output_args, 'inputs': input_args})]
+        cmd += ["--pipes", json.dumps(json.dumps(
+            {'outputs': output_args, 'inputs': input_args}))]
         # add a socket if the module has a web interface
         if self.module.has_interface:
             cmd += ["--socket", self._socket_path()]
@@ -211,7 +229,7 @@ class Worker:
         for (name, (fd, pipe)) in self.input_connections.items():
             os.close(fd)
 
-    async def _close_pipes(self):
+    def _close_pipes(self):
         for (name, (fd, pipe)) in self.output_connections.items():
             pipe.close()
         for (name, (fd, pipe)) in self.input_connections.items():
@@ -220,8 +238,8 @@ class Worker:
     async def _pipe_in(self, npipe, queues):
         """given a numpy pipe, get data and put it
            into each queue in [output_queues] """
-        while True:
-            try:
+        try:
+            while True:
                 data = await npipe.read()
                 npipe.consume(len(data))
                 # print("adding %d rows of data to"%len(data))
@@ -229,9 +247,11 @@ class Worker:
                     # print("\tworker q: %d"%id(q))
                     q.put_nowait(data)
                 await asyncio.sleep(0.25)
-            except EmptyPipe:
+        except EmptyPipe:
                 # print("empty pipe %s, exiting loop"%npipe.name)
-                break
+            return
+        except asyncio.CancelledError:
+            return
 
     async def _pipe_out(self, queue, npipe):
         try:
@@ -244,6 +264,8 @@ class Worker:
                 await asyncio.sleep(0.25)
         except ConnectionResetError as e:
             print("reset error, for ", npipe)
+        except asyncio.CancelledError:
+            return
 
     def _socket_path(self):
         path = "/tmp/joule-module-%d" % self.module.uuid

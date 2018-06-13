@@ -9,7 +9,6 @@ if TYPE_CHECKING:
 
 
 class Pipe:
-
     class DIRECTION(enum.Enum):
         INPUT = enum.auto()
         OUTPUT = enum.auto()
@@ -20,7 +19,7 @@ class Pipe:
         self.direction: Pipe.DIRECTION = direction
         self.module: 'Module' = module
         self.stream: 'Stream' = stream
-        self._layout=layout
+        self._layout = layout
 
     def read(self, flatten=False):
         if self.direction == Pipe.DIRECTION.OUTPUT:
@@ -67,8 +66,8 @@ class Pipe:
             # already a structured array just verify its data type
             if data.dtype != self.dtype:
                 raise PipeError("wrong dtype for 1D (structured) array" +
-                                     "[%s] != req type [%s]" % (data.dtype,
-                                                                self.dtype))
+                                "[%s] != req type [%s]" % (data.dtype,
+                                                           self.dtype))
             return data
         elif data.ndim == 2:
             # Convert to structured array
