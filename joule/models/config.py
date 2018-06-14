@@ -3,7 +3,6 @@ Configuration data structure for joule
 Use load_configs to retrieve Configs object
 """
 
-from collections import namedtuple
 import configparser
 import ipaddress
 import os

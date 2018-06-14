@@ -3,7 +3,7 @@ import unittest
 import os
 import tempfile
 
-from joule.daemon import config
+from joule.models import config
 from tests import helpers
 
 

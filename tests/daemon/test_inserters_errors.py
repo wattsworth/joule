@@ -2,7 +2,8 @@
 Test the inserter and decimator objects
 """
 
-from joule.daemon import inserter, daemon
+from joule.daemon import inserter
+from joule import daemon
 from joule.utils import nilmdb
 from unittest import mock
 from tests import helpers

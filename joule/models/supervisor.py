@@ -12,17 +12,19 @@ class Supervisor:
 
     def __init__(self, workers: List[Worker]):
         self.workers = workers
+        self.task: asyncio.Task = None
 
-    async def start(self, loop: Loop):
+    def start(self, loop: Loop):
         # returns a co-routine
         tasks: Tasks = []
         for worker in self.workers:
             tasks.append(loop.create_task(worker.run(loop)))
-        await asyncio.gather(tasks, loop)
+        self.task = asyncio.gather(tasks, loop)
 
     async def stop(self, loop: Loop):
         for worker in self.workers:
             await worker.stop(loop)
+        await self.task
 
     def subscribe(self, stream: Stream, loop: Loop):
         # find a worker producing this stream

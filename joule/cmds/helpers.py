@@ -1,5 +1,5 @@
 import configparser
-from joule.daemon import config
+from joule.models import config
 
 
 def parse_config_file(f, verify=True):

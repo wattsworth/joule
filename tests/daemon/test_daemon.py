@@ -1,5 +1,5 @@
-
-from joule.daemon import daemon, config
+from joule import daemon
+from joule.models import config
 import tempfile
 import unittest
 import os

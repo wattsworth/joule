@@ -3,8 +3,7 @@ import argparse
 import sys
 import os
 import configparser
-
-from joule.daemon import module
+from joule.models import module
 
 """ helpers for handling module arguments
     Complicated because we want to look for module_config
@@ -16,13 +15,13 @@ from joule.daemon import module
 # parser for boolean args
 
 def yesno(val):
-    if(val is None):
+    if val is None:
         raise ValueError("must be 'yes' or 'no'")
     # standardize the string
     val = val.lower().rstrip().lstrip()
-    if(val == "yes"):
+    if val == "yes":
         return True
-    elif(val == "no"):
+    elif val == "no":
         return False
     else:
         raise ValueError("must be 'yes' or 'no'")
@@ -37,7 +36,7 @@ def module_args():
     sys.stdout = open(os.devnull, 'w')
     try:
         args = temp_parser.parse_known_args()[0]
-        if(args.module_config != "unset"):
+        if args.module_config != "unset":
             arg_list += _append_args(args.module_config)
     except SystemExit:
         pass
@@ -52,7 +51,6 @@ def _append_args(module_config_file):
     module_config = configparser.ConfigParser()
     with open(module_config_file, 'r') as f:
         module_config.read_file(f)
-    parser = module.Parser()
-    my_module = parser.run(module_config)
-    return my_module.args
+    my_module = module.from_config(module_config)
+    return my_module.arguments
 

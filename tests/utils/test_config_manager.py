@@ -1,6 +1,6 @@
 
 import unittest
-from joule.daemon import config
+from joule.models import config
 import tempfile
 from tests import helpers
 

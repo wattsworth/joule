@@ -5,7 +5,7 @@ import numpy as np
 import logging
 from unittest import mock
 from tests import helpers
-from joule.daemon import server
+from joule.daemon import socket_server
 from joule.utils import network
 from joule.utils.numpypipe import (request_reader,
                                    request_writer,
@@ -46,7 +46,7 @@ class TestSever(unittest.TestCase):
             w.close()
 
         async def run():
-            s = await server.build_server(ADDR, PORT, None, None)
+            s = await socket_server.build_server(ADDR, PORT, None, None)
             await asyncio.gather(*[client() for x in range(NUM_CLIENTS)])
             s.close()
             return s
@@ -72,8 +72,8 @@ class TestSever(unittest.TestCase):
         async def run():
 
             test_data = helpers.create_data(LAYOUT, length=LENGTH)
-            s = await server.build_server(ADDR, PORT,
-                                          None, mock_inserter_factory)
+            s = await socket_server.build_server(ADDR, PORT,
+                                                 None, mock_inserter_factory)
             test_stream = helpers.build_stream('test',
                                                datatype=DTYPE,
                                                num_elements=NELEM)
@@ -110,9 +110,9 @@ class TestSever(unittest.TestCase):
                 # stream, queue, unsubscribe
                 return(LAYOUT, q, mock.Mock())
             
-            s = await server.build_server(ADDR, PORT,
-                                          mock_reader_factory,
-                                          None)
+            s = await socket_server.build_server(ADDR, PORT,
+                                                 mock_reader_factory,
+                                                 None)
 #            r, w = await asyncio.open_connection(ADDR, PORT, loop=loop)
             npipe = await request_reader("/test/path")
             rx_data = await npipe.read()

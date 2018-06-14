@@ -1,4 +1,5 @@
-from joule.daemon import daemon, config
+from joule import daemon
+from joule.models import config
 import asyncio
 import asynctest
 from tests import helpers

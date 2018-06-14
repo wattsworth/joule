@@ -5,13 +5,14 @@ import logging
 import time
 import argparse
 import signal
+from aiohttp import web
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from typing import List
 
-from joule.models import (Base, Module, Worker, Supervisor)
-from joule.daemon import (config)
+from joule.models import (Base, Worker, Supervisor, config)
 from joule.services import (load_modules, load_streams)
+import joule.controllers
 
 log = logging.getLogger('joule')
 Loop = asyncio.AbstractEventLoop
@@ -24,6 +25,7 @@ class Daemon(object):
         self.db: Session = None
         self.supervisor: Supervisor = None
         self.tasks: List[asyncio.Task] = []
+        self.stop_requested = False
 
     def initialize(self, loop: Loop):
         # connect to the database
@@ -50,15 +52,26 @@ class Daemon(object):
 
     async def run(self, loop: Loop):
         # start the supervisor (runs the workers)
-        self.tasks.append(loop.create_task(self.supervisor.start(loop)))
+        self.supervisor.start(loop)
         # start the API server
-
-        for task in self.tasks:
-            await task
+        app = web.Application()
+        app['supervisor'] = self.supervisor
+        app['db'] = self.db
+        app.add_routes(joule.controllers.routes)
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, self.config.ip_address, self.config.port)
+        await site.start()
+        # sleep and check for stop condition
+        while not self.stop_requested:
+            await asyncio.sleep(0.5)
+        # clean everything up
+        await self.supervisor.stop(loop)
+        await runner.cleanup()
+        self.db.close()
 
     def stop(self):
-        for task in self.tasks:
-            task.cancel()
+        self.stop_requested = True
 
 
 def main(argv=None):
@@ -80,10 +93,10 @@ def main(argv=None):
 
     loop = asyncio.get_event_loop()
     loop.set_debug(True)
-    daemon = Daemon(my_config, loop)
-    daemon.initialize()
+    daemon = Daemon(my_config)
+    daemon.initialize(loop)
     loop.add_signal_handler(signal.SIGINT, daemon.stop)
-    loop.run_until_complete(daemon.run())
+    loop.run_until_complete(daemon.run(loop))
     loop.close()
     exit(0)
 

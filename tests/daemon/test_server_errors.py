@@ -4,7 +4,7 @@ import asyncio
 import unittest
 
 
-from joule.daemon import server
+from joule.daemon import socket_server
 from joule.utils import network
 
 ADDR = '127.0.0.1'
@@ -25,7 +25,7 @@ class TestSeverErrors(unittest.TestCase):
             w.close()
 
         async def run():
-            s = await server.build_server(ADDR, PORT, None, None)
+            s = await socket_server.build_server(ADDR, PORT, None, None)
             await client()
             s.close()
             return s
@@ -46,7 +46,7 @@ class TestSeverErrors(unittest.TestCase):
             w.close()
 
         async def run():
-            s = await server.build_server(ADDR, PORT, None, None)
+            s = await socket_server.build_server(ADDR, PORT, None, None)
             await client()
             s.close()
             return s
