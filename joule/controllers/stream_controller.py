@@ -9,7 +9,7 @@ async def index(request: web.Request):
     db: Session = request.app["db"]
     root = folder.root(request.app['db'])
 
-    if request.query["normalize"]:
+    if "normalize" in request.query:
         data = json.dumps({
             "root_id": root.id,
             "folders": db.query(Folder).all(),
@@ -20,14 +20,14 @@ async def index(request: web.Request):
         data = json.dumps(root.to_json())
 
     return web.Response(text=data,
-                        content_type='text/json')
+                        content_type='application/json')
 
 
 async def update(request):
     return web.Response(text="TODO",
-                        content_type='/text/json')
+                        content_type='application/json')
 
 
 async def delete(request):
     return web.Response(text="TODO",
-                        content_type='/text/json')
+                        content_type='application/json')

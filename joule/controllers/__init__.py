@@ -11,9 +11,9 @@ async def index(request):
 routes = [
     web.get('/', index),
     # stream controller routes
-    web.get('/streams', stream_controller.index),
-    web.put('/stream', stream_controller.update),
-    web.delete('/stream', stream_controller.delete),
+    web.get('/streams.json', stream_controller.index),
+    web.put('/stream.json', stream_controller.update),
+    web.delete('/stream.json', stream_controller.delete),
     # folder controller routes
     web.post('/folder', folder_controller.create),
     web.put('/folder', folder_controller.update),

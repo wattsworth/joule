@@ -46,8 +46,8 @@ setup(
 
     entry_points={
         'console_scripts': [
-            'joule = joule.main:main',
-            'jouled = joule.daemon.daemon:main',
+            'joule = joule.cli:main',
+            'jouled = joule.daemon:main',
             'joule-random-reader = joule.client.builtins.random_reader:main',
             'joule-file-reader = joule.client.builtins.file_reader:main',
             'joule-mean-filter = joule.client.builtins.mean_filter:main',

@@ -1,4 +1,4 @@
-from joule import main as basic
+from joule import cli as basic
 
 import unittest
 

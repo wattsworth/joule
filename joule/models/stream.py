@@ -75,7 +75,7 @@ class Stream(Base):
             'id': self.id,
             'name': self.name,
             'description': self.description,
-            'datatype': self.datatype,
+            'datatype': self.datatype.name,
             'keep_us': self.keep_us,
             'decimate': self.decimate,
             'elements': [e.to_json() for e in sorted(self.elements, key=attrgetter('index'))]

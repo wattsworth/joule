@@ -56,6 +56,7 @@ class Worker:
         self.SIGTERM_TIMEOUT = 2
         # how long to wait to restart a failed process
         self.RESTART_INTERVAL = 1
+        self.counter = 0
 
     def subscribe_to_inputs(self, workers: List['Worker'], loop: Loop) -> bool:
         # check if all the module's inputs are available
@@ -77,12 +78,16 @@ class Worker:
             return
         self.stop_requested = False
         while True:
+            if self.stop_requested:
+                break
             self.log("---starting module---")
             await self._spawn_child(loop)
             self.log("---module terminated---")
-            if restart and not self.stop_requested:
-                log.error("Restarting failed module: %s" % self.module.name)
+            if restart:
                 await asyncio.sleep(self.RESTART_INTERVAL)
+                if self.stop_requested:
+                    break
+                log.error("Restarting failed module: %s" % self.module.name)
                 # insert an empty block in output_queues to indicate end of
                 # interval
                 for queues in self.subscribers.values():
@@ -111,6 +116,11 @@ class Worker:
     def log(self, msg):
         timestamp = datetime.datetime.now().isoformat()
         self._logs.append("[%s]: %s" % (timestamp, msg))
+        if self.process is None:
+            pid = '???'
+        else:
+            pid = self.process.pid
+        print("[%s: %s] " % (self.module.name, pid) + msg)
 
     @property
     def logs(self) -> List[str]:
@@ -157,7 +167,7 @@ class Worker:
             log.error("Cannot start [%s]" % self.module.name)
             self._close_child_fds()
             popen_lock.release()
-            await self._close_pipes()
+            self._close_pipes()
             return
         self._close_child_fds()
         popen_lock.release()
@@ -172,8 +182,8 @@ class Worker:
         await logger_task
 
     async def _logger(self):
-        stream = self.process.stdout
         try:
+            stream = self.process.stdout
             while True:
                 bline = await stream.readline()
                 if len(bline) == 0:
@@ -221,6 +231,8 @@ class Worker:
         # add a socket if the module has a web interface
         if self.module.has_interface:
             cmd += ["--socket", self._socket_path()]
+        for (arg, value) in self.module.arguments.items():
+            cmd += ["--"+arg, value]
         return cmd
 
     def _close_child_fds(self):

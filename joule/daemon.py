@@ -10,7 +10,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from typing import List
 
-from joule.models import (Base, Worker, Supervisor, config)
+from joule.models import (Base, Worker, Supervisor, config, ConfigurationError)
 from joule.services import (load_modules, load_streams)
 import joule.controllers
 
@@ -44,6 +44,7 @@ class Daemon(object):
             for worker in pending_workers:
                 if worker.subscribe_to_inputs(registered_workers, loop):
                     pending_workers.remove(worker)
+                    registered_workers.append(worker)
                     break
             else:
                 for w in pending_workers:
@@ -89,8 +90,12 @@ def main(argv=None):
             exit(1)
     parser = configparser.ConfigParser()
     parser.read(args.config)
-    my_config = config.build(custom_values=parser)
-
+    my_config = None
+    try:
+        my_config = config.build(custom_values=parser)
+    except ConfigurationError as e:
+        print("Invalid configuration: %s" % e)
+        exit(1)
     loop = asyncio.get_event_loop()
     loop.set_debug(True)
     daemon = Daemon(my_config)

@@ -42,7 +42,7 @@ class Element(Base):
             'name': self.name,
             'units': self.units,
             'plottable': self.plottable,
-            'display_type': self.display_type,
+            'display_type': self.display_type.name,
             'offset': self.offset,
             'scale_factor': self.scale_factor,
             'default_max': self.default_max,

@@ -6,7 +6,7 @@ Use load_configs to retrieve Configs object
 import configparser
 import ipaddress
 import os
-
+from joule.models import ConfigurationError
 
 DEFAULT_CONFIG = {
     "Main":
@@ -40,35 +40,30 @@ def build(custom_values, verify=True) -> JouleConfig:
         my_configs.read_dict(custom_values)
 
     # ModuleDirectory
-    module_directory = my_configs['ModuleDirectory']
+    module_directory = my_configs['Main']['ModuleDirectory']
     if not os.path.isdir(module_directory) and verify:
-        raise InvalidConfiguration(
+        raise ConfigurationError(
             "ModuleDirectory [%s] does not exist" % module_directory)
     # StreamDirectory
-    stream_directory = my_configs['StreamDirectory']
+    stream_directory = my_configs['Main']['StreamDirectory']
     if not os.path.isdir(stream_directory) and verify:
-        raise InvalidConfiguration(
+        raise ConfigurationError(
             "StreamDirectory [%s] does not exist" % stream_directory)
     # IPAddress
-    ip_address = my_configs['IPAddress']
+    ip_address = my_configs['Main']['IPAddress']
     try:
         ipaddress.ip_address(ip_address)
     except ValueError as e:
-        raise InvalidConfiguration("IPAddress is invalid") from e
+        raise ConfigurationError("IPAddress is invalid") from e
     # Port
     try:
-        port = int(my_configs['Port'])
+        port = int(my_configs['Main']['Port'])
         if port < 0 or port > 65535:
             raise ValueError()
     except ValueError as e:
-        raise InvalidConfiguration("Jouled:Port must be between 0 - 65535") from e
+        raise ConfigurationError("Jouled:Port must be between 0 - 65535") from e
 
     return JouleConfig(module_directory=module_directory,
                        stream_directory=stream_directory,
                        ip_address=ip_address,
                        port=port)
-
-
-class InvalidConfiguration(Exception):
-    """Base Exception for this class"""
-    pass

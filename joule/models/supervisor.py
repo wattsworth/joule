@@ -19,7 +19,7 @@ class Supervisor:
         tasks: Tasks = []
         for worker in self.workers:
             tasks.append(loop.create_task(worker.run(loop)))
-        self.task = asyncio.gather(tasks, loop)
+        self.task = asyncio.gather(*tasks, loop=loop)
 
     async def stop(self, loop: Loop):
         for worker in self.workers:
