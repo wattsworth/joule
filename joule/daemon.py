@@ -10,7 +10,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from typing import List
 
-from joule.models import (Base, Worker, Supervisor, config, ConfigurationError)
+from joule.models import (Base, Worker, Supervisor, config, ConfigurationError,
+                          DataStore)
 from joule.services import (load_modules, load_streams)
 import joule.controllers
 
@@ -24,6 +25,7 @@ class Daemon(object):
         self.config: config.JouleConfig = my_config
         self.db: Session = None
         self.supervisor: Supervisor = None
+        self.data_store: DataStore = None
         self.tasks: List[asyncio.Task] = []
         self.stop_requested = False
 
@@ -34,7 +36,7 @@ class Daemon(object):
         self.db = Session(bind=engine)
 
         # load modules and streams from configs
-        load_streams.run(self.config.stream_directory, self.db)
+        streams = load_streams.run(self.config.stream_directory, self.db)
         modules = load_modules.run(self.config.module_directory, self.db)
 
         # configure workers
@@ -51,12 +53,17 @@ class Daemon(object):
                     log.warning("[%s] is missing inputs" % w.module)
         self.supervisor = Supervisor(registered_workers)
 
+        # create a data store
+        self.data_store = DataStore()
+        self.data_store.initialize(streams)
+
     async def run(self, loop: Loop):
         # start the supervisor (runs the workers)
         self.supervisor.start(loop)
         # start the API server
         app = web.Application()
         app['supervisor'] = self.supervisor
+        app['data_store'] = self.data_store
         app['db'] = self.db
         app.add_routes(joule.controllers.routes)
         runner = web.AppRunner(app)
