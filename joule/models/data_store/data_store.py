@@ -3,8 +3,9 @@ import asyncio
 from typing import List, Union
 from abc import ABC, abstractmethod
 
-from joule.models import Stream
+from joule.models import Stream, Subscription
 
+Loop = asyncio.AbstractEventLoop
 # starting and ending timestamps
 Interval = List[int, int]
 
@@ -29,6 +30,11 @@ class DataStore(ABC):
         pass
 
     @abstractmethod
+    async def spawn_inserter(self, stream: Stream, subscription: Subscription,
+                             loop: Loop) -> asyncio.Task:
+        pass
+
+    @abstractmethod
     def extract(self, stream: Stream, start: int, end: int,
                 output: asyncio.Queue,
                 max_rows: int = None, decimation_level=None):
@@ -37,7 +43,6 @@ class DataStore(ABC):
     @abstractmethod
     def remove(self, stream: Stream, start: int, end: int):
         pass
-
 
     @abstractmethod
     def info(self, stream: Stream) -> StreamInfo:

@@ -1,7 +1,7 @@
 from typing import List
 import asyncio
 
-from joule.models import Worker, Stream
+from joule.models import Worker, Stream, Subscription
 from joule.models.errors import SubscriptionError
 
 Tasks = List[asyncio.Task]
@@ -26,7 +26,7 @@ class Supervisor:
             await worker.stop(loop)
         await self.task
 
-    def subscribe(self, stream: Stream, loop: Loop):
+    def subscribe(self, stream: Stream, loop: Loop) -> Subscription:
         # find a worker producing this stream
         for worker in self.workers:
             try:

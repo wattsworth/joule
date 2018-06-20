@@ -5,9 +5,12 @@ import re
 import numpy as np
 from typing import List, Dict, Optional
 
-from joule.models import Stream, pipes
-from joule.models.data_store.data_store import DataStore, StreamInfo, Interval
+from joule.models import Stream, Subscription, pipes
+from joule.models.data_store.data_store import DataStore, StreamInfo, Data, Interval
 from joule.models.data_store import errors
+from joule.models.data_store.nilmdb_inserter import Inserter
+
+Loop = asyncio.AbstractEventLoop
 
 
 class PathNotFound(Exception):
@@ -16,14 +19,16 @@ class PathNotFound(Exception):
 
 class NilmdbStore(DataStore):
 
-    def __init__(self, server):
+    def __init__(self, server, insert_period: float, cleanup_period: float):
         self.server = server
         self.decimation_factor = 4
+        self.insert_period = insert_period
+        self.cleanup_period = cleanup_period
 
     async def initialize(self, streams: List[Stream]):
         url = "{server}/stream/create".format(server=self.server)
         for stream in streams:
-            data = {"path": NilmdbStore._compute_path(stream),
+            data = {"path": NilmdbStore.compute_path(stream),
                     "layout": stream.layout}
             async with aiohttp.ClientSession() as session:
                 async with session.post(url, data=data) as resp:
@@ -36,7 +41,7 @@ class NilmdbStore(DataStore):
         url = "{server}/stream/insert".format(server=self.server)
         params = {"start": "%d" % start,
                   "end": "%d" % end,
-                  "path": NilmdbStore._compute_path(stream),
+                  "path": NilmdbStore.compute_path(stream),
                   "binary": '1'}
         async with aiohttp.ClientSession() as session:
             async with session.put(url, params=params,
@@ -49,6 +54,12 @@ class NilmdbStore(DataStore):
                     return False
                 return True
 
+    async def spawn_inserter(self, stream: Stream,
+                             subscription: Subscription, loop: Loop) -> asyncio.Task:
+        inserter = Inserter(self.server, stream,
+                            self.insert_period, self.cleanup_period)
+        return loop.create_task(inserter.run(subscription.queue, loop))
+
     async def extract(self, stream: Stream, start: int, end: int,
                       output: asyncio.Queue = None, max_rows: int = None,
                       decimation_level=None) -> Optional(Data):
@@ -58,14 +69,14 @@ class NilmdbStore(DataStore):
                 decimation_level = 1
             else:
                 # find out how much data this represents
-                count = await self._count_by_path(NilmdbStore._compute_path(stream),
+                count = await self._count_by_path(NilmdbStore.compute_path(stream),
                                                   start, end)
                 desired_decimation = np.ceil(count / max_rows)
                 decimation_level = 4 ** np.ceil(np.log(desired_decimation) /
                                                 np.log(self.decimation_factor))
                 # make sure the target decimation level exists and has data
                 try:
-                    path = NilmdbStore._compute_path(stream, decimation_level)
+                    path = NilmdbStore.compute_path(stream, decimation_level)
                     if self._count_by_path(path, start, end) == 0:
                         # no data in the decimated path
                         raise PathNotFound()
@@ -75,24 +86,24 @@ class NilmdbStore(DataStore):
                         # shouldn't see this normally since queue subscribers
                         # generally want raw data but anyway...
                         raise errors.InsufficientDecimation()
-                    return self._intervals_by_path(NilmdbStore._compute_path(stream),
+                    return self._intervals_by_path(NilmdbStore.compute_path(stream),
                                                    start, end)
         # retrieve data from stream
-        path = NilmdbStore._compute_path(stream, decimation_level)
+        path = NilmdbStore.compute_path(stream, decimation_level)
         await self._extract_by_path(path, start, end, stream, output)
 
     async def remove(self, stream, start, end):
         """ remove [start,end] in path and all decimations """
         info = await self._path_info()
         all_paths = info.keys()
-        base_path = NilmdbStore._compute_path(stream)
+        base_path = NilmdbStore.compute_path(stream)
         regex = re.compile("%s~decim-(\d)+$" % base_path)
         decim_paths = list(filter(regex.match, all_paths))
         for path in [base_path, *decim_paths]:
             await self._remove_by_path(path, start, end)
 
     async def info(self, stream: Stream) -> StreamInfo:
-        path = NilmdbStore._compute_path(stream)
+        path = NilmdbStore.compute_path(stream)
         info_dict = self._path_info(path)
         return info_dict[path]
 
@@ -171,7 +182,7 @@ class NilmdbStore(DataStore):
                 return info
 
     @staticmethod
-    def _compute_path(stream: Stream, decimation_level: int = 1):
+    def compute_path(stream: Stream, decimation_level: int = 1):
         path = "/joule/%d" % stream.id
         if decimation_level == 1:
             return path

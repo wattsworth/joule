@@ -11,7 +11,8 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from joule.models import (Base, Worker, Supervisor, config, ConfigurationError,
-                          DataStore)
+                          SubscriptionError, DataStore, Stream)
+from joule.models.data_store import NilmdbStore
 from joule.services import (load_modules, load_streams)
 import joule.controllers
 
@@ -23,6 +24,14 @@ class Daemon(object):
 
     def __init__(self, my_config: config.JouleConfig):
         self.config: config.JouleConfig = my_config
+        if my_config.data_store.store_type == config.DATASTORE.NILMDB:
+            self.data_store: DataStore = \
+                NilmdbStore(my_config.data_store.url,
+                            my_config.data_store.insert_period,
+                            my_config.data_store.cleanup_period)
+        else:
+            assert "Unsupported data store: " + my_config.data_store.type.value
+
         self.db: Session = None
         self.supervisor: Supervisor = None
         self.data_store: DataStore = None
@@ -54,12 +63,14 @@ class Daemon(object):
         self.supervisor = Supervisor(registered_workers)
 
         # create a data store
-        self.data_store = DataStore()
         self.data_store.initialize(streams)
 
     async def run(self, loop: Loop):
         # start the supervisor (runs the workers)
         self.supervisor.start(loop)
+        # start inserters by subscribing to the streams
+        inserter_task_grp = self._spawn_inserters()
+
         # start the API server
         app = web.Application()
         app['supervisor'] = self.supervisor
@@ -75,11 +86,23 @@ class Daemon(object):
             await asyncio.sleep(0.5)
         # clean everything up
         await self.supervisor.stop(loop)
+        await inserter_task_grp
         await runner.cleanup()
         self.db.close()
 
     def stop(self):
         self.stop_requested = True
+
+    def _spawn_inserters(self, loop: Loop) -> asyncio.Task:
+        inserter_tasks = []
+        for stream in self.db.query(Stream).filter(Stream.keep_us != Stream.KEEP_NONE):
+            try:
+                subscription = self.supervisor.subscribe(stream, loop)
+                task = self.data_store.spawn_inserter(stream, subscription, loop)
+                inserter_tasks.append(task)
+            except SubscriptionError as e:
+                logging.warning(e)
+        return asyncio.gather(*inserter_tasks, loop)
 
 
 def main(argv=None):
