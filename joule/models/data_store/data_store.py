@@ -1,15 +1,17 @@
 import numpy as np
 import asyncio
-from typing import List, Union
+from typing import List, Union, Tuple, TYPE_CHECKING
 from abc import ABC, abstractmethod
 
-from joule.models import Stream, Subscription
+if TYPE_CHECKING:
+    from joule.models import Stream, Subscription
 
 Loop = asyncio.AbstractEventLoop
 # starting and ending timestamps
-Interval = List[int, int]
+Interval = Tuple[int, int]
 
-Data = Union(Interval, np.array)
+Data = Union[Interval, np.array]
+
 
 class StreamInfo:
     def __init__(self, start: int, end: int, rows: int):
@@ -21,29 +23,29 @@ class StreamInfo:
 class DataStore(ABC):
 
     @abstractmethod
-    def initialize(self, streams: List[Stream]):
+    def initialize(self, streams: List['Stream']):
         pass
 
     @abstractmethod
-    async def insert(self, stream: Stream,
+    async def insert(self, stream: 'Stream',
                      data: np.array, start: int, end: int):
         pass
 
     @abstractmethod
-    async def spawn_inserter(self, stream: Stream, subscription: Subscription,
+    async def spawn_inserter(self, stream: 'Stream', subscription: 'Subscription',
                              loop: Loop) -> asyncio.Task:
         pass
 
     @abstractmethod
-    def extract(self, stream: Stream, start: int, end: int,
+    def extract(self, stream: 'Stream', start: int, end: int,
                 output: asyncio.Queue,
                 max_rows: int = None, decimation_level=None):
         pass
 
     @abstractmethod
-    def remove(self, stream: Stream, start: int, end: int):
+    def remove(self, stream: 'Stream', start: int, end: int):
         pass
 
     @abstractmethod
-    def info(self, stream: Stream) -> StreamInfo:
+    def info(self, stream: 'Stream') -> StreamInfo:
         pass

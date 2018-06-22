@@ -69,7 +69,7 @@ class Stream(Base):
     @property
     def decimated_layout(self):
         # decimations are floats (min,mean,max) tuples
-        return "float32_%d" % len(self.elements)*3
+        return "float32_%d" % (len(self.elements)*3)
 
     @property
     def data_width(self):

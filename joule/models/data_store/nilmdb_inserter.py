@@ -3,30 +3,33 @@ import aiohttp
 import numpy as np
 import random
 import time
-from typing import List
+from typing import List, Callable
+import pdb
 
 from joule.models import Stream
 from joule.models.data_store import errors
-from joule.models.data_store.nilmdb import NilmdbStore
+from joule.models.data_store.nilmdb_helpers import compute_path, ERRORS, check_for_error
 
 Loop = asyncio.AbstractEventLoop
 
 
 class Inserter:
 
-    def __init__(self, server: str, stream: Stream, insert_period: float, cleanup_period: float):
+    def __init__(self, server: str, stream: Stream, insert_period: float, cleanup_period: float,
+                 session_factory: Callable[[], aiohttp.ClientSession]):
         self.insert_url = "{server}/stream/insert".format(server=server)
         self.remove_url = "{server}/stream/remove".format(server=server)
         self.create_url = "{server}/stream/create".format(server=server)
 
         self.server = server  # save for initializing decimators
         self.stream = stream
-        self.path = NilmdbStore.compute_path(stream)
+        self.path = compute_path(stream)
         self.decimator: NilmdbDecimator = None
         self.last_ts = None
         # add offsets to the period to distribute traffic
         self.insert_period = insert_period + insert_period*random.random()*0.5
         self.cleanup_period = cleanup_period + cleanup_period*random.random()*0.25
+        self._get_client = session_factory
 
     async def run(self, queue: asyncio.Queue, loop: Loop) -> None:
         """insert stream data from the queue until the queue is empty"""
@@ -39,7 +42,7 @@ class Inserter:
         if self.stream.keep_us != Stream.KEEP_ALL:
             cleaner_task = loop.create_task(self._clean())
         try:
-            async with aiohttp.ClientSession() as session:
+            async with self._get_client() as session:
                 while True:
                     await asyncio.sleep(self.insert_period)
                     (start, end, data) = await self._process(queue)
@@ -50,7 +53,8 @@ class Inserter:
                         continue  # nothing to insert
                     # lazy initialization of decimator
                     if self.stream.decimate and self.decimator is None:
-                        self.decimator = NilmdbDecimator(self.server, self.stream, 1, 4)
+                        self.decimator = NilmdbDecimator(self.server, self.stream, 1, 4,
+                                                         self._get_client)
                         decimator_task = loop.create_task(self.decimator.run(decimator_queue, loop))
                     # send the data
                     params = {"start": "%d" % start,
@@ -62,6 +66,7 @@ class Inserter:
                         if resp.status != 200:
                             error = await resp.text()
                             raise errors.DataError("NilmDB error: %s" % error)
+                    await decimator_queue.put(data)
         except asyncio.CancelledError:
             pass
         if decimator_task is not None:
@@ -73,6 +78,8 @@ class Inserter:
 
     async def _process(self, queue: asyncio.Queue) -> (int, int, np.array):
         buffer = []
+        start = None
+        end = None
         while not queue.empty():
             data = await queue.get()
             if data is None:
@@ -81,10 +88,13 @@ class Inserter:
                 buffer = np.array(data)
             else:
                 buffer = np.append(buffer, data, axis=0)
-            start = self.last_ts
+            if self.last_ts is not None:
+                start = self.last_ts
+            else:
+                start = buffer['timestamp'][0]
             end = buffer['timestamp'][-1]+1
             self.last_ts = end
-            return start, end, buffer
+        return start, end, buffer
 
     async def _close_interval(self):
         self.last_ts = 0
@@ -92,13 +102,11 @@ class Inserter:
             self.decimator.close_interval()
 
     async def _create_path(self):
-        data = {"path": NilmdbStore.compute_path(self.stream),
+        data = {"path": compute_path(self.stream),
                 "layout": self.stream.layout}
-        async with aiohttp.ClientSession() as session:
+        async with self._get_client() as session:
             async with session.post(self.create_url, data=data) as resp:
-                if resp.status != 200:
-                    # TODO: check for stream exists error
-                    raise errors.DataError(await resp.text())
+                await check_for_error(resp, ignore=[ERRORS.STREAM_ALREADY_EXISTS])
 
     async def _clean(self):
         try:
@@ -127,13 +135,14 @@ class Inserter:
 
 class NilmdbDecimator:
 
-    def __init__(self, server: str, stream: Stream, from_level: int, factor: int):
+    def __init__(self, server: str, stream: Stream, from_level: int, factor: int,
+                 session_factory: Callable[[], aiohttp.ClientSession]):
         self.stream = stream
         self.level = from_level*factor
         self.insert_url = "{server}/stream/insert".format(server=server)
         self.create_url = "{server}/stream/create".format(server=server)
         self.server = server
-        self.path = NilmdbStore.compute_path(stream, self.level)
+        self.path = compute_path(stream, self.level)
         if from_level > 1:
             self.again = True
         else:
@@ -143,8 +152,9 @@ class NilmdbDecimator:
         self.buffer = []
         self.last_ts = None
         self.child: NilmdbDecimator = None
+        self._get_client = session_factory
         # hold off to rate limit NilmDB traffic
-        self.holdoff = random.random()
+        self.holdoff = 0 #random.random()
 
     async def run(self, queue: asyncio.Queue, loop: Loop) -> None:
         """insert stream data from the queue until the queue is empty"""
@@ -152,14 +162,16 @@ class NilmdbDecimator:
         child_queue = asyncio.Queue()
         child_task: asyncio.Task = None
         try:
-            async with aiohttp.ClientSession() as session:
-                async for data in queue.get():
+            async with self._get_client() as session:
+                while True:
+                    data = await queue.get()
                     (start, end, decim_data) = self._process(data)
                     if len(decim_data) == 0:
                         continue
                     # lazy initialization of child
                     if self.child is None:
-                        self.child = NilmdbDecimator(self.server, self.stream, self.level, self.factor)
+                        self.child = NilmdbDecimator(self.server, self.stream, self.level,
+                                                     self.factor, self._get_client)
                         child_task = loop.create_task(self.child.run(child_queue, loop))
                     params = {"start": "%d" % start,
                               "end": "%d" % end,
@@ -186,7 +198,7 @@ class NilmdbDecimator:
             self.child.close_interval()
 
     def get_paths(self) -> List[str]:
-        paths = [NilmdbStore.compute_path(self.stream, self.level)]
+        paths = [compute_path(self.stream, self.level)]
         if self.child is not None:
             paths = paths + self.child.get_paths()
         return paths
@@ -222,7 +234,7 @@ class NilmdbDecimator:
 
         if n == 0:  # not enough data to work with, save it for later
             self.buffer = data
-            return
+            return None, None, []
 
         trunc_data = data[:n, :]
         # keep the leftover data
@@ -251,13 +263,13 @@ class NilmdbDecimator:
         sout['timestamp'] = out[:, 0]
         sout['data'] = out[:, 1:]
         # insert the data into the database
-        return start, end, data
+        return start, end, sout
 
     async def _create_path(self):
-        data = {"path": NilmdbStore.compute_path(self.stream, self.level),
+        data = {"path": compute_path(self.stream, self.level),
                 "layout": self.stream.decimated_layout}
-        async with aiohttp.ClientSession() as session:
+        async with self._get_client() as session:
             async with session.post(self.create_url, data=data) as resp:
-                if resp.status != 200:
-                    # TODO: check for stream exists error
-                    raise errors.DataError(await resp.text())
+                await check_for_error(resp, ignore=[ERRORS.STREAM_ALREADY_EXISTS])
+
+

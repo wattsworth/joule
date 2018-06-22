@@ -4,7 +4,6 @@ from typing import List, Dict
 import configparser
 
 from joule.models.errors import ConfigurationError
-from joule.models import (Argument)
 from joule.models.stream import Stream
 """
 Configuration File:
