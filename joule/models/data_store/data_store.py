@@ -19,11 +19,18 @@ class StreamInfo:
         self.end = end
         self.rows = rows
 
+    def to_json(self):
+        return{
+            "start": self.start,
+            "end": self.end,
+            "rows": self.rows
+        }
+
 
 class DataStore(ABC):
 
     @abstractmethod
-    def initialize(self, streams: List['Stream']):
+    async def initialize(self, streams: List['Stream']):
         pass
 
     @abstractmethod
@@ -37,15 +44,19 @@ class DataStore(ABC):
         pass
 
     @abstractmethod
-    def extract(self, stream: 'Stream', start: int, end: int,
+    async def extract(self, stream: 'Stream', start: int, end: int,
                 output: asyncio.Queue,
                 max_rows: int = None, decimation_level=None):
         pass
 
     @abstractmethod
-    def remove(self, stream: 'Stream', start: int, end: int):
+    async def remove(self, stream: 'Stream', start: int, end: int):
         pass
 
     @abstractmethod
-    def info(self, stream: 'Stream') -> StreamInfo:
+    async def info(self, stream: 'Stream') -> StreamInfo:
+        pass
+
+    @abstractmethod
+    def close(self):
         pass

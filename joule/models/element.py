@@ -2,7 +2,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy import Column, Integer, Enum, Float, String, Boolean, ForeignKey
 import configparser
 import enum
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, Dict, TYPE_CHECKING
 
 from joule.models.meta import Base
 from joule.models.errors import ConfigurationError
@@ -39,6 +39,7 @@ class Element(Base):
 
     def to_json(self):
         return {
+            'id': self.id,
             'name': self.name,
             'units': self.units,
             'plottable': self.plottable,
@@ -48,6 +49,18 @@ class Element(Base):
             'default_max': self.default_max,
             'default_min': self.default_min
         }
+
+
+def from_json(data: Dict) -> Element:
+    return Element(id=data["id"],
+                   name=data["name"],
+                   units=data["units"],
+                   plottable=data["plottable"],
+                   display_type=Element.DISPLAYTYPE[data["display_type"]],
+                   offset=data["offset"],
+                   scale_factor=data["scale_factor"],
+                   default_max=data["default_max"],
+                   default_min=data["default_min"])
 
 
 def from_config(config: configparser.ConfigParser):

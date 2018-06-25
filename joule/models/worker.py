@@ -116,11 +116,11 @@ class Worker:
     def log(self, msg):
         timestamp = datetime.datetime.now().isoformat()
         self._logs.append("[%s]: %s" % (timestamp, msg))
-        if self.process is None:
-            pid = '???'
-        else:
-            pid = self.process.pid
-        print("[%s: %s] " % (self.module.name, pid) + msg)
+        # if self.process is None:
+        #    pid = '???'
+        # else:
+        #    pid = self.process.pid
+        # print("[%s: %s] " % (self.module.name, pid) + msg)
 
     @property
     def logs(self) -> List[str]:

@@ -1,7 +1,7 @@
 from sqlalchemy.orm import relationship
 from sqlalchemy import (Column, Integer, String,
                         Boolean, Enum, ForeignKey)
-from typing import List, TYPE_CHECKING
+from typing import List, Dict, TYPE_CHECKING
 import configparser
 import enum
 import re
@@ -69,7 +69,7 @@ class Stream(Base):
     @property
     def decimated_layout(self):
         # decimations are floats (min,mean,max) tuples
-        return "float32_%d" % (len(self.elements)*3)
+        return "float32_%d" % (len(self.elements) * 3)
 
     @property
     def data_width(self):
@@ -85,6 +85,19 @@ class Stream(Base):
             'decimate': self.decimate,
             'elements': [e.to_json() for e in sorted(self.elements, key=attrgetter('index'))]
         }
+
+
+def from_json(data: Dict) -> Stream:
+    elements = []
+    for item in data["elements"]:
+        elements.append(element.from_json(item))
+    return Stream(id=data["id"],
+                  name=data["name"],
+                  description=data["description"],
+                  datatype=Stream.DATATYPE[data["datatype"]],
+                  keep_us=data["keep_us"],
+                  decimate=data["decimate"],
+                  elements=elements)
 
 
 def from_config(config: configparser.ConfigParser) -> Stream:

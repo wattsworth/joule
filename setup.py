@@ -30,7 +30,8 @@ setup(
     platforms=['Any'],
     scripts=[],
     provides=[],
-    install_requires=['cliff',
+    install_requires=['click',
+                      'treelib'
                       'numpy',
                       'scipy',
                       'psutil',
@@ -52,13 +53,7 @@ setup(
             'joule-file-reader = joule.client.builtins.file_reader:main',
             'joule-mean-filter = joule.client.builtins.mean_filter:main',
             'joule-median-filter = joule.client.builtins.median_filter:main'
-        ],
-        'joule.commands': [
-            'modules = joule.cmds.modules:ModulesCmd',
-            'logs = joule.cmds.logs:LogsCmd',
-            'initialize = joule.cmds.initialize:InitializeCmd',
-            'docs = joule.cmds.docs:DocsCmd'
-        ],
+        ]
     },
     #options={
     #    'build_scripts': {

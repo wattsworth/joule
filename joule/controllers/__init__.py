@@ -10,18 +10,20 @@ async def index(request):
 
 routes = [
     web.get('/', index),
-    # stream controller routes
+    # --- stream controller routes ---
+    # list all streams
     web.get('/streams.json', stream_controller.index),
+    web.get('/stream.json', stream_controller.info),
     web.put('/stream.json', stream_controller.update),
     web.delete('/stream.json', stream_controller.delete),
-    # folder controller routes
+    # --- folder routes ---
     web.post('/folder', folder_controller.create),
     web.put('/folder', folder_controller.update),
     web.delete('/folder', folder_controller.delete),
-    # data routes
+    # --- data routes ---
     web.get('/data', data_controller.subscribe),
     web.post('/data', data_controller.publish),
-    # module routes
+    # --- module routes ---
     web.get('/modules', module_controller.index),
     web.get('/module', module_controller.show),
     # TODO: routes for module interface proxy

@@ -75,17 +75,20 @@ class Daemon(object):
         # start the API server
         app = web.Application()
         app['supervisor'] = self.supervisor
-        app['data_store'] = self.data_store
+        app['data-store'] = self.data_store
         app['db'] = self.db
         app.add_routes(joule.controllers.routes)
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, self.config.ip_address, self.config.port)
         await site.start()
+
         # sleep and check for stop condition
         while not self.stop_requested:
             await asyncio.sleep(0.5)
+
         # clean everything up
+        self.data_store.close()
         await self.supervisor.stop(loop)
         inserter_task_grp.cancel()
         await inserter_task_grp
