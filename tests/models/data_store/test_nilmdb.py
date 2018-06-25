@@ -36,6 +36,7 @@ class TestNilmdbStore(asynctest.TestCase):
 
     async def tearDown(self):
         await self.fake_nilmdb.stop()
+        self.store.close()
 
     async def test_initialize(self):
 

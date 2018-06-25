@@ -32,7 +32,7 @@ class TestStream(unittest.TestCase):
         self.assertIsNotNone(my_stream)
 
     def test_json(self):
-        my_stream = Stream(name='test', decimate=True)
+        my_stream = Stream(name='test', decimate=True, datatype=Stream.DATATYPE.UINT16)
         json = my_stream.to_json()
         self.assertEqual(json['decimate'], True)
         self.assertEqual(json['name'], 'test')

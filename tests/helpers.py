@@ -1,5 +1,5 @@
 import numpy as np
-
+import configparser
 
 def create_data(layout,
                 length=100,
@@ -45,6 +45,12 @@ def parse_layout(layout):
         raise ValueError("bad layout")
     dtype = np.dtype([('timestamp', '<i8'), ('data', atype, lcount)])
     return ltype, lcount, dtype
+
+
+def parse_configs(config_str):
+    config = configparser.ConfigParser()
+    config.read_string(config_str)
+    return config
 
 
 def mock_stream_info(streams):

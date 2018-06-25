@@ -57,8 +57,8 @@ def _save_stream(new_stream: Stream, path: str, db: Session) -> None:
         .one_or_none()
     if cur_stream is not None:
         if cur_stream.layout != new_stream.layout:
-            logger.error("Invalid layout %s for [%s/%s], existing stream has layout %s" % (
-                new_stream.layout, cur_stream.path, cur_stream.name, cur_stream.layout))
+            logger.error("Invalid layout %s for [%s], existing stream has layout %s" % (
+                new_stream.layout, cur_stream.name, cur_stream.layout))
         else:
             cur_stream.merge_configs(new_stream)
             db.add(cur_stream)
