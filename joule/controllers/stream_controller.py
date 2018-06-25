@@ -4,7 +4,7 @@ from joule.models import Stream, Folder, DataStore
 from typing import List, Optional
 import pdb
 
-from joule.models import folder
+from joule.models import folder, ConfigurationError
 
 
 async def index(request: web.Request):
@@ -30,6 +30,32 @@ async def info(request: web.Request):
     stream_info = await data_store.info(stream)
     return web.json_response({"stream": stream.to_json(),
                               "data-info": stream_info.to_json()})
+
+
+async def move(request: web.Request):
+    db: Session = request.app["db"]
+    body = await request.post()
+    root = folder.root(db)
+    # find the stream
+    if 'path' in body:
+        stream = _find_stream_by_path(
+            body['path'][1:].split('/'), root)
+    elif 'id' in body:
+        stream = db.query(Stream).get(body["id"])
+    else:
+        return web.Response(text="specify an id or a path", status=400)
+    if stream is None:
+        return web.Response(text="stream does not exist", status=404)
+    # find or create the destination folder
+    if 'destination' not in body:
+        return web.Response(text="specify a destination", status=400)
+    try:
+        destination = folder.find_or_create(body['destination'], db)
+    except ConfigurationError as e:
+        return web.Response(text=e, status=400)
+    destination.streams.append(stream)
+    db.commit()
+    return web.json_response({"stream": stream.to_json()})
 
 
 async def update(request):

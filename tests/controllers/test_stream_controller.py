@@ -3,7 +3,7 @@ from aiohttp import web
 import aiohttp
 from sqlalchemy.orm import Session
 
-from joule.models import folder, Stream, StreamInfo
+from joule.models import folder, Stream, Folder, StreamInfo
 import joule.controllers
 from .helpers import create_db, MockStore
 
@@ -31,8 +31,8 @@ class TestStreamController(AioHTTPTestCase):
     async def test_stream_info(self):
         db: Session = self.app["db"]
         my_stream: Stream = db.query(Stream).filter_by(name="stream1").one()
-        store:MockStore = self.app["data-store"]
-        mock_info=StreamInfo(start=0, end=100, rows=200)
+        store: MockStore = self.app["data-store"]
+        mock_info = StreamInfo(start=0, end=100, rows=200)
         store.set_info(my_stream, mock_info)
         # can query by id
         resp = await self.client.request("GET", "/stream.json?id=%d" % my_stream.id)
@@ -44,3 +44,21 @@ class TestStreamController(AioHTTPTestCase):
         resp = await self.client.request("GET", "/stream.json", params=payload)
         actual = await resp.json()
         self.assertEqual(actual, expected)
+
+    @unittest_run_loop
+    async def test_stream_move(self):
+        db: Session = self.app["db"]
+        # move stream1 into folder3
+        payload = {
+            "path": "/folder1/stream1",
+            "destination": "/new/folder3"
+        }
+        resp = await self.client.put("/stream/move.json", data=payload)
+        self.assertEqual(resp.status, 200)
+        folder3 = db.query(Folder).filter_by(name="folder3").one()
+        folder1 = db.query(Folder).filter_by(name="folder1").one()
+        # check the destination
+        self.assertEqual(folder3.streams[0].name, "stream1")
+        self.assertEqual(folder3.parent.name, "new")
+        # check the source
+        self.assertEqual(len(folder1.streams), 0)

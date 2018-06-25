@@ -14,6 +14,7 @@ routes = [
     # list all streams
     web.get('/streams.json', stream_controller.index),
     web.get('/stream.json', stream_controller.info),
+    web.put('/stream/move.json', stream_controller.move),
     web.put('/stream.json', stream_controller.update),
     web.delete('/stream.json', stream_controller.delete),
     # --- folder routes ---
