@@ -16,11 +16,8 @@ async def index(request: web.Request):
 async def info(request: web.Request):
     db: Session = request.app["db"]
     data_store: DataStore = request.app["data-store"]
-
-    root = folder.root(db)
     if 'path' in request.query:
-        stream = _find_stream_by_path(
-            request.query['path'][1:].split('/'), root)
+        stream = folder.find_stream_by_path(request.query['path'], db)
     elif 'id' in request.query:
         stream = db.query(Stream).get(request.query["id"])
     else:
@@ -35,11 +32,9 @@ async def info(request: web.Request):
 async def move(request: web.Request):
     db: Session = request.app["db"]
     body = await request.post()
-    root = folder.root(db)
     # find the stream
     if 'path' in body:
-        stream = _find_stream_by_path(
-            body['path'][1:].split('/'), root)
+        stream = folder.find_stream_by_path(body['path'], db)
     elif 'id' in body:
         stream = db.query(Stream).get(body["id"])
     else:
@@ -53,6 +48,11 @@ async def move(request: web.Request):
         destination = folder.find_or_create(body['destination'], db)
     except ConfigurationError as e:
         return web.Response(text=e, status=400)
+    # make sure there are no other streams with the same name here
+    for peer in destination.streams:
+        if peer.name == stream.name:
+            return web.Response(text="a stream with this name is in the destination folder",
+                                status=400)
     destination.streams.append(stream)
     db.commit()
     return web.json_response({"stream": stream.to_json()})
@@ -67,16 +67,3 @@ async def delete(request):
     return web.Response(text="TODO",
                         content_type='application/json')
 
-
-def _find_stream_by_path(path: List[str], parent: Folder) -> Optional[Stream]:
-    if len(path) == 1:
-        for stream in parent.streams:
-            if stream.name == path[0]:
-                return stream
-        else:
-            return None
-    for child in parent.children:
-        if child.name == path[0]:
-            return _find_stream_by_path(path[1:], child)
-    else:
-        return None

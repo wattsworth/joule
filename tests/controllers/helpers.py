@@ -3,9 +3,11 @@ from sqlalchemy.orm import Session
 from typing import List
 import numpy as np
 import asyncio
+import pdb
 
 from joule.models import (Base, DataStore, Stream, Subscription, StreamInfo)
 from joule.services import parse_pipe_config
+from tests import helpers
 
 Loop = asyncio.AbstractEventLoop
 
@@ -40,7 +42,9 @@ class MockStore(DataStore):
     async def extract(self, stream: Stream, start: int, end: int,
                       output: asyncio.Queue,
                       max_rows: int = None, decimation_level=None):
-        pass
+        for x in range(3):
+            print("adding data...")
+            await output.put(helpers.create_data(stream.layout))
 
     async def remove(self, stream: Stream, start: int, end: int):
         pass

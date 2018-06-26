@@ -1,6 +1,6 @@
 from sqlalchemy.orm import relationship, backref, Session
 from sqlalchemy import Column, Integer, String, ForeignKey
-from typing import List, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, Optional
 import logging
 from joule.models.errors import ConfigurationError
 from joule.models.stream import Stream
@@ -21,6 +21,19 @@ class Folder(Base):
     parent_id: int = Column(Integer, ForeignKey('folder.id'))
     if TYPE_CHECKING:
         parent: 'Folder'
+
+    def find_stream_by_segments(self, segments: List[str]) -> Optional[Stream]:
+        if len(segments) == 1:
+            for stream in self.streams:
+                if stream.name == segments[0]:
+                    return stream
+            else:
+                return None
+        for child in self.children:
+            if child.name == segments[0]:
+                return child.find_stream_by_segments(segments[1:])
+        else:
+            return None
 
     def __repr__(self):
         if self.id is None:
@@ -68,3 +81,8 @@ def find_or_create(path: str, db: Session, parent=None) -> Folder:
         db.add(folder)
     sub_path = '/' + '/'.join(reversed(path_chunks))
     return find_or_create(sub_path, db, folder)
+
+
+def find_stream_by_path(path: str, db: Session) -> Optional[Stream]:
+    segments = path[1:].split('/')
+    return root(db).find_stream_by_segments(segments)

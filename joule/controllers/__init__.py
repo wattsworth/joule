@@ -22,8 +22,8 @@ routes = [
     web.put('/folder', folder_controller.update),
     web.delete('/folder', folder_controller.delete),
     # --- data routes ---
-    web.get('/data', data_controller.subscribe),
-    web.post('/data', data_controller.publish),
+    web.get('/data', data_controller.read),
+    web.post('/data', data_controller.write),
     # --- module routes ---
     web.get('/modules', module_controller.index),
     web.get('/module', module_controller.show),

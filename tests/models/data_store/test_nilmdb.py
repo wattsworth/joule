@@ -5,7 +5,7 @@ import numpy as np
 
 from joule.models import Stream, Element
 from joule.models.data_store.nilmdb import NilmdbStore
-from joule.models.data_store.errors import InsufficientDecimation, DataError
+from joule.models.data_store.errors import InsufficientDecimationError, DataError
 from .fake_nilmdb import FakeNilmdb, FakeResolver, FakeStream
 from tests import helpers
 
@@ -147,7 +147,7 @@ class TestNilmdbStore(asynctest.TestCase):
         self.assertEqual(nrows // 16, rcvd_rows)
 
         # should raise exception if data is not decimated enough
-        with self.assertRaises(InsufficientDecimation):
+        with self.assertRaises(InsufficientDecimationError):
             await self.store.extract(self.stream1, start=100, end=1000,
                                      output=data_queue, max_rows=nrows // 128)
 
@@ -168,7 +168,7 @@ class TestNilmdbStore(asynctest.TestCase):
 
         # if max_rows and decimation_level specified, error if
         # too much data
-        with self.assertRaises(InsufficientDecimation):
+        with self.assertRaises(InsufficientDecimationError):
             await self.store.extract(self.stream1, start=100, end=1000,
                                      output=data_queue, decimation_level=64,
                                      max_rows=nrows // 128)

@@ -80,18 +80,18 @@ class NilmdbStore(DataStore):
                     path = compute_path(stream, decimation_level)
                     if (await self._count_by_path(path, start, end)) == 0:
                         # no data in the decimated path
-                        raise errors.InsufficientDecimation("required level is empty")
+                        raise errors.InsufficientDecimationError("required level is empty")
                 except errors.DataError as e:
                     if ERRORS.NO_SUCH_STREAM.value in str(e):
                         # no decimated data or required level does not exist
-                        raise errors.InsufficientDecimation("required level does not exist")
+                        raise errors.InsufficientDecimationError("required level does not exist")
                     raise e  # some other error, propogate it up
         elif max_rows is not None:
             # two constraints, make sure we aren't going to return too much data
             count = await self._count_by_path(compute_path(stream, decimation_level),
                                               start, end)
             if count > max_rows:
-                raise errors.InsufficientDecimation("actual_rows(%d) > max_rows(%d)" % (count, max_rows))
+                raise errors.InsufficientDecimationError("actual_rows(%d) > max_rows(%d)" % (count, max_rows))
 
         # retrieve data from stream
         path = compute_path(stream, decimation_level)

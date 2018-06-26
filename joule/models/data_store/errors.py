@@ -2,5 +2,6 @@
 class DataError(Exception):
     pass
 
-class InsufficientDecimation(Exception):
+
+class InsufficientDecimationError(Exception):
     pass
