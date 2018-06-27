@@ -141,7 +141,6 @@ class NilmdbStore(DataStore):
                         reader.consume(len(data))
                     except pipes.EmptyPipe:
                         break
-        await output.put(None)
 
     async def _intervals_by_path(self, path: str, start: Optional[int],
                                  end: Optional[int]) -> List[Interval]:

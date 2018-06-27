@@ -38,7 +38,6 @@ async def read(request: web.Request):
     if params['decimation-level'] is not None and params['decimation-level'] <= 0:
         return web.Response(text="[max-rows] must be > 0", status=400)
 
-    print("here!")
     # create an extraction task
     q = asyncio.Queue()
     try:
@@ -53,9 +52,11 @@ async def read(request: web.Request):
     resp = web.StreamResponse(status=200)
     resp.enable_chunked_encoding()
     await resp.prepare(request)
-    while not extractor.done():
+    while True:
         data: np.array = await q.get()
         await resp.write(data.tostring())
+        if extractor.done() and q.empty():
+            break
     await extractor
     return resp
 

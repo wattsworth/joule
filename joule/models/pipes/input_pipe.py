@@ -14,12 +14,14 @@ class InputPipe(Pipe):
         self.reader = reader
         self.close_cb = close_cb
         self.byte_buffer = b''
+        self._data = []
         # tunable constant
         self.BUFFER_SIZE = buffer_size
         self.buffer = np.zeros(self.BUFFER_SIZE, dtype=self.dtype)
         self.last_index = 0
 
     async def read(self, flatten=False):
+
         if self.reader is None:
             self.reader = await self.reader_factory()
 
@@ -28,10 +30,10 @@ class InputPipe(Pipe):
         if max_rows == 0:
             return self._format_data(self.buffer[:self.last_index], flatten)
 
-        raw = await self.reader.read(max_rows * rowbytes)
-        # TODO: handle empty pipes, is eof the same as 0 bytes?
-        if self.reader.at_eof() and (len(raw) == 0):
+        if self.reader.at_eof():
             raise EmptyPipe()
+
+        raw = await self.reader.read(max_rows * rowbytes)
 
         extra_bytes = (len(raw) + len(self.byte_buffer)) % rowbytes
         # TODO: optimize for common case where byte_buffer is empty
@@ -45,10 +47,13 @@ class InputPipe(Pipe):
         # append data onto buffer
         self.buffer[self.last_index:self.last_index + len(data)] = data
         self.last_index += len(data)
-        return self._format_data(self.buffer[:self.last_index], flatten)
+        self._data = self._format_data(self.buffer[:self.last_index], flatten)
+        return self._data
 
     def consume(self, num_rows):
-        if num_rows <= 0:
+        if num_rows == 0:
+            return  # nothing to do
+        if num_rows < 0:
             print("WARNING: NumpyPipe::consume called with negative offset: %d" % num_rows)
             return
 
@@ -57,6 +62,10 @@ class InputPipe(Pipe):
                             % (num_rows, self.last_index))
         self.buffer = np.roll(self.buffer, -1 * num_rows)
         self.last_index -= num_rows
+
+    @property
+    def data(self) -> np.array:
+        return self._data
 
     def close(self):
         if self.close_cb is not None:

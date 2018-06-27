@@ -11,6 +11,7 @@ from tests import helpers
 
 Loop = asyncio.AbstractEventLoop
 
+
 def create_db(pipe_configs: List[str]) -> Session:
     # create a database
     engine = create_engine('sqlite://')
@@ -27,6 +28,7 @@ def create_db(pipe_configs: List[str]) -> Session:
 class MockStore(DataStore):
     def __init__(self):
         self.stream_info = {}
+        self.nchunks = 3
 
     async def initialize(self, streams: List[Stream]):
         pass
@@ -39,11 +41,13 @@ class MockStore(DataStore):
                              loop: Loop) -> asyncio.Task:
         pass
 
+    def configure_extract(self, nchunks):
+        self.nchunks = nchunks
+
     async def extract(self, stream: Stream, start: int, end: int,
                       output: asyncio.Queue,
                       max_rows: int = None, decimation_level=None):
-        for x in range(3):
-            print("adding data...")
+        for x in range(self.nchunks):
             await output.put(helpers.create_data(stream.layout))
 
     async def remove(self, stream: Stream, start: int, end: int):

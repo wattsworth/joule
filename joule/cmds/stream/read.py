@@ -3,7 +3,6 @@ import dateparser
 import aiohttp
 import asyncio
 import requests
-import pdb
 
 from joule.cmds.config import pass_config
 from joule.models.stream import from_json
@@ -39,11 +38,12 @@ def read_data(config, start, end, max_rows, decimation_level, mark_intervals, st
                 pipe = InputPipe(stream=my_stream, reader=response.content)
                 try:
                     while True:
-                        data = await pipe.read()
+                        data = await pipe.read(flatten=True)
                         pipe.consume(len(data))
+                        # TODO: faster ASCII conversion?
                         for row in data:
-                            click.echo('%d ' % row['timestamp'], nl=False)
-                            click.echo(' '.join('%f' % x for x in row['data']))
+                            line = "%d %s" % (row[0], ' '.join('%f' % x for x in row[1:]))
+                            print(line)
                 except EmptyPipe:
                     pass
 
