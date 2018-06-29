@@ -1,6 +1,5 @@
 from joule.models.pipes import Pipe
 
-import pdb
 
 class OutputPipe(Pipe):
 

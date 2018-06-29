@@ -1,6 +1,6 @@
 import numpy as np
 import asyncio
-from typing import List, Union, Tuple, TYPE_CHECKING
+from typing import List, Union, Tuple, Callable, Coroutine, TYPE_CHECKING
 from abc import ABC, abstractmethod
 
 if TYPE_CHECKING:
@@ -20,7 +20,7 @@ class StreamInfo:
         self.rows = rows
 
     def to_json(self):
-        return{
+        return {
             "start": self.start,
             "end": self.end,
             "rows": self.rows
@@ -45,8 +45,8 @@ class DataStore(ABC):
 
     @abstractmethod
     async def extract(self, stream: 'Stream', start: int, end: int,
-                output: asyncio.Queue,
-                max_rows: int = None, decimation_level=None):
+                      callback: Callable[[np.ndarray], Coroutine],
+                      max_rows: int = None, decimation_level=None) -> (asyncio.Task, str):
         pass
 
     @abstractmethod

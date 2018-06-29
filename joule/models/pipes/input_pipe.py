@@ -1,6 +1,6 @@
 import numpy as np
-
-from joule.models.pipes import Pipe
+import sys
+from joule.models.pipes import Pipe, find_interval_token
 from joule.models.pipes.errors import PipeError, EmptyPipe
 
 
@@ -14,7 +14,8 @@ class InputPipe(Pipe):
         self.reader = reader
         self.close_cb = close_cb
         self.byte_buffer = b''
-        self._data = []
+        self.unprocessed_raw = []
+        self.interval_break = False
         # tunable constant
         self.BUFFER_SIZE = buffer_size
         self.buffer = np.zeros(self.BUFFER_SIZE, dtype=self.dtype)
@@ -30,25 +31,41 @@ class InputPipe(Pipe):
         if max_rows == 0:
             return self._format_data(self.buffer[:self.last_index], flatten)
 
-        if self.reader.at_eof():
-            raise EmptyPipe()
+        # Note: this assumes the interval token is always unbroken
+        # only get new data if we've processed everything we have
+        if len(self.unprocessed_raw) > 0:
+            raw = self.unprocessed_raw
+            self.unprocessed_raw = []
+        else:
+            if self.reader.at_eof():
+                raise EmptyPipe()
+            raw = await self.reader.read(max_rows * rowbytes)
 
-        raw = await self.reader.read(max_rows * rowbytes)
+        # check for an interval
+        self.interval_break = False
+        loc = find_interval_token(raw, self.layout)
+        if loc is not None:
+            self.unprocessed_raw = raw[loc[1]:]
+            raw = raw[:loc[0]]
+            self.interval_break = True
 
         extra_bytes = (len(raw) + len(self.byte_buffer)) % rowbytes
-        # TODO: optimize for common case where byte_buffer is empty
+
         if extra_bytes > 0:
             data = np.frombuffer(
                 self.byte_buffer + raw[:-extra_bytes], dtype=self.dtype)
             self.byte_buffer = raw[-extra_bytes:]
-        else:
+        elif len(self.byte_buffer) > 0:
             data = np.frombuffer(self.byte_buffer + raw, dtype=self.dtype)
             self.byte_buffer = b''
+        else:  # common case where byte_buffer is empty
+            data = np.frombuffer(raw, dtype=self.dtype)
+            self.byte_buffer = b''
+
         # append data onto buffer
         self.buffer[self.last_index:self.last_index + len(data)] = data
         self.last_index += len(data)
-        self._data = self._format_data(self.buffer[:self.last_index], flatten)
-        return self._data
+        return self._format_data(self.buffer[:self.last_index], flatten)
 
     def consume(self, num_rows):
         if num_rows == 0:
@@ -64,8 +81,8 @@ class InputPipe(Pipe):
         self.last_index -= num_rows
 
     @property
-    def data(self) -> np.array:
-        return self._data
+    def end_of_interval(self):
+        return self.interval_break
 
     def close(self):
         if self.close_cb is not None:

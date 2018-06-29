@@ -4,7 +4,7 @@ import numpy as np
 import asyncio
 import pdb
 
-from joule.models import folder, DataStore, Stream, InsufficientDecimationError
+from joule.models import folder, DataStore, Stream, InsufficientDecimationError, DataError
 
 
 async def read(request: web.Request):
@@ -39,25 +39,30 @@ async def read(request: web.Request):
         return web.Response(text="[max-rows] must be > 0", status=400)
 
     # create an extraction task
-    q = asyncio.Queue()
-    try:
-        task = data_store.extract(stream, params['start'], params['end'], q,
-                                  max_rows=params['max-rows'],
-                                  decimation_level=params['decimation-level'])
-    except InsufficientDecimationError as e:
-        return web.Response(text="decimated data is not available: %s" % e)
-    extractor = request.loop.create_task(task)
-
-    # send data in chunks
-    resp = web.StreamResponse(status=200)
-    resp.enable_chunked_encoding()
-    await resp.prepare(request)
-    while True:
-        data: np.array = await q.get()
+    resp = None
+    nrows = 0
+    async def send_data(data: np.ndarray, layout, decimated):
+        nonlocal resp, nrows
+        if resp is None:
+            resp = web.StreamResponse(status=200,
+                                      headers={'joule-layout': layout,
+                                               'joule-decimated': str(decimated)})
+            resp.enable_chunked_encoding()
+            await resp.prepare(request)
+        nrows+= len(data)
         await resp.write(data.tostring())
-        if extractor.done() and q.empty():
-            break
-    await extractor
+
+    try:
+        extractor = await data_store.extract(stream, params['start'], params['end'],
+                                             callback=send_data,
+                                             max_rows=params['max-rows'],
+                                             decimation_level=params['decimation-level'])
+        await extractor
+    except InsufficientDecimationError as e:
+        return web.Response(text="decimated data is not available: %s" % e, status=400)
+    except DataError as e:
+        return web.Response(text="read error: %s" % e, status=400)
+    print("sent %d rows" % nrows)
     return resp
 
 

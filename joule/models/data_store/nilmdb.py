@@ -5,7 +5,7 @@ import asyncio
 import re
 import pdb
 import numpy as np
-from typing import List, Dict, Optional, TYPE_CHECKING
+from typing import List, Dict, Optional, Callable, Coroutine
 from joule.models import Stream, pipes
 from joule.models.data_store.data_store import DataStore, StreamInfo, Data, Interval
 from joule.models.data_store import errors
@@ -62,8 +62,8 @@ class NilmdbStore(DataStore):
         return loop.create_task(inserter.run(queue, loop))
 
     async def extract(self, stream: Stream, start: int, end: int,
-                      output: asyncio.Queue, max_rows: int = None,
-                      decimation_level=None):
+                      callback: Callable[[np.ndarray], Coroutine], max_rows: int = None,
+                      decimation_level=None) -> Coroutine:
         # figure out appropriate decimation level
         if decimation_level is None:
             if max_rows is None:
@@ -84,7 +84,7 @@ class NilmdbStore(DataStore):
                 except errors.DataError as e:
                     if ERRORS.NO_SUCH_STREAM.value in str(e):
                         # no decimated data or required level does not exist
-                        raise errors.InsufficientDecimationError("required level does not exist")
+                        raise errors.InsufficientDecimationError("required level %d does not exist" % decimation_level)
                     raise e  # some other error, propogate it up
         elif max_rows is not None:
             # two constraints, make sure we aren't going to return too much data
@@ -99,7 +99,7 @@ class NilmdbStore(DataStore):
             layout = stream.decimated_layout
         else:
             layout = stream.layout
-        await self._extract_by_path(path, start, end, layout, output)
+        return self._extract_by_path(path, start, end, layout, callback)
 
     async def intervals(self, stream: Stream, start: Optional[int], end: Optional[int]):
         return await self._intervals_by_path(compute_path(stream),
@@ -121,26 +121,32 @@ class NilmdbStore(DataStore):
         return info_dict[path]
 
     async def _extract_by_path(self, path: str, start: Optional[int], end: Optional[int],
-                               layout: str, output: asyncio.Queue = None):
+                               layout: str, callback):
         url = "{server}/stream/extract".format(server=self.server)
         params = {"path": path,
                   "binary": 1}
-        if start is not None:
-            params["start"] = start
-        if end is not None:
-            params["end"] = end
+        decimated = False
+        if re.search('~decim-(\d)+$', path):
+            decimated = True
         async with self._get_client() as session:
-            async with session.get(url, params=params) as resp:
-                await check_for_error(resp)
-                # put data into the queue as it arrives
-                reader = pipes.InputPipe(layout=layout, reader=resp.content)
-                while True:
-                    try:
-                        data = await reader.read()
-                        await output.put(data)
-                        reader.consume(len(data))
-                    except pipes.EmptyPipe:
-                        break
+            # first determine the intervals
+            intervals = await self._intervals_by_path(path, start, end)
+            # now extract each interval
+            for interval in intervals:
+                params["start"] = interval[0]
+                params["end"] = interval[1]
+                async with session.get(url, params=params) as resp:
+                    await check_for_error(resp)
+                    # put data into the queue as it arrives
+                    reader = pipes.InputPipe(layout=layout, reader=resp.content)
+                    while True:
+                        try:
+                            data = await reader.read()
+                            await callback(data, layout, decimated)
+                            reader.consume(len(data))
+                        except pipes.EmptyPipe:
+                            break
+                await callback(pipes.interval_token(layout), layout, decimated)
 
     async def _intervals_by_path(self, path: str, start: Optional[int],
                                  end: Optional[int]) -> List[Interval]:

@@ -107,3 +107,20 @@ class Pipe:
             msg += "[None]"
         msg += '>'
         return msg
+
+
+def interval_token(layout):
+    stub = Pipe(layout=layout)
+    nelem = int(layout.split('_')[1])
+    token = np.zeros(1, dtype=stub.dtype)
+    token['timestamp'] = 0
+    token['data'] = np.zeros(nelem)
+    return token
+
+
+def find_interval_token(raw: bytes, layout):
+    token = interval_token(layout).tostring()
+    index = raw.find(token)
+    if index == -1:
+        return None
+    return index, index + len(token)

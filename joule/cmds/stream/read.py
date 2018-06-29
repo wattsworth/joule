@@ -1,8 +1,10 @@
 import click
 import dateparser
 import aiohttp
+from aiohttp import web
 import asyncio
 import requests
+import pdb
 
 from joule.cmds.config import pass_config
 from joule.models.stream import from_json
@@ -10,14 +12,15 @@ from joule.models.pipes import InputPipe, EmptyPipe
 
 
 @click.command(name="read-data")
-@click.option("--start")
-@click.option("--end")
-@click.option("--max-rows", type=int)
-@click.option("--decimation-level", type=int)
-@click.option("--mark-intervals", default=False)
+@click.option("--start", help="timestamp or descriptive string")
+@click.option("--end", help="timestamp or descriptive string")
+@click.option("--max-rows", help="limit response data", type=int)
+@click.option("--decimation-level", help="specify a particular decimation", type=int)
+@click.option("--show-bounds", is_flag=True, help="include min/max for decimated data")
+@click.option("--mark-intervals", help="include [# interval break] tags", is_flag=True)
 @click.argument("stream")
 @pass_config
-def read_data(config, start, end, max_rows, decimation_level, mark_intervals, stream):
+def read_data(config, start, end, max_rows, decimation_level, show_bounds, mark_intervals, stream):
     params = {"path": stream}
     if start is not None:
         params['start'] = int(dateparser.parse(start).timestamp() * 1e6)
@@ -28,22 +31,32 @@ def read_data(config, start, end, max_rows, decimation_level, mark_intervals, st
     if decimation_level is not None:
         params['decimation-level'] = decimation_level
 
-    # get the stream object so we can decode the data
-    resp = requests.get(config.url + "/stream.json", params={"path": stream})
-    my_stream = from_json(resp.json()["stream"])
-
     async def _get_data():
         async with aiohttp.ClientSession() as session:
             async with session.get(config.url + "/data", params=params) as response:
-                pipe = InputPipe(stream=my_stream, reader=response.content)
+                if response.status != 200:
+                    msg = await response.text()
+                    click.echo("ERROR: %s" % msg, err=True)
+                    return
+                decimated = False
+                if response.headers['joule-decimated'] == 'True':
+                    decimated = True
+
+                pipe = InputPipe(layout=response.headers['joule-layout'],
+                                 reader=response.content)
                 try:
                     while True:
                         data = await pipe.read(flatten=True)
+                        if decimated and not show_bounds:
+                            # suppress the bound information
+                            ncols = (data.shape[1] - 1) // 3 + 1
+                            data = data[:, :ncols]
                         pipe.consume(len(data))
-                        # TODO: faster ASCII conversion?
                         for row in data:
                             line = "%d %s" % (row[0], ' '.join('%f' % x for x in row[1:]))
-                            print(line)
+                            click.echo(line)
+                        if pipe.end_of_interval and mark_intervals:
+                            click.echo("# interval break")
                 except EmptyPipe:
                     pass
 

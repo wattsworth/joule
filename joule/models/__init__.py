@@ -4,7 +4,7 @@ from joule.models.folder import Folder
 from joule.models.module import Module
 from joule.models.worker import Worker
 from joule.models.data_store.data_store import DataStore, StreamInfo
-from joule.models.data_store.errors import InsufficientDecimationError
+from joule.models.data_store.errors import InsufficientDecimationError, DataError
 from joule.models.data_store.nilmdb import NilmdbStore
 from joule.models.subscription import Subscription
 from joule.models.supervisor import Supervisor
