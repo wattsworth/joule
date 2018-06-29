@@ -5,9 +5,14 @@ import asyncio
 import pdb
 
 from joule.models import folder, DataStore, Stream, InsufficientDecimationError, DataError
+from joule.models import pipes
 
 
-async def read(request: web.Request):
+async def read_json(request: web.Request):
+    return await read(request, json=True)
+
+
+async def read(request: web.Request, json=False):
     db: Session = request.app["db"]
     data_store: DataStore = request.app["data-store"]
     # find the requested stream
@@ -38,23 +43,48 @@ async def read(request: web.Request):
     if params['decimation-level'] is not None and params['decimation-level'] <= 0:
         return web.Response(text="[max-rows] must be > 0", status=400)
 
-    # create an extraction task
+    # --- Binary Streaming Handler ---
     resp = None
-    nrows = 0
-    async def send_data(data: np.ndarray, layout, decimated):
-        nonlocal resp, nrows
+
+    async def stream_data(data: np.ndarray, layout, decimated):
+        nonlocal resp
         if resp is None:
             resp = web.StreamResponse(status=200,
                                       headers={'joule-layout': layout,
                                                'joule-decimated': str(decimated)})
             resp.enable_chunked_encoding()
             await resp.prepare(request)
-        nrows+= len(data)
         await resp.write(data.tostring())
 
+    # --- JSON Handler ---
+
+    data_blocks = []  # array of data segments
+    data_segment = None
+    is_decimated = False
+
+    async def retrieve_data(data: np.ndarray, layout, decimated):
+        nonlocal data_blocks, data_segment, is_decimated
+        if decimated:
+            is_decimated = True
+        if np.array_equal(data, pipes.interval_token(layout)):
+            data_blocks.append(data_segment.tolist())
+            data_segment = None
+        else:
+            data = np.c_[data['timestamp'][:, None], data['data']]
+            if data_segment is None:
+                data_segment = data
+            else:
+                data_segment = np.vstack((data_segment, data))
+
+    if json:
+        callback = retrieve_data
+    else:
+        callback = stream_data
+
+    # create an extraction task
     try:
         extractor = await data_store.extract(stream, params['start'], params['end'],
-                                             callback=send_data,
+                                             callback=callback,
                                              max_rows=params['max-rows'],
                                              decimation_level=params['decimation-level'])
         await extractor
@@ -62,8 +92,11 @@ async def read(request: web.Request):
         return web.Response(text="decimated data is not available: %s" % e, status=400)
     except DataError as e:
         return web.Response(text="read error: %s" % e, status=400)
-    print("sent %d rows" % nrows)
-    return resp
+
+    if json:
+        return web.json_response({"data": data_blocks, "decimated": is_decimated})
+    else:
+        return resp
 
 
 async def write(request):

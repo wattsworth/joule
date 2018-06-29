@@ -23,6 +23,7 @@ routes = [
     web.delete('/folder', folder_controller.delete),
     # --- data routes ---
     web.get('/data', data_controller.read),
+    web.get('/data.json', data_controller.read_json),
     web.post('/data', data_controller.write),
     # --- module routes ---
     web.get('/modules', module_controller.index),
