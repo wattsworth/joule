@@ -6,7 +6,7 @@ import time
 from typing import List, Callable
 import pdb
 
-from joule.models import Stream
+from joule.models import Stream, pipes
 from joule.models.data_store import errors
 from joule.models.data_store.nilmdb_helpers import compute_path, ERRORS, check_for_error
 
@@ -31,7 +31,7 @@ class Inserter:
         self.cleanup_period = cleanup_period + cleanup_period*random.random()*0.25
         self._get_client = session_factory
 
-    async def run(self, queue: asyncio.Queue, loop: Loop) -> None:
+    async def run(self, pipe: pipes.InputPipe, loop: Loop) -> None:
         """insert stream data from the queue until the queue is empty"""
         decimator_queue = asyncio.Queue()
         decimator_task: asyncio.Task = None
@@ -43,14 +43,20 @@ class Inserter:
             cleaner_task = loop.create_task(self._clean())
         try:
             async with self._get_client() as session:
+                last_ts = None
                 while True:
                     await asyncio.sleep(self.insert_period)
-                    (start, end, data) = await self._process(queue)
-                    if data is None:
-                        self._close_interval()
-                        continue  # process the rest of the data in the queue
-                    if len(data) == 0:
-                        continue  # nothing to insert
+                    data = await pipe.read()
+                    if last_ts is not None:
+                        start = last_ts
+                    else:
+                        start = data['timestamp'][0]
+                    end = data['timestamp'][-1] + 1
+                    last_ts = end
+                    if pipe.end_of_interval:
+                        self.last_ts = None
+                        if self.decimator is not None:
+                            self.decimator.close_interval()
                     # lazy initialization of decimator
                     if self.stream.decimate and self.decimator is None:
                         self.decimator = NilmdbDecimator(self.server, self.stream, 1, 4,
@@ -68,6 +74,8 @@ class Inserter:
                             raise errors.DataError("NilmDB error: %s" % error)
                     await decimator_queue.put(data)
         except asyncio.CancelledError:
+            pass
+        except pipes.EmptyPipe:
             pass
         if decimator_task is not None:
             decimator_task.cancel()

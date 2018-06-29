@@ -16,6 +16,7 @@ routes = [
     web.get('/stream.json', stream_controller.info),
     web.put('/stream/move.json', stream_controller.move),
     web.put('/stream.json', stream_controller.update),
+    web.post('/stream.json', stream_controller.create),
     web.delete('/stream.json', stream_controller.delete),
     # --- folder routes ---
     web.post('/folder', folder_controller.create),

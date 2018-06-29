@@ -1,6 +1,7 @@
 from aiohttp import web
 from sqlalchemy.orm import Session
-from joule.models import Stream, Folder, DataStore
+from joule.models import Stream, Folder, DataStore, stream
+import json
 from typing import List, Optional
 import pdb
 
@@ -56,6 +57,28 @@ async def move(request: web.Request):
     destination.streams.append(stream)
     db.commit()
     return web.json_response({"stream": stream.to_json()})
+
+
+async def create(request):
+    db: Session = request.app["db"]
+    body = await request.post()
+    if 'path' not in body:
+        return web.Response(text="specify a path", status=400)
+    path = body['path']
+    if 'stream' not in body:
+        return web.Response(text="provide a stream", status=400)
+    try:
+        new_stream = stream.from_json(json.loads(body['stream']))
+        # clear out the id's
+        new_stream.id = None
+        for elem in new_stream.elements:
+            elem.id = None
+        destination = folder.find_or_create(path, db)
+        destination.streams.append(new_stream)
+        db.commit()
+    except ValueError as e:
+        return web.Response(text=e, status=400)
+    return web.json_response(data=new_stream.to_json())
 
 
 async def update(request):

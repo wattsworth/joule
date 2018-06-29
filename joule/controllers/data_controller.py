@@ -100,4 +100,5 @@ async def read(request: web.Request, json=False):
 
 
 async def write(request):
+    print("ok I need to store this data!")
     return web.Response(text="TODO")

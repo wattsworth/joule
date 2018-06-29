@@ -1,13 +1,9 @@
 import click
 import dateparser
 import aiohttp
-from aiohttp import web
 import asyncio
-import requests
-import pdb
 
 from joule.cmds.config import pass_config
-from joule.models.stream import from_json
 from joule.models.pipes import InputPipe, EmptyPipe
 
 

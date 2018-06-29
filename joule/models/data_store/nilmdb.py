@@ -55,11 +55,12 @@ class NilmdbStore(DataStore):
                         raise errors.DataError(error["message"])
                     raise Exception(resp)
 
+    # TODO: change to accepting a DataPipe instead of a queue
     def spawn_inserter(self, stream: Stream,
-                       queue: asyncio.Queue, loop: Loop) -> asyncio.Task:
+                       pipe: pipes.InputPipe, loop: Loop) -> asyncio.Task:
         inserter = Inserter(self.server, stream,
                             self.insert_period, self.cleanup_period, self._get_client)
-        return loop.create_task(inserter.run(queue, loop))
+        return loop.create_task(inserter.run(pipe, loop))
 
     async def extract(self, stream: Stream, start: int, end: int,
                       callback: Callable[[np.ndarray], Coroutine], max_rows: int = None,

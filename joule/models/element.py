@@ -40,6 +40,7 @@ class Element(Base):
     def to_json(self):
         return {
             'id': self.id,
+            'index': self.index,
             'name': self.name,
             'units': self.units,
             'plottable': self.plottable,
@@ -53,6 +54,7 @@ class Element(Base):
 
 def from_json(data: Dict) -> Element:
     return Element(id=data["id"],
+                   index=data["index"],
                    name=data["name"],
                    units=data["units"],
                    plottable=data["plottable"],
