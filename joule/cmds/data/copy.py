@@ -10,13 +10,13 @@ from joule.cmds.config import pass_config
 from joule.models import stream, Stream, pipes, StreamInfo
 
 
-@click.command(name="copy-data")
+@click.command(name="copy")
 @click.option("--start", help="timestamp or descriptive string")
 @click.option("--end", help="timestamp or descriptive string")
 @click.argument("source")
 @click.argument("destination")
 @pass_config
-def copy_data(config, start, end, source, destination):
+def data_copy(config, start, end, source, destination):
     # retrieve the source stream
     resp = requests.get(config.url + "/stream.json", params={"path": source})
     if resp.status_code != 200:

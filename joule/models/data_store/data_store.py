@@ -1,12 +1,12 @@
 import numpy as np
 import asyncio
-from typing import List, Union, Tuple, Callable, Coroutine, TYPE_CHECKING
+from typing import List, Union, Tuple, Optional, Callable, Coroutine, TYPE_CHECKING
 from abc import ABC, abstractmethod
 
 from joule.models import pipes
 
 if TYPE_CHECKING:
-    from joule.models import Stream, Subscription
+    from joule.models import Stream
 
 Loop = asyncio.AbstractEventLoop
 # starting and ending timestamps
@@ -46,13 +46,17 @@ class DataStore(ABC):
         pass
 
     @abstractmethod
-    async def extract(self, stream: 'Stream', start: int, end: int,
+    async def extract(self, stream: 'Stream', start: Optional[int], end: Optional[int],
                       callback: Callable[[np.ndarray], Coroutine],
                       max_rows: int = None, decimation_level=None) -> (asyncio.Task, str):
         pass
 
     @abstractmethod
-    async def remove(self, stream: 'Stream', start: int, end: int):
+    async def remove(self, stream: 'Stream', start: Optional[int], end: Optional[int]):
+        pass
+
+    @abstractmethod
+    async def destroy(self, stream):
         pass
 
     @abstractmethod

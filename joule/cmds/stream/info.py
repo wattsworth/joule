@@ -21,6 +21,7 @@ def stream_info(config, path):
     click.echo("\tDescription:  %s" % _optional_field(my_stream.description))
     click.echo("\tDatatype:     %s" % my_stream.datatype.name.lower())
     click.echo("\tKeep:         %s" % _display_keep(my_stream.keep_us))
+    click.echo("\tDecimate:     %s" % _display_decimate(my_stream.decimate))
     click.echo()
     # display information from the data store
     my_info: StreamInfo = StreamInfo(**json["data-info"])
@@ -41,6 +42,13 @@ def stream_info(config, path):
     click.echo(tabulate(elem_data, headers=["Name", "Units", "Display", "Min,Max"],
                         stralign="center",
                         tablefmt="fancy_grid"))
+
+
+def _display_decimate(decimate: bool) -> str:
+    if decimate:
+        return "yes"
+    else:
+        return "no"
 
 
 def _display_keep(keep: int) -> str:

@@ -8,7 +8,7 @@ from joule.cmds.config import pass_config
 
 @click.command(name="list")
 @pass_config
-def list_streams(config):
+def stream_list(config):
     json = _get(config.url+"/streams.json")
     json["name"] = config.url
     tree = Tree()

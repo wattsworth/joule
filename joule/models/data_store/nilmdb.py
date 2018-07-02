@@ -64,7 +64,7 @@ class NilmdbStore(DataStore):
                             insert_period, self.cleanup_period, self._get_client)
         return loop.create_task(inserter.run(pipe, loop))
 
-    async def extract(self, stream: Stream, start: int, end: int,
+    async def extract(self, stream: Stream, start: Optional[int], end: Optional[int],
                       callback: Callable[[np.ndarray], Coroutine], max_rows: int = None,
                       decimation_level=None) -> Coroutine:
         # figure out appropriate decimation level
@@ -108,7 +108,8 @@ class NilmdbStore(DataStore):
         return await self._intervals_by_path(compute_path(stream),
                                              start, end)
 
-    async def remove(self, stream, start, end):
+    async def remove(self, stream, start: Optional[int]= None,
+                     end: Optional[int]=None):
         """ remove [start,end] in path and all decimations """
         info = await self._path_info()
         all_paths = info.keys()
@@ -122,6 +123,20 @@ class NilmdbStore(DataStore):
         path = compute_path(stream)
         info_dict = await self._path_info(path)
         return info_dict[path]
+
+    async def destroy(self, stream: Stream):
+        await self.remove(stream)
+        url = "{server}/stream/destroy".format(server=self.server)
+        info = await self._path_info()
+        all_paths = info.keys()
+        base_path = compute_path(stream)
+        regex = re.compile("%s~decim-(\d)+$" % base_path)
+        decim_paths = list(filter(regex.match, all_paths))
+        async with self._get_client() as session:
+            for path in [base_path, *decim_paths]:
+                async with session.post(url, data={"path": path}) as resp:
+                    await check_for_error(resp)
+        return web.Response(text="ok")
 
     async def _extract_by_path(self, path: str, start: Optional[int], end: Optional[int],
                                layout: str, callback):

@@ -9,7 +9,7 @@ from joule.cmds.config import pass_config
 @click.argument("stream")
 @click.argument("destination")
 @pass_config
-def move_stream(config, stream, destination):
+def stream_move(config, stream, destination):
     data = {
         "path": stream,
         "destination": destination

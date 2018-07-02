@@ -45,16 +45,15 @@ async def read(request: web.Request, json=False):
 
     # --- Binary Streaming Handler ---
     resp = None
-    chunk_count = 0
+
     async def stream_data(data: np.ndarray, layout, decimated):
-        nonlocal resp, chunk_count
+        nonlocal resp
         if resp is None:
             resp = web.StreamResponse(status=200,
                                       headers={'joule-layout': layout,
                                                'joule-decimated': str(decimated)})
             resp.enable_chunked_encoding()
             await resp.prepare(request)
-        chunk_count += 1
         await resp.write(data.tostring())
 
     # --- JSON Handler ---
@@ -116,4 +115,37 @@ async def write(request: web.Request):
     pipe = pipes.InputPipe(name="inbound", stream=stream, reader=request.content)
     task = data_store.spawn_inserter(stream, pipe, request.loop, insert_period=0)
     await task
+    return web.Response(text="ok")
+
+
+async def remove(request: web.Request):
+    db: Session = request.app["db"]
+    data_store: DataStore = request.app["data-store"]
+    # find the requested stream
+    if 'path' in request.query:
+        stream = folder.find_stream_by_path(request.query['path'], db)
+    elif 'id' in request.query:
+        stream = db.query(Stream).get(request.query["id"])
+    else:
+        return web.Response(text="specify an id or a path", status=400)
+    if stream is None:
+        return web.Response(text="stream does not exist", status=404)
+
+    # parse time bounds
+    start = None
+    end = None
+    try:
+        if 'start' in request.query:
+            start = int(request.query['start'])
+        if 'end' in request.query:
+            end = int(request.query['end'])
+    except ValueError:
+        return web.Response(text="[start] and [end] must be integers", status=400)
+
+    # make sure bounds make sense
+    if ((start is not None and end is not None) and
+            (start >= end)):
+        return web.Response(text="[start] must be < [end]", status=400)
+
+    await data_store.remove(stream, start, end)
     return web.Response(text="ok")

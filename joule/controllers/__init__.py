@@ -26,6 +26,7 @@ routes = [
     web.get('/data', data_controller.read),
     web.get('/data.json', data_controller.read_json),
     web.post('/data', data_controller.write),
+    web.delete('/data', data_controller.remove),
     # --- module routes ---
     web.get('/modules', module_controller.index),
     web.get('/module', module_controller.show),

@@ -7,7 +7,7 @@ from joule.cmds.config import pass_config
 from joule.models.pipes import InputPipe, EmptyPipe
 
 
-@click.command(name="read-data")
+@click.command(name="read")
 @click.option("--start", help="timestamp or descriptive string")
 @click.option("--end", help="timestamp or descriptive string")
 @click.option("--max-rows", help="limit response data", type=int)
@@ -16,7 +16,7 @@ from joule.models.pipes import InputPipe, EmptyPipe
 @click.option("--mark-intervals", help="include [# interval break] tags", is_flag=True)
 @click.argument("stream")
 @pass_config
-def read_data(config, start, end, max_rows, decimation_level, show_bounds, mark_intervals, stream):
+def data_read(config, start, end, max_rows, decimation_level, show_bounds, mark_intervals, stream):
     params = {"path": stream}
     if start is not None:
         params['start'] = int(dateparser.parse(start).timestamp() * 1e6)

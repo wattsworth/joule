@@ -87,6 +87,19 @@ async def update(request):
 
 
 async def delete(request):
-    return web.Response(text="TODO",
-                        content_type='application/json')
+    db: Session = request.app["db"]
+    data_store: DataStore = request.app["data-store"]
+    # find the requested stream
+    if 'path' in request.query:
+        stream = folder.find_stream_by_path(request.query['path'], db)
+    elif 'id' in request.query:
+        stream = db.query(Stream).get(request.query["id"])
+    else:
+        return web.Response(text="specify an id or a path", status=400)
+    if stream is None:
+        return web.Response(text="stream does not exist", status=404)
+    await data_store.destroy(stream)
+    db.delete(stream)
+    db.commit()
+    return web.Response(text="ok")
 

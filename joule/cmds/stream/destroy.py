@@ -1,11 +1,15 @@
 import click
-
+import requests
 from joule.cmds.config import pass_config
 
 
 @click.command(name="destroy")
-@click.argument("source")
-@click.argument("destination")
+@click.argument("stream")
 @pass_config
-def destroy_stream(config, stream):
-    print("Destroy stream %s?" % (stream))
+def stream_destroy(config, stream):
+    click.confirm("Destroy stream [%s]?" % stream, abort=True)
+    resp = requests.delete(config.url+"/stream.json", params={"path": stream})
+    if resp.status_code != 200:
+        click.echo("ERROR: "+resp.text, err=True)
+    else:
+        click.echo("OK")
