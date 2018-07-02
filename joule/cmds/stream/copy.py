@@ -7,7 +7,7 @@ import asyncio
 import json
 
 from joule.cmds.config import pass_config
-from joule.models import stream, Stream
+from joule.models import stream, Stream, pipes, StreamInfo
 
 
 @click.command(name="copy-data")
@@ -23,6 +23,7 @@ def copy_data(config, start, end, source, destination):
         click.echo("source error: %s" % resp.content.decode(), err=True)
         return
     src_stream = stream.from_json(resp.json()['stream'])
+    src_info: StreamInfo = StreamInfo(**resp.json()['data-info'])
 
     # retrieve the destination stream (create it if necessary)
     resp = requests.get(config.url + "/stream.json", params={"path": destination})
@@ -32,11 +33,11 @@ def copy_data(config, start, end, source, destination):
         dest_stream = stream.from_json(src_stream.to_json())
         dest_stream.keep_us = Stream.KEEP_ALL
         dest_stream.name = destination.split("/")[-1]
-        data = {
+        body = {
             "path": "/".join(destination.split("/")[:-1]),
             "stream": json.dumps(dest_stream.to_json())
         }
-        resp = requests.post(config.url + "/stream.json", data=data)
+        resp = requests.post(config.url + "/stream.json", data=body)
         if resp.status_code != 200:
             click.echo("destination error: %s" % resp.content.decode(), err=True)
             return
@@ -70,6 +71,13 @@ def copy_data(config, start, end, source, destination):
     if end is not None:
         params['end'] = int(dateparser.parse(end).timestamp() * 1e6)
 
+    # figure out the duration for the progress bar
+    if start is None:
+        start = src_info.start
+    if end is None:
+        end = src_info.end
+    duration = end - start
+
     async def _copy_data():
         async with aiohttp.ClientSession() as session:
             async with session.get(config.url + "/data", params=params) as src_response:
@@ -77,8 +85,33 @@ def copy_data(config, start, end, source, destination):
                     msg = await src_response.text()
                     click.echo("Error reading from source: %s" % msg)
                     return
-                print("starting the writer!")
-                async with session.post(config.url + "/data", data=src_response.content) as dest_response:
+
+                pipe = pipes.InputPipe(stream=dest_stream, reader=src_response.content)
+
+                async def _data_sender():
+                    with click.progressbar(
+                            label='Copying data',
+                            length=duration) as bar:
+                        last_ts = start
+                        try:
+                            while True:
+                                data = await pipe.read()
+                                pipe.consume(len(data))
+                                if len(data) > 0:
+                                    cur_ts = data[-1]['timestamp']
+                                    yield data.tostring()
+                                    # total time extents of this chunk
+                                    bar.update(cur_ts-last_ts)
+                                    last_ts = cur_ts
+                                if pipe.end_of_interval:
+                                    yield pipes.interval_token(dest_stream.layout). \
+                                        tostring()
+                        except pipes.EmptyPipe:
+                            pass
+                        bar.update(end-last_ts)
+                async with session.post(config.url + "/data",
+                                        params={"id": dest_stream.id},
+                                        data=_data_sender()) as dest_response:
                     if dest_response.status != 200:
                         msg = await dest_response.text()
                         click.echo("Error writing to destination: %s" % msg)

@@ -24,17 +24,14 @@ class Inserter:
         self.server = server  # save for initializing decimators
         self.stream = stream
         self.path = compute_path(stream)
-        self.decimator: NilmdbDecimator = None
-        self.last_ts = None
         # add offsets to the period to distribute traffic
-        self.insert_period = insert_period + insert_period*random.random()*0.5
-        self.cleanup_period = cleanup_period + cleanup_period*random.random()*0.25
+        self.insert_period = insert_period + insert_period * random.random() * 0.5
+        self.cleanup_period = cleanup_period + cleanup_period * random.random() * 0.25
         self._get_client = session_factory
+        self.decimator = None
 
     async def run(self, pipe: pipes.InputPipe, loop: Loop) -> None:
         """insert stream data from the queue until the queue is empty"""
-        decimator_queue = asyncio.Queue()
-        decimator_task: asyncio.Task = None
         cleaner_task: asyncio.Task = None
         # create the database path
         # lazy stream creation
@@ -47,67 +44,43 @@ class Inserter:
                 while True:
                     await asyncio.sleep(self.insert_period)
                     data = await pipe.read()
-                    if last_ts is not None:
-                        start = last_ts
-                    else:
-                        start = data['timestamp'][0]
-                    end = data['timestamp'][-1] + 1
-                    last_ts = end
+                    pipe.consume(len(data))
+                    # there might be an interval break and no new data
+                    if len(data) > 0:
+                        if last_ts is not None:
+                            start = last_ts
+                        else:
+                            start = data['timestamp'][0]
+                        end = data['timestamp'][-1] + 1
+                        last_ts = end
+                        # lazy initialization of decimator
+                        if self.stream.decimate and self.decimator is None:
+                            self.decimator = NilmdbDecimator(self.server, self.stream, 1, 4,
+                                                             self._get_client)
+                        # send the data
+                        params = {"start": "%d" % start,
+                                  "end": "%d" % end,
+                                  "path": self.path,
+                                  "binary": '1'}
+                        async with session.put(self.insert_url, params=params,
+                                               data=data.tostring()) as resp:
+                            if resp.status != 200:
+                                error = await resp.text()
+                                raise errors.DataError("NilmDB error: %s" % error)
+                        # decimate the data
+                        await self.decimator.process(data)
+                    # check for interval breaks
                     if pipe.end_of_interval:
-                        self.last_ts = None
+                        last_ts = None
                         if self.decimator is not None:
                             self.decimator.close_interval()
-                    # lazy initialization of decimator
-                    if self.stream.decimate and self.decimator is None:
-                        self.decimator = NilmdbDecimator(self.server, self.stream, 1, 4,
-                                                         self._get_client)
-                        decimator_task = loop.create_task(self.decimator.run(decimator_queue, loop))
-                    # send the data
-                    params = {"start": "%d" % start,
-                              "end": "%d" % end,
-                              "path": self.path,
-                              "binary": '1'}
-                    async with session.put(self.insert_url, params=params,
-                                           data=data.tostring()) as resp:
-                        if resp.status != 200:
-                            error = await resp.text()
-                            raise errors.DataError("NilmDB error: %s" % error)
-                    await decimator_queue.put(data)
         except asyncio.CancelledError:
             pass
         except pipes.EmptyPipe:
             pass
-        if decimator_task is not None:
-            decimator_task.cancel()
-            await decimator_task
         if cleaner_task is not None:
             cleaner_task.cancel()
             await cleaner_task
-
-    async def _process(self, queue: asyncio.Queue) -> (int, int, np.array):
-        buffer = []
-        start = None
-        end = None
-        while not queue.empty():
-            data = await queue.get()
-            if data is None:
-                return 0, 0, None  # indicates a break in the data
-            if len(buffer) == 0:
-                buffer = np.array(data)
-            else:
-                buffer = np.append(buffer, data, axis=0)
-            if self.last_ts is not None:
-                start = self.last_ts
-            else:
-                start = buffer['timestamp'][0]
-            end = buffer['timestamp'][-1]+1
-            self.last_ts = end
-        return start, end, buffer
-
-    async def _close_interval(self):
-        self.last_ts = 0
-        if self.decimator is not None:
-            self.decimator.close_interval()
 
     async def _create_path(self):
         data = {"path": compute_path(self.stream),
@@ -121,7 +94,7 @@ class Inserter:
             async with aiohttp.ClientSession() as session:
                 while True:
                     await asyncio.sleep(self.cleanup_period)
-                    keep_time = int(time.time()*1e6) - self.stream.keep_us
+                    keep_time = int(time.time() * 1e6) - self.stream.keep_us
                     # remove raw data
                     params = {"start": "%d" % 0,
                               "end": "%d" % keep_time,
@@ -146,7 +119,7 @@ class NilmdbDecimator:
     def __init__(self, server: str, stream: Stream, from_level: int, factor: int,
                  session_factory: Callable[[], aiohttp.ClientSession]):
         self.stream = stream
-        self.level = from_level*factor
+        self.level = from_level * factor
         self.insert_url = "{server}/stream/insert".format(server=server)
         self.create_url = "{server}/stream/create".format(server=server)
         self.server = server
@@ -159,45 +132,46 @@ class NilmdbDecimator:
         self.layout = stream.decimated_layout
         self.buffer = []
         self.last_ts = None
+        self.path_created = False
         self.child: NilmdbDecimator = None
         self._get_client = session_factory
         # hold off to rate limit NilmDB traffic
-        self.holdoff = 0 #random.random()
+        self.holdoff = 0  # random.random()
 
-    async def run(self, queue: asyncio.Queue, loop: Loop) -> None:
+    async def process(self, data: np.ndarray) -> None:
         """insert stream data from the queue until the queue is empty"""
-        await self._create_path()
-        child_queue = asyncio.Queue()
-        child_task: asyncio.Task = None
+        if not self.path_created:
+            await self._create_path()
+            self.path_created = True
         try:
             async with self._get_client() as session:
-                while True:
-                    data = await queue.get()
-                    (start, end, decim_data) = self._process(data)
-                    if len(decim_data) == 0:
-                        continue
-                    # lazy initialization of child
-                    if self.child is None:
-                        self.child = NilmdbDecimator(self.server, self.stream, self.level,
-                                                     self.factor, self._get_client)
-                        child_task = loop.create_task(self.child.run(child_queue, loop))
-                    params = {"start": "%d" % start,
-                              "end": "%d" % end,
-                              "path": self.path,
-                              "binary": '1'}
-                    async with session.put(self.insert_url, params=params,
-                                           data=decim_data.tostring()) as resp:
-                        if resp.status != 200:
-                            error = await resp.text()
-                            raise errors.DataError("NilmDB error: %s" % error)
-                    # feed data to child decimator
-                    await child_queue.put(decim_data)
-                    await asyncio.sleep(self.holdoff)
+                decim_data = self._process(data)
+                if len(decim_data) == 0:
+                    return
+                if self.last_ts is not None:
+                    start = self.last_ts
+                else:
+                    start = decim_data['timestamp'][0]
+                end = decim_data['timestamp'][-1] + 1
+                self.last_ts = end
+                # lazy initialization of child
+                if self.child is None:
+                    self.child = NilmdbDecimator(self.server, self.stream, self.level,
+                                                 self.factor, self._get_client)
+                params = {"start": "%d" % start,
+                          "end": "%d" % end,
+                          "path": self.path,
+                          "binary": '1'}
+                async with session.put(self.insert_url, params=params,
+                                       data=decim_data.tostring()) as resp:
+                    if resp.status != 200:
+                        error = await resp.text()
+                        raise errors.DataError("NilmDB error: %s" % error)
+                # feed data to child decimator
+                await self.child.process(decim_data)
+                await asyncio.sleep(self.holdoff)
         except asyncio.CancelledError:
             pass
-        if child_task is not None:
-            child_task.cancel()
-            await child_task
 
     def close_interval(self):
         self.buffer = []
@@ -211,7 +185,7 @@ class NilmdbDecimator:
             paths = paths + self.child.get_paths()
         return paths
 
-    def _process(self, sarray: np.array) -> (int, int, np.array):
+    def _process(self, sarray: np.ndarray) -> np.ndarray:
 
         # flatten structured array
         data = np.c_[sarray['timestamp'][:, None], sarray['data']]
@@ -242,7 +216,7 @@ class NilmdbDecimator:
 
         if n == 0:  # not enough data to work with, save it for later
             self.buffer = data
-            return None, None, []
+            return np.array([])
 
         trunc_data = data[:n, :]
         # keep the leftover data
@@ -256,14 +230,6 @@ class NilmdbDecimator:
                     np.min(trunc_data[:, :, min_col], axis=1),
                     np.max(trunc_data[:, :, max_col], axis=1)]
 
-        # set up the interval
-        if self.last_ts is None:
-            self.last_ts = data[0, 0]
-
-        start = self.last_ts
-        end = data[n - 1, 0] + 1
-        self.last_ts = end
-
         # structure the array
         width = np.shape(out)[1] - 1
         dtype = np.dtype([('timestamp', '<i8'), ('data', '<f4', width)])
@@ -271,7 +237,7 @@ class NilmdbDecimator:
         sout['timestamp'] = out[:, 0]
         sout['data'] = out[:, 1:]
         # insert the data into the database
-        return start, end, sout
+        return sout
 
     async def _create_path(self):
         data = {"path": compute_path(self.stream, self.level),
@@ -279,5 +245,3 @@ class NilmdbDecimator:
         async with self._get_client() as session:
             async with session.post(self.create_url, data=data) as resp:
                 await check_for_error(resp, ignore=[ERRORS.STREAM_ALREADY_EXISTS])
-
-

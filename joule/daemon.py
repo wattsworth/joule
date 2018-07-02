@@ -42,7 +42,7 @@ class Daemon(object):
             exit(1)
 
         # connect to the database
-        engine = create_engine('sqlite://')
+        engine = create_engine('sqlite:////tmp/joule.sql')
         Base.metadata.create_all(engine)
         self.db = Session(bind=engine)
 

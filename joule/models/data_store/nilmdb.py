@@ -57,9 +57,11 @@ class NilmdbStore(DataStore):
 
     # TODO: change to accepting a DataPipe instead of a queue
     def spawn_inserter(self, stream: Stream,
-                       pipe: pipes.InputPipe, loop: Loop) -> asyncio.Task:
+                       pipe: pipes.InputPipe, loop: Loop, insert_period=None) -> asyncio.Task:
+        if insert_period is None:
+            insert_period = self.insert_period
         inserter = Inserter(self.server, stream,
-                            self.insert_period, self.cleanup_period, self._get_client)
+                            insert_period, self.cleanup_period, self._get_client)
         return loop.create_task(inserter.run(pipe, loop))
 
     async def extract(self, stream: Stream, start: int, end: int,
@@ -139,7 +141,7 @@ class NilmdbStore(DataStore):
                 async with session.get(url, params=params) as resp:
                     await check_for_error(resp)
                     # put data into the queue as it arrives
-                    reader = pipes.InputPipe(layout=layout, reader=resp.content)
+                    reader = pipes.InputPipe(name="outbound", layout=layout, reader=resp.content)
                     while True:
                         try:
                             data = await reader.read()
@@ -147,6 +149,7 @@ class NilmdbStore(DataStore):
                             reader.consume(len(data))
                         except pipes.EmptyPipe:
                             break
+                # insert the interval token to indicate a break
                 await callback(pipes.interval_token(layout), layout, decimated)
 
     async def _intervals_by_path(self, path: str, start: Optional[int],

@@ -45,15 +45,16 @@ async def read(request: web.Request, json=False):
 
     # --- Binary Streaming Handler ---
     resp = None
-
+    chunk_count = 0
     async def stream_data(data: np.ndarray, layout, decimated):
-        nonlocal resp
+        nonlocal resp, chunk_count
         if resp is None:
             resp = web.StreamResponse(status=200,
                                       headers={'joule-layout': layout,
                                                'joule-decimated': str(decimated)})
             resp.enable_chunked_encoding()
             await resp.prepare(request)
+        chunk_count += 1
         await resp.write(data.tostring())
 
     # --- JSON Handler ---
@@ -99,6 +100,20 @@ async def read(request: web.Request, json=False):
         return resp
 
 
-async def write(request):
-    print("ok I need to store this data!")
-    return web.Response(text="TODO")
+async def write(request: web.Request):
+    db: Session = request.app["db"]
+    data_store: DataStore = request.app["data-store"]
+    # find the requested stream
+    if 'path' in request.query:
+        stream = folder.find_stream_by_path(request.query['path'], db)
+    elif 'id' in request.query:
+        stream = db.query(Stream).get(request.query["id"])
+    else:
+        return web.Response(text="specify an id or a path", status=400)
+    if stream is None:
+        return web.Response(text="stream does not exist", status=404)
+    # spawn in inserter task
+    pipe = pipes.InputPipe(name="inbound", stream=stream, reader=request.content)
+    task = data_store.spawn_inserter(stream, pipe, request.loop, insert_period=0)
+    await task
+    return web.Response(text="ok")

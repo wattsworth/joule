@@ -3,6 +3,8 @@ import asyncio
 from typing import List, Union, Tuple, Callable, Coroutine, TYPE_CHECKING
 from abc import ABC, abstractmethod
 
+from joule.models import pipes
+
 if TYPE_CHECKING:
     from joule.models import Stream, Subscription
 
@@ -39,8 +41,8 @@ class DataStore(ABC):
         pass
 
     @abstractmethod
-    async def spawn_inserter(self, stream: 'Stream', subscription: 'Subscription',
-                             loop: Loop) -> asyncio.Task:
+    async def spawn_inserter(self, stream: 'Stream', pipe: pipes.InputPipe,
+                             loop: Loop, insert_period=None) -> asyncio.Task:
         pass
 
     @abstractmethod
