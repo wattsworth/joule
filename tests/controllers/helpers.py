@@ -3,9 +3,9 @@ from sqlalchemy.orm import Session
 from typing import List
 import numpy as np
 import asyncio
-import pdb
+from typing import Optional, Callable, Coroutine
 
-from joule.models import (Base, DataStore, Stream, Subscription, StreamInfo)
+from joule.models import (Base, DataStore, Stream, StreamInfo, pipes)
 from joule.services import parse_pipe_config
 from tests import helpers
 
@@ -34,23 +34,26 @@ class MockStore(DataStore):
         pass
 
     async def insert(self, stream: Stream,
-                     data: np.array, start: int, end: int):
+                     data: np.ndarray, start: int, end: int):
         pass
 
-    async def spawn_inserter(self, stream: Stream, subscription: Subscription,
-                             loop: Loop) -> asyncio.Task:
+    async def spawn_inserter(self, stream: Stream, pipe: pipes.InputPipe,
+                             loop: Loop, insert_period=None) -> asyncio.Task:
         pass
 
     def configure_extract(self, nchunks):
         self.nchunks = nchunks
 
-    async def extract(self, stream: Stream, start: int, end: int,
-                      output: asyncio.Queue,
+    async def extract(self, stream: Stream, start: Optional[int], end: Optional[int],
+                      callback: Callable[[np.ndarray, str, bool], Coroutine],
                       max_rows: int = None, decimation_level=None):
         for x in range(self.nchunks):
-            await output.put(helpers.create_data(stream.layout))
+            await callback(helpers.create_data(stream.layout), stream.layout, False)
 
-    async def remove(self, stream: Stream, start: int, end: int):
+    async def remove(self, stream: Stream, start: Optional[int], end: Optional[int]):
+        pass
+
+    async def destroy(self, stream: Stream):
         pass
 
     async def info(self, stream: Stream) -> StreamInfo:

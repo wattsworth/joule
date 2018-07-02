@@ -68,7 +68,8 @@ class Inserter:
                                 error = await resp.text()
                                 raise errors.DataError("NilmDB error: %s" % error)
                         # decimate the data
-                        await self.decimator.process(data)
+                        if self.decimator is not None:
+                            await self.decimator.process(data)
                     # check for interval breaks
                     if pipe.end_of_interval:
                         last_ts = None

@@ -3,12 +3,12 @@ import aiohttp
 import asyncio
 import numpy as np
 
-from joule.models import Stream, Element
+from joule.models import Stream, Element, pipes
 from joule.models.data_store.nilmdb import NilmdbStore
 from joule.models.data_store.errors import InsufficientDecimationError, DataError
 from .fake_nilmdb import FakeNilmdb, FakeResolver, FakeStream
 from tests import helpers
-
+from ..pipes.reader import QueueReader
 
 class TestNilmdbStore(asynctest.TestCase):
     use_default_loop = False
@@ -66,16 +66,13 @@ class TestNilmdbStore(asynctest.TestCase):
 
     async def test_decimating_inserter(self):
         self.stream1.decimate = True
-        data_queue = asyncio.Queue()
+        source = QueueReader()
+        pipe = pipes.InputPipe(stream=self.stream1, reader=source)
         nrows = 955
         data = helpers.create_data(layout="int8_3", length=nrows)
-        self.store.insert_period = 0.02
-        task = self.store.spawn_inserter(self.stream1, data_queue, self.loop)
+        task = self.store.spawn_inserter(self.stream1, pipe, self.loop, insert_period=0)
         for chunk in helpers.to_chunks(data, 300):
-            await data_queue.put(chunk)
-            await asyncio.sleep(0.05)
-        await asyncio.sleep(0.05)
-        task.cancel()
+            await source.put(chunk.tostring())
         await task
         self.assertTrue(len(self.fake_nilmdb.streams), 5)
         self.assertEqual(self.fake_nilmdb.streams["/joule/1"].rows, nrows)
@@ -91,16 +88,13 @@ class TestNilmdbStore(asynctest.TestCase):
     async def test_nondecimating_inserter(self):
         self.stream1.decimate = False
         self.stream1.datatype = Stream.DATATYPE.UINT16
-        data_queue = asyncio.Queue()
+        source=QueueReader()
+        pipe = pipes.InputPipe(stream=self.stream1, reader=source)
         nrows = 896
         data = helpers.create_data(layout="uint16_3", length=nrows)
-        self.store.insert_period = 0.02
-        task = self.store.spawn_inserter(self.stream1, data_queue, self.loop)
+        task = self.store.spawn_inserter(self.stream1, pipe, self.loop, insert_period=0)
         for chunk in helpers.to_chunks(data, 300):
-            await data_queue.put(chunk)
-            await asyncio.sleep(0.05)
-        await asyncio.sleep(0.05)
-        task.cancel()
+            await source.put(chunk.tostring())
         await task
 
         self.assertEqual(self.fake_nilmdb.streams["/joule/1"].rows, nrows)
@@ -117,66 +111,78 @@ class TestNilmdbStore(asynctest.TestCase):
             layout=self.stream1.decimated_layout, start=100, end=1000, rows=nrows // 16)
         self.fake_nilmdb.streams['/joule/1~decim-64'] = FakeStream(
             layout=self.stream1.decimated_layout, start=100, end=1000, rows=nrows // 64)
-        data_queue = asyncio.Queue()
+
+        extracted_data = []
+
+        async def callback(data, layout, decimated):
+            extracted_data.append(data)
 
         # should return *raw* data when max_rows and decimation_level are None
-        await self.store.extract(self.stream1, start=100, end=1000, output=data_queue)
+        await self.store.extract(self.stream1, start=100, end=1000, callback=callback)
         self.assertEqual(len(self.fake_nilmdb.extract_calls), 1)
         path = self.fake_nilmdb.extract_calls[0]['path']
         self.assertTrue(path, '/joule/1')
         rcvd_rows = 0
-        while not data_queue.empty():
-            chunk = await data_queue.get()
+        last_row = []
+        for chunk in extracted_data:
             if chunk is not None:
                 rcvd_rows += len(chunk)
-        self.assertEqual(nrows, rcvd_rows)
+                last_row = chunk[-1]
+        self.assertEqual(last_row, pipes.interval_token(self.stream1.layout))
+        self.assertEqual(nrows, rcvd_rows-1)  # ignore the interval token
 
         # should return *decimated* data when max_rows!=None
         self.fake_nilmdb.extract_calls = []  # reset
+        extracted_data = []
         await self.store.extract(self.stream1, start=100, end=1000,
-                                 output=data_queue, max_rows=int(1.5 * (nrows / 16)))
+                                 callback=callback, max_rows=int(1.5 * (nrows / 16)))
         # expect count req from raw and decim-16, and extract from data from decim-16
         self.assertEqual(len(self.fake_nilmdb.extract_calls), 3)
         path = self.fake_nilmdb.extract_calls[0]['path']
         self.assertTrue(path, '/joule/1~decim-16')
         rcvd_rows = 0
-        while not data_queue.empty():
-            chunk = await data_queue.get()
+        last_row = []
+        for chunk in extracted_data:
             if chunk is not None:
                 rcvd_rows += len(chunk)
-        self.assertEqual(nrows // 16, rcvd_rows)
+                last_row = chunk[-1]
+        self.assertEqual(last_row, pipes.interval_token(self.stream1.decimated_layout))
+        self.assertEqual(nrows // 16, rcvd_rows-1)
 
         # should raise exception if data is not decimated enough
         with self.assertRaises(InsufficientDecimationError):
             await self.store.extract(self.stream1, start=100, end=1000,
-                                     output=data_queue, max_rows=nrows // 128)
+                                     callback=callback, max_rows=nrows // 128)
 
         # should return data from a specified decimation level
         self.fake_nilmdb.extract_calls = []  # reset
+        extracted_data = []
         await self.store.extract(self.stream1, start=100, end=1000,
-                                 output=data_queue, decimation_level=64)
+                                 callback=callback, decimation_level=64)
         # expect extract from decim-64
         self.assertEqual(len(self.fake_nilmdb.extract_calls), 1)
         path = self.fake_nilmdb.extract_calls[0]['path']
         self.assertTrue(path, '/joule/1~decim-64')
         rcvd_rows = 0
-        while not data_queue.empty():
-            chunk = await data_queue.get()
+        last_row = []
+        for chunk in extracted_data:
             if chunk is not None:
                 rcvd_rows += len(chunk)
-        self.assertEqual(nrows // 64, rcvd_rows)
+                last_row = chunk[-1]
+        self.assertEqual(last_row, pipes.interval_token(self.stream1.decimated_layout))
+        self.assertEqual(nrows // 64, rcvd_rows -1)
 
         # if max_rows and decimation_level specified, error if
         # too much data
         with self.assertRaises(InsufficientDecimationError):
             await self.store.extract(self.stream1, start=100, end=1000,
-                                     output=data_queue, decimation_level=64,
+                                     callback=callback, decimation_level=64,
                                      max_rows=nrows // 128)
 
         # error if decimation_level does not exist
         with self.assertRaises(DataError):
             await self.store.extract(self.stream1, start=100, end=1000,
-                                     output=data_queue, decimation_level=5)
+                                     callback=callback, decimation_level=5)
 
     async def test_intervals(self):
         intervals = [[1, 2], [2, 3], [3, 4]]

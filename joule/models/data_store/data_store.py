@@ -37,7 +37,7 @@ class DataStore(ABC):
 
     @abstractmethod
     async def insert(self, stream: 'Stream',
-                     data: np.array, start: int, end: int):
+                     data: np.ndarray, start: int, end: int):
         pass
 
     @abstractmethod
@@ -47,8 +47,8 @@ class DataStore(ABC):
 
     @abstractmethod
     async def extract(self, stream: 'Stream', start: Optional[int], end: Optional[int],
-                      callback: Callable[[np.ndarray], Coroutine],
-                      max_rows: int = None, decimation_level=None) -> (asyncio.Task, str):
+                      callback: Callable[[np.ndarray, str, bool], Coroutine],
+                      max_rows: int = None, decimation_level=None):
         pass
 
     @abstractmethod
@@ -56,7 +56,7 @@ class DataStore(ABC):
         pass
 
     @abstractmethod
-    async def destroy(self, stream):
+    async def destroy(self, stream: 'Stream'):
         pass
 
     @abstractmethod

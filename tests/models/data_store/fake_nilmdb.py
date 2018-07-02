@@ -40,7 +40,10 @@ class FakeStream:
         self.end = end
         self.rows = rows
         self.intervals = intervals
-
+        if start is not None and end is not None:
+            if self.intervals is None:
+                self.intervals = [[start, end]]
+                
     @property
     def dtype(self):
         ltype = self.layout.split('_')[0]

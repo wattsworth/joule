@@ -65,8 +65,8 @@ class NilmdbStore(DataStore):
         return loop.create_task(inserter.run(pipe, loop))
 
     async def extract(self, stream: Stream, start: Optional[int], end: Optional[int],
-                      callback: Callable[[np.ndarray], Coroutine], max_rows: int = None,
-                      decimation_level=None) -> Coroutine:
+                      callback: Callable[[np.ndarray, str, bool], Coroutine], max_rows: int = None,
+                      decimation_level=None):
         # figure out appropriate decimation level
         if decimation_level is None:
             if max_rows is None:
@@ -102,7 +102,7 @@ class NilmdbStore(DataStore):
             layout = stream.decimated_layout
         else:
             layout = stream.layout
-        return self._extract_by_path(path, start, end, layout, callback)
+        await self._extract_by_path(path, start, end, layout, callback)
 
     async def intervals(self, stream: Stream, start: Optional[int], end: Optional[int]):
         return await self._intervals_by_path(compute_path(stream),

@@ -21,8 +21,8 @@ class TestDataController(AioHTTPTestCase):
     @unittest_run_loop
     async def test_read_data(self):
         db: Session = self.app["db"]
-        store:MockStore = self.app["data-store"]
-        nchunks=10
+        store: MockStore = self.app["data-store"]
+        nchunks = 10
         store.configure_extract(nchunks)
         resp: aiohttp.ClientResponse = await \
             self.client.get("/data", params={"path": "/folder1/stream1"})

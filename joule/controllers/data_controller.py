@@ -83,11 +83,10 @@ async def read(request: web.Request, json=False):
 
     # create an extraction task
     try:
-        extractor = await data_store.extract(stream, params['start'], params['end'],
-                                             callback=callback,
-                                             max_rows=params['max-rows'],
-                                             decimation_level=params['decimation-level'])
-        await extractor
+        await data_store.extract(stream, params['start'], params['end'],
+                                 callback=callback,
+                                 max_rows=params['max-rows'],
+                                 decimation_level=params['decimation-level'])
     except InsufficientDecimationError as e:
         return web.Response(text="decimated data is not available: %s" % e, status=400)
     except DataError as e:
