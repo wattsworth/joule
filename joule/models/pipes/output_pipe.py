@@ -1,4 +1,4 @@
-from joule.models.pipes import Pipe
+from joule.models.pipes import Pipe, interval_token
 
 
 class OutputPipe(Pipe):
@@ -16,6 +16,10 @@ class OutputPipe(Pipe):
         # make sure dtype is structured
         sdata = self._apply_dtype(data)
         self.writer.write(sdata.tostring())
+        await self.writer.drain()
+
+    async def close_interval(self):
+        self.writer.write(interval_token(self.layout))
         await self.writer.drain()
 
     def close(self):

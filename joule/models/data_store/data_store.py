@@ -41,7 +41,7 @@ class DataStore(ABC):
         pass
 
     @abstractmethod
-    async def spawn_inserter(self, stream: 'Stream', pipe: pipes.InputPipe,
+    async def spawn_inserter(self, stream: 'Stream', pipe: pipes.Pipe,
                              loop: Loop, insert_period=None) -> asyncio.Task:
         pass
 

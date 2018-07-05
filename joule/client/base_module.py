@@ -2,7 +2,11 @@ import argparse
 import asyncio
 import signal
 from . import helpers
+from joule.models import pipes
+from typing import Tuple, Dict
 
+Pipes = Dict[str, pipes.Pipe]
+Loop = asyncio.AbstractEventLoop
 
 class BaseModule:
 
@@ -21,7 +25,7 @@ class BaseModule:
         self.stop_requested = True    
         
     def start(self, parsed_args=None):
-        if(parsed_args is None):
+        if parsed_args is None:
             parser = argparse.ArgumentParser()
             self._build_args(parser)
             module_args = helpers.module_args()
@@ -29,23 +33,23 @@ class BaseModule:
                 
         loop = asyncio.get_event_loop()
         self.stop_requested = False
-        try:
-            task = self.run_as_task(parsed_args, loop)
+        task = self.run_as_task(parsed_args, loop)
 
-            def stop_task():
-                loop = asyncio.get_event_loop()
-                # give task no more than 2 seconds to exit
-                loop.call_later(2, task.cancel)
-                # run custom exit routine
-                self.stop()
-                
-            loop.add_signal_handler(signal.SIGINT, stop_task)
-            loop.add_signal_handler(signal.SIGTERM, stop_task)
+        def stop_task():
+            # give task no more than 2 seconds to exit
+            loop.call_later(2, task.cancel)
+            # run custom exit routine
+            self.stop()
+
+        loop.add_signal_handler(signal.SIGINT, stop_task)
+        loop.add_signal_handler(signal.SIGTERM, stop_task)
+        try:
             loop.run_until_complete(task)
         except asyncio.CancelledError:
             pass
         except helpers.ClientError as e:
             print("ERROR:", str(e))
+
         loop.close()
 
     def _build_args(self, parser):
@@ -74,36 +78,8 @@ class BaseModule:
         parser.formatter_class = argparse.RawDescriptionHelpFormatter
         self.custom_args(parser)
 
-    async def _build_pipes(self, parsed_args):
+    async def _build_pipes(self, parsed_args, loop: Loop) -> Tuple[Pipes, Pipes]:
         pipe_args = parsed_args.pipes
-        module_config_file = parsed_args.module_config
-        stream_config_dir = parsed_args.stream_configs
 
         # run the module within joule
-        if(pipe_args != 'unset'):
-            return helpers.build_fd_pipes(pipe_args)
-        
-        # run the module in isolation mode
-        if(module_config_file == 'unset' or
-           stream_config_dir == 'unset'):
-            msg = ("Specify module_config AND stream_configs\n"
-                   "\tor run in joule environment")
-            raise helpers.ClientError(msg)
-        
-        # if time bounds are set make sure they are valid
-        start_time = parsed_args.start_time
-        end_time = parsed_args.end_time
-        if((start_time is not None and end_time is None) or
-           (end_time is not None and start_time is None)):
-            raise helpers.ClientError("Specify start_time AND"
-                                      " end_time or neither")
-
-        # request pipe sockets from joule server
-        try:
-            return await helpers.build_socket_pipes(module_config_file,
-                                                    stream_config_dir,
-                                                    start_time,
-                                                    end_time)
-        except ConnectionRefusedError as e:
-            raise helpers.ClientError("%s: (is jouled running?)" % str(e))
-
+        return helpers.build_fd_pipes(pipe_args, loop)

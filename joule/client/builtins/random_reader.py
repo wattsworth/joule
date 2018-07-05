@@ -1,12 +1,11 @@
-from joule.utils.time import now as time_now
 
-from joule import ReaderModule
+from ..reader_module import ReaderModule
+from ..helpers import utilities
 import asyncio
 import numpy as np
 import textwrap
 import argparse
 
-OUTPUT_RATE = 1  # run in 1 second blocks
 
 ARGS_DESC = """
 ---
@@ -67,11 +66,13 @@ ARGS_DESC = """
 ---
 """
 
+OUTPUT_RATE = 1  # run in 1 second blocks
+
 
 class RandomReader(ReaderModule):
-    "Generate a random stream of data"
+    """Generate a random stream of data"""
     
-    def custom_args(self, parser):
+    def custom_args(self, parser: argparse.ArgumentParser):
         parser.add_argument("--width", type=int,
                             required=True,
                             help="number of elements in output")
@@ -85,14 +86,14 @@ class RandomReader(ReaderModule):
         # figure out how much output will be in each block
         rate = parsed_args.rate
         width = parsed_args.width
-        data_ts = time_now()
+        data_ts = utilities.time_now()
         data_ts_inc = 1/rate*1e6
         wait_time = 1/OUTPUT_RATE
         BLOCK_SIZE = rate/OUTPUT_RATE
         fraction_remaining = 0
         i = 0
         # print("Starting random stream: %d elements @ %0.1fHz" % (width, rate))
-        while(not self.stop_requested):
+        while not self.stop_requested:
             float_block_size = BLOCK_SIZE+fraction_remaining
             int_block_size = int(np.floor(float_block_size))
             fraction_remaining = float_block_size - int_block_size
@@ -106,9 +107,11 @@ class RandomReader(ReaderModule):
             await asyncio.sleep(wait_time)
             i += 1
 
+
 def main():
     r = RandomReader()
     r.start()
-    
+
+
 if __name__ == "__main__":
     main()

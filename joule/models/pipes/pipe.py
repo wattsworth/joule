@@ -21,15 +21,10 @@ class Pipe:
         self.stream: 'Stream' = stream
         self._layout = layout
 
-    def read(self, flatten=False):
+    async def read(self, flatten=False):
         if self.direction == Pipe.DIRECTION.OUTPUT:
             raise PipeError("cannot read from an output pipe")
 
-        raise PipeError("abstract method must be implemented by child")
-
-    def write(self, data):
-        if self.direction == Pipe.DIRECTION.INPUT:
-            raise PipeError("cannot write to an input pipe")
         raise PipeError("abstract method must be implemented by child")
 
     def consume(self, num_rows):
@@ -37,8 +32,24 @@ class Pipe:
             raise PipeError("cannot consume from an output pipe")
         raise PipeError("abstract method must be implemented by child")
 
+    @property
+    def end_of_interval(self):
+        return False
+
+    async def write(self, data):
+        if self.direction == Pipe.DIRECTION.INPUT:
+            raise PipeError("cannot write to an input pipe")
+        raise PipeError("abstract method must be implemented by child")
+
+    async def close_interval(self):
+        if self.direction == Pipe.DIRECTION.INPUT:
+            raise PipeError("cannot write to an input pipe")
+        raise PipeError("abstract method must be implemented by child")
+
     def close(self):
         pass  # close the pipe, optionally implemented by the child
+
+
 
     @property
     def layout(self):

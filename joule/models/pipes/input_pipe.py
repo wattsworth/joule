@@ -1,8 +1,10 @@
 import numpy as np
-import sys
+import logging
 import asyncio
 from joule.models.pipes import Pipe, find_interval_token
 from joule.models.pipes.errors import PipeError, EmptyPipe
+
+log = logging.getLogger('joule')
 
 
 class InputPipe(Pipe):
@@ -35,7 +37,10 @@ class InputPipe(Pipe):
         nbytes = 0  # make sure we get more than 0 bytes from the read
         while nbytes == 0:
             if self.reader.at_eof():
-                raise EmptyPipe()
+                if self.last_index == 0:
+                    raise EmptyPipe()
+                return self._format_data(self.buffer[:self.last_index], flatten)
+
             raw = await self.reader.read(max_rows * rowbytes)
             nbytes = len(raw)
             if nbytes == 0:
@@ -80,7 +85,7 @@ class InputPipe(Pipe):
         if num_rows == 0:
             return  # nothing to do
         if num_rows < 0:
-            print("WARNING: NumpyPipe::consume called with negative offset: %d" % num_rows)
+            log.warning("InputPipe::consume called with negative offset: %d" % num_rows)
             return
 
         if num_rows > self.last_index:

@@ -1,7 +1,8 @@
-from typing import List
+from typing import List, Callable
 import asyncio
+import pdb
 
-from joule.models import Worker, Stream, Subscription
+from joule.models import Worker, Stream, pipes
 from joule.models.errors import SubscriptionError
 
 Tasks = List[asyncio.Task]
@@ -18,7 +19,7 @@ class Supervisor:
         # returns a co-routine
         tasks: Tasks = []
         for worker in self.workers:
-            tasks.append(loop.create_task(worker.run(loop)))
+            tasks.append(loop.create_task(worker.run(self.subscribe, loop)))
         self.task = asyncio.gather(*tasks, loop=loop)
 
     async def stop(self, loop: Loop):
@@ -26,15 +27,15 @@ class Supervisor:
             await worker.stop(loop)
         await self.task
 
-    def subscribe(self, stream: Stream, loop: Loop) -> Subscription:
+    def subscribe(self, stream: Stream, pipe: pipes.Pipe) -> Callable:
         # find a worker producing this stream
         for worker in self.workers:
             try:
-                return worker.subscribe(stream, loop)
+                return worker.subscribe(stream, pipe)
             except SubscriptionError:
                 pass
         else:
-            raise SubscriptionError("[%s] has no producer" % stream.name)
+            raise SubscriptionError("stream [%s] has no producer" % stream.name)
 
     def publish(self, stream: Stream, loop: Loop):
         pass

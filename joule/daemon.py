@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from joule.models import (Base, Worker, Supervisor, config, ConfigurationError,
-                          SubscriptionError, DataStore, Stream)
+                          SubscriptionError, DataStore, Stream, pipes)
 from joule.models import NilmdbStore
 from joule.services import (load_modules, load_streams)
 import joule.controllers
@@ -51,18 +51,8 @@ class Daemon(object):
         modules = load_modules.run(self.config.module_directory, self.db)
 
         # configure workers
-        pending_workers = [Worker(m) for m in modules]
-        registered_workers = []
-        while len(pending_workers) > 0:
-            for worker in pending_workers:
-                if worker.subscribe_to_inputs(registered_workers, loop):
-                    pending_workers.remove(worker)
-                    registered_workers.append(worker)
-                    break
-            else:
-                for w in pending_workers:
-                    log.warning("[%s] is missing inputs" % w.module)
-        self.supervisor = Supervisor(registered_workers)
+        workers = [Worker(m) for m in modules]
+        self.supervisor = Supervisor(workers)
 
     async def run(self, loop: Loop):
         # initialize streams in the data store
@@ -102,10 +92,10 @@ class Daemon(object):
         inserter_tasks = []
         for stream in self.db.query(Stream).filter(Stream.keep_us != Stream.KEEP_NONE):
             try:
-                subscription = self.supervisor.subscribe(stream, loop)
-                task = self.data_store.spawn_inserter(stream,
-                                                      subscription.queue,
-                                                      loop)
+                pipe = pipes.LocalPipe(layout=stream.layout, loop=loop)
+                # ignore unsubscribe callback, we are never going to use it
+                self.supervisor.subscribe(stream, pipe)
+                task = self.data_store.spawn_inserter(stream, pipe, loop)
                 inserter_tasks.append(task)
             except SubscriptionError as e:
                 logging.warning(e)

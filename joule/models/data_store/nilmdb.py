@@ -57,7 +57,7 @@ class NilmdbStore(DataStore):
 
     # TODO: change to accepting a DataPipe instead of a queue
     def spawn_inserter(self, stream: Stream,
-                       pipe: pipes.InputPipe, loop: Loop, insert_period=None) -> asyncio.Task:
+                       pipe: pipes.Pipe, loop: Loop, insert_period=None) -> asyncio.Task:
         if insert_period is None:
             insert_period = self.insert_period
         inserter = Inserter(self.server, stream,

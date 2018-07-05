@@ -16,15 +16,15 @@ class ReaderModule(base_module.BaseModule):
            parsed_args.module_config == "unset"):
             output = StdoutPipe()
         else:
-            coro = self._build_pipes(parsed_args)
+            coro = self._build_pipes(parsed_args, loop)
             (pipes_in, pipes_out) = loop.run_until_complete(coro)
             output = pipes_out['output']
         return asyncio.ensure_future(self.run(parsed_args, output))
 
     
 class StdoutPipe:
-
-    async def write(self, data):
+    @staticmethod
+    async def write(data):
         for row in data:
             ts = row[0]
             vals = row[1:]

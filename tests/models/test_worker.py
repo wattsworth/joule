@@ -1,4 +1,3 @@
-
 import asyncio
 import unittest
 import logging
@@ -13,11 +12,11 @@ import argparse
 from unittest.mock import Mock
 from contextlib import contextmanager
 
-from joule.models import Module, Stream, Worker, Element
+from joule.models import Module, Stream, Worker, Element, Supervisor
 from joule.models import pipes
 from .. import helpers
 
-LOG_SIZE = 10 # override module default
+LOG_SIZE = 10  # override module default
 
 
 class TestWorker(unittest.TestCase):
@@ -25,7 +24,9 @@ class TestWorker(unittest.TestCase):
     def setUp(self):
         # generic float32_4 streams
         streams = [Stream(name="str%d" % n, datatype=Stream.DATATYPE.FLOAT32,
-                          elements=[Element(name="e%d" % j) for j in range(3)]) for n in range(4)]
+                          elements=[Element(name="e%d" % j, index=j,
+                                            display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(3)]) for n in
+                   range(4)]
         self.streams = streams
 
         # [producer0] --<str0>--,----------------<str0,str2>--[consumer0]
@@ -47,69 +48,32 @@ class TestWorker(unittest.TestCase):
         m_consumers[0].inputs = {"input1": streams[0], "input2": streams[2]}
         m_consumers[1].inputs = {"input1": streams[2], "input2": streams[3]}
         self.consumers: List[Worker] = [Worker(m) for m in m_consumers]
+        self.supervisor = Supervisor(self.producers + self.consumers)
 
     def test_builds_worker_from_module(self):
         # subscriber arrays are empty
         self.assertEqual(self.worker.subscribers, {self.streams[2]: [], self.streams[3]: []})
-        # subscriptions are empty
-        self.assertEqual(self.worker.subscriptions, {self.streams[0]: None, self.streams[1]: None})
-        # input connections are empty
-        self.assertEqual(self.worker.input_connections, {"input1": None, "input2": None})
+        # data connections are empty
+        self.assertEqual(self.worker.input_connections, [])
         # output connections are empty
-        self.assertEqual(self.worker.output_connections, {"output1": None, "output2": None})
-
-    def test_subscribes_to_inputs(self):
-        # consumers can't subscribe when inputs are not available
-        for w in [self.worker, *self.consumers]:
-            self.assertFalse(w.subscribe_to_inputs([], None))  # loop not needed
-        # producers can subscribe because they have no inputs
-        for w in self.producers:
-            self.assertTrue(w.subscribe_to_inputs([], None))  # loop not needed
-        # all module can subscribe when inputs are available
-        all_workers = [self.worker, *self.producers, *self.consumers]
-        for w in all_workers:
-            self.assertTrue(w.subscribe_to_inputs(all_workers, None))  # loop not needed
-        # now the workers should be linked subscribers==(queue)==>subscription
-        # p0->w (stream0)
-        self.assertEqual(self.producers[0].subscribers[self.streams[0]][0],
-                         self.worker.subscriptions[self.streams[0]].queue)
-        # p1->w (stream1)
-        self.assertEqual(self.producers[1].subscribers[self.streams[1]][0],
-                         self.worker.subscriptions[self.streams[1]].queue)
-        # p0->c0 (stream0)
-        self.assertEqual(self.producers[0].subscribers[self.streams[0]][1],
-                         self.consumers[0].subscriptions[self.streams[0]].queue)
-        # w->c0 (stream2)
-        self.assertEqual(self.worker.subscribers[self.streams[2]][0],
-                         self.consumers[0].subscriptions[self.streams[2]].queue)
-        # w->c1 (stream2,stream3)
-        self.assertEqual(self.worker.subscribers[self.streams[2]][1],
-                         self.consumers[1].subscriptions[self.streams[2]].queue)
-        self.assertEqual(self.worker.subscribers[self.streams[3]][0],
-                         self.consumers[1].subscriptions[self.streams[3]].queue)
-
-    def test_unwinds_subscriptions_when_inputs_are_not_available(self):
-        # consumer0 requires producer0 and worker so subscribe_to_inputs fails
-        self.assertFalse(self.consumers[0].subscribe_to_inputs([self.producers[0]], None))  # loop not needed
-        # the tentative subscription should be cancelled
-        self.assertEqual(len(self.producers[0].subscribers[self.streams[0]]), 0)
+        self.assertEqual(self.worker.output_connections, [])
 
     def test_spawns_child_process(self):
         loop = asyncio.get_event_loop()
-        self.worker.subscribe_to_inputs(self.producers, loop)
-        loop.run_until_complete(self.worker.run(loop, restart=False))
+        loop.run_until_complete(self.worker.run(self.supervisor.subscribe,
+                                                loop, restart=False))
         self.assertEqual(self.worker.process.returncode, 0)
 
     def test_restarts_child(self):
         loop = asyncio.get_event_loop()
         self.worker.RESTART_INTERVAL = 0.2
-        self.worker.subscribe_to_inputs(self.producers, loop)
 
         with self.check_fd_leakage():
             with self.assertLogs(logging.getLogger('joule'), logging.WARNING):
                 loop.run_until_complete(asyncio.gather(
                     loop.create_task(self._stop_worker(loop)),
-                    loop.create_task(self.worker.run(loop, restart=True))
+                    loop.create_task(self.worker.run(self.supervisor.subscribe,
+                                                     loop, restart=True))
                 ))
         self.assertEqual(self.worker.process.returncode, 0)
 
@@ -117,21 +81,22 @@ class TestWorker(unittest.TestCase):
         # yes runs forever, # ignores the parameters
         self.module.exec_cmd = "/usr/bin/yes #"
         loop = asyncio.get_event_loop()
-        self.worker.subscribe_to_inputs(self.producers, loop)
+        # self.worker.subscribe_to_inputs(self.producers, loop)
         with self.check_fd_leakage():
             loop.run_until_complete(asyncio.gather(
                 loop.create_task(self._stop_worker(loop)),
-                loop.create_task(self.worker.run(loop, restart=False))
+                loop.create_task(self.worker.run(self.supervisor.subscribe,
+                                                 loop, restart=False))
             ))
         # check to make sure it was killed by SIGTERM
         self.assertEqual(self.worker.process.returncode, -1 * signal.SIGTERM)
 
     def test_builds_pipes_argument(self):
         loop = asyncio.get_event_loop()
-        self.worker.subscribe_to_inputs(self.producers, loop)
         self.module.exec_cmd = "/bin/echo"
         self.worker.log = Mock()
-        loop.run_until_complete(self.worker.run(loop, restart=False))
+        loop.run_until_complete(self.worker.run(self.supervisor.subscribe,
+                                                loop, restart=False))
         self.assertEqual(self.worker.process.returncode, 0)
         # expect to get a pipes argument that is a json string
         parser = argparse.ArgumentParser()
@@ -141,16 +106,20 @@ class TestWorker(unittest.TestCase):
         args = parser.parse_args(argv)
         my_pipes = json.loads(args.pipes)
         # verify inputs and outputs are in the config
-        self.assertEqual(my_pipes['outputs']['output1']['layout'], 'float32_3')
-        self.assertEqual(my_pipes['outputs']['output2']['layout'], 'float32_3')
-        self.assertEqual(my_pipes['inputs']['input1']['layout'], 'float32_3')
-        self.assertEqual(my_pipes['inputs']['input2']['layout'], 'float32_3')
+        value = self.streams[0].to_json()
+        self.assertEqual(my_pipes['inputs']['input1']['stream'], value)
+        value = self.streams[1].to_json()
+        self.assertEqual(my_pipes['inputs']['input2']['stream'], value)
+        value = self.streams[2].to_json()
+        self.assertEqual(my_pipes['outputs']['output1']['stream'], value)
+        value = self.streams[3].to_json()
+        self.assertEqual(my_pipes['outputs']['output2']['stream'], value)
 
     def test_logs_child_output(self):
         loop = asyncio.get_event_loop()
-        self.worker.subscribe_to_inputs(self.producers, loop)
         self.module.exec_cmd = "/bin/echo"
-        loop.run_until_complete(self.worker.run(loop, restart=False))
+        loop.run_until_complete(self.worker.run(self.supervisor.subscribe,
+                                                loop, restart=False))
         self.assertEqual(self.worker.process.returncode, 0)
         # log should have a starting entry
         self.assertRegex(self.worker.logs[0], 'starting')
@@ -161,12 +130,12 @@ class TestWorker(unittest.TestCase):
 
     def test_rolls_logs(self):
         loop = asyncio.get_event_loop()
-        self.worker.subscribe_to_inputs(self.producers, loop)
         self.module.exec_cmd = "/usr/bin/yes #"
         with self.check_fd_leakage():
             loop.run_until_complete(asyncio.gather(
                 loop.create_task(self._stop_worker(loop)),
-                loop.create_task(self.worker.run(loop, restart=False))
+                loop.create_task(self.worker.run(self.supervisor.subscribe,
+                                                 loop, restart=False))
             ))
         logs = self.worker.logs
         self.assertEqual(len(logs), LOG_SIZE)
@@ -179,50 +148,58 @@ class TestWorker(unittest.TestCase):
         loop = asyncio.get_event_loop()
         # create worker connections
         all_workers = [self.worker, *self.producers, *self.consumers]
-        for w in all_workers:
-            self.assertTrue(w.subscribe_to_inputs(all_workers, loop))
         # child runs until stopped
         self.module.exec_cmd = "/usr/bin/yes #"
 
         async def mock_child():
             # wait until the worker has "started" the child
             await asyncio.sleep(0.5)
-            # retrieve fd's
-            fd_in1 = self.worker.input_connections["input1"][0]
-            fd_in2 = self.worker.input_connections["input2"][0]
-            fd_out1 = self.worker.output_connections["output1"][0]
-            fd_out2 = self.worker.output_connections["output2"][0]
             # create pipes from fd's
-            input1 = pipes.InputPipe("input1", layout=self.streams[0].layout,
-                                     reader_factory=pipes.reader_factory(fd_in1, loop))
-            input2 = pipes.InputPipe("input2", layout=self.streams[1].layout,
-                                     reader_factory=pipes.reader_factory(fd_in2, loop))
-            output1 = pipes.OutputPipe("output1", layout=self.streams[2].layout,
-                                       writer_factory=pipes.writer_factory(fd_out1, loop))
-            output2 = pipes.OutputPipe("output1", layout=self.streams[3].layout,
-                                       writer_factory=pipes.writer_factory(fd_out2, loop))
+            inputs = []
+            for c in self.worker.input_connections:
+                rf = pipes.reader_factory(c.child_fd, loop)
+                inputs.append(pipes.InputPipe(name=c.name,
+                                              stream=c.stream,
+                                              reader_factory=rf))
+            outputs = []
+            for c in self.worker.output_connections:
+                wf = pipes.writer_factory(c.child_fd, loop)
+                outputs.append(pipes.OutputPipe(name=c.name,
+                                                stream=c.stream,
+                                                writer_factory=wf))
+
             # read input1 and send it to output1
-            await output1.write(await input1.read(flatten=True)*2.0)
+            await outputs[0].write(await inputs[0].read(flatten=True) * 2.0)
             # read input2 and send it to output2
-            await output2.write(await input2.read(flatten=True)*3.0)
+            await outputs[1].write(await inputs[1].read(flatten=True) * 3.0)
+
+        input_data = helpers.create_data('float32_3')
+
+        async def mock_producers():
+            await asyncio.sleep(0.5)
+
+            # add mock data in the producer queues
+            await self.producers[0].subscribers[self.streams[0]][0].write(input_data)
+            await self.producers[1].subscribers[self.streams[1]][0].write(input_data)
 
         # stub the close functions so the pipes stay open
         self.worker._close_child_fds = Mock()
-        # add mock data in the producer queues
-        input_data = helpers.create_data('float32_3')
-        self.producers[0].subscribers[self.streams[0]][0].put_nowait(input_data)
-        self.producers[1].subscribers[self.streams[1]][0].put_nowait(input_data)
 
+        # subscribe to the module outputs
+        output1 = pipes.LocalPipe(layout=self.streams[2].layout, loop=loop)
+        output2 = pipes.LocalPipe(layout=self.streams[3].layout, loop=loop)
+        self.worker.subscribe(self.streams[2], output1)
+        self.worker.subscribe(self.streams[3], output2)
         loop.run_until_complete(asyncio.gather(
-                                    self.worker.run(loop, restart=False),
-                                    mock_child(),
-                                    self._stop_worker(loop)))
+            self.worker.run(self.supervisor.subscribe, loop, restart=False),
+            mock_child(), mock_producers(),
+            self._stop_worker(loop)))
         # check stream2, should be stream0*2.0
-        data = self.consumers[0].subscriptions[self.streams[2]].queue.get_nowait()
-        np.testing.assert_array_almost_equal(input_data['data']*2.0, data['data'])
+        data = output1.read_nowait()
+        np.testing.assert_array_almost_equal(input_data['data'] * 2.0, data['data'])
         # check stream3, should be stream1*3.0
-        data = self.consumers[1].subscriptions[self.streams[3]].queue.get_nowait()
-        np.testing.assert_array_almost_equal(input_data['data']*3.0, data['data'])
+        data = output2.read_nowait()
+        np.testing.assert_array_almost_equal(input_data['data'] * 3.0, data['data'])
 
     async def _stop_worker(self, loop: asyncio.AbstractEventLoop):
         await asyncio.sleep(1)
