@@ -1,5 +1,5 @@
 import asyncio
-
+import logging
 from . import base_module
 
 
@@ -18,6 +18,9 @@ class ReaderModule(base_module.BaseModule):
         else:
             coro = self._build_pipes(parsed_args, loop)
             (pipes_in, pipes_out) = loop.run_until_complete(coro)
+            if 'output' not in pipes_out:
+                logging.error("Reader Module must a have a single output called 'output'")
+                exit(1)
             output = pipes_out['output']
         return asyncio.ensure_future(self.run(parsed_args, output))
 

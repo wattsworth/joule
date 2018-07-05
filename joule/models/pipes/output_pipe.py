@@ -19,7 +19,7 @@ class OutputPipe(Pipe):
         await self.writer.drain()
 
     async def close_interval(self):
-        self.writer.write(interval_token(self.layout))
+        self.writer.write(interval_token(self.layout).tostring())
         await self.writer.drain()
 
     def close(self):

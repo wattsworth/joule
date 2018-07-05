@@ -2,7 +2,8 @@ from aiohttp import web
 from joule.controllers import (stream_controller,
                                folder_controller,
                                data_controller,
-                               module_controller)
+                               module_controller,
+                               interface_controller)
 
 
 async def index(request):
@@ -30,7 +31,9 @@ routes = [
     # --- module routes ---
     web.get('/modules.json', module_controller.index),
     web.get('/module.json', module_controller.info),
-    web.get('/module/logs.json', module_controller.logs)
-    # TODO: routes for module interface proxy
+    web.get('/module/logs.json', module_controller.logs),
+    # --- interface routes ---
+    web.get('/interface/{id}', interface_controller.get),
+    web.get('/interface/{id}/{path:.*}', interface_controller.get)
     # TODO: routes for stream tags /streams/tags
 ]

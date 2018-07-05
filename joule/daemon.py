@@ -78,8 +78,8 @@ class Daemon(object):
             await asyncio.sleep(0.5)
 
         # clean everything up
-        self.data_store.close()
         await self.supervisor.stop(loop)
+        self.data_store.close()
         inserter_task_grp.cancel()
         await inserter_task_grp
         await runner.cleanup()

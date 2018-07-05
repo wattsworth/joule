@@ -41,5 +41,11 @@ class Supervisor:
         else:
             raise SubscriptionError("stream [%s] has no producer" % stream.name)
 
+    def get_socket(self, module_uuid):
+        for w in self.workers:
+            if w.module.uuid == module_uuid:
+                return w.interface_socket
+        return None
+
     def publish(self, stream: Stream, loop: Loop):
         pass

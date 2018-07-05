@@ -22,6 +22,7 @@ Subscribers = Dict[Stream, List[pipes.Pipe]]
 popen_lock = asyncio.Lock()
 log = logging.getLogger('joule')
 
+SOCKET_BASE = "wattsworth.joule.%d"
 
 class DataConnection:
     def __init__(self, name: str, child_fd: int,
@@ -68,7 +69,6 @@ class Worker:
         self.SIGTERM_TIMEOUT = 2
         # how long to wait to restart a failed process
         self.RESTART_INTERVAL = 1
-        self.counter = 0
 
     def statistics(self):
         # gather process statistics
@@ -83,6 +83,18 @@ class Worker:
                 }
         else:
             return {}
+
+    @property
+    def interface_socket(self):
+        if self.module.has_interface:
+            return b'\0' + (SOCKET_BASE % self.module.uuid).encode('ascii')
+        return None
+
+    @property
+    def interface_name(self):
+        if self.module.has_interface:
+            return SOCKET_BASE % self.module.uuid
+        return "none"
 
     async def run(self, subscribe: Callable[[Stream, pipes.Pipe, Loop], Callable],
                   loop: Loop, restart: bool = True) -> None:
@@ -130,11 +142,11 @@ class Worker:
     def log(self, msg):
         timestamp = datetime.datetime.now().isoformat()
         self._logs.append("[%s]: %s" % (timestamp, msg))
-        # if self.process is None:
-        #    pid = '???'
-        # else:
-        #    pid = self.process.pid
-        # print("[%s: %s] " % (self.module.name, pid) + msg)
+        if self.process is None:
+            pid = '???'
+        else:
+            pid = self.process.pid
+        #print("[%s: %s] " % (self.module.name, pid) + msg)
 
     @property
     def logs(self) -> List[str]:
@@ -266,7 +278,7 @@ class Worker:
             {'outputs': output_args, 'inputs': input_args}))]
         # add a socket if the module has a web interface
         if self.module.has_interface:
-            cmd += ["--socket", self._socket_path()]
+            cmd += ["--socket", self.interface_name]
         for (arg, value) in self.module.arguments.items():
             cmd += ["--" + arg, value]
         return cmd
@@ -280,11 +292,3 @@ class Worker:
             c.disconnect()
         self.output_connections = []
         self.input_connections = []
-
-    def _socket_path(self):
-        path = "/tmp/joule-module-%d" % self.module.uuid
-        try:
-            os.unlink(path)
-        except OSError:
-            if os.path.exists(path):
-                print("file exists!")
