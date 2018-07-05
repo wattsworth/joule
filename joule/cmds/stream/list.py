@@ -10,10 +10,9 @@ from joule.cmds.config import pass_config
 @pass_config
 def stream_list(config):
     json = _get(config.url+"/streams.json")
-    json["name"] = config.url
+    json["name"] = ""
     tree = Tree()
     _process_folder(tree, json, None)
-    click.echo()
     click.echo(tree.show())
 
 

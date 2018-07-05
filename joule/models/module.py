@@ -1,10 +1,11 @@
-
 import enum
 from typing import List, Dict
 import configparser
 
 from joule.models.errors import ConfigurationError
 from joule.models.stream import Stream
+from joule.models.stream import from_json as stream_from_json
+
 """
 Configuration File:
 [Main]

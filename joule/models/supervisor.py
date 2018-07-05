@@ -12,24 +12,28 @@ Loop = asyncio.AbstractEventLoop
 class Supervisor:
 
     def __init__(self, workers: List[Worker]):
-        self.workers = workers
+        self._workers = workers
         self.task: asyncio.Task = None
+
+    @property
+    def workers(self):
+        return self._workers
 
     def start(self, loop: Loop):
         # returns a co-routine
         tasks: Tasks = []
-        for worker in self.workers:
+        for worker in self._workers:
             tasks.append(loop.create_task(worker.run(self.subscribe, loop)))
         self.task = asyncio.gather(*tasks, loop=loop)
 
     async def stop(self, loop: Loop):
-        for worker in self.workers:
+        for worker in self._workers:
             await worker.stop(loop)
         await self.task
 
     def subscribe(self, stream: Stream, pipe: pipes.Pipe) -> Callable:
         # find a worker producing this stream
-        for worker in self.workers:
+        for worker in self._workers:
             try:
                 return worker.subscribe(stream, pipe)
             except SubscriptionError:

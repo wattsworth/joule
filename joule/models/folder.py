@@ -86,3 +86,16 @@ def find_or_create(path: str, db: Session, parent=None) -> Folder:
 def find_stream_by_path(path: str, db: Session) -> Optional[Stream]:
     segments = path[1:].split('/')
     return root(db).find_stream_by_segments(segments)
+
+
+# return the file path
+def get_stream_path(stream: Stream) -> Optional[str]:
+    if stream.folder is None:
+        return None
+
+    def _get_path(folder: Folder, path: str):
+        if folder.parent is None:
+            return "/"+path
+        return _get_path(folder.parent, folder.name+"/"+path)
+
+    return _get_path(stream.folder, stream.name)

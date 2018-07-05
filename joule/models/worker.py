@@ -6,9 +6,11 @@ import os
 import json
 import collections
 import datetime
+import psutil
 
 from joule.models.module import Module
 from joule.models.stream import Stream
+from joule.models.folder import get_stream_path
 from joule.models.errors import SubscriptionError
 from joule.models import pipes
 from joule.models.pipes.errors import EmptyPipe
@@ -30,6 +32,10 @@ class DataConnection:
         self.stream = stream
         self.pipe = pipe
         self.unsubscribe = unsubscribe
+
+    @property
+    def location(self):
+        return get_stream_path(self.stream)
 
     def disconnect(self):
         if self.unsubscribe is not None:
@@ -63,6 +69,20 @@ class Worker:
         # how long to wait to restart a failed process
         self.RESTART_INTERVAL = 1
         self.counter = 0
+
+    def statistics(self):
+        # gather process statistics
+        if self.process is not None:
+            p = psutil.Process(pid=self.process.pid)
+            with p.oneshot():
+                return{
+                    'pid': p.pid,
+                    'create_time': p.create_time(),
+                    'cpu_percent': p.cpu_percent(),
+                    'memory': p.memory_info().rss
+                }
+        else:
+            return {}
 
     async def run(self, subscribe: Callable[[Stream, pipes.Pipe, Loop], Callable],
                   loop: Loop, restart: bool = True) -> None:
@@ -110,11 +130,11 @@ class Worker:
     def log(self, msg):
         timestamp = datetime.datetime.now().isoformat()
         self._logs.append("[%s]: %s" % (timestamp, msg))
-        #if self.process is None:
+        # if self.process is None:
         #    pid = '???'
-        #else:
+        # else:
         #    pid = self.process.pid
-        #print("[%s: %s] " % (self.module.name, pid) + msg)
+        # print("[%s: %s] " % (self.module.name, pid) + msg)
 
     @property
     def logs(self) -> List[str]:
