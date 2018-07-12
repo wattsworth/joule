@@ -15,8 +15,6 @@ from joule.models import stream, folder
 def run(pipe_config: str, db: Session) -> Stream:
     # separate the configuration pieces
     (path, name, inline_config) = _parse_pipe_config(pipe_config)
-    if path is None or name is None:
-        raise ConfigurationError("invalid configuration [%s]" % pipe_config)
     name = stream.validate_name(name)
     # parse the inline configuration
     (datatype, element_names) = _parse_inline_config(inline_config)
@@ -67,7 +65,7 @@ def _parse_inline_config(inline_config: str) -> (Stream.DATATYPE, List[str]):
         return None, None
     try:
         config = inline_config.split('[')
-        if len(config) != 2:
+        if len(config) != 2 or inline_config[-1] != ']':
             raise ConfigurationError("format is datatype[e1,e2,e3,...]")
         datatype = stream.validate_datatype(config[0].strip())
         element_names = [e.strip() for e in config[1].strip()[:-1].split(",")]

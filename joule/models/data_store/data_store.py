@@ -28,6 +28,22 @@ class StreamInfo:
             "rows": self.rows
         }
 
+class DbInfo:
+    def __init__(self, path: str, other: int, reserved: int, free: int, size: int):
+        self.path = path
+        self.other = other
+        self.reserved = reserved
+        self.free = free
+        self.size = size
+
+    def to_json(self):
+        return {
+            "path": self.path,
+            "other": self.other,
+            "reserved": self.reserved,
+            "free": self.free,
+            "size": self.size
+        }
 
 class DataStore(ABC):
 
@@ -61,6 +77,10 @@ class DataStore(ABC):
 
     @abstractmethod
     async def info(self, stream: 'Stream') -> StreamInfo:
+        pass
+
+    @abstractmethod
+    async def dbinfo(self) -> DbInfo:
         pass
 
     @abstractmethod

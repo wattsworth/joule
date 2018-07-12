@@ -37,7 +37,7 @@ class TestStreamController(AioHTTPTestCase):
         # can query by id
         resp = await self.client.request("GET", "/stream.json?id=%d" % my_stream.id)
         actual = await resp.json()
-        expected = {"stream": my_stream.to_json(), "data-info": mock_info.to_json()}
+        expected = {"stream": my_stream.to_json(), "data_info": mock_info.to_json()}
         self.assertEqual(actual, expected)
         # can query by path
         payload = {'path': "/folder1/stream1"}

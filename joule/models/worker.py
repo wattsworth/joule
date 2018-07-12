@@ -70,7 +70,7 @@ class Worker:
         # how long to wait to restart a failed process
         self.RESTART_INTERVAL = 1
 
-    def statistics(self):
+    def statistics(self) -> Dict:
         # gather process statistics
         if self.process is not None:
             p = psutil.Process(pid=self.process.pid)
@@ -87,7 +87,7 @@ class Worker:
     @property
     def interface_socket(self):
         if self.module.has_interface:
-            return b'\0' + (SOCKET_BASE % self.module.uuid).encode('ascii')
+            return b'\x00' + (SOCKET_BASE % self.module.uuid).encode('ascii')
         return None
 
     @property
@@ -100,14 +100,18 @@ class Worker:
                   loop: Loop, restart: bool = True) -> None:
         self.stop_requested = False
         while True:
+            # when jouled is run from the command line Ctrl+C sends SIGTERM
+            # to the child and jouled which can cause jouled to restart the
+            # child and then kill it
             if self.stop_requested:
-                break
+                break  # pragma: no cover
             self.log("---starting module---")
             try:
                 await self._spawn_child(subscribe, loop)
             except SubscriptionError as e:
                 log.error("Cannot start module [%s]: %s" % (self.module.name, e))
-                break
+                self.log("inputs are not available: %s" % e)
+                return
             self.log("---module terminated---")
             if restart:
                 await asyncio.sleep(self.RESTART_INTERVAL)
@@ -169,8 +173,15 @@ class Worker:
                            loop: Loop) -> None:
         # lock so fd's don't pollute other modules
         await popen_lock.acquire()
+        try:
+            await self._subscribe_to_inputs(subscribe, loop)
+        except SubscriptionError as e:
+            self._close_child_fds()
+            popen_lock.release()
+            self._close_connections()
+            raise e  # bubble up the exception
+
         output_task = await self._spawn_outputs(loop)
-        await self._subscribe_to_inputs(subscribe, loop)
         cmd = self._compose_cmd()
         create = asyncio.create_subprocess_exec(
             *cmd,
@@ -190,6 +201,7 @@ class Worker:
             return
         self._close_child_fds()
         popen_lock.release()
+
         logger_task = loop.create_task(self._logger())
         await self.process.wait()
         # Unwind the tasks
@@ -197,8 +209,12 @@ class Worker:
         output_task.cancel()
         logger_task.cancel()
         # collect any errors
-        await output_task
-        await logger_task
+        try:
+            await output_task
+            await logger_task
+        # should be caught but on fast fails they can bubble up
+        except asyncio.CancelledError:  # pragma: no cover
+            pass
 
     async def _logger(self):
         try:

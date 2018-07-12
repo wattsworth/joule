@@ -5,7 +5,7 @@ import asyncio
 import numpy as np
 import textwrap
 import argparse
-
+from aiohttp import web
 
 ARGS_DESC = """
 ---
@@ -81,6 +81,15 @@ class RandomReader(ReaderModule):
                             help="rate in Hz")
         parser.description = textwrap.dedent(ARGS_DESC)
 
+    def routes(self):
+        return [
+            web.get('/', self.index)
+        ]
+
+    def index(self, request):
+        return web.Response(text="The average is %0.2f and the stddev is %0.2f" %
+                                 (self.avg, self.stddev))
+
     async def run(self, parsed_args, output):
         # produce output four times per second
         # figure out how much output will be in each block
@@ -98,6 +107,8 @@ class RandomReader(ReaderModule):
             int_block_size = int(np.floor(float_block_size))
             fraction_remaining = float_block_size - int_block_size
             data = np.random.rand(int_block_size, width)
+            self.avg = np.average(data)
+            self.stddev = np.std(data)
             top_ts = data_ts + int_block_size*data_ts_inc
             ts = np.array(np.linspace(data_ts, top_ts,
                                       int_block_size, endpoint=False),

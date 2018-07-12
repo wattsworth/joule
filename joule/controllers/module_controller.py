@@ -10,8 +10,10 @@ async def index(request):
     resp = []
     for worker in supervisor.workers:
         info = {
+            "id": worker.module.uuid,
             "name": worker.module.name,
             "description": worker.module.description,
+            "has_interface": worker.module.has_interface,
             "inputs": {},
             "outputs": {},
             "statistics": worker.statistics()}

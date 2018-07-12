@@ -24,7 +24,7 @@ def stream_info(config, path):
     click.echo("\tDecimate:     %s" % _display_decimate(my_stream.decimate))
     click.echo()
     # display information from the data store
-    my_info: StreamInfo = StreamInfo(**json["data-info"])
+    my_info: StreamInfo = StreamInfo(**json["data_info"])
     click.echo("\tStart:        %s" % _display_time(my_info.start))
     click.echo("\tEnd:          %s" % _display_time(my_info.end))
     click.echo("\tRows:         %d" % my_info.rows)

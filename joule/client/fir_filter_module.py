@@ -1,11 +1,22 @@
 import numpy as np
 import asyncio
+from aiohttp import web
 
 from . import filter_module
 
 
 class FIRFilterModule(filter_module.FilterModule):
     "Apply Type I or IV FIR filter to the input"
+
+
+    def routes(self):
+        return [
+            web.get('/', self.index)
+        ]
+
+    def index(self, request):
+        return web.Response(text="The average is %0.2f and the stddev is %0.2f" %
+                                 (self.avg, self.stddev))
 
     def make_filter(self, parsed_args):
         # return [taps...]
@@ -34,6 +45,8 @@ class FIRFilterModule(filter_module.FilterModule):
             data_out = np.apply_along_axis(np.convolve, 0,
                                            data_in, taps,
                                            mode='valid')
+            self.avg = np.average(data_out)
+            self.stddev = np.std(data_out)
             sarray_out['data'] = data_out
             await stream_out.write(sarray_out)
             stream_in.consume(output_len)

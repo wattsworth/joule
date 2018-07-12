@@ -1,6 +1,6 @@
 import numpy as np
 import argparse
-import joule
+from ..fir_filter_module import FIRFilterModule
 
 ARGS_DESC = """
 ---
@@ -80,11 +80,11 @@ ARGS_DESC = """
 """
 
 
-class MeanFilter(joule.FIRFilterModule):
+class MeanFilter(FIRFilterModule):
     "Compute the moving average of the input"
     
     def custom_args(self, parser):
-        parser.add_argument("window", type=int,
+        parser.add_argument("--window", type=int,
                             help="window length (odd)")
         parser.description = ARGS_DESC
         parser.formatter_class = argparse.RawDescriptionHelpFormatter

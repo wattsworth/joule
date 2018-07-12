@@ -68,8 +68,11 @@ class LocalPipe(Pipe):
         return self.interval_break
 
     def consume(self, num_rows):
-        if num_rows <= 0:
-            print("WARNING: NumpyPipe::consume called with negative offset: %d" % num_rows)
+        if num_rows == 0:
+            print("zero consume on local pipe")
+            return
+        if num_rows < 0:
+            print("WARNING: LocalPipe::consume called with negative offset: %d" % num_rows)
             return
         if num_rows > self.last_index:
             raise PipeError("cannot consume %d rows: only %d available"

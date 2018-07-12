@@ -3,11 +3,10 @@ import aiohttp
 from aiohttp import web
 import asyncio
 import re
-import pdb
 import numpy as np
 from typing import List, Dict, Optional, Callable, Coroutine
 from joule.models import Stream, pipes
-from joule.models.data_store.data_store import DataStore, StreamInfo, Data, Interval
+from joule.models.data_store.data_store import DataStore, StreamInfo, DbInfo, Data, Interval
 from joule.models.data_store import errors
 from joule.models.data_store.nilmdb_inserter import Inserter
 from joule.models.data_store.nilmdb_helpers import compute_path, check_for_error, ERRORS
@@ -123,6 +122,13 @@ class NilmdbStore(DataStore):
         path = compute_path(stream)
         info_dict = await self._path_info(path)
         return info_dict[path]
+
+    async def dbinfo(self) -> DbInfo:
+        url = "{server}/dbinfo".format(server = self.server)
+        async with self._get_client() as session:
+            async with session.get(url) as resp:
+                data = await resp.json()
+                return DbInfo(**data)
 
     async def destroy(self, stream: Stream):
         await self.remove(stream)

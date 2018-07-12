@@ -27,7 +27,7 @@ async def info(request: web.Request):
         return web.Response(text="stream does not exist", status=404)
     stream_info = await data_store.info(stream)
     return web.json_response({"stream": stream.to_json(),
-                              "data-info": stream_info.to_json()})
+                              "data_info": stream_info.to_json()})
 
 
 async def move(request: web.Request):
@@ -102,4 +102,3 @@ async def delete(request):
     db.delete(stream)
     db.commit()
     return web.Response(text="ok")
-

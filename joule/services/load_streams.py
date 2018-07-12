@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from typing import Dict
+from typing import Dict ,List
 import logging
 import re
 
@@ -13,14 +13,15 @@ from joule.services.helpers import (Configurations,
 logger = logging.getLogger('joule')
 
 # types
-Streams = Dict[str, Stream]
+Streams = Dict[str, List[Stream]]
 
 
 def run(path: str, db: Session):
     configs = load_configs(path)
     configured_streams = _parse_configs(configs)
-    for path, stream in configured_streams.items():
-        _save_stream(stream, path, db)
+    for path, streams in configured_streams.items():
+        for stream in streams:
+            _save_stream(stream, path, db)
     return [stream for _, stream in configured_streams.items()]
 
 
@@ -31,7 +32,10 @@ def _parse_configs(configs: Configurations) -> Streams:
             s = stream_from_config(data)
             s.locked = True
             stream_path = _validate_path(data['Main']['path'])
-            streams[stream_path] = s
+            if stream_path in streams:
+                streams[stream_path].append(s)
+            else:
+                streams[stream_path] = [s]
         except KeyError as e:
             logger.error("Invalid stream [%s]: [Main] missing %s" %
                          (file_path, e.args[0]))

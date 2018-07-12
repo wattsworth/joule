@@ -11,7 +11,7 @@ class FilterModule(base_module.BaseModule):
         assert False, "implement in child class"
 
     def run_as_task(self, parsed_args, loop):
-        coro = self._build_pipes(parsed_args)
+        coro = self._build_pipes(parsed_args, loop)
         (pipes_in, pipes_out) = loop.run_until_complete(coro)
         return asyncio.ensure_future(
             self.run(parsed_args, pipes_in, pipes_out))

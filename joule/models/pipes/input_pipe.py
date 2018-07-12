@@ -1,8 +1,10 @@
 import numpy as np
 import logging
+import inspect, os
 import asyncio
 from joule.models.pipes import Pipe, find_interval_token
 from joule.models.pipes.errors import PipeError, EmptyPipe
+import pdb
 
 log = logging.getLogger('joule')
 
@@ -21,7 +23,7 @@ class InputPipe(Pipe):
         self.interval_break = False
         # tunable constant
         self.BUFFER_SIZE = buffer_size
-        self.buffer = np.zeros(self.BUFFER_SIZE*2, dtype=self.dtype)
+        self.buffer = np.zeros(self.BUFFER_SIZE * 2, dtype=self.dtype)
         self.last_index = 0
 
     async def read(self, flatten=False):
@@ -30,22 +32,24 @@ class InputPipe(Pipe):
 
         rowbytes = self.dtype.itemsize
         max_rows = self.BUFFER_SIZE - self.last_index
-        # see if we can fit any more data into the buffer
         if max_rows == 0:
+            # buffer is full, this must be consumed before a new read
             return self._format_data(self.buffer[:self.last_index], flatten)
 
         nbytes = 0  # make sure we get more than 0 bytes from the read
+        raw = b''
         while nbytes == 0:
             if self.reader.at_eof():
-                if self.last_index == 0:
+                if (len(self.unprocessed_np_buffer) == 0 and
+                        self.last_index == 0):
                     raise EmptyPipe()
-                return self._format_data(self.buffer[:self.last_index], flatten)
+                break
 
             raw = await self.reader.read(max_rows * rowbytes)
+
             nbytes = len(raw)
             if nbytes == 0:
                 await asyncio.sleep(0.1)
-
         # extra_bytes: number of leftover bytes after % rowbytes
         # byte_buffer: the extra_bytes from the last read
         # unprocessed_np_buffer: data leftover from an interval break in the previous read
@@ -101,3 +105,22 @@ class InputPipe(Pipe):
     def close(self):
         if self.close_cb is not None:
             self.close_cb()
+
+descriptors = set()
+
+
+def print_open_fds(print_all=False):
+    global descriptors
+    (frame, filename, line_number, function_name, lines, index) = inspect.getouterframes(inspect.currentframe())[1]
+    fds = set(os.listdir('/proc/self/fd/'))
+    new_fds = fds - descriptors
+    closed_fds = descriptors - fds
+    descriptors = fds
+
+    if print_all:
+        print("{}:{} ALL file descriptors: {}".format(filename, line_number, fds))
+
+    if new_fds:
+        print("{}:{} new file descriptors: {}".format(filename, line_number, new_fds))
+    if closed_fds:
+        print("{}:{} closed file descriptors: {}".format(filename, line_number, closed_fds))

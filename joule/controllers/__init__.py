@@ -1,16 +1,16 @@
 from aiohttp import web
-from joule.controllers import (stream_controller,
-                               folder_controller,
-                               data_controller,
-                               module_controller,
-                               interface_controller)
-
-
-async def index(request):
-    return web.Response(text="Joule server")
+from joule.controllers import (
+    root_controller,
+    stream_controller,
+    folder_controller,
+    data_controller,
+    module_controller,
+    interface_controller)
 
 routes = [
-    web.get('/', index),
+    web.get('/', root_controller.index),
+    web.get('/dbinfo', root_controller.dbinfo),
+    web.get('/version', root_controller.version),
     # --- stream controller routes ---
     # list all streams
     web.get('/streams.json', stream_controller.index),

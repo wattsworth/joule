@@ -5,7 +5,7 @@ import numpy as np
 import asyncio
 from typing import Optional, Callable, Coroutine
 
-from joule.models import (Base, DataStore, Stream, StreamInfo, pipes)
+from joule.models import (Base, DataStore, Stream, StreamInfo, DbInfo, pipes)
 from joule.services import parse_pipe_config
 from tests import helpers
 
@@ -58,6 +58,9 @@ class MockStore(DataStore):
 
     async def info(self, stream: Stream) -> StreamInfo:
         return self.stream_info[stream]
+
+    async def dbinfo(self) -> DbInfo:
+        return DbInfo('/file/path', 0, 0, 0, 0)
 
     def close(self):
         pass
