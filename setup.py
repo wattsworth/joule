@@ -31,7 +31,7 @@ setup(
     scripts=[],
     provides=[],
     install_requires=['click',
-                      'treelib'
+                      'treelib',
                       'numpy',
                       'scipy',
                       'psutil',

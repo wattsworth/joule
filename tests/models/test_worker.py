@@ -29,6 +29,10 @@ MODULE_STOP_ON_SIGTERM = os.path.join(os.path.dirname(__file__),
 class TestWorker(unittest.TestCase):
 
     def setUp(self):
+        self.loop = asyncio.new_event_loop()
+        self.loop.set_debug(True)
+#        logging.getLogger('asyncio').setLevel(logging.DEBUG)
+        asyncio.set_event_loop(self.loop)
         # generic float32_4 streams
         streams = [Stream(name="str%d" % n, datatype=Stream.DATATYPE.FLOAT32,
                           elements=[Element(name="e%d" % j, index=j,
@@ -58,6 +62,14 @@ class TestWorker(unittest.TestCase):
         self.consumers: List[Worker] = [Worker(m) for m in m_consumers]
         self.supervisor = Supervisor(self.producers + self.consumers)
 
+    def tearDown(self):
+        closed = self.loop.is_closed()
+        if not closed:
+            self.loop.call_soon(self.loop.stop)
+            self.loop.run_forever()
+            self.loop.close()
+        asyncio.set_event_loop(None)
+        
     def test_builds_worker_from_module(self):
         # subscriber arrays are empty
         self.assertEqual(self.worker.subscribers, {self.streams[2]: [], self.streams[3]: []})
@@ -150,6 +162,7 @@ class TestWorker(unittest.TestCase):
 
     def test_builds_child_arguments(self):
         loop = asyncio.get_event_loop()
+        # TODO: use a command that sleeps for a little bit to give the logger time
         self.module.exec_cmd = "/bin/echo"
         self.module.arguments = {'arg1': "value1",
                                  'arg2': "value2"}
@@ -310,11 +323,16 @@ class TestWorker(unittest.TestCase):
         loop.run_until_complete(asyncio.gather(
             self.worker.run(self.supervisor.subscribe, loop, restart=False),
             mock_child(), mock_producers(),
-            self._stop_worker(loop)))
+            self._stop_worker(loop,2)))
         # check stream2, should be stream0*2.0 [] stream0*2.0
         output_data = output1.read_nowait()
         output1.consume(len(output_data))
         np.testing.assert_array_almost_equal(interval1_data['data'] * 2.0,
+                                             output_data['data'])
+        self.assertTrue(output1.end_of_interval)
+        output_data = output1.read_nowait()
+        output1.consume(len(output_data))
+        np.testing.assert_array_almost_equal(interval2_data['data'] * 2.0,
                                              output_data['data'])
         self.assertTrue(output1.end_of_interval)
 
@@ -322,6 +340,11 @@ class TestWorker(unittest.TestCase):
         output_data = output2.read_nowait()
         output2.consume(len(output_data))
         np.testing.assert_array_almost_equal(interval1_data['data'] * 3.0,
+                                             output_data['data'])
+        self.assertTrue(output2.end_of_interval)
+        output_data = output2.read_nowait()
+        output2.consume(len(output_data))
+        np.testing.assert_array_almost_equal(interval2_data['data'] * 3.0,
                                              output_data['data'])
         self.assertTrue(output2.end_of_interval)
 

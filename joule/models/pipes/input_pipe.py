@@ -23,6 +23,7 @@ class InputPipe(Pipe):
         self.interval_break = False
         # tunable constant
         self.BUFFER_SIZE = buffer_size
+        self.TIMEOUT_INTERVAL = 0.5
         self.buffer = np.zeros(self.BUFFER_SIZE * 2, dtype=self.dtype)
         self.last_index = 0
 
@@ -44,8 +45,11 @@ class InputPipe(Pipe):
                         self.last_index == 0):
                     raise EmptyPipe()
                 break
-
-            raw = await self.reader.read(max_rows * rowbytes)
+            try:
+                raw = await asyncio.wait_for(self.reader.read(max_rows * rowbytes),
+                                             self.TIMEOUT_INTERVAL)
+            except asyncio.TimeoutError:
+                break
 
             nbytes = len(raw)
             if nbytes == 0:
