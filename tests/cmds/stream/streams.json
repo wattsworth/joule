@@ -1,0 +1,288 @@
+{
+  "id": 1,
+  "name": "root",
+  "description": null,
+  "children": [
+    {
+      "id": 2,
+      "name": "folder_2",
+      "description": null,
+      "children": [
+
+      ],
+      "streams": [
+        {
+          "id": 1,
+          "name": "stream_2_1",
+          "description": "",
+          "datatype": "INT16",
+          "keep_us": -1,
+          "decimate": true,
+          "elements": [
+            {
+              "id": 12,
+              "index": 0,
+              "name": "top",
+              "units": null,
+              "plottable": true,
+              "display_type": "CONTINUOUS",
+              "offset": 0,
+              "scale_factor": 1,
+              "default_max": null,
+              "default_min": null
+            },
+            {
+              "id": 13,
+              "index": 1,
+              "name": "bottom",
+              "units": null,
+              "plottable": true,
+              "display_type": "CONTINUOUS",
+              "offset": 0,
+              "scale_factor": 1,
+              "default_max": null,
+              "default_min": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "folder_1",
+      "description": null,
+      "children": [
+
+      ],
+      "streams": [
+        {
+          "id": 2,
+          "name": "stream_1_2",
+          "description": "",
+          "datatype": "UINT8",
+          "keep_us": -1,
+          "decimate": true,
+          "elements": [
+            {
+              "id": 14,
+              "index": 0,
+              "name": "a",
+              "units": null,
+              "plottable": true,
+              "display_type": "CONTINUOUS",
+              "offset": 0,
+              "scale_factor": 1,
+              "default_max": null,
+              "default_min": null
+            },
+            {
+              "id": 15,
+              "index": 1,
+              "name": "b",
+              "units": null,
+              "plottable": true,
+              "display_type": "CONTINUOUS",
+              "offset": 0,
+              "scale_factor": 1,
+              "default_max": null,
+              "default_min": null
+            },
+            {
+              "id": 16,
+              "index": 2,
+              "name": "c",
+              "units": null,
+              "plottable": true,
+              "display_type": "CONTINUOUS",
+              "offset": 0,
+              "scale_factor": 1,
+              "default_max": null,
+              "default_min": null
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "name": "stream_1_1",
+          "description": "",
+          "datatype": "FLOAT32",
+          "keep_us": -1,
+          "decimate": true,
+          "elements": [
+            {
+              "id": 17,
+              "index": 0,
+              "name": "x",
+              "units": null,
+              "plottable": true,
+              "display_type": "CONTINUOUS",
+              "offset": 0,
+              "scale_factor": 1,
+              "default_max": 100,
+              "default_min": null
+            },
+            {
+              "id": 18,
+              "index": 1,
+              "name": "y",
+              "units": null,
+              "plottable": true,
+              "display_type": "EVENT",
+              "offset": 0,
+              "scale_factor": 1,
+              "default_max": null,
+              "default_min": -6
+            },
+            {
+              "id": 19,
+              "index": 2,
+              "name": "z",
+              "units": "watts",
+              "plottable": true,
+              "display_type": "DISCRETE",
+              "offset": 0,
+              "scale_factor": 1,
+              "default_max": null,
+              "default_min": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "folder_3",
+      "description": null,
+      "children": [
+        {
+          "id": 5,
+          "name": "folder_3_1",
+          "description": null,
+          "children": [
+
+          ],
+          "streams": [
+            {
+              "id": 4,
+              "name": "stream_3_1_1",
+              "description": "",
+              "datatype": "INT32",
+              "keep_us": -1,
+              "decimate": true,
+              "elements": [
+                {
+                  "id": 20,
+                  "index": 0,
+                  "name": "a",
+                  "units": null,
+                  "plottable": true,
+                  "display_type": "CONTINUOUS",
+                  "offset": 0,
+                  "scale_factor": 1,
+                  "default_max": null,
+                  "default_min": null
+                },
+                {
+                  "id": 21,
+                  "index": 1,
+                  "name": "b",
+                  "units": null,
+                  "plottable": true,
+                  "display_type": "CONTINUOUS",
+                  "offset": 0,
+                  "scale_factor": 1,
+                  "default_max": null,
+                  "default_min": null
+                },
+                {
+                  "id": 22,
+                  "index": 2,
+                  "name": "c",
+                  "units": null,
+                  "plottable": true,
+                  "display_type": "CONTINUOUS",
+                  "offset": 0,
+                  "scale_factor": 1,
+                  "default_max": null,
+                  "default_min": null
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "streams": [
+        {
+          "id": 5,
+          "name": "stream_3_1",
+          "description": "",
+          "datatype": "UINT16",
+          "keep_us": -1,
+          "decimate": true,
+          "elements": [
+            {
+              "id": 23,
+              "index": 0,
+              "name": "a",
+              "units": null,
+              "plottable": true,
+              "display_type": "CONTINUOUS",
+              "offset": 0,
+              "scale_factor": 1,
+              "default_max": null,
+              "default_min": null
+            },
+            {
+              "id": 24,
+              "index": 1,
+              "name": "b",
+              "units": null,
+              "plottable": true,
+              "display_type": "CONTINUOUS",
+              "offset": 0,
+              "scale_factor": 1,
+              "default_max": null,
+              "default_min": null
+            },
+            {
+              "id": 25,
+              "index": 2,
+              "name": "c",
+              "units": null,
+              "plottable": true,
+              "display_type": "CONTINUOUS",
+              "offset": 0,
+              "scale_factor": 1,
+              "default_max": null,
+              "default_min": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "folder_4",
+      "description": null,
+      "children": [
+        {
+          "id": 7,
+          "name": "folder_4_1",
+          "description": null,
+          "children": [
+
+          ],
+          "streams": [
+
+          ]
+        }
+      ],
+      "streams": [
+
+      ]
+    }
+  ],
+  "streams": [
+
+  ]
+}

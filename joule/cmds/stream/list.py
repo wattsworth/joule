@@ -10,6 +10,7 @@ from joule.cmds.config import pass_config
 @pass_config
 def stream_list(config):
     json = _get(config.url+"/streams.json")
+
     json["name"] = ""
     tree = Tree()
     _process_folder(tree, json, None)
@@ -38,9 +39,14 @@ def _get(url: str, params=None) -> Dict:
     try:
         resp = requests.get(url, params=params)
     except requests.ConnectionError:
-        print("Error contacting Joule server at [%s]" % url)
+        click.echo("Error contacting Joule server at [%s]" % url)
         exit(1)
     if resp.status_code != 200:
-        print("Error [%d]: %s" % (resp.status_code, resp.text))
+        click.echo("Error [%d]: %s" % (resp.status_code, resp.text))
         exit(1)
-    return resp.json()
+    try:
+        data = resp.json()
+        return data
+    except ValueError:
+        click.echo("Error: Invalid server response, check the URL")
+        exit(1)

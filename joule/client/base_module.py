@@ -19,11 +19,11 @@ class BaseModule:
         self.stop_requested = False
 
     def run_as_task(self, parsed_args, loop):
-        assert False, "implement in child class"
+        assert False, "implement in child class"  # pragma: no cover
 
     def custom_args(self, parser):
         # parser.add_argument("--custom_flag")
-        pass
+        pass  # pragma: no cover
 
     def stop(self):
         # override in client for alternate shutdown strategy
