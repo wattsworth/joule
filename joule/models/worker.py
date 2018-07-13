@@ -7,6 +7,7 @@ import json
 import collections
 import datetime
 import psutil
+import pdb
 
 from joule.models.module import Module
 from joule.models.stream import Stream
@@ -198,6 +199,12 @@ class Worker:
             self._close_child_fds()
             popen_lock.release()
             self._close_connections()
+            output_task.cancel()
+            try:
+                await output_task
+            # should be caught but on fast fails they can bubble up
+            except asyncio.CancelledError:  # pragma: no cover
+                pass
             return
         self._close_child_fds()
         popen_lock.release()

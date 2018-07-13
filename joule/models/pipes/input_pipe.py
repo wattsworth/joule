@@ -23,6 +23,8 @@ class InputPipe(Pipe):
         self.interval_break = False
         # tunable constant
         self.BUFFER_SIZE = buffer_size
+        """Note: The StreamReader.read coroutine hangs even if the write
+        side of the pipe is closed so the call is wrapped in a wait_for"""
         self.TIMEOUT_INTERVAL = 0.5
         self.buffer = np.zeros(self.BUFFER_SIZE * 2, dtype=self.dtype)
         self.last_index = 0

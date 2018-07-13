@@ -24,6 +24,8 @@ MODULE_IGNORE_SIGTERM = os.path.join(os.path.dirname(__file__),
                                      'worker_scripts', 'ignore_sigterm.py')
 MODULE_STOP_ON_SIGTERM = os.path.join(os.path.dirname(__file__),
                                       'worker_scripts', 'stop_on_sigterm.py')
+MODULE_ECHO_ARGS = os.path.join(os.path.dirname(__file__),
+                                'worker_scripts', 'echo_args.py')
 
 
 class TestWorker(unittest.TestCase):
@@ -31,7 +33,7 @@ class TestWorker(unittest.TestCase):
     def setUp(self):
         self.loop = asyncio.new_event_loop()
         self.loop.set_debug(True)
-#        logging.getLogger('asyncio').setLevel(logging.DEBUG)
+        #        logging.getLogger('asyncio').setLevel(logging.DEBUG)
         asyncio.set_event_loop(self.loop)
         # generic float32_4 streams
         streams = [Stream(name="str%d" % n, datatype=Stream.DATATYPE.FLOAT32,
@@ -69,7 +71,7 @@ class TestWorker(unittest.TestCase):
             self.loop.run_forever()
             self.loop.close()
         asyncio.set_event_loop(None)
-        
+
     def test_builds_worker_from_module(self):
         # subscriber arrays are empty
         self.assertEqual(self.worker.subscribers, {self.streams[2]: [], self.streams[3]: []})
@@ -162,8 +164,7 @@ class TestWorker(unittest.TestCase):
 
     def test_builds_child_arguments(self):
         loop = asyncio.get_event_loop()
-        # TODO: use a command that sleeps for a little bit to give the logger time
-        self.module.exec_cmd = "/bin/echo"
+        self.module.exec_cmd = "python " + MODULE_ECHO_ARGS
         self.module.arguments = {'arg1': "value1",
                                  'arg2': "value2"}
         self.module.has_interface = True
@@ -251,10 +252,7 @@ class TestWorker(unittest.TestCase):
         self.assertTrue('terminated' in logs[-1])
 
     def test_passes_data_across_pipes(self):
-        """Note: The StreamReader.read coroutine hangs even if the write
-        side of the pipe is closed so it is not possible to flush the pipes when
-        the child exits. Therefore this test just checks the first part of the data
-        which should be able to make it through the pipes"""
+
         loop = asyncio.get_event_loop()
         # create worker connections
         all_workers = [self.worker, *self.producers, *self.consumers]
@@ -268,20 +266,20 @@ class TestWorker(unittest.TestCase):
             inputs: List[pipes.Pipe] = []
             for c in self.worker.input_connections:
                 rf = pipes.reader_factory(c.child_fd, loop)
-                inputs.append(pipes.InputPipe(name='c-'+c.name,
+                inputs.append(pipes.InputPipe(name='c-' + c.name,
                                               stream=c.stream,
                                               reader_factory=rf))
             outputs = []
             for c in self.worker.output_connections:
                 wf = pipes.writer_factory(c.child_fd, loop)
-                outputs.append(pipes.OutputPipe(name='c-'+c.name,
+                outputs.append(pipes.OutputPipe(name='c-' + c.name,
                                                 stream=c.stream,
                                                 writer_factory=wf))
 
             # read input and send it to output
             for x in range(2):  # expect 2 intervals of data
-                for i in [1,0]:
-                    data = await inputs[i].read(flatten=True) * (i+2.0)
+                for i in [1, 0]:
+                    data = await inputs[i].read(flatten=True) * (i + 2.0)
                     await outputs[i].write(data)
                     self.assertEqual(len(data), 100)
                     self.assertTrue(inputs[i].end_of_interval)
@@ -291,6 +289,7 @@ class TestWorker(unittest.TestCase):
             outputs[1].close()
 
             await asyncio.sleep(0.5)
+
         interval1_data = helpers.create_data('float32_3')
         interval2_data = helpers.create_data('float32_3')
 
@@ -305,7 +304,7 @@ class TestWorker(unittest.TestCase):
             await input1.close_interval()
             input1.close()
 
-            input2 =  self.producers[1].subscribers[self.streams[1]][0]
+            input2 = self.producers[1].subscribers[self.streams[1]][0]
             await input2.write(interval1_data)
             await input2.close_interval()
             await input2.write(interval2_data)
@@ -323,7 +322,7 @@ class TestWorker(unittest.TestCase):
         loop.run_until_complete(asyncio.gather(
             self.worker.run(self.supervisor.subscribe, loop, restart=False),
             mock_child(), mock_producers(),
-            self._stop_worker(loop,2)))
+            self._stop_worker(loop, 2)))
         # check stream2, should be stream0*2.0 [] stream0*2.0
         output_data = output1.read_nowait()
         output1.consume(len(output_data))
@@ -347,7 +346,6 @@ class TestWorker(unittest.TestCase):
         np.testing.assert_array_almost_equal(interval2_data['data'] * 3.0,
                                              output_data['data'])
         self.assertTrue(output2.end_of_interval)
-
 
     async def _stop_worker(self, loop: asyncio.AbstractEventLoop, delay=1):
         await asyncio.sleep(delay)
