@@ -4,6 +4,7 @@ import unittest
 import tempfile
 import logging
 import os
+import pdb
 
 from joule.models import (Base, Stream, Folder, Element, ConfigurationError)
 from joule.services import load_streams
@@ -12,17 +13,6 @@ logger = logging.getLogger('joule')
 
 
 class TestConfigureStreams(unittest.TestCase):
-
-    def test_errors_on_bad_path(self):
-        """path must be of form /dir/subdir/../subsubdir"""
-        for bad_path in ["", "/slash/at/end/", "bad name", "/double/end//",
-                         "//double/start", "/*bad&symb()ls"]:
-            with self.assertRaisesRegex(ConfigurationError, "path"):
-                load_streams._validate_path(bad_path)
-        # but allows paths with _ and -
-        for good_path in ["/", "/short", "/meters-4/prep-a",
-                          "/meter_4/prep-b", "/path  with/ spaces"]:
-            load_streams._validate_path(good_path)
 
     def test_merges_config_and_db_streams(self):
         """e2e stream configuration service test"""
@@ -44,6 +34,11 @@ class TestConfigureStreams(unittest.TestCase):
         stream2.elements = [Element(name="e%d" % x, index=x) for x in range(2)]
         folder_deeper.streams.append(stream2)
         folder_deeper.parent = folder_test
+
+        # /test/deeper/stream3: int8_2
+        stream3 = Stream(name="stream3", datatype=Stream.DATATYPE.INT16)
+        stream3.elements = [Element(name="e%d" % x, index=x) for x in range(2)]
+        folder_deeper.streams.append(stream3)
 
         root = Folder(name="root")
         root.children = [folder_test]
@@ -68,16 +63,25 @@ class TestConfigureStreams(unittest.TestCase):
               name=new_e3
               default_min=-10
             """,
-            # /new/path/stream3: uint8_2 <a new stream>
+            # /new/path/stream4: uint8_2 <a new stream>
             """
             [Main]
-              name = stream3
+              name = stream4
               path = /new/path
               datatype = uint8
             [Element1]
               name=1
             [Element2]
               name=2
+            """,
+            # /new/path/stream5: uint8_1 <a new stream>
+            """
+            [Main]
+              name = stream5
+              path = /new/path
+              datatype = uint8
+            [Element1]
+              name=1
             """,
             # /test/deeper/stream2: float32_1 <conflicting layout>
             """
@@ -115,9 +119,9 @@ class TestConfigureStreams(unittest.TestCase):
 
         # now check the database:
         # should have 3 streams
-        self.assertEqual(session.query(Stream).count(), 3)
+        self.assertEqual(session.query(Stream).count(), 5)
         # and 7 elements (orphans eliminated)
-        self.assertEqual(session.query(Element).count(), 7)
+        self.assertEqual(session.query(Element).count(), 10)
         # Check stream merging
         #   stream1 should have a new keep value
         stream1: Stream = session.query(Stream).filter_by(name="stream1").one()
@@ -135,9 +139,12 @@ class TestConfigureStreams(unittest.TestCase):
         #   /test/deeper/stream2 should be the same
         stream2: Stream = session.query(Stream).filter_by(name="stream2").one()
         self.assertEqual(stream2.layout, 'int8_2')
+        #   /test/deeper/stream3 should be the same
+        stream3: Stream = session.query(Stream).filter_by(name="stream3").one()
+        self.assertEqual(stream3.layout, 'int16_2')
         # Check new streams are added
-        stream2: Stream = session.query(Stream).filter_by(name="stream3").one()
-        self.assertEqual(stream2.layout, 'uint8_2')
+        stream4: Stream = session.query(Stream).filter_by(name="stream4").one()
+        self.assertEqual(stream4.layout, 'uint8_2')
 
         # Check the folder structure
         # -root
@@ -157,15 +164,17 @@ class TestConfigureStreams(unittest.TestCase):
                 deeper = f.children[0]
                 self.assertEqual(deeper.name, "deeper")
                 self.assertEqual(len(deeper.children), 0)
-                self.assertEqual(len(deeper.streams), 1)
+                self.assertEqual(len(deeper.streams), 2)
                 self.assertEqual(deeper.streams[0].name, 'stream2')
+                self.assertEqual(deeper.streams[1].name, 'stream3')
             elif f.name == 'new':
                 self.assertEqual(len(f.streams), 0)
                 self.assertEqual(len(f.children), 1)
                 path = f.children[0]
                 self.assertEqual(path.name, "path")
                 self.assertEqual(len(path.children), 0)
-                self.assertEqual(len(path.streams), 1)
-                self.assertEqual(path.streams[0].name, 'stream3')
+                self.assertEqual(len(path.streams), 2)
+                self.assertEqual(path.streams[0].name, 'stream4')
+                self.assertEqual(path.streams[1].name, 'stream5')
             else:
                 self.fail("unexpected name: " + f.name)

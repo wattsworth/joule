@@ -12,7 +12,7 @@ from joule.models.errors import ConfigurationError
 from joule.models import element
 
 if TYPE_CHECKING:
-    from joule.models import (Folder, Pipe)
+    from joule.models import (Folder)  # pragma: no cover
 
 
 class Stream(Base):

@@ -48,4 +48,5 @@ class Supervisor:
         return None
 
     def publish(self, stream: Stream, loop: Loop):
-        pass
+        # TODO
+        pass  # pragma: no cover

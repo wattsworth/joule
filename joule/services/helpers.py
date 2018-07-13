@@ -15,6 +15,7 @@ def load_configs(path: str) -> Configurations:
         file_path = os.path.join(path, file)
         config = configparser.ConfigParser()
         try:
+            # can only happen if joule does not have read permissions
             if len(config.read(file_path)) != 1:
                 logger.error("Cannot read file [%s]" % file_path)
                 continue

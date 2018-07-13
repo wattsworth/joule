@@ -30,12 +30,23 @@ class TestStream(unittest.TestCase):
         my_stream = Stream(name='test', description='a test',
                            datatype=Stream.DATATYPE.FLOAT32, keep_us=Stream.KEEP_ALL)
         self.assertIsNotNone(my_stream)
+        # has a meaningful string representation
+        self.assertTrue("test" in "%r" % my_stream)
 
     def test_json(self):
-        my_stream = Stream(name='test', decimate=True, datatype=Stream.DATATYPE.UINT16)
+        my_stream = Stream(id=0, name='test', decimate=True, datatype=Stream.DATATYPE.UINT16)
+        for j in range(4):
+            my_stream.elements.append(Element(name="e%d" % j, index=j,
+                                              display_type=Element.DISPLAYTYPE.CONTINUOUS))
+        # turns streams into json
         json = my_stream.to_json()
         self.assertEqual(json['decimate'], True)
         self.assertEqual(json['name'], 'test')
+        self.assertEqual(len(json['elements']), 4)
+        # builds streams from json
+        new_stream = stream.from_json(json)
+        self.assertEqual(new_stream.id, my_stream.id)
+        self.assertEqual(len(new_stream.elements), len(my_stream.elements))
 
     def test_parses_config(self):
         s = stream.from_config(self.base_config)
@@ -84,4 +95,3 @@ class TestStream(unittest.TestCase):
 
     def test_has_string_representation(self):
         self.assertRegex("%s" % self.my_stream, self.my_stream.name)
-

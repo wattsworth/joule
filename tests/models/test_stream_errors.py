@@ -1,5 +1,5 @@
 import unittest
-
+from unittest import mock
 from joule.models import (ConfigurationError)
 from joule.models import stream  # for helper functions
 from tests import helpers
@@ -20,6 +20,11 @@ class TestStreamErrors(unittest.TestCase):
                  name = e1
             """)
 
+    def test_errors_on_missing_main(self):
+        self.base_config.remove_section("Main")
+        with self.assertRaisesRegex(ConfigurationError, 'Main'):
+            stream.from_config(self.base_config)
+
     def test_errors_on_bad_name(self):
         bad_names = ["", "has/slash", "/other"]
         self.evaluate_bad_values("name", bad_names)
@@ -39,9 +44,15 @@ class TestStreamErrors(unittest.TestCase):
         self.evaluate_bad_values("datatype", bad_datatypes)
 
     def test_errors_on_missing_elements_sections(self):
-        """Must have at least one element"""
+        """Must have at least one eunittest.lement"""
         self.base_config.remove_section("Element1")
         with self.assertRaises(ConfigurationError):
+            stream.from_config(self.base_config)
+
+    @mock.patch('joule.models.element.from_config')
+    def test_errors_on_invalid_elements(self, from_config: mock.Mock):
+        from_config.side_effect = ConfigurationError()
+        with self.assertRaisesRegex(ConfigurationError, 'element'):
             stream.from_config(self.base_config)
 
     def evaluate_bad_values(self, setting_name, bad_settings, section="Main"):

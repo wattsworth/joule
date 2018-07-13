@@ -31,6 +31,9 @@ class Daemon(object):
         self.stop_requested = False
 
     def initialize(self, loop: Loop):
+        # load the database configs
+        databases = load_databases.run(self.config.database_directory)
+
         # initialize the data store
         if self.config.data_store.store_type == config.DATASTORE.NILMDB:
             self.data_store: DataStore = \
@@ -42,7 +45,11 @@ class Daemon(object):
             exit(1)
 
         # connect to the database
-        engine = create_engine('sqlite:////tmp/joule.sql')
+        if config.database_name not in databases:
+            log.error("Specified database [%s] is not configured" % config.database_name)
+            exit(1)
+        database = databases[config.database_name]
+        engine = create_engine(database.engine_config)
         Base.metadata.create_all(engine)
         self.db = Session(bind=engine)
 
@@ -119,7 +126,7 @@ def main(argv=None):
     parser.read(args.config)
     my_config = None
     try:
-        my_config = config.build(custom_values=parser)
+        my_config = load_config.run(custom_values=parser)
     except ConfigurationError as e:
         log.error("Invalid configuration: %s" % e)
         exit(1)
