@@ -13,7 +13,9 @@ class FakeJoule:
         self.runner = None
         self.app = web.Application()
         self.app.router.add_routes(
-            [web.get('/streams.json', self.stream_list)])
+            [web.get('/streams.json', self.stream_list),
+             web.put('/data', self.data_write),
+             web.get('/data', self.data_read)])
         self.stream_list_response = ""
         self.stream_list_code = 200
 
@@ -23,3 +25,9 @@ class FakeJoule:
 
     async def stream_list(self, request: web.Request):
         return web.Response(text=self.stream_list_response, status=self.stream_list_code)
+
+    async def data_read(self, request: web.Request):
+        return web.Response(text="TODO")
+
+    async def data_write(self, request: web.Request):
+        return web.Response(text="TODO")
