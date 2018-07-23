@@ -5,11 +5,13 @@ import tempfile
 import logging
 import os
 import pdb
-
+import warnings
 from joule.models import (Base, Stream, Folder, Element, ConfigurationError)
 from joule.services import load_streams
 
 logger = logging.getLogger('joule')
+
+warnings.simplefilter('always')
 
 
 class TestConfigureStreams(unittest.TestCase):
@@ -174,7 +176,7 @@ class TestConfigureStreams(unittest.TestCase):
                 self.assertEqual(path.name, "path")
                 self.assertEqual(len(path.children), 0)
                 self.assertEqual(len(path.streams), 2)
-                self.assertEqual(path.streams[0].name, 'stream4')
-                self.assertEqual(path.streams[1].name, 'stream5')
+                for stream in path.streams:
+                    self.assertTrue(stream.name in ['stream4', 'stream5'])
             else:
                 self.fail("unexpected name: " + f.name)

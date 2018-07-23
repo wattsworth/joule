@@ -283,7 +283,12 @@ class Worker:
             os.set_inheritable(r, True)
             pipe = pipes.OutputPipe(name=name, stream=stream,
                                     writer=writer)
-            unsubscribe = subscribe(stream, pipe)
+            try:
+                unsubscribe = subscribe(stream, pipe)
+            except SubscriptionError as e:
+                os.close(r)
+                pipe.close()
+                raise e  # bubble exception up
             self.input_connections.append(DataConnection(name,
                                                          r, stream,
                                                          pipe,

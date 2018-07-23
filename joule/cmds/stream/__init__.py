@@ -8,7 +8,7 @@ from .destroy import stream_destroy
 @click.group(name="stream")
 def streams():
     """Manage Joule data streams"""
-    pass
+    pass  # pragma: no cover
 
 
 streams.add_command(stream_info)

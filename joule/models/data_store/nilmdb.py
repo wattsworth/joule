@@ -113,7 +113,7 @@ class NilmdbStore(DataStore):
         info = await self._path_info()
         all_paths = info.keys()
         base_path = compute_path(stream)
-        regex = re.compile("%s~decim-(\d)+$" % base_path)
+        regex = re.compile(r"%s~decim-(\d)+$" % base_path)
         decim_paths = list(filter(regex.match, all_paths))
         for path in [base_path, *decim_paths]:
             await self._remove_by_path(path, start, end)
@@ -136,7 +136,7 @@ class NilmdbStore(DataStore):
         info = await self._path_info()
         all_paths = info.keys()
         base_path = compute_path(stream)
-        regex = re.compile("%s~decim-(\d)+$" % base_path)
+        regex = re.compile(r'%s~decim-(\d)+$' % base_path)
         decim_paths = list(filter(regex.match, all_paths))
         async with self._get_client() as session:
             for path in [base_path, *decim_paths]:
@@ -150,7 +150,7 @@ class NilmdbStore(DataStore):
         params = {"path": path,
                   "binary": 1}
         decimated = False
-        if re.search('~decim-(\d)+$', path):
+        if re.search(r'~decim-(\d)+$', path):
             decimated = True
         async with self._get_client() as session:
             # first determine the intervals

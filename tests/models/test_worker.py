@@ -11,6 +11,7 @@ import inspect, os, pdb
 import argparse
 from unittest.mock import Mock
 from contextlib import contextmanager
+import warnings
 
 from joule.models import Module, Stream, Worker, Element, Supervisor
 from joule.models import pipes
@@ -26,6 +27,9 @@ MODULE_STOP_ON_SIGTERM = os.path.join(os.path.dirname(__file__),
                                       'worker_scripts', 'stop_on_sigterm.py')
 MODULE_ECHO_ARGS = os.path.join(os.path.dirname(__file__),
                                 'worker_scripts', 'echo_args.py')
+warnings.simplefilter('always')
+
+warnings.simplefilter('error')
 
 
 class TestWorker(unittest.TestCase):

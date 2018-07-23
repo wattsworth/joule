@@ -7,7 +7,7 @@ from .remove import data_remove
 @click.group(name="data")
 def data():
     """Manage Joule data"""
-    pass
+    pass  # pragma: no cover
 
 
 data.add_command(data_copy)

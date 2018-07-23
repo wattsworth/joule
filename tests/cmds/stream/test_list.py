@@ -4,11 +4,13 @@ import os
 import signal
 import multiprocessing
 from aiohttp.test_utils import unused_port
+import warnings
 
 from ..fake_joule import FakeJoule
 from joule.cli import main
 
 STREAM_LIST = os.path.join(os.path.dirname(__file__), 'streams.json')
+warnings.simplefilter('always')
 
 
 class TestStreamList(unittest.TestCase):

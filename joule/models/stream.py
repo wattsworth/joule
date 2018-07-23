@@ -116,7 +116,7 @@ def from_config(config: configparser.ConfigParser) -> Stream:
     except KeyError as e:
         raise ConfigurationError("[Main] missing %s" % e.args[0]) from e
     # now try to load the elements
-    element_configs = filter(lambda sec: re.match("Element\d", sec),
+    element_configs = filter(lambda sec: re.match(r"Element\d", sec),
                              config.sections())
     index = 0
     for name in element_configs:
@@ -156,7 +156,7 @@ def validate_keep(keep: str) -> int:
         return Stream.KEEP_NONE
     if keep.lower() == "all":
         return Stream.KEEP_ALL
-    match = re.fullmatch('^(\d+)([hdwmy])$', keep)
+    match = re.fullmatch(r'^(\d+)([hdwmy])$', keep)
     if match is None:
         raise ConfigurationError("invalid [Stream] keep"
                                  "use format #unit (eg 1w), none or all")

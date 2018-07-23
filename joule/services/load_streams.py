@@ -46,7 +46,7 @@ def _parse_configs(configs: Configurations) -> Streams:
 
 def _validate_path(path: str) -> str:
     #
-    if path != '/' and re.fullmatch('^(/[\w -]+)+$', path) is None:
+    if path != '/' and re.fullmatch(r'^(/[\w -]+)+$', path) is None:
         raise ConfigurationError(
             "invalid path, use format: /dir/subdir/../file. "
             "valid characters: [0-9,A-Z,a-z,_,-, ]")

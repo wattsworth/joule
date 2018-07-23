@@ -40,6 +40,7 @@ setup(
                       'markdown',
                       'BeautifulSoup4',
                       'dateparser',
+                      'tabulate',
                       'sqlalchemy'],
     namespace_packages=[],
     packages=find_packages(),
