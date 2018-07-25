@@ -34,8 +34,9 @@ class FakeJoule:
              web.get('/stream.json', self.stream_info),
              web.post('/data', self.data_write),
              web.get('/data', self.data_read)])
-        self.stream_list_response = ""
-        self.stream_list_code = 200
+        self.stub_stream_info = False
+        self.response = ""
+        self.http_code = 200
         self.streams: Dict[str, MockDbEntry] = {}
         self.msgs = None
 
@@ -48,9 +49,12 @@ class FakeJoule:
         self.streams[path] = MockDbEntry(stream, info, data)
 
     async def stream_list(self, request: web.Request):
-        return web.Response(text=self.stream_list_response, status=self.stream_list_code)
+        return web.Response(text=self.response, status=self.http_code)
 
     async def stream_info(self, request: web.Request):
+        if self.stub_stream_info:
+            return web.Response(text=self.response, status=self.http_code)
+
         mock_entry = self.streams[request.query['path']]
         return web.json_response({'stream': mock_entry.stream.to_json(),
                                   'data_info': mock_entry.info.to_json()})

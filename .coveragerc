@@ -1,2 +1,9 @@
 [run]
-omit = joule/_version.py, joule/main.py, joule/daemon/test.py
+omit = joule/testing/e2eutils/nilmtool.py, joule/testing/e2eutils/joule.py
+
+[report]
+exclude_lines =
+  pragma: no cover
+  def __repr__
+  if __name__ == __main__:
+

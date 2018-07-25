@@ -5,7 +5,7 @@ import signal
 import multiprocessing
 from aiohttp.test_utils import unused_port
 import warnings
-
+import time
 from ..fake_joule import FakeJoule
 from joule.cli import main
 
@@ -20,6 +20,7 @@ class TestStreamList(unittest.TestCase):
         self.msgs = multiprocessing.Queue()
         self.server_proc = multiprocessing.Process(target=server.start, args=(port, self.msgs))
         self.server_proc.start()
+        time.sleep(0.01)
         return "http://localhost:%d" % port
 
     def stop_server(self):
@@ -34,10 +35,11 @@ class TestStreamList(unittest.TestCase):
     def test_lists_streams(self):
         server = FakeJoule()
         with open(STREAM_LIST, 'r') as f:
-            server.stream_list_response = f.read()
+            server.response = f.read()
         url = self.start_server(server)
         runner = CliRunner()
         result = runner.invoke(main, ['--url', url, 'stream', 'list'])
+        self.assertEqual(result.exit_code, 0)
         output = result.output
         # make sure the folders are listed
         for folder in ['folder_1', 'folder_2', 'folder_3', 'folder_3_1', 'folder_4', 'folder_4_1']:
@@ -56,7 +58,7 @@ class TestStreamList(unittest.TestCase):
 
     def test_when_server_returns_invalid_data(self):
         server = FakeJoule()
-        server.stream_list_response = "notjson"
+        server.response = "notjson"
         url = self.start_server(server)
         runner = CliRunner()
         result = runner.invoke(main, ['--url', url, 'stream', 'list'])
@@ -68,8 +70,8 @@ class TestStreamList(unittest.TestCase):
         server = FakeJoule()
         error_msg = "test error"
         error_code = 500
-        server.stream_list_response = error_msg
-        server.stream_list_code = error_code
+        server.response = error_msg
+        server.http_code = error_code
         url = self.start_server(server)
         runner = CliRunner()
         result = runner.invoke(main, ['--url', url, 'stream', 'list'])
