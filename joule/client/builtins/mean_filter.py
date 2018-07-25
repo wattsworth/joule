@@ -81,7 +81,7 @@ ARGS_DESC = """
 
 
 class MeanFilter(FIRFilterModule):
-    "Compute the moving average of the input"
+    """Compute the moving average of the input"""
     
     def custom_args(self, parser):
         parser.add_argument("--window", type=int,
@@ -90,8 +90,8 @@ class MeanFilter(FIRFilterModule):
         parser.formatter_class = argparse.RawDescriptionHelpFormatter
 
     def make_filter(self, parsed_args):
-        N = parsed_args.window
-        return np.ones((N,))/N
+        window = parsed_args.window
+        return np.ones((window,))/window
 
                 
 def main():

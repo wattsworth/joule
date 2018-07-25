@@ -39,4 +39,8 @@ def _get(url: str, params=None) -> Dict:
     if resp.status_code != 200:
         print("Error [%d]: %s" % (resp.status_code, resp.text))
         exit(1)
-    return resp.json()
+    try:
+        return resp.json()
+    except ValueError:
+        click.echo("Error: Invalid server response, check the URL")
+        exit(1)

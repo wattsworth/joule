@@ -9,8 +9,8 @@ Loop = asyncio.AbstractEventLoop
 class LocalPipe(Pipe):
     """pipe for intra-module async communication"""
 
-    def __init__(self, layout, loop:Loop, buffer_size=3000, debug=False):
-        super().__init__(layout=layout)
+    def __init__(self, layout, loop: Loop, name=None, buffer_size=3000, debug=False):
+        super().__init__(name=name, layout=layout)
         # tunable constants
         self.BUFFER_SIZE = buffer_size
         self.MAX_BLOCK_SIZE = int(buffer_size / 3)
@@ -33,8 +33,7 @@ class LocalPipe(Pipe):
                 if block is None:
                     self.interval_break = True
                     break
-                self.buffer[
-                    self.last_index:self.last_index + len(block)] = block
+                self.buffer[self.last_index:self.last_index + len(block)] = block
                 if self.debug:
                     if self._buffer_full():
                         msg = "buffer FULL"
@@ -76,7 +75,7 @@ class LocalPipe(Pipe):
             return
         if num_rows > self.last_index:
             raise PipeError("cannot consume %d rows: only %d available"
-                                 % (num_rows, self.last_index))
+                            % (num_rows, self.last_index))
         self.buffer = np.roll(self.buffer, -1 * num_rows)
         self.last_index -= num_rows
 
@@ -115,4 +114,3 @@ class LocalPipe(Pipe):
         """Yield successive MAX_BLOCK_SIZE chunks of data."""
         for i in range(0, len(data), self.MAX_BLOCK_SIZE):
             yield data[i:i + self.MAX_BLOCK_SIZE]
-

@@ -127,7 +127,9 @@ def data_copy(config, start, end, source, destination):
     # set up aiohttp to handle the response as a JoulePipe
     loop = asyncio.get_event_loop()
     loop.run_until_complete(_copy_data())
+    loop.close()
     click.echo("OK")
+
 
 def _get(url: str, params=None) -> Dict:
     resp = None  # to appease type checker

@@ -30,10 +30,11 @@ class FakeJoule:
         self.runner = None
         self.app = web.Application()
         self.app.router.add_routes(
-            [web.get('/streams.json', self.stream_list),
+            [web.get('/streams.json', self.stub_get),
              web.get('/stream.json', self.stream_info),
              web.post('/data', self.data_write),
-             web.get('/data', self.data_read)])
+             web.get('/data', self.data_read),
+             web.get('/module.json', self.stub_get)])
         self.stub_stream_info = False
         self.response = ""
         self.http_code = 200
@@ -48,7 +49,7 @@ class FakeJoule:
     def add_stream(self, path, stream: Stream, info: StreamInfo, data: Optional[np.ndarray]):
         self.streams[path] = MockDbEntry(stream, info, data)
 
-    async def stream_list(self, request: web.Request):
+    async def stub_get(self, request: web.Request):
         return web.Response(text=self.response, status=self.http_code)
 
     async def stream_info(self, request: web.Request):

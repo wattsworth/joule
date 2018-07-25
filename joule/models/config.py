@@ -39,11 +39,9 @@ class DatabaseConfig:
     def __init__(self, backend: BACKEND,
                  path: str = "",
                  url: str = "",
-                 port: int = 0,
                  username: str = "",
                  password: str = "", ):
         self.url = url
-        self.port = port
         self.path = path
         self.username = username
         self.password = password
@@ -52,7 +50,10 @@ class DatabaseConfig:
     @property
     def engine_config(self):
         if self.backend == BACKEND.SQLITE:
-            return "sqlite:///%s" % self.path
+            return "sqlite://%s" % self.path
+        elif (self.backend == BACKEND.POSTGRES or
+              self.backend == BACKEND.TIMESCALE):
+            return "postgresql://%s:%s@%s" % (self.username, self.password, self.url)
         else:
             raise ConfigurationError("no sqlalchemy support for %s" % self.backend.value)
 
@@ -82,4 +83,3 @@ class JouleConfig:
         self.port = port
         self.database_name = database_name
         self.data_store = data_store
-

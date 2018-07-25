@@ -1,5 +1,7 @@
 import numpy as np
 import configparser
+import asyncio
+import unittest
 
 
 def create_data(layout:str,
@@ -66,3 +68,19 @@ def mock_stream_info(streams):
                 return [stream]
         return []
     return stream_info
+
+
+class AsyncTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.loop = asyncio.new_event_loop()
+        self.loop.set_debug(True)
+        asyncio.set_event_loop(self.loop)
+
+    def tearDown(self):
+        closed = self.loop.is_closed()
+        if not closed:
+            self.loop.call_soon(self.loop.stop)
+            self.loop.run_forever()
+            self.loop.close()
+        asyncio.set_event_loop(None)

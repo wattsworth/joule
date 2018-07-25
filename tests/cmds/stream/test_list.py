@@ -8,12 +8,13 @@ import warnings
 import time
 from ..fake_joule import FakeJoule
 from joule.cli import main
+from tests import helpers
 
 STREAM_LIST = os.path.join(os.path.dirname(__file__), 'streams.json')
 warnings.simplefilter('always')
 
 
-class TestStreamList(unittest.TestCase):
+class TestStreamList(helpers.AsyncTestCase):
 
     def start_server(self, server):
         port = unused_port()

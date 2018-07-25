@@ -5,8 +5,7 @@ import signal
 import multiprocessing
 from aiohttp.test_utils import unused_port
 import warnings
-import traceback
-import pdb
+import time
 import numpy as np
 
 from ..fake_joule import FakeJoule
@@ -18,13 +17,14 @@ STREAM_LIST = os.path.join(os.path.dirname(__file__), 'streams.json')
 warnings.simplefilter('always')
 
 
-class TestDataCopy(unittest.TestCase):
+class TestDataCopy(helpers.AsyncTestCase):
 
     def start_server(self, server):
         port = unused_port()
         self.msgs = multiprocessing.Queue()
         self.server_proc = multiprocessing.Process(target=server.start, args=(port, self.msgs))
         self.server_proc.start()
+        time.sleep(0.01)
         return "http://localhost:%d" % port
 
     def stop_server(self):
