@@ -3,13 +3,14 @@ import requests
 from treelib import Tree
 from typing import Dict
 
+from joule.cmds.helpers import get_json
 from joule.cmds.config import pass_config
 
 
 @click.command(name="list")
 @pass_config
 def stream_list(config):
-    json = _get(config.url+"/streams.json")
+    json = get_json(config.url+"/streams.json")
 
     json["name"] = ""
     tree = Tree()

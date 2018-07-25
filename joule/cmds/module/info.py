@@ -2,6 +2,7 @@ import click
 import requests
 from typing import Dict
 
+from joule.cmds.helpers import get_json
 from joule.cmds.config import pass_config
 
 
@@ -10,7 +11,7 @@ from joule.cmds.config import pass_config
 @pass_config
 def module_info(config, name):
     payload = {'name': name}
-    json = _get(config.url + "/module.json", params=payload)
+    json = get_json(config.url + "/module.json", params=payload)
     # display module information
     click.echo()
     click.echo("Name:         %s" % json['name'])
@@ -28,19 +29,3 @@ def module_info(config, name):
         for (name, loc) in json['outputs'].items():
             click.echo("\t%s:\t%s" % (name, loc))
 
-
-def _get(url: str, params=None) -> Dict:
-    resp = None  # to appease type checker
-    try:
-        resp = requests.get(url, params=params)
-    except requests.ConnectionError:
-        print("Error contacting Joule server at [%s]" % url)
-        exit(1)
-    if resp.status_code != 200:
-        print("Error [%d]: %s" % (resp.status_code, resp.text))
-        exit(1)
-    try:
-        return resp.json()
-    except ValueError:
-        click.echo("Error: Invalid server response, check the URL")
-        exit(1)

@@ -1,9 +1,8 @@
 import click
-import requests
 from tabulate import tabulate
 import datetime
-from typing import Dict
 
+from joule.cmds.helpers import get_json
 from joule.cmds.config import pass_config
 from joule.models import stream, StreamInfo
 
@@ -13,7 +12,7 @@ from joule.models import stream, StreamInfo
 @pass_config
 def stream_info(config, path):
     payload = {'path': path}
-    json = _get(config.url + "/stream.json", params=payload)
+    json = get_json(config.url + "/stream.json", params=payload)
     my_stream: stream.Stream = stream.from_json(json["stream"])
     # display stream information
     click.echo()
@@ -81,20 +80,3 @@ def _optional_field(value: str) -> str:
         return u"\u2014"  # emdash
     else:
         return value
-
-
-def _get(url: str, params=None) -> Dict:
-    resp = None  # to appease type checker
-    try:
-        resp = requests.get(url, params=params)
-    except requests.ConnectionError:
-        print("Error contacting Joule server at [%s]" % url)
-        exit(1)
-    if resp.status_code != 200:
-        print("Error [%d]: %s" % (resp.status_code, resp.text))
-        exit(1)
-    try:
-        return resp.json()
-    except ValueError:
-        click.echo("Error: Invalid server response, check the URL")
-        exit(1)

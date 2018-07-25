@@ -1,11 +1,15 @@
 from aiohttp import web
 import os
 import sys
-import traceback
 import multiprocessing
 import numpy as np
-from joule.models import Stream, StreamInfo, pipes
 from typing import Dict, Optional
+from aiohttp.test_utils import unused_port
+import time
+import signal
+
+from tests import helpers
+from joule.models import Stream, StreamInfo, pipes
 
 # from https://github.com/aio-libs/aiohttp/blob/master/examples/fake_server.py
 
@@ -34,6 +38,7 @@ class FakeJoule:
              web.get('/stream.json', self.stream_info),
              web.post('/data', self.data_write),
              web.get('/data', self.data_read),
+             web.get('/modules.json', self.stub_get),
              web.get('/module.json', self.stub_get)])
         self.stub_stream_info = False
         self.response = ""
@@ -86,3 +91,22 @@ class FakeJoule:
                 break
         self.msgs.put(mock_entry)
         return web.Response(text="ok")
+
+
+class FakeJouleTestCase(helpers.AsyncTestCase):
+    def start_server(self, server):
+        port = unused_port()
+        self.msgs = multiprocessing.Queue()
+        self.server_proc = multiprocessing.Process(target=server.start, args=(port, self.msgs))
+        self.server_proc.start()
+        time.sleep(0.01)
+        return "http://localhost:%d" % port
+
+    def stop_server(self):
+        if self.server_proc is None:
+            return
+        # aiohttp doesn't always quit with SIGTERM
+        os.kill(self.server_proc.pid, signal.SIGKILL)
+        # join any zombies
+        multiprocessing.active_children()
+        self.server_proc.join()

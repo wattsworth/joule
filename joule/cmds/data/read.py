@@ -55,7 +55,9 @@ def data_read(config, start, end, max_rows, decimation_level, show_bounds, mark_
                             click.echo("# interval break")
                 except EmptyPipe:
                     pass
-
     # set up aiohttp to handle the response as a JoulePipe
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(_get_data())
+    try:
+        loop.run_until_complete(_get_data())
+    except aiohttp.ClientError as e:
+        print("Error: ", e)
