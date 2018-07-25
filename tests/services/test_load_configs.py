@@ -40,20 +40,3 @@ class TestLoadConfigs(unittest.TestCase):
                     self.assertEqual(my_config.stream_directory, stream_dir)
                     self.assertEqual(my_config.module_directory, module_dir)
                     self.assertEqual(my_config.database_directory, database_dir)
-
-    def test_accepts_data_store_types(self):
-        for backend in ['NilmDB', 'Timescale', 'SQL']:
-            parser = configparser.ConfigParser()
-            parser.read_string("""
-                        [DataStore]
-                        type = %s
-                        database = mock
-                        url = mock
-                        """ % backend)
-            my_config = load_config.run(custom_values=parser, verify=False)
-            if backend == 'NilmDB':
-                self.assertEqual(my_config.data_store.backend, config.DATASTORE.NILMDB)
-            elif backend == 'Timescale':
-                self.assertEqual(my_config.data_store.backend, config.DATASTORE.TIMESCALE)
-            elif backend == 'SQL':
-                self.assertEqual(my_config.data_store.backend, config.DATASTORE.SQL)

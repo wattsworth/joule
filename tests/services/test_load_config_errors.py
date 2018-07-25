@@ -48,25 +48,6 @@ class TestLoadConfigErrors(unittest.TestCase):
             with self.assertRaisesRegex(ConfigurationError, "Port"):
                 load_config.run(custom_values=parser, verify=False)
 
-    def test_errors_on_bad_datastore_type(self):
-        parser = configparser.ConfigParser()
-        parser.read_string("""
-                            [DataStore]
-                            type = bad-value
-                            """)
-        with self.assertRaises(ConfigurationError):
-            load_config.run(custom_values=parser, verify=False)
-
-    def test_errors_on_missing_datastore_configs(self):
-        # Timescale must have a database specified
-        parser = configparser.ConfigParser()
-        parser.read_string("""
-                    [DataStore]
-                    type = Timescale
-                    """)
-        with self.assertRaisesRegex(ConfigurationError, "Database"):
-            load_config.run(custom_values=parser, verify=False)
-
     def test_errors_on_invalid_insert_period(self):
         bad_periods = ['-1', '0', 'abc', '']
         for period in bad_periods:

@@ -16,10 +16,13 @@ Data = Union[Interval, np.array]
 
 
 class StreamInfo:
-    def __init__(self, start: int, end: int, rows: int):
+    def __init__(self, start: Optional[int], end: Optional[int], rows: int):
         self.start = start
         self.end = end
         self.rows = rows
+
+    def __repr__(self):
+        return "<StreamInfo start=%r end=%r rows=%r>" % (self.start, self.end, self.rows)
 
     def to_json(self):
         return {

@@ -17,7 +17,8 @@ class TestStreamList(unittest.TestCase):
 
     def start_server(self, server):
         port = unused_port()
-        self.server_proc = multiprocessing.Process(target=server.start, args=(port,))
+        self.msgs = multiprocessing.Queue()
+        self.server_proc = multiprocessing.Process(target=server.start, args=(port, self.msgs))
         self.server_proc.start()
         return "http://localhost:%d" % port
 

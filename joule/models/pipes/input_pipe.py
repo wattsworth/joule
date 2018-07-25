@@ -4,7 +4,6 @@ import inspect, os
 import asyncio
 from joule.models.pipes import Pipe, find_interval_token
 from joule.models.pipes.errors import PipeError, EmptyPipe
-import pdb
 
 log = logging.getLogger('joule')
 
@@ -32,7 +31,6 @@ class InputPipe(Pipe):
     async def read(self, flatten=False):
         if self.reader is None:
             self.reader = await self.reader_factory()
-
         rowbytes = self.dtype.itemsize
         max_rows = self.BUFFER_SIZE - self.last_index
         if max_rows == 0:

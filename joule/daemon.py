@@ -13,7 +13,7 @@ from typing import List
 from joule.models import (Base, Worker, Supervisor, config, ConfigurationError,
                           SubscriptionError, DataStore, Stream, pipes)
 from joule.models import NilmdbStore
-from joule.services import (load_modules, load_streams)
+from joule.services import (load_modules, load_streams, load_config, load_databases)
 import joule.controllers
 
 log = logging.getLogger('joule')
@@ -34,21 +34,27 @@ class Daemon(object):
         # load the database configs
         databases = load_databases.run(self.config.database_directory)
 
-        # initialize the data store
-        if self.config.data_store.store_type == config.DATASTORE.NILMDB:
+        # initialize the data store database
+        db_name = self.config.data_store.database_name
+        if db_name not in databases:
+            log.error("Specified database [%s] is not configured" % db_name)
+            exit(1)
+        database = databases[db_name]
+        if database.backend == config.BACKEND.NILMDB:
             self.data_store: DataStore = \
-                NilmdbStore(self.config.data_store.url,
+                NilmdbStore(database.url,
                             self.config.data_store.insert_period,
                             self.config.data_store.cleanup_period, loop)
         else:
-            log.error("Unsupported data store: " + self.config.data_store.type.value)
+            log.error("Unsupported data store type: " + database.backend.value)
             exit(1)
 
-        # connect to the database
-        if config.database_name not in databases:
-            log.error("Specified database [%s] is not configured" % config.database_name)
+        # connect to the metadata database
+        db_name = self.config.database_name
+        if db_name not in databases:
+            log.error("Specified database [%s] is not configured" % db_name)
             exit(1)
-        database = databases[config.database_name]
+        database = databases[db_name]
         engine = create_engine(database.engine_config)
         Base.metadata.create_all(engine)
         self.db = Session(bind=engine)

@@ -11,3 +11,4 @@ from joule.models.errors import (ConfigurationError,
                                  SubscriptionError)
 from joule.models.pipes.pipe import Pipe
 from joule.models.meta import Base
+from joule.models.config import DatabaseConfig

@@ -17,31 +17,26 @@ DEFAULT_CONFIG = {
             "DatabaseDirectory": "/etc/joule/database_configs",
             "IPAddress": "127.0.0.1",
             "Port": 3000,
-            "Database": "default"
+            "Database": "metadata"  # may not be NILMDB
         },
     "DataStore":
         {
-            "Type": "nilmdb",
-            "URL": "http://localhost/nilmdb",
+            "Database": "datastore",  # must be NILMDB or TIMESCALE
             "InsertPeriod": "5",
             "CleanupPeriod": "60"
         }
 }
 
 
-class DATASTORE(enum.Enum):
+class BACKEND(enum.Enum):
     NILMDB = enum.auto()
-    TIMESCALE = enum.auto()
-    SQL = enum.auto()
-
-
-class DATABASE(enum.Enum):
     POSTGRES = enum.auto()
     SQLITE = enum.auto()
+    TIMESCALE = enum.auto()
 
 
 class DatabaseConfig:
-    def __init__(self, backend: DATABASE,
+    def __init__(self, backend: BACKEND,
                  path: str = "",
                  url: str = "",
                  port: int = 0,
@@ -54,15 +49,20 @@ class DatabaseConfig:
         self.password = password
         self.backend = backend
 
+    @property
+    def engine_config(self):
+        if self.backend == BACKEND.SQLITE:
+            return "sqlite:///%s" % self.path
+        else:
+            raise ConfigurationError("no sqlalchemy support for %s" % self.backend.value)
+
 
 class DataStoreConfig:
-    def __init__(self, backend: DATASTORE,
+    def __init__(self,
                  insert_period: float, cleanup_period: float,
-                 url: str = "", database_name: str = ""):
-        self.backend = backend
-        self.url = url  # for NilmDB
+                 database_name: str = ""):
         self.insert_period = insert_period
-        self.database_name = database_name  # for Timescale
+        self.database_name = database_name
         self.cleanup_period = cleanup_period
 
 

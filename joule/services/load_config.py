@@ -44,25 +44,9 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
     # Database
     database_name = my_configs['Main']['Database']
 
-    # DataStore:Type
+    # DataStore:Database
     store_configs = my_configs['DataStore']
-    data_store_url = ""
-    data_store_database = ""
-    backend = store_configs['Type']
-    try:
-        if backend.lower() == 'nilmdb':
-            data_store_backend = config.DATASTORE.NILMDB
-            data_store_url = store_configs['URL']
-        elif backend.lower() == 'timescale':
-            data_store_backend = config.DATASTORE.TIMESCALE
-            data_store_database = store_configs['Database']
-        elif backend.lower() == 'sql':
-            data_store_backend = config.DATASTORE.SQL
-            data_store_database = store_configs['Database']
-        else:
-            raise ConfigurationError("Unknown data store type [%s]" % backend)
-    except KeyError as e:
-        raise ConfigurationError("[%s] setting is required for %s DataStore" % (e, backend))
+
     # DataStore:InsertPeriod
     try:
         insert_period = int(store_configs['InsertPeriod'])
@@ -79,9 +63,8 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
     except ValueError:
         raise ConfigurationError("DataStore:CleanupPeriod must be a postive number > InsertPeriod")
 
-    data_store = config.DataStoreConfig(data_store_backend, insert_period, cleanup_period,
-                                        url=data_store_url,
-                                        database_name=data_store_database)
+    data_store = config.DataStoreConfig(insert_period, cleanup_period,
+                                        database_name=store_configs['Database'])
     return config.JouleConfig(module_directory=module_directory,
                               stream_directory=stream_directory,
                               database_directory=database_directory,
