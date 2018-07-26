@@ -7,7 +7,8 @@ import numpy as np
 import shlex
 import json
 from typing import List
-import inspect, os, pdb
+import inspect
+import os
 import argparse
 from unittest.mock import Mock
 from contextlib import contextmanager
@@ -259,7 +260,6 @@ class TestWorker(unittest.TestCase):
 
         loop = asyncio.get_event_loop()
         # create worker connections
-        all_workers = [self.worker, *self.producers, *self.consumers]
         # child runs until stopped
         self.module.exec_cmd = "/usr/bin/yes #"
 

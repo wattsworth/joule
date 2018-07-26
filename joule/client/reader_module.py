@@ -1,4 +1,5 @@
 import asyncio
+import numpy as np
 import logging
 from . import base_module
 
@@ -27,7 +28,10 @@ class ReaderModule(base_module.BaseModule):
     
 class StdoutPipe:
     @staticmethod
-    async def write(data):
+    async def write(data: np.ndarray):
+        # check if this is a structured array, if so flatten it
+        if data.ndim == 1:
+            data = np.c_[data['timestamp'][:, None], data['data']]
         for row in data:
             ts = row[0]
             vals = row[1:]
