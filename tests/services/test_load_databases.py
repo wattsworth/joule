@@ -52,4 +52,4 @@ class TestLoadDatabases(unittest.TestCase):
         self.assertEqual(databases['db2'].engine_config,
                          "postgresql://admin:secret@127.0.0.1:5432")
         self.assertEqual(databases['db3'].engine_config,
-                         "sqlite:///tmp/sql.db")
+                         "sqlite:////tmp/sql.db")

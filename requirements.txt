@@ -7,13 +7,11 @@ beautifulsoup4==4.6.0
 certifi==2018.4.16
 chardet==3.0.4
 click==6.7
-cliff==2.11.0
 cmd2==0.8.5
 coverage==4.5.1
 dateparser==0.7.0
 idna==2.6
 idna-ssl==1.0.1
--e git+git@git.wattsworth.net:/wattsworth/joule.git@f63d04363bdc0bed59fd11c039ca7511eed25c07#egg=Joule
 Markdown==2.6.11
 more-itertools==4.1.0
 multidict==4.3.1
@@ -37,7 +35,7 @@ regex==2018.2.21
 requests==2.18.4
 scipy==1.1.0
 six==1.11.0
-sliderepl==1.1
+
 SQLAlchemy==1.2.7
 stevedore==1.28.0
 tabulate==0.8.2

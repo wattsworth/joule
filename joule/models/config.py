@@ -50,7 +50,7 @@ class DatabaseConfig:
     @property
     def engine_config(self):
         if self.backend == BACKEND.SQLITE:
-            return "sqlite://%s" % self.path
+            return "sqlite:///%s" % self.path
         elif (self.backend == BACKEND.POSTGRES or
               self.backend == BACKEND.TIMESCALE):
             return "postgresql://%s:%s@%s" % (self.username, self.password, self.url)
