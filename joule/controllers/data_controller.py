@@ -27,12 +27,13 @@ async def read(request: web.Request, json=False):
 
     # parse optional parameters
     params = {'start': None, 'end': None, 'max-rows': None, 'decimation-level': None}
+    param = ""  # to appease type checker
     try:
         for param in params:
             if param in request.query:
                 params[param] = int(request.query[param])
-    except ValueError as e:
-        return web.Response(text="parameter [%s] must be an int" % e, status=400)
+    except ValueError:
+        return web.Response(text="parameter [%s] must be an int" % param, status=400)
 
     # make sure parameters make sense
     if ((params['start'] is not None and params['end'] is not None) and
@@ -41,7 +42,7 @@ async def read(request: web.Request, json=False):
     if params['max-rows'] is not None and params['max-rows'] <= 0:
         return web.Response(text="[max-rows] must be > 0", status=400)
     if params['decimation-level'] is not None and params['decimation-level'] <= 0:
-        return web.Response(text="[max-rows] must be > 0", status=400)
+        return web.Response(text="[decimation-level] must be > 0", status=400)
 
     # --- Binary Streaming Handler ---
     resp = None

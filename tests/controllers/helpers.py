@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 import numpy as np
 import asyncio
+import pdb
 from typing import Optional, Callable, Coroutine
 
 from joule.models import (Base, DataStore, Stream, StreamInfo, DbInfo, pipes)
@@ -28,7 +29,11 @@ def create_db(pipe_configs: List[str]) -> Session:
 class MockStore(DataStore):
     def __init__(self):
         self.stream_info = {}
+        # stubs to track data controller execution
         self.nchunks = 3
+        self.inserted_data = False
+        self.removed_data_bounds = (None, None)
+        self.destroyed_stream_id = None
 
     async def initialize(self, streams: List[Stream]):
         pass
@@ -39,7 +44,9 @@ class MockStore(DataStore):
 
     async def spawn_inserter(self, stream: Stream, pipe: pipes.InputPipe,
                              loop: Loop, insert_period=None) -> asyncio.Task:
-        pass
+        async def task():
+            self.inserted_data = True
+        return loop.create_task(task())
 
     def configure_extract(self, nchunks):
         self.nchunks = nchunks
@@ -51,10 +58,10 @@ class MockStore(DataStore):
             await callback(helpers.create_data(stream.layout), stream.layout, False)
 
     async def remove(self, stream: Stream, start: Optional[int], end: Optional[int]):
-        pass
+        self.removed_data_bounds = (start, end)
 
     async def destroy(self, stream: Stream):
-        pass
+        self.destroyed_stream_id = stream.id
 
     async def info(self, stream: Stream) -> StreamInfo:
         return self.stream_info[stream]

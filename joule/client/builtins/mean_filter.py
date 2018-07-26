@@ -94,7 +94,7 @@ class MeanFilter(FIRFilterModule):
         return np.ones((window,))/window
 
                 
-def main():
+def main():  # pragma: no cover
     r = MeanFilter()
     r.start()
 

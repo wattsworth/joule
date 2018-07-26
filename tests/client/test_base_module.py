@@ -4,8 +4,13 @@ import asyncio
 import json
 import io
 import numpy as np
-import unittest
 from contextlib import redirect_stdout
+from aiohttp import web
+import aiohttp
+from aiohttp.test_utils import unused_port
+import threading
+import time
+import requests
 
 from joule.client import ReaderModule
 from joule.models import Stream, Element, pipes
@@ -14,9 +19,23 @@ import warnings
 
 warnings.simplefilter('always')
 
-class Reader(ReaderModule):
+
+class SimpleReader(ReaderModule):
     async def run(self, parsed_args, output: pipes.Pipe):
         await output.write(parsed_args.mock_data)
+
+
+class InterfaceReader(ReaderModule):
+    async def run(self, parsed_args, output: pipes.Pipe):
+        while not self.stop_requested:
+            await asyncio.sleep(0.01)
+
+    def routes(self):
+        return [web.get('/', self.index)]
+
+    async def index(self, _):
+        self.stop_requested = True
+        return web.Response(text="Hello World")
 
 
 class TestBaseModule(helpers.AsyncTestCase):
@@ -27,9 +46,9 @@ class TestBaseModule(helpers.AsyncTestCase):
         self.stream = Stream(name="output", datatype=Stream.DATATYPE.FLOAT32,
                              elements=[Element(name="e%d" % j, index=j,
                                                display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(3)])
-    #@unittest.skip("msg")
+
     def test_writes_to_pipes(self):
-        module = Reader()
+        module = SimpleReader()
         (r, w) = os.pipe()
         loop = asyncio.get_event_loop()
         rf = pipes.reader_factory(r, loop)
@@ -49,7 +68,7 @@ class TestBaseModule(helpers.AsyncTestCase):
         np.testing.assert_array_equal(data, received_data)
 
     def test_writes_to_stdout(self):
-        module = Reader()
+        module = SimpleReader()
         data = helpers.create_data(self.stream.layout, length=10)
         args = argparse.Namespace(pipes="unset", module_config="unset", socket="unset", mock_data=data)
         # run the reader module
@@ -65,7 +84,50 @@ class TestBaseModule(helpers.AsyncTestCase):
             np.testing.assert_array_almost_equal(rx_data, data['data'][i])
 
     def test_runs_webserver(self):
-        pass
+        module = InterfaceReader()
+        data = helpers.create_data(self.stream.layout, length=10)
+        port = unused_port()
+        args = argparse.Namespace(pipes="unset", module_config="unset",
+                                  socket="unset", port=port, host="127.0.0.1",
+                                  mock_data=data)
+
+        def get_page():
+            time.sleep(0.5)
+            resp = requests.get('http://localhost:%d' % port)
+            self.assertEqual(resp.content.decode('utf8'), 'Hello World')
+
+        getter = threading.Thread(target=get_page)
+        getter.start()
+        f = io.StringIO()
+        with redirect_stdout(f):
+            module.start(args)
+        getter.join()
 
     def test_opens_socket(self):
-        pass
+        module = InterfaceReader()
+        data = helpers.create_data(self.stream.layout, length=10)
+        args = argparse.Namespace(pipes="unset", module_config="unset",
+                                  socket="joule.test",
+                                  mock_data=data)
+
+        def get_page():
+            time.sleep(0.5)
+            loop = asyncio.new_event_loop()
+            resp = loop.run_until_complete(get_page_task())
+            self.assertEqual(resp, 'Hello World')
+            loop.close()
+
+        async def get_page_task():
+            conn = aiohttp.UnixConnector(path=b'\x00'+'joule.test'.encode('ascii'))
+            async with aiohttp.ClientSession(connector=conn,
+                                             auto_decompress=False) as session:
+                # proxy the request to the module
+                async with session.get('http://localhost/') as resp:
+                    return await resp.text()
+
+        getter = threading.Thread(target=get_page)
+        getter.start()
+        f = io.StringIO()
+        with redirect_stdout(f):
+            module.start(args)
+        getter.join()

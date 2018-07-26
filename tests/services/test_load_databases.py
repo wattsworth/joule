@@ -3,7 +3,7 @@ import unittest
 import logging
 import tempfile
 import os
-from joule.models import (DatabaseConfig)
+from joule.models import (DatabaseConfig, ConfigurationError)
 from joule.services import load_databases
 
 logger = logging.getLogger('joule')
@@ -49,6 +49,9 @@ class TestLoadDatabases(unittest.TestCase):
                 databases = load_databases.run(conf_dir)
         self.assertEqual(len(databases), 3)
         self.assertEqual(databases['db1'].url, "http://localhost/nilmdb")
+        # no engine config available for nilmdb
+        with self.assertRaises(ConfigurationError):
+            _ = databases['db1'].engine_config
         self.assertEqual(databases['db2'].engine_config,
                          "postgresql://admin:secret@127.0.0.1:5432")
         self.assertEqual(databases['db3'].engine_config,

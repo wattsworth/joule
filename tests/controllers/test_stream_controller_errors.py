@@ -1,9 +1,8 @@
 from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 from aiohttp import web
 import aiohttp
-from sqlalchemy.orm import Session
 
-from joule.models import folder, Stream
+from joule.models import Stream, Element
 import joule.controllers
 from .helpers import create_db, MockStore
 
@@ -39,6 +38,9 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         # must specify an id or a path
         resp = await self.client.put("/stream/move.json", data={"destination": "/new/folder3"})
         self.assertEqual(resp.status, 400)
+        # must specify a destination
+        resp = await self.client.put("/stream/move.json", data={"path": "/folder1/stream1"})
+        self.assertEqual(resp.status, 400)
         # return "not found" on bad id
         resp = await self.client.put("/stream/move.json", data={"id": 2348,
                                                                 "destination": "/x/y"})
@@ -55,3 +57,34 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         resp = await self.client.put("/stream/move.json", data={"path": "/folder_x1/same_name",
                                                                 "destination": "/folder_x2"})
         self.assertEqual(resp.status, 400)
+
+    @unittest_run_loop
+    async def test_stream_create(self):
+        # must specify a stream
+        resp = await self.client.post("/stream.json", data={"path": "/folder2/deeper"})
+        self.assertEqual(resp.status, 400)
+        # must specify a path
+        new_stream = Stream(name="test", datatype=Stream.DATATYPE.FLOAT32)
+        new_stream.elements = [Element(name="e%d" % j, index=j,
+                                       display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(3)]
+        resp = await self.client.post("/stream.json", data={"stream": new_stream.to_json()})
+        self.assertEqual(resp.status, 400)
+        # invalid stream json
+        resp = await self.client.post("/stream.json", data={"path": "/path/to",
+                                                            "stream": 'notjson'})
+        self.assertEqual(resp.status, 400)
+        # incorrect stream format
+        resp = await self.client.post("/stream.json", data={"path": "/path/to",
+                                                            "stream": '{"invalid": 2}'})
+        self.assertEqual(resp.status, 400)
+
+    @unittest_run_loop
+    async def test_stream_delete(self):
+        resp = await self.client.delete("/stream.json", params = {})
+        self.assertEqual(resp.status, 400)
+        # return "not found" on bad id
+        resp = await self.client.delete("/stream.json", params={"id": 2348})
+        self.assertEqual(resp.status, 404)
+        # return "not found" on bad path
+        resp = await self.client.delete("/stream.json", params={"path": "/bad/path"})
+        self.assertEqual(resp.status, 404)

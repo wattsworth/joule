@@ -1,7 +1,6 @@
-from joule.utils.time import now as time_now
+from ..helpers import utilities
 from joule.client import ReaderModule
 import numpy as np
-import asyncio
 
 ARGS_DESC = """
 ---
@@ -70,7 +69,7 @@ ARGS_DESC = """
 
 
 class FileReader(ReaderModule):
-    "Read data from a file"
+    """Read data from a file"""
 
     def custom_args(self, parser):
         parser.add_argument("file", help="file name")
@@ -86,14 +85,14 @@ class FileReader(ReaderModule):
             for line in f:
                 data = np.fromstring(line, dtype=float,
                                      sep=parsed_args.delimiter)
-                if(parsed_args.timestamp):
-                    data = np.insert(data, 0, time_now())
-                await output.write([data])
-                if(self.stop_requested):
+                if parsed_args.timestamp:
+                    data = np.insert(data, 0, utilities.time_now())
+                await output.write(np.array([data]))
+                if self.stop_requested:
                     break
 
                 
-def main():
+def main():  # pragma: no cover
     r = FileReader()
     r.start()
 

@@ -5,7 +5,7 @@ import multiprocessing
 from aiohttp.test_utils import unused_port
 import warnings
 import time
-from ..fake_joule import FakeJoule
+from ..fake_joule import FakeJoule, FakeJouleTestCase
 from joule.cli import main
 from tests import helpers
 
@@ -13,24 +13,7 @@ MODULE_LIST = os.path.join(os.path.dirname(__file__), 'modules.json')
 warnings.simplefilter('always')
 
 
-class TestStreamList(helpers.AsyncTestCase):
-
-    def start_server(self, server):
-        port = unused_port()
-        self.msgs = multiprocessing.Queue()
-        self.server_proc = multiprocessing.Process(target=server.start, args=(port, self.msgs))
-        self.server_proc.start()
-        time.sleep(0.01)
-        return "http://localhost:%d" % port
-
-    def stop_server(self):
-        if self.server_proc is None:
-            return
-        # aiohttp doesn't always quit with SIGTERM
-        os.kill(self.server_proc.pid, signal.SIGKILL)
-        # join any zombies
-        multiprocessing.active_children()
-        self.server_proc.join()
+class TestStreamList(FakeJouleTestCase):
 
     def test_lists_modules(self):
         server = FakeJoule()

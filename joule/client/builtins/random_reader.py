@@ -119,7 +119,7 @@ class RandomReader(ReaderModule):
             i += 1
 
 
-def main():
+def main():  # pragma: no cover
     r = RandomReader()
     r.start()
 

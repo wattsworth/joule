@@ -29,7 +29,7 @@ pyparsing==2.2.0
 pyperclip==1.6.0
 pytest==3.5.1
 python-dateutil==2.7.3
-pytz==2018.4
+pytz==2018.5
 PyYAML==3.12
 regex==2018.2.21
 requests==2.18.4

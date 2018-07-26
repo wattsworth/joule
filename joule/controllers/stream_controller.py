@@ -77,11 +77,13 @@ async def create(request):
         destination.streams.append(new_stream)
         db.commit()
     except ValueError as e:
-        return web.Response(text=e, status=400)
+        return web.Response(text="Invalid stream JSON: %r" % e, status=400)
+    except KeyError as e:
+        return web.Response(text="Invalid stream specification: %r" % e, status=400)
     return web.json_response(data=new_stream.to_json())
 
 
-async def update(request):
+async def update(request):  # pragma: no cover
     return web.Response(text="TODO",
                         content_type='application/json')
 

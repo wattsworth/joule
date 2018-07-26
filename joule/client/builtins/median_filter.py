@@ -93,9 +93,6 @@ class MedianFilter(joule.FilterModule):
         parser.description = ARGS_DESC
         parser.formatter_class = argparse.RawDescriptionHelpFormatter
 
-    def runtime_help(self, parsed_args):
-        return "median filter with a window size of %d" % parsed_args.window
-
     async def run(self, parsed_args, inputs, outputs):
         N = parsed_args.window
         stream_in = inputs["input"]
@@ -117,7 +114,7 @@ class MedianFilter(joule.FilterModule):
             stream_in.consume(len(sarray_out))
 
 
-def main():
+def main():  # pragma: no cover
     r = MedianFilter()
     r.start()
 
