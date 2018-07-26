@@ -289,8 +289,8 @@ class TestWorker(unittest.TestCase):
                     self.assertTrue(inputs[i].end_of_interval)
                     await outputs[i].close_interval()
                     inputs[i].consume(len(data))
-            outputs[0].close()
-            outputs[1].close()
+            await outputs[0].close()
+            await outputs[1].close()
 
             await asyncio.sleep(0.5)
 
@@ -306,14 +306,14 @@ class TestWorker(unittest.TestCase):
             await input1.close_interval()
             await input1.write(interval2_data)
             await input1.close_interval()
-            input1.close()
+            await input1.close()
 
             input2 = self.producers[1].subscribers[self.streams[1]][0]
             await input2.write(interval1_data)
             await input2.close_interval()
             await input2.write(interval2_data)
             await input2.close_interval()
-            input2.close()
+            await input2.close()
 
         # stub the close functions so the pipes stay open
         self.worker._close_child_fds = Mock()

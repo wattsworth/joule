@@ -46,10 +46,8 @@ class Pipe:
             raise PipeError("cannot write to an input pipe")
         raise PipeError("abstract method must be implemented by child")
 
-    def close(self):
+    async def close(self):
         pass  # close the pipe, optionally implemented by the child
-
-
 
     @property
     def layout(self):

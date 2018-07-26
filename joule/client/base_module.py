@@ -1,13 +1,13 @@
 import argparse
 import asyncio
 import signal
-from . import helpers
-from joule.models import pipes
-from typing import Tuple, Dict
+from typing import List, Tuple, Dict
 from aiohttp import web
 import logging
 import socket
-import aiohttp
+
+from . import helpers
+from joule.models import pipes
 
 Pipes = Dict[str, pipes.Pipe]
 Loop = asyncio.AbstractEventLoop
@@ -17,6 +17,7 @@ class BaseModule:
 
     def __init__(self):
         self.stop_requested = False
+        self.pipes: List[pipes.Pipe] = []
 
     def run_as_task(self, parsed_args, loop):
         assert False, "implement in child class"  # pragma: no cover
@@ -59,6 +60,8 @@ class BaseModule:
             print("ERROR:", str(e))
         if runner is not None:
             loop.run_until_complete(runner.cleanup())
+        for pipe in self.pipes:
+            loop.run_until_complete(pipe.close())
         loop.close()
 
     def _build_args(self, parser):
@@ -101,7 +104,10 @@ class BaseModule:
         pipe_args = parsed_args.pipes
 
         # run the module within joule
-        return helpers.build_fd_pipes(pipe_args, loop)
+        (pipes_in, pipes_out) = helpers.build_fd_pipes(pipe_args, loop)
+        # keep track of the pipes so they can be closed
+        self.pipes = list(pipes_in.values()) + list(pipes_out.values())
+        return pipes_in, pipes_out
 
     def routes(self):
         return []  # override in child to implement a web interface

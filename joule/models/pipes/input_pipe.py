@@ -106,7 +106,7 @@ class InputPipe(Pipe):
     def end_of_interval(self):
         return self.interval_break
 
-    def close(self):
+    async def close(self):
         if self.close_cb is not None:
             self.close_cb()
 

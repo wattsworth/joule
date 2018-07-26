@@ -39,10 +39,10 @@ class DataConnection:
     def location(self):
         return get_stream_path(self.stream)
 
-    def disconnect(self):
+    async def disconnect(self):
         if self.unsubscribe is not None:
             self.unsubscribe()
-        self.pipe.close()
+        await self.pipe.close()
 
 
 class Worker:
@@ -179,7 +179,7 @@ class Worker:
         except SubscriptionError as e:
             self._close_child_fds()
             popen_lock.release()
-            self._close_connections()
+            await self._close_connections()
             raise e  # bubble up the exception
 
         output_task = await self._spawn_outputs(loop)
@@ -198,7 +198,7 @@ class Worker:
             log.error("Cannot start [%s]" % self.module.name)
             self._close_child_fds()
             popen_lock.release()
-            self._close_connections()
+            await self._close_connections()
             output_task.cancel()
             try:
                 await output_task
@@ -212,7 +212,7 @@ class Worker:
         logger_task = loop.create_task(self._logger())
         await self.process.wait()
         # Unwind the tasks
-        self._close_connections()
+        await self._close_connections()
         output_task.cancel()
         logger_task.cancel()
         # collect any errors
@@ -287,7 +287,7 @@ class Worker:
                 unsubscribe = subscribe(stream, pipe)
             except SubscriptionError as e:
                 os.close(r)
-                pipe.close()
+                await pipe.close()
                 raise e  # bubble exception up
             self.input_connections.append(DataConnection(name,
                                                          r, stream,
@@ -315,8 +315,8 @@ class Worker:
         for c in self.input_connections + self.output_connections:
             os.close(c.child_fd)
 
-    def _close_connections(self):
+    async def _close_connections(self):
         for c in self.output_connections + self.input_connections:
-            c.disconnect()
+            await c.disconnect()
         self.output_connections = []
         self.input_connections = []

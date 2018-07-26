@@ -1,11 +1,10 @@
-import multiprocessing
 import os
 import argparse
 import asyncio
 import json
 import io
 import numpy as np
-import tempfile
+import unittest
 from contextlib import redirect_stdout
 
 from joule.client import ReaderModule
@@ -13,6 +12,7 @@ from joule.models import Stream, Element, pipes
 from tests import helpers
 import warnings
 
+warnings.simplefilter('always')
 
 class Reader(ReaderModule):
     async def run(self, parsed_args, output: pipes.Pipe):
@@ -27,7 +27,7 @@ class TestBaseModule(helpers.AsyncTestCase):
         self.stream = Stream(name="output", datatype=Stream.DATATYPE.FLOAT32,
                              elements=[Element(name="e%d" % j, index=j,
                                                display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(3)])
-
+    #@unittest.skip("msg")
     def test_writes_to_pipes(self):
         module = Reader()
         (r, w) = os.pipe()
@@ -38,34 +38,31 @@ class TestBaseModule(helpers.AsyncTestCase):
                                           "inputs": {}}))
         data = helpers.create_data(self.stream.layout)
         args = argparse.Namespace(pipes=pipe_arg, socket="unset", mock_data=data)
-        module_proc = multiprocessing.Process(target=module.start, args=(args,))
         # run the reader module
-        module_proc.start()
-        os.close(w)  # close our copy of the write side
-        module_proc.join()  # wait for reader to finish
+        loop = asyncio.new_event_loop()
+        loop.set_debug(True)
+        asyncio.set_event_loop(loop)
+        module.start(args)
+        asyncio.set_event_loop(self.loop)
         # check the output
-        received_data = loop.run_until_complete(pipe.read())
+        received_data = self.loop.run_until_complete(pipe.read())
         np.testing.assert_array_equal(data, received_data)
 
     def test_writes_to_stdout(self):
         module = Reader()
         data = helpers.create_data(self.stream.layout, length=10)
         args = argparse.Namespace(pipes="unset", module_config="unset", socket="unset", mock_data=data)
-        module_proc = multiprocessing.Process(target=module.start, args=(args,))
-        # capture stdout to a file
-        with tempfile.TemporaryFile(mode='w+') as output_file:
-            # run the reader module
-            with redirect_stdout(output_file):
-                module_proc.start()
-                module_proc.join()  # wait for reader to finish
-            # check the output
-            output_file.seek(0,0)
-            for row in data:
-                output = output_file.readline().split(' ')
-                ts = int(output[0])
-                data = [float(x) for x in output[1:]]
-                self.assertEqual(ts, row['timestamp'])
-                np.testing.assert_array_almost_equal(data, row['data'])
+        # run the reader module
+        f = io.StringIO()
+        with redirect_stdout(f):
+            module.start(args)
+        lines = f.getvalue().split('\n')
+        for i in range(len(data)):
+            output = lines[i].split(' ')
+            ts = int(output[0])
+            rx_data = [float(x) for x in output[1:]]
+            self.assertEqual(ts, data['timestamp'][i])
+            np.testing.assert_array_almost_equal(rx_data, data['data'][i])
 
     def test_runs_webserver(self):
         pass
