@@ -19,7 +19,7 @@ class Folder(Base):
                                                             remote_side=[id]))
     streams: List[Stream] = relationship("Stream", back_populates="folder")
     parent_id: int = Column(Integer, ForeignKey('folder.id'))
-    if TYPE_CHECKING:
+    if TYPE_CHECKING:  # pragma: no cover
         parent: 'Folder'
 
     def find_stream_by_segments(self, segments: List[str]) -> Optional[Stream]:
