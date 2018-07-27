@@ -1,5 +1,6 @@
 import asyncio
 import unittest
+from unittest import mock
 import logging
 import signal
 import psutil
@@ -15,6 +16,7 @@ from contextlib import contextmanager
 import warnings
 
 from joule.models import Module, Stream, Worker, Element, Supervisor
+from joule.models.worker import DataConnection
 from joule.models import pipes
 from .. import helpers
 
@@ -52,6 +54,7 @@ class TestWorker(unittest.TestCase):
         # [producer1] --<str1>--`             `--<str2,str3>--[consumer1]
 
         self.module = Module(name="module", exec_cmd="/bin/true",
+                             description="test module",
                              has_interface=False, uuid=123)
         self.module.inputs = {"input1": streams[0], "input2": streams[1]}
         self.module.outputs = {"output1": streams[2], "output2": streams[3]}
@@ -84,6 +87,16 @@ class TestWorker(unittest.TestCase):
         self.assertEqual(self.worker.input_connections, [])
         # output connections are empty
         self.assertEqual(self.worker.output_connections, [])
+
+    @mock.patch('joule.models.worker.get_stream_path')
+    def test_provides_module_attributes(self, mock_path: mock.Mock):
+        mock_path.return_value = "/mock/path"
+        self.assertEqual(self.worker.uuid, self.module.uuid)
+        self.assertEqual(self.worker.name, self.module.name)
+        self.assertEqual(self.worker.description, self.module.description)
+        self.assertEqual(self.worker.has_interface, self.module.has_interface)
+        connection = DataConnection("stub", 0, self.streams[0], pipes.Pipe())
+        self.assertEqual(connection.location, "/mock/path")
 
     def test_generates_socket_name(self):
         self.assertIsNone(self.worker.interface_socket)

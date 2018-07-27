@@ -265,7 +265,7 @@ class Worker:
                     break
                 line = bline.decode('UTF-8').rstrip()
                 self.log(line)
-        except asyncio.CancelledError:
+        except asyncio.CancelledError:  # pragma: no cover
             return
 
     async def _spawn_outputs(self, loop: Loop) -> asyncio.Task:

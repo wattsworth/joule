@@ -48,7 +48,7 @@ class DbInfo:
             "size": self.size
         }
 
-class DataStore(ABC):
+class DataStore(ABC):  # pragma: no cover
 
     @abstractmethod
     async def initialize(self, streams: List['Stream']):

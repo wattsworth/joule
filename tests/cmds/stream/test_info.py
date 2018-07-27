@@ -1,38 +1,19 @@
-import unittest
 from click.testing import CliRunner
 import os
-import signal
-import multiprocessing
 from aiohttp.test_utils import unused_port
 import warnings
-import time
+import json
+import copy
 
-from ..fake_joule import FakeJoule
+from joule.models import Stream
+from ..fake_joule import FakeJoule, FakeJouleTestCase
 from joule.cli import main
-from tests import helpers
 
 STREAM_INFO = os.path.join(os.path.dirname(__file__), 'stream.json')
 warnings.simplefilter('always')
 
 
-class TestStreamInfo(helpers.AsyncTestCase):
-
-    def start_server(self, server):
-        port = unused_port()
-        self.msgs = multiprocessing.Queue()
-        self.server_proc = multiprocessing.Process(target=server.start, args=(port, self.msgs))
-        self.server_proc.start()
-        time.sleep(0.01)
-        return "http://localhost:%d" % port
-
-    def stop_server(self):
-        if self.server_proc is None:
-            return
-        # aiohttp doesn't always quit with SIGTERM
-        os.kill(self.server_proc.pid, signal.SIGKILL)
-        # join any zombies
-        multiprocessing.active_children()
-        self.server_proc.join()
+class TestStreamInfo(FakeJouleTestCase):
 
     def test_shows_stream_info(self):
         server = FakeJoule()
@@ -58,6 +39,28 @@ class TestStreamInfo(helpers.AsyncTestCase):
             else:
                 self.fail("element name %s not in output" % element_name)
         self.stop_server()
+
+    def test_handles_different_stream_configurations(self):
+        server = FakeJoule()
+        with open(STREAM_INFO, 'r') as f:
+            orig_stream_data = json.loads(f.read())
+        stream1 = copy.deepcopy(orig_stream_data)
+        stream1['stream']['decimate'] = False
+        stream1['stream']['keep_us'] = 8*60*60*1e6  # 8 hours
+        stream2 = copy.deepcopy(orig_stream_data)
+        stream2['stream']['keep_us'] = Stream.KEEP_NONE
+        stream2['stream']['description'] = 'description'
+        stream2['data_info']['start'] = None
+        stream2['data_info']['end'] = None
+        for stream in [stream1, stream2]:
+            server.stub_stream_info = True  # use the response text
+            server.response = json.dumps(stream)
+            url = self.start_server(server)
+            runner = CliRunner()
+            result = runner.invoke(main, ['--url', url, 'stream', 'info', '/folder_1/random'])
+            # just make sure different configurations cause an error in the output
+            self.assertEqual(result.exit_code, 0)
+            self.stop_server()
 
     def test_when_stream_does_not_exist(self):
         server = FakeJoule()

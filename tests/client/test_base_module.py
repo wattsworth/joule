@@ -83,6 +83,18 @@ class TestBaseModule(helpers.AsyncTestCase):
             self.assertEqual(ts, data['timestamp'][i])
             np.testing.assert_array_almost_equal(rx_data, data['data'][i])
 
+    def test_reader_requires_output(self):
+        module = SimpleReader()
+        data = helpers.create_data(self.stream.layout, length=10)
+        pipe_arg = json.dumps(json.dumps({"outputs": {'badname': {'fd': 0, 'stream': self.stream.to_json()}},
+                                          "inputs": {}}))
+        args = argparse.Namespace(pipes=pipe_arg, module_config="unset", socket="unset", mock_data=data)
+        # run the reader module
+        with self.assertLogs(level="ERROR") as logs:
+            module.start(args)
+        all_logs = ' '.join(logs.output).lower()
+        self.assertTrue('output' in all_logs)
+
     def test_runs_webserver(self):
         module = InterfaceReader()
         data = helpers.create_data(self.stream.layout, length=10)

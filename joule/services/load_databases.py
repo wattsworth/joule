@@ -16,7 +16,8 @@ def run(path: str) -> Databases:
         try:
             data: configparser.ConfigParser = data["Main"]
         except KeyError:
-            raise ConfigurationError("missing [Main] section")
+            logger.error("Invalid database [%s]: Missing [Main] section" % file_path)
+            continue
         try:
             backend = _validate_backend(data["backend"])
             name = data["name"]

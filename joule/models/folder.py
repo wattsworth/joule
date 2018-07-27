@@ -70,8 +70,8 @@ def find_or_create(path: str, db: Session, parent=None) -> Folder:
     if path == '/':
         return parent
     path_chunks = list(reversed(path.split('/')[1:]))
-    if len(path_chunks) == 0:
-        return parent
+    # if len(path_chunks) == 0: # never used
+    #    return parent
     name = path_chunks.pop()
     folder: Folder = db.query(Folder).filter_by(parent=parent, name=name). \
         one_or_none()

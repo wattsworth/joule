@@ -12,21 +12,6 @@ from joule.models import module
 """
 
 
-# parser for boolean args
-
-def yesno(val):
-    if val is None:
-        raise ValueError("must be 'yes' or 'no'")
-    # standardize the string
-    val = val.lower().rstrip().lstrip()
-    if val == "yes":
-        return True
-    elif val == "no":
-        return False
-    else:
-        raise ValueError("must be 'yes' or 'no'")
-
-    
 def module_args():
     # build a dummy parser to look for module_config
     temp_parser = argparse.ArgumentParser()

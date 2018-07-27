@@ -46,6 +46,7 @@ class MockStore(DataStore):
                              loop: Loop, insert_period=None) -> asyncio.Task:
         async def task():
             self.inserted_data = True
+
         return loop.create_task(task())
 
     def configure_extract(self, nchunks):
@@ -78,12 +79,13 @@ class MockStore(DataStore):
 
 
 class MockWorker:
-    def __init__(self, name, inputs, outputs, uuid=1, has_interface=False):
+    def __init__(self, name, inputs, outputs, uuid=1, has_interface=False, socket=None):
         self.name = name
         self.description = "description for %s" % name
         self.has_interface = has_interface
         self.uuid = uuid
-        self.input_connections= []
+        self.interface_socket = socket
+        self.input_connections = []
         for (name, path) in inputs.items():
             self.input_connections.append(argparse.Namespace(name=name, location=path))
         self.output_connections = []
@@ -96,6 +98,3 @@ class MockWorker:
     @property
     def logs(self):
         return ["log entry1", "log entry2"]
-
-
-

@@ -43,7 +43,7 @@ class Supervisor:
 
     def get_socket(self, module_uuid):
         for w in self.workers:
-            if w.module.uuid == module_uuid:
+            if w.uuid == module_uuid:
                 return w.interface_socket
         return None
 

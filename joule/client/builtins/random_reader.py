@@ -72,7 +72,7 @@ OUTPUT_RATE = 1  # run in 1 second blocks
 class RandomReader(ReaderModule):
     """Generate a random stream of data"""
     
-    def custom_args(self, parser: argparse.ArgumentParser):
+    def custom_args(self, parser: argparse.ArgumentParser):  # pragma: no cover
         parser.add_argument("--width", type=int,
                             required=True,
                             help="number of elements in output")
@@ -80,15 +80,6 @@ class RandomReader(ReaderModule):
                             required=True,
                             help="rate in Hz")
         parser.description = textwrap.dedent(ARGS_DESC)
-
-    def routes(self):
-        return [
-            web.get('/', self.index)
-        ]
-
-    def index(self, request):
-        return web.Response(text="The average is %0.2f and the stddev is %0.2f" %
-                                 (self.avg, self.stddev))
 
     async def run(self, parsed_args, output):
         # produce output four times per second

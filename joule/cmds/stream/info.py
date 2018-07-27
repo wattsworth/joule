@@ -34,8 +34,8 @@ def stream_info(config, path):
         elem_data.append([element.name,
                           _optional_field(element.units),
                           element.display_type.name.lower(),
-                          _display_bounds(element.default_min,
-                                          element.default_max)
+                          _display_bounds(element.default_max,
+                                          element.default_min)
                           ])
     # display element information
     click.echo(tabulate(elem_data, headers=["Name", "Units", "Display", "Min,Max"],

@@ -12,7 +12,9 @@ class TestElement(unittest.TestCase):
             """[Element1]
                  name = test
                  plottable = no
-                 offset = 5.2
+                 # None uses the default value
+                 offset = None
+                 default_min = -10.5
             """)
         self.base_config = config['Element1']
 
@@ -21,5 +23,6 @@ class TestElement(unittest.TestCase):
         self.assertEqual(e.name, "test")
         self.assertEqual(e.plottable, False)
         self.assertEqual(e.display_type, Element.DISPLAYTYPE.CONTINUOUS)  # default value
-        self.assertEqual(e.offset, 5.2)
+        self.assertEqual(e.offset, 0.0) # default value
         self.assertEqual(e.scale_factor, 1.0)  # default value
+        self.assertEqual(e.default_min, -10.5)

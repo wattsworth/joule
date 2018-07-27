@@ -87,7 +87,7 @@ class MedianFilter(joule.FilterModule):
     def __init__(self):
         super(MedianFilter, self).__init__()
 
-    def custom_args(self, parser):
+    def custom_args(self, parser):  # pragma: no cover
         parser.add_argument("window", type=int,
                             help="window length")
         parser.description = ARGS_DESC

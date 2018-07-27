@@ -71,7 +71,7 @@ ARGS_DESC = """
 class FileReader(ReaderModule):
     """Read data from a file"""
 
-    def custom_args(self, parser):
+    def custom_args(self, parser):  # pragma: no cover
         parser.add_argument("file", help="file name")
         parser.add_argument("-d", "--delimiter", default=",",
                             choices=[" ", ","],

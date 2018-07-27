@@ -38,11 +38,15 @@ class FakeJoule:
             [web.get('/streams.json', self.stub_get),
              web.get('/stream.json', self.stream_info),
              web.post('/stream.json', self.create_stream),
+             web.put('/stream/move.json', self.move_stream),
              web.post('/data', self.data_write),
              web.get('/data', self.data_read),
+             web.delete('/data', self.data_remove),
              web.get('/modules.json', self.stub_get),
              web.get('/module.json', self.stub_get)])
         self.stub_stream_info = False
+        self.stub_stream_move = False
+        self.stub_data_remove = False
         self.response = ""
         self.http_code = 200
         self.streams: Dict[str, MockDbEntry] = {}
@@ -76,6 +80,12 @@ class FakeJoule:
         return web.json_response({'stream': mock_entry.stream.to_json(),
                                   'data_info': mock_entry.info.to_json()})
 
+    async def data_remove(self, request: web.Request):
+        if self.stub_data_remove:
+            return web.Response(text=self.response, status=self.http_code)
+        self.msgs.put((request.query['path'], request.query['start'], request.query['end']))
+        return web.Response(text="ok")
+
     async def data_read(self, request: web.Request):
         mock_entry = self.streams[request.query['path']]
         resp = web.StreamResponse(status=200,
@@ -103,6 +113,16 @@ class FakeJoule:
         self.msgs.put(mock_entry)
         return web.Response(text="ok")
 
+    async def move_stream(self, request: web.Request):
+        if self.stub_stream_move:
+            return web.Response(text=self.response, status=self.http_code)
+        body = await request.post()
+        path = body['path']
+        destination = body['destination']
+        # so we can check that the message was received
+        self.msgs.put((path, destination))
+        return web.json_response(data={"stub": "value"})
+
 
 class FakeJouleTestCase(helpers.AsyncTestCase):
     def start_server(self, server):
@@ -110,7 +130,7 @@ class FakeJouleTestCase(helpers.AsyncTestCase):
         self.msgs = multiprocessing.Queue()
         self.server_proc = multiprocessing.Process(target=server.start, args=(port, self.msgs))
         self.server_proc.start()
-        time.sleep(0.01)
+        time.sleep(0.10)
         return "http://localhost:%d" % port
 
     def stop_server(self):

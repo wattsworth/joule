@@ -21,5 +21,5 @@ def load_configs(path: str) -> Configurations:
                 continue
             configs[file] = config
         except configparser.Error as e:
-            logger.error(e)
+            logger.error("Configuration file error: %r" % e)
     return configs

@@ -21,9 +21,9 @@ class ReaderModule(base_module.BaseModule):
             (pipes_in, pipes_out) = loop.run_until_complete(coro)
             if 'output' not in pipes_out:
                 logging.error("Reader Module must a have a single output called 'output'")
-                exit(1)
+                return loop.create_task(asyncio.sleep(0))
             output = pipes_out['output']
-        return asyncio.ensure_future(self.run(parsed_args, output))
+        return loop.create_task(self.run(parsed_args, output))
 
     
 class StdoutPipe:

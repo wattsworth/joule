@@ -83,7 +83,7 @@ ARGS_DESC = """
 class MeanFilter(FIRFilterModule):
     """Compute the moving average of the input"""
     
-    def custom_args(self, parser):
+    def custom_args(self, parser):  # pragma: no cover
         parser.add_argument("--window", type=int,
                             help="window length (odd)")
         parser.description = ARGS_DESC
