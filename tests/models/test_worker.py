@@ -128,11 +128,11 @@ class TestWorker(unittest.TestCase):
         async def get_statistics():
             await asyncio.sleep(0.25)
             statistics = self.worker.statistics()
-            self.assertIsNotNone(statistics['pid'])
-            self.assertGreater(statistics['memory'], 0)
+            self.assertIsNotNone(statistics.pid)
+            self.assertGreater(statistics.memory, 0)
 
         # no statistics available before worker starts
-        self.assertEqual(self.worker.statistics(), {})
+        self.assertEqual(self.worker.statistics().pid, None)
 
         # calling stop before run doesn't matter
         loop.run_until_complete(self.worker.stop(loop))

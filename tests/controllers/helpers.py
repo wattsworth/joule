@@ -3,10 +3,10 @@ from sqlalchemy.orm import Session
 from typing import List
 import numpy as np
 import asyncio
-import pdb
+import argparse
 from typing import Optional, Callable, Coroutine
 
-from joule.models import (Base, DataStore, Stream, StreamInfo, DbInfo, pipes)
+from joule.models import (Base, DataStore, Stream, StreamInfo, DbInfo, pipes, worker)
 from joule.services import parse_pipe_config
 from tests import helpers
 
@@ -75,3 +75,27 @@ class MockStore(DataStore):
     # -- special mock tools --
     def set_info(self, stream: Stream, info: StreamInfo):
         self.stream_info[stream] = info
+
+
+class MockWorker:
+    def __init__(self, name, inputs, outputs, uuid=1, has_interface=False):
+        self.name = name
+        self.description = "description for %s" % name
+        self.has_interface = has_interface
+        self.uuid = uuid
+        self.input_connections= []
+        for (name, path) in inputs.items():
+            self.input_connections.append(argparse.Namespace(name=name, location=path))
+        self.output_connections = []
+        for (name, path) in outputs.items():
+            self.output_connections.append(argparse.Namespace(name=name, location=path))
+
+    def statistics(self) -> worker.Statistics:
+        return worker.Statistics(100, 100, 1.0, 100)
+
+    @property
+    def logs(self):
+        return ["log entry1", "log entry2"]
+
+
+

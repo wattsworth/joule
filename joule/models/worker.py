@@ -25,6 +25,7 @@ log = logging.getLogger('joule')
 
 SOCKET_BASE = "wattsworth.joule.%d"
 
+
 class DataConnection:
     def __init__(self, name: str, child_fd: int,
                  stream: Stream, pipe: pipes.Pipe,
@@ -43,6 +44,22 @@ class DataConnection:
         if self.unsubscribe is not None:
             self.unsubscribe()
         await self.pipe.close()
+
+
+class Statistics:
+    def __init__(self, pid, create_time, cpu_percent, memory):
+        self.pid = pid
+        self.create_time = create_time
+        self.cpu_percent = cpu_percent
+        self.memory = memory
+
+    def to_json(self):
+        return {
+            'pid': self.pid,
+            'create_time': self.create_time,
+            'cpu_percent': self.cpu_percent,
+            'memory': self.memory
+        }
 
 
 class Worker:
@@ -71,19 +88,35 @@ class Worker:
         # how long to wait to restart a failed process
         self.RESTART_INTERVAL = 1
 
-    def statistics(self) -> Dict:
+    def statistics(self) -> Statistics:
         # gather process statistics
         if self.process is not None:
             p = psutil.Process(pid=self.process.pid)
             with p.oneshot():
-                return{
-                    'pid': p.pid,
-                    'create_time': p.create_time(),
-                    'cpu_percent': p.cpu_percent(),
-                    'memory': p.memory_info().rss
-                }
+                return Statistics(p.pid,
+                                  p.create_time(),
+                                  p.cpu_percent(),
+                                  p.memory_info().rss)
         else:
-            return {}
+            # worker is not running, no statistics available
+            return Statistics(None, None, None, None)
+
+    # provide the module attributes
+    @property
+    def uuid(self):
+        return self.module.uuid
+
+    @property
+    def name(self):
+        return self.module.name
+
+    @property
+    def description(self):
+        return self.module.description
+
+    @property
+    def has_interface(self):
+        return self.module.has_interface
 
     @property
     def interface_socket(self):
@@ -151,7 +184,7 @@ class Worker:
             pid = '???'
         else:
             pid = self.process.pid
-        #print("[%s: %s] " % (self.module.name, pid) + msg)
+        # print("[%s: %s] " % (self.module.name, pid) + msg)
 
     @property
     def logs(self) -> List[str]:

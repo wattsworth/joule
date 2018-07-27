@@ -4,7 +4,7 @@ import numpy as np
 
 from joule.models.pipes.errors import PipeError
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from joule.models import (Module, Stream)
 
 
@@ -47,7 +47,8 @@ class Pipe:
         raise PipeError("abstract method must be implemented by child")
 
     async def close(self):
-        pass  # close the pipe, optionally implemented by the child
+        # close the pipe, optionally implemented by the child
+        pass  # pragma: no cover
 
     @property
     def layout(self):
@@ -56,20 +57,23 @@ class Pipe:
         return self._layout
 
     @property
-    def dtype(self):
-        ltype = self.layout.split('_')[0]
-        lcount = int(self.layout.split('_')[1])
-        if ltype.startswith('int'):
-            atype = '<i' + str(int(ltype[3:]) // 8)
-        elif ltype.startswith('uint'):
-            atype = '<u' + str(int(ltype[4:]) // 8)
-        elif ltype.startswith('float'):
-            atype = '<f' + str(int(ltype[5:]) // 8)
-        else:
-            raise PipeError("bad layout")
-        return np.dtype([('timestamp', '<i8'), ('data', atype, lcount)])
+    def dtype(self) -> np.dtype:
+        try:
+            ltype = self.layout.split('_')[0]
+            lcount = int(self.layout.split('_')[1])
+            if ltype.startswith('int'):
+                atype = '<i' + str(int(ltype[3:]) // 8)
+            elif ltype.startswith('uint'):
+                atype = '<u' + str(int(ltype[4:]) // 8)
+            elif ltype.startswith('float'):
+                atype = '<f' + str(int(ltype[5:]) // 8)
+            else:
+                raise ValueError()
+            return np.dtype([('timestamp', '<i8'), ('data', atype, lcount)])
+        except (IndexError, ValueError):
+            raise PipeError("bad layout: [%s]" % self.layout)
 
-    def _apply_dtype(self, data):
+    def _apply_dtype(self, data:np.ndarray) -> np.ndarray:
         """convert [data] to the pipe's [dtype]"""
         if data.ndim == 1:
             # already a structured array just verify its data type
@@ -87,7 +91,7 @@ class Pipe:
                 sarray['data'] = np.squeeze(data[:, 1:])
                 return sarray
             except (IndexError, ValueError):
-                raise ValueError("wrong number of fields for this data type")
+                raise PipeError("wrong number of fields for this data type")
         else:
             raise PipeError("wrong number of dimensions in array")
 

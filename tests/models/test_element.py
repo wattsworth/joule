@@ -1,8 +1,8 @@
+import unittest
+
 from joule.models import element
 from joule.models.element import Element
-
 from tests import helpers
-import unittest
 
 
 class TestElement(unittest.TestCase):

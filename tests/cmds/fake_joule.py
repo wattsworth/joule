@@ -7,9 +7,10 @@ from typing import Dict, Optional
 from aiohttp.test_utils import unused_port
 import time
 import signal
+import json
 
 from tests import helpers
-from joule.models import Stream, StreamInfo, pipes
+from joule.models import Stream, StreamInfo, pipes, stream
 
 # from https://github.com/aio-libs/aiohttp/blob/master/examples/fake_server.py
 
@@ -36,6 +37,7 @@ class FakeJoule:
         self.app.router.add_routes(
             [web.get('/streams.json', self.stub_get),
              web.get('/stream.json', self.stream_info),
+             web.post('/stream.json', self.create_stream),
              web.post('/data', self.data_write),
              web.get('/data', self.data_read),
              web.get('/modules.json', self.stub_get),
@@ -54,13 +56,22 @@ class FakeJoule:
     def add_stream(self, path, stream: Stream, info: StreamInfo, data: Optional[np.ndarray]):
         self.streams[path] = MockDbEntry(stream, info, data)
 
+    async def create_stream(self, request: web.Request):
+        body = await request.post()
+        path = body['path']
+        new_stream = stream.from_json(json.loads(body['stream']))
+        new_stream.id += 100 # give the stream  a unique id
+        self.streams[path] = MockDbEntry(new_stream, StreamInfo(None, None, None), None)
+        return web.json_response(data=new_stream.to_json())
+
     async def stub_get(self, request: web.Request):
         return web.Response(text=self.response, status=self.http_code)
 
     async def stream_info(self, request: web.Request):
         if self.stub_stream_info:
             return web.Response(text=self.response, status=self.http_code)
-
+        if request.query['path'] not in self.streams:
+            return web.Response(text="stream does not exist", status=404)
         mock_entry = self.streams[request.query['path']]
         return web.json_response({'stream': mock_entry.stream.to_json(),
                                   'data_info': mock_entry.info.to_json()})

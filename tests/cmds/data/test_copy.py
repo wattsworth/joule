@@ -58,6 +58,25 @@ class TestDataCopy(helpers.AsyncTestCase):
         np.testing.assert_array_equal(src_data, mock_entry.data)
         self.stop_server()
 
+    def test_creates_stream_if_necessary(self):
+        server = FakeJoule()
+        # create the source stream
+        src = Stream(id=0, name="source", keep_us=100, datatype=Stream.DATATYPE.FLOAT32)
+        src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
+
+        # source has 100 rows of data between [0, 100]
+        src_data = helpers.create_data(src.layout, length=4)
+        src_info = StreamInfo(int(src_data['timestamp'][0]), int(src_data['timestamp'][-1]), len(src_data))
+        server.add_stream('/test/source', src, src_info, src_data)
+
+        url = self.start_server(server)
+        runner = CliRunner()
+        result = runner.invoke(main, ['--url', url, 'data', 'copy', '/test/source', '/test/destination'])
+        self.assertEqual(result.exit_code, 0)
+        mock_entry = self.msgs.get()
+        np.testing.assert_array_equal(src_data, mock_entry.data)
+        self.stop_server()
+
     def test_when_server_is_not_available(self):
         url = "http://127.0.0.1:%d" % unused_port()
         runner = CliRunner()

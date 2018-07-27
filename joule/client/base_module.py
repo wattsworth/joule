@@ -31,7 +31,7 @@ class BaseModule:
         self.stop_requested = True
 
     def start(self, parsed_args=None):
-        if parsed_args is None:
+        if parsed_args is None:  # pragma: no cover
             parser = argparse.ArgumentParser()
             self._build_args(parser)
             module_args = helpers.module_args()
@@ -64,7 +64,7 @@ class BaseModule:
             loop.run_until_complete(pipe.close())
         loop.close()
 
-    def _build_args(self, parser):
+    def _build_args(self, parser):  # pragma: no cover
         grp = parser.add_argument_group('joule',
                                         'control module execution')
         # --pipes: JSON argument set by jouled

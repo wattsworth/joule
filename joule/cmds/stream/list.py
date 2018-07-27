@@ -33,21 +33,3 @@ def _process_stream(tree: Tree, stream, parent_id):
     tag = "%s: %s" % (stream["name"], dtype)
     identifier = "s%d" % stream["id"]
     tree.create_node(tag, identifier, parent_id)
-
-
-def _get(url: str, params=None) -> Dict:
-    resp = None  # to appease type checker
-    try:
-        resp = requests.get(url, params=params)
-    except requests.ConnectionError:
-        click.echo("Error contacting Joule server at [%s]" % url)
-        exit(1)
-    if resp.status_code != 200:
-        click.echo("Error [%d]: %s" % (resp.status_code, resp.text))
-        exit(1)
-    try:
-        data = resp.json()
-        return data
-    except ValueError:
-        click.echo("Error: Invalid server response, check the URL")
-        exit(1)

@@ -51,6 +51,7 @@ def data_copy(config, start, end, source, destination):
     else:
         dest_stream = None  # to appease type checker
         try:
+            print(resp.content)
             dest_stream = stream.from_json(resp.json()['stream'])
         except ValueError:
             click.echo("Error: Invalid server response, check the URL")
