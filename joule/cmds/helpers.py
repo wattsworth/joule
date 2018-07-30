@@ -1,9 +1,18 @@
-from typing import Dict
+from typing import Dict, Union
 import requests
 import click
 
 
+def get(url: str, params=None) -> requests.Response:
+    try:
+        return requests.get(url, params=params)
+    except requests.ConnectionError:
+        click.echo("Error contacting Joule server at [%s]" % url)
+        exit(1)
+
+
 def get_json(url: str, params=None) -> Dict:
+
     resp = None  # to appease type checker
     try:
         resp = requests.get(url, params=params)

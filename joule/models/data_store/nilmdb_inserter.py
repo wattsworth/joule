@@ -35,10 +35,11 @@ class Inserter:
         cleaner_task: asyncio.Task = None
         # create the database path
         # lazy stream creation
-        await self._create_path()
-        if self.stream.keep_us != Stream.KEEP_ALL:
-            cleaner_task = loop.create_task(self._clean())
         try:
+            await self._create_path()
+            if self.stream.keep_us != Stream.KEEP_ALL:
+                cleaner_task = loop.create_task(self._clean())
+
             async with self._get_client() as session:
                 last_ts = None
                 while True:
@@ -66,6 +67,9 @@ class Inserter:
                                                data=data.tostring()) as resp:
                             if resp.status != 200:
                                 error = await resp.text()
+                                if cleaner_task is not None:
+                                    cleaner_task.cancel()
+                                    await cleaner_task
                                 raise errors.DataError("NilmDB error: %s" % error)
                         # decimate the data
                         if self.decimator is not None:
@@ -75,9 +79,12 @@ class Inserter:
                         last_ts = None
                         if self.decimator is not None:
                             self.decimator.close_interval()
-        except asyncio.CancelledError:
-            pass
-        except pipes.EmptyPipe:
+        except aiohttp.ClientError as e:
+            if cleaner_task is not None:
+                cleaner_task.cancel()
+                await cleaner_task
+            raise errors.DataError("NilmDB error: %s" % e)
+        except (pipes.EmptyPipe, asyncio.CancelledError):
             pass
         if cleaner_task is not None:
             cleaner_task.cancel()
@@ -92,7 +99,7 @@ class Inserter:
 
     async def _clean(self):
         try:
-            async with aiohttp.ClientSession() as session:
+            async with self._get_client() as session:
                 while True:
                     await asyncio.sleep(self.cleanup_period)
                     keep_time = int(time.time() * 1e6) - self.stream.keep_us
@@ -110,7 +117,8 @@ class Inserter:
                             async with session.post(self.remove_url, params=params) as resp:
                                 if resp.status != 200:
                                     raise errors.DataError(await resp.text())
-
+        except aiohttp.ClientError as e:
+            raise errors.DataError("NilmDB error: %s" % e)
         except asyncio.CancelledError:
             pass
 
@@ -141,10 +149,11 @@ class NilmdbDecimator:
 
     async def process(self, data: np.ndarray) -> None:
         """insert stream data from the queue until the queue is empty"""
-        if not self.path_created:
-            await self._create_path()
-            self.path_created = True
         try:
+            if not self.path_created:
+                await self._create_path()
+                self.path_created = True
+
             async with self._get_client() as session:
                 decim_data = self._process(data)
                 if len(decim_data) == 0:
@@ -171,6 +180,8 @@ class NilmdbDecimator:
                 # feed data to child decimator
                 await self.child.process(decim_data)
                 await asyncio.sleep(self.holdoff)
+        except aiohttp.ClientError as e:
+            raise errors.DataError("NilmDB error: %s" % e)
         except asyncio.CancelledError:
             pass
 

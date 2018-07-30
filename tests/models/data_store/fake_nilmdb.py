@@ -71,6 +71,7 @@ class FakeNilmdb:
              web.post('/nilmdb/stream/remove', self.stream_remove),
              web.get('/nilmdb/stream/list', self.stream_list)])
         self.runner = None
+        self.error_on_paths = {} # (msg, status) tuples to return for path
         # record of transactions
         self.posts = []
         self.gets = []
@@ -90,6 +91,9 @@ class FakeNilmdb:
     async def stop(self):
         await self.runner.cleanup()
 
+    def generate_error_on_path(self, path, status, msg):
+        self.error_on_paths[path] = (msg, status)
+
     async def stream_create(self, request: web.Request):
         self.posts.append(request)
         content = await request.post()
@@ -105,6 +109,9 @@ class FakeNilmdb:
     async def stream_insert(self, request: web.Request):
         self.posts.append(request)
         content = request.query
+        if content['path'] in self.error_on_paths:
+            (msg, status) = self.error_on_paths[content['path']]
+            return web.Response(status=status, text=msg)
         stream = self.streams[content["path"]]
         start = int(content["start"])
         end = int(content["end"])
@@ -179,5 +186,4 @@ class FakeNilmdb:
                                    stream.start,
                                    stream.end,
                                    stream.rows,
-                                   stream.end-stream.start] for path, stream in self.streams.items()])
-
+                                   stream.end - stream.start] for path, stream in self.streams.items()])

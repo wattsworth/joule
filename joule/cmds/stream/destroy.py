@@ -10,6 +10,7 @@ def stream_destroy(config, stream):
     click.confirm("Destroy stream [%s]?" % stream, abort=True)
     resp = requests.delete(config.url+"/stream.json", params={"path": stream})
     if resp.status_code != 200:
-        click.echo("ERROR: "+resp.text, err=True)
+        click.echo("Error [%d]: %s" % (resp.status_code, resp.text))
+        exit(1)
     else:
         click.echo("OK")

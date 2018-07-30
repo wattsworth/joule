@@ -54,7 +54,6 @@ class NilmdbStore(DataStore):
                         raise errors.DataError(error["message"])
                     raise Exception(resp)
 
-    # TODO: change to accepting a DataPipe instead of a queue
     def spawn_inserter(self, stream: Stream,
                        pipe: pipes.Pipe, loop: Loop, insert_period=None) -> asyncio.Task:
         if insert_period is None:

@@ -78,7 +78,7 @@ async def create(request):
         db.commit()
     except ValueError as e:
         return web.Response(text="Invalid stream JSON: %r" % e, status=400)
-    except KeyError as e:
+    except (KeyError, ConfigurationError) as e:
         return web.Response(text="Invalid stream specification: %r" % e, status=400)
     return web.json_response(data=new_stream.to_json())
 

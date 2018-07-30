@@ -1,6 +1,7 @@
 from aiohttp import web
 import os
-import sys
+import io
+from contextlib import redirect_stdout
 import multiprocessing
 import numpy as np
 from typing import Dict, Optional
@@ -12,6 +13,7 @@ import json
 from tests import helpers
 from joule.models import Stream, StreamInfo, pipes, stream
 
+
 # from https://github.com/aio-libs/aiohttp/blob/master/examples/fake_server.py
 
 
@@ -20,6 +22,7 @@ class MockDbEntry:
         self.stream = stream
         self.info = info
         self.data = data
+        self.n_intervals = 0
 
     def add_data(self, chunk):
         if self.data is None:
@@ -48,28 +51,39 @@ class FakeJoule:
         self.stub_stream_info = False
         self.stub_stream_move = False
         self.stub_data_remove = False
+        self.stub_stream_destroy = False
+        self.stub_stream_create = False
+        self.stub_data_read = False
+        self.stub_data_write = False
         self.response = ""
         self.http_code = 200
         self.streams: Dict[str, MockDbEntry] = {}
         self.msgs = None
 
     def start(self, port, msgs: multiprocessing.Queue):
-        sys.stdout = open(os.devnull, 'w')
         self.msgs = msgs
-        web.run_app(self.app, host='127.0.0.1', port=port)
+        f = io.StringIO()
+        with redirect_stdout(f):
+            web.run_app(self.app, host='127.0.0.1', port=port)
 
     def add_stream(self, path, stream: Stream, info: StreamInfo, data: Optional[np.ndarray]):
         self.streams[path] = MockDbEntry(stream, info, data)
 
     async def create_stream(self, request: web.Request):
+        if self.stub_stream_create:
+            return web.Response(text=self.response, status=self.http_code)
         body = await request.post()
         path = body['path']
+        if path == '':  # check for invalid value (eg)
+            return web.Response(text='invalid request', status=400)
         new_stream = stream.from_json(json.loads(body['stream']))
-        new_stream.id += 100 # give the stream  a unique id
+        new_stream.id += 100  # give the stream  a unique id
         self.streams[path] = MockDbEntry(new_stream, StreamInfo(None, None, None), None)
         return web.json_response(data=new_stream.to_json())
 
     async def delete_stream(self, request: web.Request):
+        if self.stub_stream_destroy:
+            return web.Response(text=self.response, status=self.http_code)
         self.msgs.put(request.query['path'])
         return web.Response(text="ok")
 
@@ -77,7 +91,7 @@ class FakeJoule:
         return web.Response(text=self.response, status=self.http_code)
 
     async def stream_info(self, request: web.Request):
-        if self.stub_stream_info:
+        if self.stub_stream_info or request.query['path'] == '/stub/response':
             return web.Response(text=self.response, status=self.http_code)
         if request.query['path'] not in self.streams:
             return web.Response(text="stream does not exist", status=404)
@@ -92,6 +106,9 @@ class FakeJoule:
         return web.Response(text="ok")
 
     async def data_read(self, request: web.Request):
+        if self.stub_data_read:
+            return web.Response(text=self.response, status=self.http_code)
+
         mock_entry = self.streams[request.query['path']]
         resp = web.StreamResponse(status=200,
                                   headers={'joule-layout': mock_entry.stream.layout,
@@ -102,6 +119,9 @@ class FakeJoule:
         return resp
 
     async def data_write(self, request: web.Request):
+        if self.stub_data_write:
+            return web.Response(text=self.response, status=self.http_code)
+
         if 'id' in request.query:
             stream_id = int(request.query['id'])
             mock_entry = [x for x in self.streams.values() if x.stream.id == stream_id][0]
@@ -112,6 +132,8 @@ class FakeJoule:
             try:
                 chunk = await pipe.read()
                 pipe.consume(len(chunk))
+                if pipe.end_of_interval:
+                    mock_entry.n_intervals += 1
                 mock_entry.add_data(chunk)
             except pipes.EmptyPipe:
                 break

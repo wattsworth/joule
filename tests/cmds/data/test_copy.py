@@ -1,4 +1,3 @@
-import unittest
 from click.testing import CliRunner
 import os
 import signal
@@ -10,7 +9,7 @@ import numpy as np
 
 from ..fake_joule import FakeJoule
 from joule.cli import main
-from joule.models import Stream, Element, StreamInfo
+from joule.models import Stream, Element, StreamInfo, pipes
 from tests import helpers
 
 warnings.simplefilter('always')
@@ -38,16 +37,11 @@ class TestDataCopy(helpers.AsyncTestCase):
     def test_copies_data(self):
         server = FakeJoule()
         # create the source and destination streams
-        src = Stream(id=0, name="source", keep_us=100, datatype=Stream.DATATYPE.FLOAT32)
-        src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
+        src_data = create_source_data(server)  # helpers.create_data(src.layout)
+        # dest is empty
         dest = Stream(id=1, name="dest", keep_us=100, datatype=Stream.DATATYPE.FLOAT32)
         dest.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in
                          range(3)]
-        # source has 100 rows of data between [0, 100]
-        src_data = helpers.create_data(src.layout)
-        src_info = StreamInfo(int(src_data['timestamp'][0]), int(src_data['timestamp'][-1]), len(src_data))
-        server.add_stream('/test/source', src, src_info, src_data)
-        # dest is empty
         server.add_stream('/test/destination', dest, StreamInfo(None, None, 0), None)
 
         url = self.start_server(server)
@@ -56,6 +50,7 @@ class TestDataCopy(helpers.AsyncTestCase):
         self.assertEqual(result.exit_code, 0)
         mock_entry = self.msgs.get()
         np.testing.assert_array_equal(src_data, mock_entry.data)
+        self.assertEqual(mock_entry.n_intervals, 3)
         self.stop_server()
 
     def test_creates_stream_if_necessary(self):
@@ -84,28 +79,147 @@ class TestDataCopy(helpers.AsyncTestCase):
         self.assertTrue('Error' in result.output)
         self.assertEqual(result.exit_code, 1)
 
-    @unittest.skip("TODO")
-    def test_when_server_returns_invalid_data(self):
+    def test_when_source_is_empty(self):
         server = FakeJoule()
-        server.stream_list_response = "notjson"
+        # source has no data
+        src_info = StreamInfo(None, None, 0)
+        # create the source stream
+        src = Stream(id=0, name="source", keep_us=100, datatype=Stream.DATATYPE.FLOAT32)
+        src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
+        server.add_stream('/test/source', src, src_info, np.ndarray([]))
         url = self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'data', 'copy'])
-        self.assertTrue('Error' in result.output)
+        result = runner.invoke(main, ['--url', url, 'data', 'copy', '/test/source', '/test/destination'])
+        self.assertTrue('Error' in result.output and 'source' in result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()
 
-    @unittest.skip("TODO")
-    def test_when_server_returns_error_code(self):
+    def test_when_destination_is_invalid(self):
         server = FakeJoule()
-        error_msg = "test error"
-        error_code = 500
-        server.stream_list_response = error_msg
-        server.stream_list_code = error_code
+        # create the source stream
+        src = Stream(id=0, name="source", keep_us=100, datatype=Stream.DATATYPE.FLOAT32)
+        src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
+
+        # source has 100 rows of data between [0, 100]
+        src_data = helpers.create_data(src.layout, length=4)
+        src_info = StreamInfo(int(src_data['timestamp'][0]), int(src_data['timestamp'][-1]), len(src_data))
+
+        server.add_stream('/test/source', src, src_info, np.ndarray([]))
         url = self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'stream', 'list'])
-        self.assertTrue('%d' % error_code in result.output)
-        self.assertTrue(error_msg in result.output)
+        result = runner.invoke(main, ['--url', url, 'data', 'copy', '/test/source', 'badpath'])
+        self.assertTrue('Error' in result.output and 'destination' in result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()
+
+    def test_when_server_returns_invalid_data(self):
+        server = FakeJoule()
+        create_source_data(server)
+
+        server.response = "notjson"
+        server.http_code = 200
+        url = self.start_server(server)
+        runner = CliRunner()
+        result = runner.invoke(main, ['--url', url, 'data', 'copy', '/test/source', '/stub/response'])
+        self.assertTrue('Error' in result.output)
+
+        self.assertEqual(result.exit_code, 1)
+        self.stop_server()
+
+    def test_incompatible_layouts(self):
+        server = FakeJoule()
+        create_source_data(server)
+        dest = Stream(id=1, name="dest", keep_us=100, datatype=Stream.DATATYPE.FLOAT32)
+        dest.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in
+                         range(5)]
+        server.add_stream('/test/destination', dest, StreamInfo(None, None, 0), None)
+        url = self.start_server(server)
+        runner = CliRunner()
+        result = runner.invoke(main, ['--url', url, 'data', 'copy', '/test/source', '/test/destination'])
+        self.assertTrue('not compatible' in result.output)
+        self.assertEqual(result.exit_code, 1)
+        self.stop_server()
+
+    def test_warn_on_different_elements(self):
+        server = FakeJoule()
+        create_source_data(server)
+        dest = Stream(id=1, name="dest", keep_us=100, datatype=Stream.DATATYPE.FLOAT32)
+        dest.elements = [
+            Element(name="different%d" % x, index=x, units='other', display_type=Element.DISPLAYTYPE.CONTINUOUS) for x
+            in
+            range(3)]
+        server.add_stream('/test/destination', dest, StreamInfo(None, None, 0), None)
+        url = self.start_server(server)
+        runner = CliRunner()
+        # does not copy without confirmation
+        result = runner.invoke(main, ['--url', url, 'data', 'copy', '/test/source', '/test/destination'])
+        self.assertTrue(self.msgs.empty())
+        self.assertNotEqual(result.exit_code, 0)
+        # copies with confirmation
+        result = runner.invoke(main, ['--url', url, 'data', 'copy', '/test/source', '/test/destination'],
+                               input='y\n')
+        mock_entry = self.msgs.get()
+        self.assertTrue(len(mock_entry.data) > 0)
+        self.assertEqual(result.exit_code, 0)
+        self.stop_server()
+
+    def test_start_must_be_before_end(self):
+        server = FakeJoule()
+        create_source_data(server)
+        url = self.start_server(server)
+        runner = CliRunner()
+        # does not copy without confirmation
+        result = runner.invoke(main, ['--url', url, 'data', 'copy',
+                                      '/test/source', '/test/destination',
+                                      '--start', '1 hour ago', '--end', '2 hours ago'])
+        self.assertEqual(result.exit_code, 1)
+        self.assertTrue('start' in result.output and 'end' in result.output)
+        self.stop_server()
+
+    def test_data_read_errors(self):
+        server = FakeJoule()
+        server.stub_data_read = True
+        server.http_code = 400
+        server.response = 'nilmdb error'
+        create_source_data(server)
+        url = self.start_server(server)
+        runner = CliRunner()
+        result = runner.invoke(main, ['--url', url, 'data', 'copy',
+                                      '/test/source', '/test/destination'])
+        self.assertEqual(result.exit_code, 1)
+        self.assertTrue('Error' in result.output and 'source' in result.output)
+        self.stop_server()
+
+    def test_data_write_errors(self):
+        server = FakeJoule()
+        server.stub_data_write = True
+        server.http_code = 400
+        server.response = 'nilmdb error'
+        create_source_data(server)
+        url = self.start_server(server)
+        runner = CliRunner()
+        result = runner.invoke(main, ['--url', url, 'data', 'copy',
+                                      '/test/source', '/test/destination'])
+        self.assertEqual(result.exit_code, 1)
+        self.assertTrue('Error' in result.output and 'destination' in result.output)
+        self.stop_server()
+
+
+def create_source_data(server):
+    # create the source stream
+    src = Stream(id=0, name="source", keep_us=100, datatype=Stream.DATATYPE.FLOAT32)
+    src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
+
+    # source has 100 rows of data in four intervals between [0, 100]
+    src_data = helpers.create_data(src.layout, length=100, start=0, step=1)
+    # insert the intervals
+    pipe_data = np.hstack((src_data[:25],
+                           pipes.interval_token(src.layout),
+                           src_data[25:50],
+                           pipes.interval_token(src.layout),
+                           src_data[50:75],
+                           pipes.interval_token(src.layout),
+                           src_data[75:]))
+    src_info = StreamInfo(int(src_data['timestamp'][0]), int(src_data['timestamp'][-1]), len(src_data))
+    server.add_stream('/test/source', src, src_info, pipe_data)
+    return src_data
