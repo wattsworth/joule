@@ -39,6 +39,7 @@ class FakeJoule:
              web.get('/stream.json', self.stream_info),
              web.post('/stream.json', self.create_stream),
              web.put('/stream/move.json', self.move_stream),
+             web.delete('/stream.json', self.delete_stream),
              web.post('/data', self.data_write),
              web.get('/data', self.data_read),
              web.delete('/data', self.data_remove),
@@ -67,6 +68,10 @@ class FakeJoule:
         new_stream.id += 100 # give the stream  a unique id
         self.streams[path] = MockDbEntry(new_stream, StreamInfo(None, None, None), None)
         return web.json_response(data=new_stream.to_json())
+
+    async def delete_stream(self, request: web.Request):
+        self.msgs.put(request.query['path'])
+        return web.Response(text="ok")
 
     async def stub_get(self, request: web.Request):
         return web.Response(text=self.response, status=self.http_code)

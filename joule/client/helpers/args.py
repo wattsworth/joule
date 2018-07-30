@@ -3,6 +3,7 @@ import argparse
 import sys
 import os
 import configparser
+
 from joule.models import module
 
 """ helpers for handling module arguments
@@ -37,5 +38,8 @@ def _append_args(module_config_file):
     with open(module_config_file, 'r') as f:
         module_config.read_file(f)
     my_module = module.from_config(module_config)
-    return my_module.arguments
+    args = []
+    for (arg, value) in my_module.arguments.items():
+        args += ["--" + arg, value]
+    return args
 
