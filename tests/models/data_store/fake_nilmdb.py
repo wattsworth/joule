@@ -64,12 +64,14 @@ class FakeNilmdb:
         self.loop = loop
         self.app = web.Application()
         self.app.router.add_routes(
-            [web.post('/nilmdb/stream/create', self.stream_create),
+            [web.get('/nilmdb/dbinfo', self.dbinfo),
+             web.post('/nilmdb/stream/create', self.stream_create),
              web.put('/nilmdb/stream/insert', self.stream_insert),
              web.get('/nilmdb/stream/extract', self.stream_extract),
              web.get('/nilmdb/stream/intervals', self.stream_intervals),
              web.post('/nilmdb/stream/remove', self.stream_remove),
-             web.get('/nilmdb/stream/list', self.stream_list)])
+             web.get('/nilmdb/stream/list', self.stream_list),
+             web.post('/nilmdb/stream/destroy', self.stream_destroy)])
         self.runner = None
         self.error_on_paths = {} # (msg, status) tuples to return for path
         # record of transactions
@@ -77,6 +79,7 @@ class FakeNilmdb:
         self.gets = []
         self.extract_calls = []
         self.remove_calls = []
+        self.destroy_calls = []
         # dict path=>layout from stream/create calls
         self.streams: Dict[str, FakeStream] = {}
 
@@ -93,6 +96,13 @@ class FakeNilmdb:
 
     def generate_error_on_path(self, path, status, msg):
         self.error_on_paths[path] = (msg, status)
+
+    async def dbinfo(self, request: web.Request):
+        return web.json_response(data={"path": "/opt/data",
+                                       "other": 36002418688,
+                                       "reserved": 11639611392,
+                                       "free": 178200829952,
+                                       "size": 2832261120})
 
     async def stream_create(self, request: web.Request):
         self.posts.append(request)
@@ -179,6 +189,11 @@ class FakeNilmdb:
     async def stream_remove(self, request: web.Request):
         self.remove_calls.append(request.query)
         return web.Response(text="100")
+
+    async def stream_destroy(self, request: web.Request):
+        content = await request.post()
+        self.destroy_calls.append(content)
+        return web.json_response(data=None)
 
     async def stream_list(self, request: web.Request):
         return web.json_response([[path,

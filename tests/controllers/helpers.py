@@ -56,7 +56,7 @@ class MockStore(DataStore):
                       callback: Callable[[np.ndarray, str, bool], Coroutine],
                       max_rows: int = None, decimation_level=None):
         for x in range(self.nchunks):
-            await callback(helpers.create_data(stream.layout), stream.layout, False)
+            await callback(helpers.create_data(stream.layout, length=25), stream.layout, False)
 
     async def remove(self, stream: Stream, start: Optional[int], end: Optional[int]):
         self.removed_data_bounds = (start, end)

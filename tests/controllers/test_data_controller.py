@@ -9,6 +9,7 @@ import joule.controllers
 from .helpers import create_db, MockStore
 from tests import helpers
 
+
 class TestDataController(AioHTTPTestCase):
 
     async def get_application(self):
@@ -40,6 +41,25 @@ class TestDataController(AioHTTPTestCase):
         async for _ in resp.content.iter_chunks():
             rx_chunks += 1
         self.assertEqual(nchunks, rx_chunks)
+
+    @unittest_run_loop
+    async def test_read_json_data(self):
+        db: Session = self.app["db"]
+        store: MockStore = self.app["data-store"]
+        nchunks = 10
+        store.configure_extract(nchunks)
+        resp: aiohttp.ClientResponse = await \
+            self.client.get("/data.json", params={"path": "/folder1/stream1"})
+        data = await resp.json()
+        self.assertFalse(data['decimated'])
+        self.assertEqual(len(data['data'][0]), nchunks*25)
+        # can retrieve stream by id as well
+        stream = db.query(Stream).filter_by(name="stream1").one()
+        resp: aiohttp.ClientResponse = await \
+            self.client.get("/data.json", params={"id": stream.id})
+        await resp.json()
+        self.assertFalse(data['decimated'])
+        self.assertEqual(len(data['data'][0]), nchunks * 25)
 
     @unittest_run_loop
     async def test_write_data(self):

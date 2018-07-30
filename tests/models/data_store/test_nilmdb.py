@@ -306,3 +306,31 @@ class TestNilmdbStore(asynctest.TestCase):
         self.assertEqual(info.start, 1)
         self.assertEqual(info.end, 100)
         self.assertEqual(info.rows, 200)
+
+    async def test_dbinfo(self):
+        dbinfo = await self.store.dbinfo()
+        # constants in fake_nilmdb
+        self.assertEqual(dbinfo.path, '/opt/data')
+        self.assertEqual(dbinfo.free, 178200829952)
+
+    async def test_destroy(self):
+        # initialize nilmdb state
+        self.fake_nilmdb.streams['/joule/1'] = FakeStream(
+            layout=self.stream1.layout, start=1, end=100, rows=100)
+        self.fake_nilmdb.streams['/joule/1~decim-4'] = FakeStream(
+            layout=self.stream1.decimated_layout, start=1, end=100, rows=100)
+        self.fake_nilmdb.streams['/joule/1~decim-16'] = FakeStream(
+            layout=self.stream1.decimated_layout, start=1, end=100, rows=100)
+        self.fake_nilmdb.streams['/joule/1~decim-64'] = FakeStream(
+            layout=self.stream1.decimated_layout, start=1, end=100, rows=100)
+
+        # removes data between time bounds at all decimation levels
+        await self.store.destroy(self.stream1)
+        self.assertEqual(len(self.fake_nilmdb.remove_calls), 4)
+        paths = ['/joule/1', '/joule/1~decim-4',
+                 '/joule/1~decim-16', '/joule/1~decim-64']
+        for call in self.fake_nilmdb.remove_calls:
+            self.assertTrue(call["path"] in paths)
+        # and destroys the stream
+        for call in self.fake_nilmdb.destroy_calls:
+            self.assertTrue(call["path"] in paths)
