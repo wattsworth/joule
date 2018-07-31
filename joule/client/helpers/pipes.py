@@ -26,9 +26,3 @@ def build_fd_pipes(pipe_args: str, loop: Loop) -> Tuple[Pipes, Pipes]:
                                          reader_factory=rf)
 
     return pipes_in, pipes_out
-
-
-def _confirm():
-    # raise error is user does not enter OK
-    if input("Type OK to continue: ") != "OK":
-        raise ClientError("must type OK to continue execution")

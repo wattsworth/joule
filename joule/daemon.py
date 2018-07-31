@@ -13,6 +13,7 @@ from typing import List
 from joule.models import (Base, Worker, Supervisor, config, ConfigurationError,
                           SubscriptionError, DataStore, Stream, pipes)
 from joule.models import NilmdbStore
+from joule.models.data_store.errors import DataError
 from joule.services import (load_modules, load_streams, load_config, load_databases)
 import joule.controllers
 
@@ -69,7 +70,11 @@ class Daemon(object):
 
     async def run(self, loop: Loop):
         # initialize streams in the data store
-        await self.data_store.initialize(self.db.query(Stream).all())
+        try:
+            await self.data_store.initialize(self.db.query(Stream).all())
+        except DataError as e:
+            log.error("Database error: %s" % e)
+            exit(1)
         # start the supervisor (runs the workers)
         self.supervisor.start(loop)
         # start inserters by subscribing to the streams

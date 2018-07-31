@@ -9,7 +9,9 @@ from joule.models import Stream, pipes
 from joule.models.data_store.data_store import DataStore, StreamInfo, DbInfo, Data, Interval
 from joule.models.data_store import errors
 from joule.models.data_store.nilmdb_inserter import Inserter
-from joule.models.data_store.nilmdb_helpers import compute_path, check_for_error, ERRORS
+from joule.models.data_store.nilmdb_helpers import (compute_path,
+                                                    check_for_error,
+                                                    ERRORS)
 
 Loop = asyncio.AbstractEventLoop
 
@@ -30,12 +32,15 @@ class NilmdbStore(DataStore):
 
     async def initialize(self, streams: List[Stream]) -> None:
         url = "{server}/stream/create".format(server=self.server)
-        async with self._get_client() as session:
-            for stream in streams:
-                data = {"path": compute_path(stream),
-                        "layout": stream.layout}
-                async with session.post(url, data=data) as resp:
-                    await check_for_error(resp, ignore=[ERRORS.STREAM_ALREADY_EXISTS])
+        try:
+            async with self._get_client() as session:
+                for stream in streams:
+                    data = {"path": compute_path(stream),
+                            "layout": stream.layout}
+                    async with session.post(url, data=data) as resp:
+                        await check_for_error(resp, ignore=[ERRORS.STREAM_ALREADY_EXISTS])
+        except aiohttp.ClientError:
+            raise errors.DataError("cannot contact NilmDB at [%s]" % self.server)
 
     async def insert(self, stream: Stream, start: int, end: int, data: np.array) -> None:
         """insert stream data, retry on error"""

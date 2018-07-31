@@ -95,7 +95,8 @@ async def read(request: web.Request, json=False):
 
     if json:
         # put the last data_segment on
-        data_blocks.append(data_segment.tolist())
+        if data_segment is not None:
+            data_blocks.append(data_segment.tolist())
         return web.json_response({"data": data_blocks, "decimated": is_decimated})
     else:
         return resp

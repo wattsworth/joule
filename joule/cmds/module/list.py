@@ -1,7 +1,5 @@
 import click
-import requests
 from tabulate import tabulate
-from typing import Dict
 
 from joule.cmds.helpers import get_json
 from joule.cmds.config import pass_config

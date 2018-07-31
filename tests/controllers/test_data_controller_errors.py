@@ -1,9 +1,7 @@
 from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 from aiohttp import web
 import aiohttp
-from sqlalchemy.orm import Session
 
-from joule.models import folder, Stream, Folder, StreamInfo
 import joule.controllers
 from .helpers import create_db, MockStore
 
@@ -33,6 +31,24 @@ class TestDataController(AioHTTPTestCase):
         resp: aiohttp.ClientResponse = await \
             self.client.get("/data", params={'id': '404'})
         self.assertEqual(resp.status, 404)
+
+    @unittest_run_loop
+    async def test_read_errors_on_decimation_failure(self):
+        store: MockStore = self.app['data-store']
+        store.configure_extract(10,decimation_error=True)
+        params = {'path': '/folder1/stream1', 'decimation-level': 64}
+        resp: aiohttp.ClientResponse = await self.client.get("/data", params=params)
+        self.assertNotEqual(resp.status, 200)
+        self.assertTrue('decimated' in await resp.text())
+
+    @unittest_run_loop
+    async def test_read_errors_on_nilmdb_error(self):
+        store: MockStore = self.app['data-store']
+        store.configure_extract(10, data_error=True)
+        params = {'path': '/folder1/stream1', 'decimation-level': 64}
+        resp: aiohttp.ClientResponse = await self.client.get("/data", params=params)
+        self.assertNotEqual(resp.status, 200)
+        self.assertTrue('error' in await resp.text())
 
     @unittest_run_loop
     async def test_read_params_must_be_valid(self):

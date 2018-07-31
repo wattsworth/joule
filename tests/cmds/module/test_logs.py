@@ -5,33 +5,29 @@ import warnings
 from ..fake_joule import FakeJoule, FakeJouleTestCase
 from joule.cli import main
 
-MODULE_LIST = os.path.join(os.path.dirname(__file__), 'modules.json')
+MODULE_LOGS = os.path.join(os.path.dirname(__file__), 'logs.json')
 warnings.simplefilter('always')
 
 
-class TestStreamList(FakeJouleTestCase):
+class TestModuleLogs(FakeJouleTestCase):
 
-    def test_lists_modules(self):
+    def test_print_module_logs(self):
         server = FakeJoule()
-        with open(MODULE_LIST, 'r') as f:
+        with open(MODULE_LOGS, 'r') as f:
             server.response = f.read()
         url = self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'module', 'list'])
+        result = runner.invoke(main, ['--url', url, 'module', 'logs','my_module'])
         self.assertEqual(result.exit_code, 0)
         output = result.output
-        # make sure modules are listed
-        for name in ['Module%d' % x for x in range(1,5)]:
-            self.assertTrue(name in output)
-        # check a few streams
-        for stream in ['folder_1/stream_1_1', '/folder_2/stream_2_1']:
-            self.assertTrue(stream in output)
+        self.assertTrue(len(output)>0)
+        self.assertTrue("starting" in output)
         self.stop_server()
 
     def test_when_server_is_not_available(self):
         url = "http://127.0.0.1:%d" % unused_port()
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'module', 'list'])
+        result = runner.invoke(main, ['--url', url, 'module', 'logs', 'my_module'])
         self.assertTrue('Error' in result.output)
         self.assertEqual(result.exit_code, 1)
 
@@ -40,7 +36,7 @@ class TestStreamList(FakeJouleTestCase):
         server.response = "notjson"
         url = self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'module', 'list'])
+        result = runner.invoke(main, ['--url', url, 'module', 'logs', 'my_module'])
         self.assertTrue('Error' in result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()
@@ -53,7 +49,7 @@ class TestStreamList(FakeJouleTestCase):
         server.http_code = error_code
         url = self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'module', 'list'])
+        result = runner.invoke(main, ['--url', url, 'module', 'logs', 'my_module'])
         self.assertTrue('%d' % error_code in result.output)
         self.assertTrue(error_msg in result.output)
         self.assertEqual(result.exit_code, 1)

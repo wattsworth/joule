@@ -47,7 +47,8 @@ class FakeJoule:
              web.get('/data', self.data_read),
              web.delete('/data', self.data_remove),
              web.get('/modules.json', self.stub_get),
-             web.get('/module.json', self.stub_get)])
+             web.get('/module.json', self.stub_get),
+             web.get('/module/logs.json', self.stub_get)])
         self.stub_stream_info = False
         self.stub_stream_move = False
         self.stub_data_remove = False

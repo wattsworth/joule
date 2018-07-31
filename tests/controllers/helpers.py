@@ -6,6 +6,7 @@ import asyncio
 import argparse
 from typing import Optional, Callable, Coroutine
 
+from joule.models.data_store.errors import DataError, InsufficientDecimationError
 from joule.models import (Base, DataStore, Stream, StreamInfo, DbInfo, pipes, worker)
 from joule.services import parse_pipe_config
 from tests import helpers
@@ -31,6 +32,9 @@ class MockStore(DataStore):
         self.stream_info = {}
         # stubs to track data controller execution
         self.nchunks = 3
+        self.nintervals = 1
+        self.raise_data_error = False
+        self.raise_data_error = False
         self.inserted_data = False
         self.removed_data_bounds = (None, None)
         self.destroyed_stream_id = None
@@ -49,14 +53,32 @@ class MockStore(DataStore):
 
         return loop.create_task(task())
 
-    def configure_extract(self, nchunks):
+    def configure_extract(self, nchunks, nintervals=1,
+                          decimation_error=False,
+                          data_error=False):
         self.nchunks = nchunks
+        self.nintervals = nintervals
+        self.raise_decimation_error = decimation_error
+        self.raise_data_error = data_error
 
     async def extract(self, stream: Stream, start: Optional[int], end: Optional[int],
                       callback: Callable[[np.ndarray, str, bool], Coroutine],
-                      max_rows: int = None, decimation_level=None):
-        for x in range(self.nchunks):
-            await callback(helpers.create_data(stream.layout, length=25), stream.layout, False)
+                      max_rows: int = None, decimation_level=1):
+        if self.raise_data_error:
+            raise DataError("nilmdb error")
+        if self.raise_decimation_error:
+            raise InsufficientDecimationError("insufficient decimation")
+        if decimation_level is not None and decimation_level > 1:
+            decimated = True
+            layout = stream.decimated_layout
+        else:
+            decimated = False
+            layout = stream.layout
+        for i in range(self.nintervals):
+            for x in range(self.nchunks):
+                await callback(helpers.create_data(layout, length=25), layout, decimated)
+            if i < (self.nintervals - 1):
+                await callback(pipes.interval_token(layout), layout, decimated)
 
     async def remove(self, stream: Stream, start: Optional[int], end: Optional[int]):
         self.removed_data_bounds = (start, end)

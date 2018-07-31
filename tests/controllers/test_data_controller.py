@@ -33,33 +33,40 @@ class TestDataController(AioHTTPTestCase):
             rx_chunks += 1
         self.assertEqual(nchunks, rx_chunks)
 
-        # can retrieve stream by id as well
+        # can retrieve stream by id and as decimated data
         stream = db.query(Stream).filter_by(name="stream1").one()
         resp: aiohttp.ClientResponse = await \
-            self.client.get("/data", params={"id": stream.id})
+            self.client.get("/data", params={"id": stream.id, 'decimation-level': 16})
         rx_chunks = 0
         async for _ in resp.content.iter_chunks():
             rx_chunks += 1
         self.assertEqual(nchunks, rx_chunks)
+        self.assertEqual(resp.headers['joule-decimated'], 'True')
+        self.assertEqual(resp.headers['joule-layout'], stream.decimated_layout)
 
     @unittest_run_loop
     async def test_read_json_data(self):
         db: Session = self.app["db"]
         store: MockStore = self.app["data-store"]
-        nchunks = 10
-        store.configure_extract(nchunks)
+        n_chunks = 10
+        n_intervals = 2
+        # mock data has 2 intervals retrieved as 10 chunks each
+        store.configure_extract(n_chunks, n_intervals)
         resp: aiohttp.ClientResponse = await \
             self.client.get("/data.json", params={"path": "/folder1/stream1"})
         data = await resp.json()
         self.assertFalse(data['decimated'])
-        self.assertEqual(len(data['data'][0]), nchunks*25)
-        # can retrieve stream by id as well
+        self.assertEqual(len(data['data'][0]), n_chunks*25)
+        # can retrieve stream by id and as decimated data as well
         stream = db.query(Stream).filter_by(name="stream1").one()
         resp: aiohttp.ClientResponse = await \
-            self.client.get("/data.json", params={"id": stream.id})
-        await resp.json()
-        self.assertFalse(data['decimated'])
-        self.assertEqual(len(data['data'][0]), nchunks * 25)
+            self.client.get("/data.json", params={"id": stream.id, 'decimation-level': 16})
+        data = await resp.json()
+        self.assertTrue(data['decimated'])
+        # only the interval is exposed, the chunking is transparent
+        self.assertEqual(len(data['data']), 2)
+        for interval in data['data']:
+            self.assertEqual(len(interval), n_chunks * 25)
 
     @unittest_run_loop
     async def test_write_data(self):
