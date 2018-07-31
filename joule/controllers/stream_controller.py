@@ -48,7 +48,7 @@ async def move(request: web.Request):
     try:
         destination = folder.find_or_create(body['destination'], db)
     except ConfigurationError as e:
-        return web.Response(text=e, status=400)
+        return web.Response(text="Destination error: %s" % str(e), status=400)
     # make sure there are no other streams with the same name here
     for peer in destination.streams:
         if peer.name == stream.name:

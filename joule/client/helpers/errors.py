@@ -1,3 +1,0 @@
-        
-class ClientError(Exception):
-    pass

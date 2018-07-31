@@ -18,6 +18,7 @@ class BaseModule:
     def __init__(self):
         self.stop_requested = False
         self.pipes: List[pipes.Pipe] = []
+        self.STOP_TIMEOUT = 2
 
     def run_as_task(self, parsed_args, loop):
         assert False, "implement in child class"  # pragma: no cover
@@ -41,12 +42,11 @@ class BaseModule:
         self.stop_requested = False
 
         runner = loop.run_until_complete(self._start_interface(parsed_args))
-
         task = self.run_as_task(parsed_args, loop)
 
         def stop_task():
             # give task no more than 2 seconds to exit
-            loop.call_later(2, task.cancel)
+            loop.call_later(self.STOP_TIMEOUT, task.cancel)
             # run custom exit routine
             self.stop()
 
@@ -56,8 +56,6 @@ class BaseModule:
             loop.run_until_complete(task)
         except asyncio.CancelledError:
             pass
-        except helpers.ClientError as e:
-            print("ERROR:", str(e))
         if runner is not None:
             loop.run_until_complete(runner.cleanup())
         for pipe in self.pipes:

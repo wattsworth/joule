@@ -1,6 +1,5 @@
 import json
 import asyncio
-from .errors import ClientError
 from joule.models import (stream, pipes)
 from typing import Dict, Tuple
 

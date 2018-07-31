@@ -53,6 +53,10 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         resp = await self.client.put("/stream/move.json", data={"path": "/folder2/deeper",
                                                                 "destination": "malformed"})
         self.assertEqual(resp.status, 404)
+        resp = await self.client.put("/stream/move.json", data={"path": "/folder1/stream1",
+                                                                "destination": "invalid"})
+        self.assertEqual(resp.status, 400)
+
         # cannot conflict with an existing stream in the destination
         resp = await self.client.put("/stream/move.json", data={"path": "/folder_x1/same_name",
                                                                 "destination": "/folder_x2"})
