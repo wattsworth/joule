@@ -31,13 +31,12 @@ def data_read(config, start, end, max_rows, decimation_level, show_bounds, mark_
         async with aiohttp.ClientSession() as session:
             async with session.get(config.url + "/data", params=params) as response:
                 if response.status != 200:
-                    msg = await response.text()
-                    click.echo("ERROR: %s" % msg, err=True)
-                    return
+                    click.echo("Error %s [%d]: %s" % (config.url, response.status,
+                                                      await response.text()))
+                    exit(1)
                 decimated = False
                 if response.headers['joule-decimated'] == 'True':
                     decimated = True
-
                 pipe = InputPipe(layout=response.headers['joule-layout'],
                                  reader=response.content)
                 try:

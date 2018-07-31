@@ -23,6 +23,7 @@ warnings.simplefilter('always')
 class SimpleReader(ReaderModule):
     async def run(self, parsed_args, output: pipes.Pipe):
         await output.write(parsed_args.mock_data)
+        await output.close()
 
 
 class InterfaceReader(ReaderModule):
@@ -38,7 +39,7 @@ class InterfaceReader(ReaderModule):
         return web.Response(text="Hello World")
 
 
-class TestBaseModule(helpers.AsyncTestCase):
+class TestReaderModule(helpers.AsyncTestCase):
 
     def setUp(self):
         super().setUp()

@@ -36,3 +36,6 @@ class StdoutPipe:
             ts = row[0]
             vals = row[1:]
             print("%d %s" % (ts, " ".join([repr(x) for x in vals])))
+
+    async def close(self):
+        pass

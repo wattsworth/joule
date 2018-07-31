@@ -10,7 +10,7 @@ import numpy as np
 
 from ..fake_joule import FakeJoule, FakeJouleTestCase
 from joule.cli import main
-from joule.models import Stream, Element, StreamInfo
+from joule.models import Stream, Element, StreamInfo, pipes
 from tests import helpers
 
 warnings.simplefilter('always')
@@ -30,13 +30,62 @@ class TestDataRead(FakeJouleTestCase):
 
         url = self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'data', 'read', '/test/source'])
+        # add in some extra parameters to make sure they are parsed
+        result = runner.invoke(main, ['--url', url, 'data', 'read', '/test/source',
+                                      '--start', '0', '--end', '1 hour ago', '--max-rows', '1000'])
         self.assertEqual(result.exit_code, 0)
         output = result.output.split('\n')
         for x in range(len(src_data)):
             row = src_data[x]
             expected = "%d %s" % (row['timestamp'], ' '.join('%f' % x for x in row['data']))
             self.assertTrue(expected in output[x])
+        self.stop_server()
+
+    def test_reads_decimated_data(self):
+        server = FakeJoule()
+        # create the source stream
+        src = Stream(id=0, name="source", keep_us=100, datatype=Stream.DATATYPE.FLOAT32)
+        src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
+        # source has 200 rows of data between [0, 200] in two intervals
+        src_data = np.hstack((helpers.create_data(src.decimated_layout, start=0, length=100, step=1),
+                              pipes.interval_token(src.decimated_layout),
+                              helpers.create_data(src.decimated_layout, start=100, length=100, step=1)))
+
+        src_info = StreamInfo(int(src_data['timestamp'][0]), int(src_data['timestamp'][-1]), len(src_data))
+        server.add_stream('/test/source', src, src_info, src_data)
+        url = self.start_server(server)
+
+        # mark the intervals and show the bounds
+        runner = CliRunner()
+        result = runner.invoke(main, ['--url', url, 'data', 'read', '/test/source',
+                                      '--decimation-level', '16', '--mark-intervals',
+                                      '--show-bounds'])
+        self.assertEqual(result.exit_code, 0)
+        output = result.output.split('\n')
+        for x in range(len(src_data)):
+            row = src_data[x]
+            if row == pipes.interval_token(src.decimated_layout):
+                expected = '# interval break'
+            else:
+                expected = "%d %s" % (row['timestamp'], ' '.join('%f' % x for x in row['data']))
+            self.assertTrue(expected in output[x])
+
+        # do not mark the intervals and hide the bounds
+        runner = CliRunner()
+        result = runner.invoke(main, ['--url', url, 'data', 'read', '/test/source',
+                                      '--decimation-level', '16'])
+        self.assertEqual(result.exit_code, 0)
+        output = result.output.split('\n')
+        offset = 0
+        for x in range(len(src_data)):
+            row = src_data[x]
+            if row == pipes.interval_token(src.decimated_layout):
+                offset = 1
+                continue
+            else:
+                expected = "%d %s" % (row['timestamp'], ' '.join('%f' % x for x in row['data'][:3]))
+            self.assertTrue(expected in output[x - offset])
+
         self.stop_server()
 
     def test_when_server_is_not_available(self):
@@ -46,28 +95,15 @@ class TestDataRead(FakeJouleTestCase):
         self.assertTrue('Error' in result.output)
         # self.assertEqual(result.exit_code, 1)
 
-    @unittest.skip("TODO")
-    def test_when_server_returns_invalid_data(self):
-        server = FakeJoule()
-        server.stream_list_response = "notjson"
-        url = self.start_server(server)
-        runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'data', 'read', '/test/source'])
-        self.assertTrue('Error' in result.output)
-        self.assertEqual(result.exit_code, 1)
-        self.stop_server()
-
-    @unittest.skip("TODO")
     def test_when_server_returns_error_code(self):
         server = FakeJoule()
-        error_msg = "test error"
-        error_code = 500
-        server.stream_list_response = error_msg
-        server.stream_list_code = error_code
+        server.response = "test error"
+        server.http_code = 500
+        server.stub_data_read = True
         url = self.start_server(server)
         runner = CliRunner()
         result = runner.invoke(main, ['--url', url, 'data', 'read', '/test/source'])
-        self.assertTrue('%d' % error_code in result.output)
-        self.assertTrue(error_msg in result.output)
+        self.assertTrue('%d' % 500 in result.output)
+        self.assertTrue("test error" in result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()

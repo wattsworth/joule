@@ -5,7 +5,7 @@ from . import base_module
 
 class CompositeModule(base_module.BaseModule):
 
-    async def setup(self, parsed_args, inputs, outputs):
+    async def setup(self, parsed_args, inputs, outputs, loop):
         # call run for other modules
         # return [coro, coro, ...]
         assert False, "implement in child class"  # pragma: no cover
@@ -15,6 +15,7 @@ class CompositeModule(base_module.BaseModule):
         (pipes_in, pipes_out) = loop.run_until_complete(coro)
         coro = self.setup(parsed_args,
                           pipes_in,
-                          pipes_out)
+                          pipes_out,
+                          loop)
         tasks = loop.run_until_complete(coro)
         return asyncio.gather(*tasks)

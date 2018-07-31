@@ -24,7 +24,8 @@ class TestNilmdbStore(asynctest.TestCase):
         url = "http://test.nodes.wattsworth.net:%d/nilmdb" % \
               info['test.nodes.wattsworth.net']
         # url = "http://localhost/nilmdb"
-        self.store = NilmdbStore(url, 5, 60, self.loop)
+        # use a 0 insert period for test execution
+        self.store = NilmdbStore(url, 0, 60, self.loop)
         self.store.connector = connector
 
         # make a couple example streams
@@ -85,7 +86,7 @@ class TestNilmdbStore(asynctest.TestCase):
         pipe = pipes.InputPipe(stream=self.stream1, reader=source)
         nrows = 955
         data = helpers.create_data(layout="int8_3", length=nrows)
-        task = self.store.spawn_inserter(self.stream1, pipe, self.loop, insert_period=0)
+        task = self.store.spawn_inserter(self.stream1, pipe, self.loop)
         for chunk in helpers.to_chunks(data, 300):
             await source.put(chunk.tostring())
         await task
@@ -276,6 +277,28 @@ class TestNilmdbStore(asynctest.TestCase):
         with self.assertRaises(DataError):
             await self.store.extract(self.stream1, start=100, end=1000,
                                      callback=callback, decimation_level=5)
+
+    async def test_extract_errors(self):
+        # initialize nilmdb state
+        nrows = 1000
+        self.fake_nilmdb.streams['/joule/1'] = FakeStream(
+            layout=self.stream1.layout, start=100, end=1000, rows=nrows)
+        self.fake_nilmdb.streams['/joule/1~decim-4'] = FakeStream(
+            layout=self.stream1.decimated_layout, start=100, end=1000, rows=nrows // 4)
+        # level 16 has no data
+        self.fake_nilmdb.streams['/joule/1~decim-16'] = FakeStream(
+            layout=self.stream1.decimated_layout, start=100, end=1000, rows=0)
+
+        extracted_data = []
+
+        async def callback(data, layout, decimated):
+            extracted_data.append(data)
+
+        # returns error because required level is emptyF
+        with self.assertRaises(InsufficientDecimationError) as e:
+            await self.store.extract(self.stream1, start=100, end=1000, callback=callback,
+                                     max_rows=(nrows//4 - 10))
+        self.assertTrue('empty' in str(e.exception))
 
     async def test_intervals(self):
         intervals = [[1, 2], [2, 3], [3, 4]]

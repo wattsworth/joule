@@ -1,7 +1,7 @@
 import numpy as np
 import asyncio
 from joule.models.pipes import Pipe
-from joule.models.pipes.errors import PipeError
+from joule.models.pipes.errors import PipeError, EmptyPipe
 
 Loop = asyncio.AbstractEventLoop
 
@@ -14,8 +14,10 @@ class LocalPipe(Pipe):
         # tunable constants
         self.BUFFER_SIZE = buffer_size
         self.MAX_BLOCK_SIZE = int(buffer_size / 3)
+        self.TIMEOUT_INTERVAL = 0.5
         self.debug = debug
         self.interval_break = False
+        self.closed = False
         # initialize buffer and queue
         self.queue = asyncio.Queue(loop=loop)
         self.buffer = np.zeros(self.BUFFER_SIZE, dtype=self.dtype)
@@ -29,7 +31,14 @@ class LocalPipe(Pipe):
             # pull new data from queue or the buffer is empty so
             # we have to wait for new data
             while not self._buffer_full():
-                block = await self.queue.get()
+                # if the buffer is empty and the queue is empty and the pipe is closed
+                if self.queue.empty() and self.last_index == 0 and self.closed:
+                    raise EmptyPipe()
+                try:
+                    block = await asyncio.wait_for(self.queue.get(), self.TIMEOUT_INTERVAL)
+                except asyncio.TimeoutError:
+                    # didn't get a block, run again and check for the pipe closed condition
+                    continue
                 if block is None:
                     self.interval_break = True
                     break
@@ -92,6 +101,9 @@ class LocalPipe(Pipe):
 
     async def close_interval(self):
         await self.queue.put(None)
+
+    async def close(self):
+        self.closed = True
 
     def write_nowait(self, data):
         # convert into a structured array

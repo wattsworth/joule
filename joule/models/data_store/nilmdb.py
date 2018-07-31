@@ -43,7 +43,7 @@ class NilmdbStore(DataStore):
             raise errors.DataError("cannot contact NilmDB at [%s]" % self.server)
 
     async def insert(self, stream: Stream, start: int, end: int, data: np.array) -> None:
-        """insert stream data, retry on error"""
+        """insert stream data"""
         url = "{server}/stream/insert".format(server=self.server)
         params = {"start": "%d" % start,
                   "end": "%d" % end,
@@ -57,7 +57,7 @@ class NilmdbStore(DataStore):
                         error = await resp.json()
                         # nilmdb rejected the data
                         raise errors.DataError(error["message"])
-                    raise Exception(resp)
+                    raise errors.DataError(await resp.text())
 
     def spawn_inserter(self, stream: Stream,
                        pipe: pipes.Pipe, loop: Loop, insert_period=None) -> asyncio.Task:
