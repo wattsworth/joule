@@ -58,7 +58,7 @@ class TestStreamInfo(FakeJouleTestCase):
             url = self.start_server(server)
             runner = CliRunner()
             result = runner.invoke(main, ['--url', url, 'stream', 'info', '/folder_1/random'])
-            # just make sure different configurations cause an error in the output
+            # just make sure different configurations do not cause errors in the output
             self.assertEqual(result.exit_code, 0)
             self.stop_server()
 

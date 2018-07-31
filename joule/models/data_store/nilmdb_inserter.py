@@ -80,7 +80,7 @@ class Inserter:
                         if self.decimator is not None:
                             self.decimator.close_interval()
         except aiohttp.ClientError as e:
-            if cleaner_task is not None:
+            if cleaner_task is not None:  # pragma: no cover
                 cleaner_task.cancel()
                 await cleaner_task
             raise errors.DataError("NilmDB error: %s" % e)
@@ -108,17 +108,17 @@ class Inserter:
                               "end": "%d" % keep_time,
                               "path": self.path}
                     async with session.post(self.remove_url, params=params) as resp:
-                        if resp.status != 200:
+                        if resp.status != 200:  # pragma: no cover
                             raise errors.DataError(await resp.text())
                     # remove decimation data
                     if self.decimator is not None:
                         for path in self.decimator.get_paths():
                             params["path"] = path
                             async with session.post(self.remove_url, params=params) as resp:
-                                if resp.status != 200:
+                                if resp.status != 200:  # pragma: no cover
                                     raise errors.DataError(await resp.text())
         except aiohttp.ClientError as e:
-            raise errors.DataError("NilmDB error: %s" % e)
+            raise errors.DataError("NilmDB error: %s" % e)  # pragma: no cover
         except asyncio.CancelledError:
             pass
 
@@ -174,15 +174,15 @@ class NilmdbDecimator:
                           "binary": '1'}
                 async with session.put(self.insert_url, params=params,
                                        data=decim_data.tostring()) as resp:
-                    if resp.status != 200:
+                    if resp.status != 200:  # pragma: no cover
                         error = await resp.text()
                         raise errors.DataError("NilmDB error: %s" % error)
                 # feed data to child decimator
                 await self.child.process(decim_data)
                 await asyncio.sleep(self.holdoff)
-        except aiohttp.ClientError as e:
+        except aiohttp.ClientError as e:  # pragma: no cover
             raise errors.DataError("NilmDB error: %s" % e)
-        except asyncio.CancelledError:
+        except asyncio.CancelledError:  # pragma: no cover
             pass
 
     def close_interval(self):

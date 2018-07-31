@@ -80,6 +80,16 @@ class TestNilmdbStore(asynctest.TestCase):
                                 data['timestamp'][-1] + 1, data)
         self.assertEqual(self.fake_nilmdb.streams["/joule/1"].rows, nrows * 2)
 
+    async def test_insert_error_on_overlapping_data(self):
+        # when nilmdb server rejects the data (eg overlapping timestamps)
+        await self.store.initialize([self.stream1])
+        self.fake_nilmdb.streams['/joule/1'] = FakeStream(
+            layout=self.stream1.layout, start=0, end=500, rows=500)
+        data = helpers.create_data(layout="int8_3", start=25, step=1, length=20)
+        with self.assertRaises(DataError)as e:
+            await self.store.insert(self.stream1, 25, 1000, data)
+        self.assertTrue('overlaps' in str(e.exception))
+
     async def test_decimating_inserter(self):
         self.stream1.decimate = True
         source = QueueReader()
@@ -157,7 +167,7 @@ class TestNilmdbStore(asynctest.TestCase):
         with self.assertRaises(DataError):
             await task
 
-    async def test_inserter_nilmdb_error(self):
+    async def test_inserter_when_nilmdb_is_not_available(self):
         # when nilmdb server is not available
         self.stream1.datatype = Stream.DATATYPE.UINT16
         source = QueueReader()

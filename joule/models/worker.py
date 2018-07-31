@@ -300,9 +300,7 @@ class Worker:
                     for s in subscribers:
                         await s.close_interval()
                 await asyncio.sleep(0.25)
-        except EmptyPipe:
-            pass
-        except asyncio.CancelledError:
+        except (EmptyPipe, asyncio.CancelledError):
             pass
 
     async def _subscribe_to_inputs(self,

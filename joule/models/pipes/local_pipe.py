@@ -43,7 +43,7 @@ class LocalPipe(Pipe):
                     self.interval_break = True
                     break
                 self.buffer[self.last_index:self.last_index + len(block)] = block
-                if self.debug:
+                if self.debug:  # pragma: no cover
                     if self._buffer_full():
                         msg = "buffer FULL"
                     else:
@@ -77,7 +77,6 @@ class LocalPipe(Pipe):
 
     def consume(self, num_rows):
         if num_rows == 0:
-            print("zero consume on local pipe")
             return
         if num_rows < 0:
             print("WARNING: LocalPipe::consume called with negative offset: %d" % num_rows)

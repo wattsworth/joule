@@ -92,8 +92,7 @@ class InputPipe(Pipe):
         if num_rows == 0:
             return  # nothing to do
         if num_rows < 0:
-            log.warning("InputPipe::consume called with negative offset: %d" % num_rows)
-            return
+            raise PipeError("consume called with negative offset: %d" % num_rows)
 
         if num_rows > self.last_index:
             raise PipeError("cannot consume %d rows: only %d available"
