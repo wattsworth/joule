@@ -9,7 +9,7 @@ async def get(request: web.Request):
     try:
         module_id = int(request.url.parts[2])
     except ValueError:
-        return web.Response(text="invalid module id", status=404)
+        return web.Response(text="invalid module id", status=400)
     socket = supervisor.get_socket(module_id)
     if socket is None:
         return web.Response(text="module does not exist or does not have an interface",

@@ -10,7 +10,7 @@ import io
 import joule.controllers
 from joule.client import FilterModule
 from joule.models import Supervisor
-from .helpers import MockStore, MockWorker
+from .helpers import MockWorker
 
 
 class InterfaceModule(FilterModule):
@@ -21,8 +21,12 @@ class InterfaceModule(FilterModule):
 
     def routes(self):
         return[
+            web.get('/', self.index),
             web.get('/test', self.test)
         ]
+
+    async def index(self, request):
+        return web.Response(text="index")
 
     async def test(self, request):
         self.stop_requested = True
@@ -56,6 +60,11 @@ class TestInterfaceController(AioHTTPTestCase):
             proc.start()
         loop.close()
         asyncio.set_event_loop(old_loop)
+        # passes root as / to module
+        resp = await self.client.request("GET", "/interface/101")
+        msg = await resp.text()
+        self.assertEqual(msg, 'index')
+        # another path, this one shuts down the module
         resp = await self.client.request("GET", "/interface/101/test")
         msg = await resp.text()
         proc.join()
