@@ -2,8 +2,10 @@ import aiohttp
 from joule.models import Stream
 from enum import Enum
 from typing import List
-from joule.models.data_store import errors
 import pdb
+
+from joule.models.data_store import errors
+
 
 class ERRORS(Enum):
     STREAM_ALREADY_EXISTS = "stream already exists at this path"
@@ -27,5 +29,5 @@ async def check_for_error(resp: aiohttp.ClientResponse, ignore: List[ERRORS] = N
                 if error_type.value in error["message"]:
                     return  # OK
     except aiohttp.ContentTypeError:
-        raise errors.DataError("[%d]: %s" % (resp.status, resp))
+        raise errors.DataError("[%d] invalid json response \"%s\"" % (resp.status, await resp.text()))
     raise errors.DataError("[%d]: %s" % (resp.status, error["message"]))

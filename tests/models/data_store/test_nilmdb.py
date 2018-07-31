@@ -1,5 +1,6 @@
 import asynctest
 import aiohttp
+from aiohttp.test_utils import unused_port
 import numpy as np
 import time
 
@@ -49,6 +50,19 @@ class TestNilmdbStore(asynctest.TestCase):
         self.assertEqual(len(self.fake_nilmdb.streams), 2)
         self.assertEqual(self.fake_nilmdb.streams["/joule/1"].layout, "int8_3")
         self.assertEqual(self.fake_nilmdb.streams["/joule/2"].layout, "uint16_4")
+
+    async def test_initialize_errors(self):
+        # when nilmdb returns invalid error data
+        self.fake_nilmdb.stub_stream_create = True
+        self.fake_nilmdb.response = 'notjson'
+        self.fake_nilmdb.http_code = 500
+
+        with self.assertRaises(DataError) as e:
+            await self.store.initialize([self.stream1, self.stream2])
+        # when nilmdb server is not available
+        self.store.server = 'http://localhost:%d' % unused_port()
+        with self.assertRaises(DataError):
+            await self.store.initialize([self.stream1, self.stream2])
 
     async def test_insert(self):
         await self.store.initialize([self.stream1])

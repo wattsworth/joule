@@ -4,6 +4,7 @@ import numpy as np
 import argparse
 import tempfile
 import os
+import time
 
 from tests import helpers
 from joule.client.builtins.file_reader import FileReader
@@ -29,4 +30,46 @@ class TestFileReader(helpers.AsyncTestCase):
         result = pipe.read_nowait()
         np.testing.assert_array_almost_equal(data['timestamp'], result['timestamp'])
         np.testing.assert_array_almost_equal(data['data'], result['data'])
+        os.remove(path)
+
+    def test_timestamps_raw_values(self):
+        data = helpers.create_data("float32_8")
+        (data_file, path) = tempfile.mkstemp()
+        with open(data_file, 'w') as f:
+            for row in data:
+                f.write("%s\n" % ' '.join(repr(x) for x in row['data']))
+        my_reader = FileReader()
+        loop = asyncio.get_event_loop()
+        pipe = LocalPipe("float32_8", loop, name="output")
+        args = argparse.Namespace(file=path, delimiter=" ",
+                                  timestamp=True)
+        loop.run_until_complete(my_reader.run(args, pipe))
+        # check the results
+        result = pipe.read_nowait()
+        # timestamps should be close to now
+        actual = np.average(result['timestamp'])
+        expected = int(time.time() * 1e6)
+        # should be within 0.1 second
+        np.testing.assert_almost_equal(actual / 1e6, expected / 1e6, decimal=1)
+        np.testing.assert_array_almost_equal(data['data'], result['data'])
+        os.remove(path)
+
+    def test_stops_on_request(self):
+        data = helpers.create_data("float32_8")
+        (data_file, path) = tempfile.mkstemp()
+        with open(data_file, 'w') as f:
+            for row in data:
+                f.write("%d %s\n" % (row['timestamp'], ' '.join(repr(x) for x in row['data'])))
+        my_reader = FileReader()
+        loop = asyncio.get_event_loop()
+        pipe = LocalPipe("float32_8", loop, name="output")
+        args = argparse.Namespace(file=path, delimiter=" ",
+                                  timestamp=False)
+        my_reader.stop()
+        loop.run_until_complete(my_reader.run(args, pipe))
+        # check the results
+        result = pipe.read_nowait()
+
+        # output should be shorter than the input
+        self.assertLess(len(result), len(data))
         os.remove(path)

@@ -6,7 +6,10 @@ import click
 def get(url: str, params=None) -> requests.Response:
     try:
         return requests.get(url, params=params)
-    except requests.ConnectionError:
+    # this method is used by data copy to check if the destination
+    # stream is available, any connection errors should be caught by
+    # the check for the source stream which occurs first
+    except requests.ConnectionError:  # pragma: no cover
         click.echo("Error contacting Joule server at [%s]" % url)
         exit(1)
 

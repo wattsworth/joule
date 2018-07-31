@@ -1,7 +1,6 @@
 import socket
 from typing import Dict
-import pdb
-import aiohttp
+import asyncio
 from aiohttp import web
 from aiohttp.resolver import DefaultResolver
 from aiohttp.test_utils import unused_port
@@ -73,7 +72,10 @@ class FakeNilmdb:
              web.get('/nilmdb/stream/list', self.stream_list),
              web.post('/nilmdb/stream/destroy', self.stream_destroy)])
         self.runner = None
-        self.error_on_paths = {} # (msg, status) tuples to return for path
+        self.error_on_paths = {}  # (msg, status) tuples to return for path
+        self.stub_stream_create = False
+        self.http_code = 200
+        self.response = ''
         # record of transactions
         self.posts = []
         self.gets = []
@@ -106,6 +108,8 @@ class FakeNilmdb:
 
     async def stream_create(self, request: web.Request):
         self.posts.append(request)
+        if self.stub_stream_create:
+            return web.Response(status=self.http_code, text=self.response)
         content = await request.post()
         if content["path"] in self.streams:
             return web.json_response({
