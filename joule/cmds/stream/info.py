@@ -13,7 +13,7 @@ from joule.models import stream, StreamInfo
 def stream_info(config, path):
     payload = {'path': path}
     json = get_json(config.url + "/stream.json", params=payload)
-    my_stream: stream.Stream = stream.from_json(json["stream"])
+    my_stream: stream.Stream = stream.from_json(json)
     # display stream information
     click.echo()
     click.echo("\tName:         %s" % my_stream.name)

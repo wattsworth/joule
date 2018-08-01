@@ -1,6 +1,6 @@
 import numpy as np
 import asyncio
-from typing import List, Union, Tuple, Optional, Callable, Coroutine, TYPE_CHECKING
+from typing import List, Union, Tuple, Optional, Callable, Coroutine, TYPE_CHECKING, Dict
 from abc import ABC, abstractmethod
 
 from joule.models import pipes
@@ -16,20 +16,27 @@ Data = Union[Interval, np.array]
 
 
 class StreamInfo:
-    def __init__(self, start: Optional[int], end: Optional[int], rows: int):
+    def __init__(self, start: Optional[int], end: Optional[int], rows: int,
+                 total_time: int = 0, bytes: int = 0):
         self.start = start
         self.end = end
         self.rows = rows
+        self.bytes = bytes
+        self.total_time = total_time
 
     def __repr__(self):
-        return "<StreamInfo start=%r end=%r rows=%r>" % (self.start, self.end, self.rows)
+        return "<StreamInfo start=%r end=%r rows=%r, total_time=%r>" % (
+            self.start, self.end, self.rows, self.total_time)
 
     def to_json(self):
         return {
             "start": self.start,
             "end": self.end,
-            "rows": self.rows
+            "rows": self.rows,
+            "bytes": self.bytes,
+            "total_time": self.total_time
         }
+    
 
 class DbInfo:
     def __init__(self, path: str, other: int, reserved: int, free: int, size: int):
@@ -47,6 +54,7 @@ class DbInfo:
             "free": self.free,
             "size": self.size
         }
+
 
 class DataStore(ABC):  # pragma: no cover
 
@@ -79,7 +87,7 @@ class DataStore(ABC):  # pragma: no cover
         pass
 
     @abstractmethod
-    async def info(self, stream: 'Stream') -> StreamInfo:
+    async def info(self, streams: List['Stream']) -> Dict[int, StreamInfo]:
         pass
 
     @abstractmethod

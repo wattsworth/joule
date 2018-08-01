@@ -1,9 +1,10 @@
 from sqlalchemy.orm import relationship, backref, Session
 from sqlalchemy import Column, Integer, String, ForeignKey
-from typing import List, TYPE_CHECKING, Optional
+from typing import List, TYPE_CHECKING, Optional, Dict
 import logging
 from joule.models.errors import ConfigurationError
 from joule.models.stream import Stream
+from joule.models.data_store.data_store import StreamInfo
 from joule.models.meta import Base
 
 logger = logging.getLogger('joule')
@@ -41,13 +42,13 @@ class Folder(Base):
         else:
             return "<Folder(id=%d, name='%s')>" % (self.id, self.name)
 
-    def to_json(self):
+    def to_json(self, info: Dict[int, StreamInfo] = None):
         return {
             'id': self.id,
             'name': self.name,
             'description': self.description,
-            'children': [c.to_json() for c in self.children],
-            'streams': [s.to_json() for s in self.streams]
+            'children': [c.to_json(info) for c in self.children],
+            'streams': [s.to_json(info) for s in self.streams]
         }
 
 

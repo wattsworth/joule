@@ -3,6 +3,7 @@ import configparser
 import asyncio
 import unittest
 
+from joule.models import Stream, Element
 
 def create_data(layout:str,
                 length=100,
@@ -27,6 +28,15 @@ def create_data(layout:str,
     # Need the squeeze in case sarray['data'] is 1 dimensional
     sarray['data'] = np.squeeze(data)
     return sarray
+
+
+def create_stream(name, layout, id=0) -> Stream:
+    (ltype, lcount, dtype) = parse_layout(layout)
+    datatype = Stream.DATATYPE[ltype.upper()]
+
+    return Stream(name=name, datatype=datatype, id=id,
+                  elements=[Element(name="e%d" % j, index=j,
+                            display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(lcount)])
 
 
 def to_chunks(data, chunk_size):

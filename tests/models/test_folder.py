@@ -3,7 +3,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from joule.services import parse_pipe_config
-from joule.models import folder, Base, Folder, Stream
+from joule.models import Stream, Base, folder, Folder
+
 
 class TestFolder(unittest.TestCase):
 

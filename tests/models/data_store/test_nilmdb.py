@@ -1,15 +1,17 @@
 import asynctest
 import aiohttp
 from aiohttp.test_utils import unused_port
-import numpy as np
-import time
+import os
+import warnings
 
 from joule.models import Stream, Element, pipes
-from joule.models.data_store.nilmdb import NilmdbStore
+from joule.models.data_store.nilmdb import NilmdbStore, bytes_per_row
 from joule.models.data_store.errors import InsufficientDecimationError, DataError
 from .fake_nilmdb import FakeNilmdb, FakeResolver, FakeStream
 from tests import helpers
-from ..pipes.reader import QueueReader
+
+STREAM_LIST = os.path.join(os.path.dirname(__file__), 'stream_list.json')
+warnings.simplefilter('always')
 
 
 class TestNilmdbStore(asynctest.TestCase):
@@ -89,120 +91,6 @@ class TestNilmdbStore(asynctest.TestCase):
         with self.assertRaises(DataError)as e:
             await self.store.insert(self.stream1, 25, 1000, data)
         self.assertTrue('overlaps' in str(e.exception))
-
-    async def test_decimating_inserter(self):
-        self.stream1.decimate = True
-        source = QueueReader()
-        pipe = pipes.InputPipe(stream=self.stream1, reader=source)
-        nrows = 955
-        data = helpers.create_data(layout="int8_3", length=nrows)
-        task = self.store.spawn_inserter(self.stream1, pipe, self.loop)
-        for chunk in helpers.to_chunks(data, 300):
-            await source.put(chunk.tostring())
-        await task
-        self.assertEqual(len(self.fake_nilmdb.streams), 6)
-        self.assertEqual(self.fake_nilmdb.streams["/joule/1"].rows, nrows)
-        self.assertEqual(self.fake_nilmdb.streams["/joule/1~decim-4"].rows,
-                         np.floor(nrows / 4))
-        self.assertEqual(self.fake_nilmdb.streams["/joule/1~decim-16"].rows,
-                         np.floor(nrows / 16))
-        self.assertEqual(self.fake_nilmdb.streams["/joule/1~decim-64"].rows,
-                         np.floor(nrows / 64))
-        self.assertEqual(self.fake_nilmdb.streams["/joule/1~decim-256"].rows,
-                         np.floor(nrows / 256))
-
-    async def test_nondecimating_inserter(self):
-        self.stream1.decimate = False
-        self.stream1.datatype = Stream.DATATYPE.UINT16
-        source = QueueReader()
-        pipe = pipes.InputPipe(stream=self.stream1, reader=source)
-        nrows = 896
-        data = helpers.create_data(layout="uint16_3", length=nrows)
-        task = self.store.spawn_inserter(self.stream1, pipe, self.loop, insert_period=0)
-        for chunk in helpers.to_chunks(data, 300):
-            await source.put(chunk.tostring())
-        await task
-
-        self.assertEqual(self.fake_nilmdb.streams["/joule/1"].rows, nrows)
-        self.assertEqual(len(self.fake_nilmdb.streams), 1)
-
-    async def test_propogates_intervals_to_decimations(self):
-        self.stream1.decimate = True
-        source = QueueReader()
-        pipe = pipes.InputPipe(stream=self.stream1, reader=source)
-        # insert the following broken chunks of data
-        # |----15*8----|-15-|-15-|-15-|-15-|  ==> raw (120 samples)
-        # |-----30-----|-3--|--3-|--3-|--3-|  ==> x4  (27 samples)
-        # |-----7------|                      ==> x16 (7 samples)
-        # |-----1------|                      ==> x64 (1 sample
-        n_chunks = 12
-        for i in range(n_chunks):
-            data = helpers.create_data(layout="int8_3", length=15, start=i * 1e6, step=1)
-            await source.put(data.tostring())
-            if i > 6:  # breaks in the 2nd half
-                await source.put(pipes.interval_token("int8_3").tostring())
-        task = self.store.spawn_inserter(self.stream1, pipe, self.loop, insert_period=0)
-        await task
-        # should have raw, x4, x16, x64, x256
-        self.assertEqual(len(self.fake_nilmdb.streams), 5)
-        self.assertEqual(self.fake_nilmdb.streams["/joule/1"].rows, n_chunks * 15)
-        # x4 level should be missing data due to interval breaks
-        self.assertEqual(self.fake_nilmdb.streams["/joule/1~decim-4"].rows, 42)
-        # x16 level should have 7 sample (only from first part)
-        self.assertEqual(self.fake_nilmdb.streams["/joule/1~decim-16"].rows, 7)
-        # x64 level should have 1 sample
-        self.assertEqual(self.fake_nilmdb.streams["/joule/1~decim-64"].rows, 1)
-        # x256 level should be empty
-        self.assertEqual(self.fake_nilmdb.streams["/joule/1~decim-256"].rows, 0)
-
-    async def test_inserter_data_error(self):
-        # when stream has invalid data (eg bad timestamps)
-        self.stream1.datatype = Stream.DATATYPE.UINT16
-        source = QueueReader()
-        pipe = pipes.InputPipe(stream=self.stream1, reader=source)
-        task = self.store.spawn_inserter(self.stream1, pipe, self.loop, insert_period=0)
-        await source.put(helpers.create_data(layout="uint16_3").tostring())
-        # when nilmdb server generates an error
-        self.fake_nilmdb.generate_error_on_path("/joule/1", 400, "bad data")
-        with self.assertRaises(DataError):
-            await task
-
-    async def test_inserter_when_nilmdb_is_not_available(self):
-        # when nilmdb server is not available
-        self.stream1.datatype = Stream.DATATYPE.UINT16
-        source = QueueReader()
-        await self.fake_nilmdb.stop()
-        await source.put(helpers.create_data(layout="uint16_3").tostring())
-        pipe = pipes.InputPipe(stream=self.stream1, reader=source)
-        task = self.store.spawn_inserter(self.stream1, pipe, self.loop, insert_period=0)
-        with self.assertRaises(DataError):
-            await task
-
-    async def test_inserter_clean(self):
-        self.stream1.datatype = Stream.DATATYPE.UINT16
-        self.stream1.keep_us = 24 * 60 * 60 * 1e6  # 1 day
-        self.stream1.decimate = True
-
-        source = QueueReader(delay=0.1)
-        await source.put(helpers.create_data(layout="uint16_3").tostring())
-        pipe = pipes.InputPipe(stream=self.stream1, reader=source)
-        self.store.cleanup_period = 0
-        task = self.store.spawn_inserter(self.stream1, pipe, self.loop, insert_period=0)
-        await task
-
-        self.assertTrue(len(self.fake_nilmdb.remove_calls) > 0)
-        # make sure decimations have been removed too
-        removed_paths = [x['path'] for x in self.fake_nilmdb.remove_calls]
-        self.assertTrue('/joule/1' in removed_paths)
-        self.assertTrue('/joule/1~decim-4' in removed_paths)
-        self.assertTrue('/joule/1~decim-16' in removed_paths)
-        # make sure nilmdb cleanup executed with correct parameters
-        params = self.fake_nilmdb.remove_calls[-1]
-        self.assertEqual(int(params['start']), 0)
-        expected = int(time.time() * 1e6) - self.stream1.keep_us
-        actual = int(params['end'])
-        # should be within 0.1 second
-        np.testing.assert_almost_equal(expected / 1e6, actual / 1e6, decimal=1)
 
     async def test_extract(self):
         # initialize nilmdb state
@@ -307,7 +195,7 @@ class TestNilmdbStore(asynctest.TestCase):
         # returns error because required level is emptyF
         with self.assertRaises(InsufficientDecimationError) as e:
             await self.store.extract(self.stream1, start=100, end=1000, callback=callback,
-                                     max_rows=(nrows//4 - 10))
+                                     max_rows=(nrows // 4 - 10))
         self.assertTrue('empty' in str(e.exception))
 
     async def test_intervals(self):
@@ -347,12 +235,39 @@ class TestNilmdbStore(asynctest.TestCase):
             self.assertTrue(call["path"] in paths)
 
     async def test_info(self):
-        self.fake_nilmdb.streams['/joule/1'] = FakeStream(
-            layout=self.stream1.layout, start=1, end=100, rows=200)
-        info = await self.store.info(self.stream1)
-        self.assertEqual(info.start, 1)
-        self.assertEqual(info.end, 100)
-        self.assertEqual(info.rows, 200)
+        with open(STREAM_LIST, 'r') as f:
+            self.fake_nilmdb.stream_list_response = f.read()
+        streams = [helpers.create_stream('S%d' % x, 'float32_3', id=x) for x in range(8)]
+        info = await self.store.info(streams)
+        # streams 1, 2, 6, 7, 8 are in the json file but 8 is not in the streams request
+        for stream_id in [1, 2, 6, 7]:
+            self.assertTrue(stream_id in info)
+        # S1 should be empty
+        s1_info = info[1]
+        self.assertIsNone(s1_info.start)
+        self.assertIsNone(s1_info.end)
+        self.assertEqual(s1_info.rows, 0)
+        self.assertEqual(s1_info.bytes, 0)
+        # S2 should have the following values
+        s2_info = info[2]
+        self.assertEqual(s2_info.start, 10)
+        self.assertEqual(s2_info.end, 100)
+        self.assertEqual(s2_info.rows, 64)
+        self.assertEqual(s2_info.bytes, 1628)
+        self.assertEqual(s2_info.total_time, 100)
+
+    async def test_bytes_per_row(self):
+        examples = [['float32_8', 40],
+                    ['uint8_1', 9],
+                    ['int16_20', 48],
+                    ['float64_1', 16]]
+        for example in examples:
+            self.assertEqual(bytes_per_row(example[0]), example[1])
+        bad_layouts = ['float32', '', 'abc', 'other32_8']
+        for layout in bad_layouts:
+            with self.assertRaises(ValueError) as e:
+                bytes_per_row(layout)
+            self.assertTrue(layout in str(e.exception))
 
     async def test_dbinfo(self):
         dbinfo = await self.store.dbinfo()

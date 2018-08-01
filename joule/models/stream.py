@@ -9,6 +9,7 @@ from operator import attrgetter
 
 from joule.models.meta import Base
 from joule.models.errors import ConfigurationError
+from joule.models.data_store.data_store import StreamInfo
 from joule.models import element
 
 if TYPE_CHECKING:
@@ -75,7 +76,13 @@ class Stream(Base):
     def data_width(self):
         return len(self.elements) + 1
 
-    def to_json(self):
+    def to_json(self, info: Dict[int, StreamInfo] = None):
+
+        if info is not None and self.id in info:
+            data_info = info[self.id].to_json()
+        else:
+            data_info = None
+
         return {
             'id': self.id,
             'name': self.name,
@@ -83,7 +90,8 @@ class Stream(Base):
             'datatype': self.datatype.name,
             'keep_us': self.keep_us,
             'decimate': self.decimate,
-            'elements': [e.to_json() for e in sorted(self.elements, key=attrgetter('index'))]
+            'elements': [e.to_json() for e in sorted(self.elements, key=attrgetter('index'))],
+            'data_info': data_info
         }
 
 

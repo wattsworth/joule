@@ -82,6 +82,7 @@ class FakeNilmdb:
         self.extract_calls = []
         self.remove_calls = []
         self.destroy_calls = []
+        self.stream_list_response = None
         # dict path=>layout from stream/create calls
         self.streams: Dict[str, FakeStream] = {}
 
@@ -200,6 +201,8 @@ class FakeNilmdb:
         return web.json_response(data=None)
 
     async def stream_list(self, request: web.Request):
+        if self.stream_list_response is not None:
+            return web.Response(text=self.stream_list_response)
         return web.json_response([[path,
                                    stream.layout,
                                    stream.start,

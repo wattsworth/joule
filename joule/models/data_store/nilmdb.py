@@ -6,7 +6,7 @@ import re
 import numpy as np
 from typing import List, Dict, Optional, Callable, Coroutine
 from joule.models import Stream, pipes
-from joule.models.data_store.data_store import DataStore, StreamInfo, DbInfo, Data, Interval
+from joule.models.data_store.data_store import DataStore, StreamInfo, DbInfo, Interval
 from joule.models.data_store import errors
 from joule.models.data_store.nilmdb_inserter import Inserter
 from joule.models.data_store.nilmdb_helpers import (compute_path,
@@ -112,8 +112,9 @@ class NilmdbStore(DataStore):
         return await self._intervals_by_path(compute_path(stream),
                                              start, end)
 
-    async def remove(self, stream, start: Optional[int]= None,
-                     end: Optional[int]=None):
+    # TODO: remove path lookup, iterate until the stream decimation isn't found
+    async def remove(self, stream, start: Optional[int] = None,
+                     end: Optional[int] = None):
         """ remove [start,end] in path and all decimations """
         info = await self._path_info()
         all_paths = info.keys()
@@ -123,13 +124,32 @@ class NilmdbStore(DataStore):
         for path in [base_path, *decim_paths]:
             await self._remove_by_path(path, start, end)
 
-    async def info(self, stream: Stream) -> StreamInfo:
-        path = compute_path(stream)
-        info_dict = await self._path_info(path)
-        return info_dict[path]
+    async def info(self, streams: List[Stream]) -> Dict[int, StreamInfo]:
+        info_dict = await self._path_info()
+        # go through each stream and compute the effective StreamInfo
+        # object by looking at the raw and decimated paths
+        streams_info = {}
+        for s in streams:
+            base_info_list = [info for (path, info) in info_dict.items() if path == compute_path(s)]
+            if len(base_info_list) == 0:
+                continue
+            stream_info: StreamInfo = base_info_list[0]
+            if stream_info.rows != 0:
+                # stream has data, check for decimations
+                regex = re.compile(r"%s~decim-(\d)+$" % compute_path(s))
+                decim_info_list = [info for (path, info) in info_dict.items() if regex.match(path) is not None]
+                for decim_info in decim_info_list:
+                    if decim_info.rows == 0:
+                        continue  # no data, don't try to look for start and end values
+                    stream_info.start = min((stream_info.start, decim_info.start))
+                    stream_info.end = max((stream_info.end, decim_info.end))
+                    stream_info.bytes += decim_info.bytes
+                    stream_info.total_time = max((stream_info.total_time, decim_info.total_time))
+            streams_info[s.id] = stream_info
+        return streams_info
 
     async def dbinfo(self) -> DbInfo:
-        url = "{server}/dbinfo".format(server = self.server)
+        url = "{server}/dbinfo".format(server=self.server)
         async with self._get_client() as session:
             async with session.get(url) as resp:
                 data = await resp.json()
@@ -223,12 +243,10 @@ class NilmdbStore(DataStore):
                 await check_for_error(resp)
                 return int(await resp.text())
 
-    async def _path_info(self, path=None) -> Dict[str, StreamInfo]:
+    async def _path_info(self) -> Dict[str, StreamInfo]:
         """ set path to None to list all streams """
         url = "{server}/stream/list".format(server=self.server)
         params = {"extended": 1}
-        if path is not None:
-            params["path"] = path
         async with self._get_client() as session:
             async with session.get(url, params=params) as resp:
                 body = await resp.text()
@@ -239,7 +257,9 @@ class NilmdbStore(DataStore):
                 for item in data:
                     info[item[0]] = StreamInfo(start=item[2],
                                                end=item[3],
-                                               rows=item[4])
+                                               rows=item[4],
+                                               bytes=item[4]*bytes_per_row(item[1]),
+                                               total_time=item[5])
                 return info
 
     def _get_client(self):
@@ -248,3 +268,20 @@ class NilmdbStore(DataStore):
 
     def close(self):
         self.connector.close()
+
+
+def bytes_per_row(layout: str) -> int:
+    try:
+        ltype = layout.split('_')[0]
+        lcount = int(layout.split('_')[1])
+        if ltype.startswith('int'):
+            return (int(ltype[3:]) // 8) * lcount + 8
+        elif ltype.startswith('uint'):
+            return (int(ltype[4:]) // 8) * lcount + 8
+        elif ltype.startswith('float'):
+            return (int(ltype[5:]) // 8) * lcount + 8
+        else:
+            raise ValueError("bad layout %s" % layout)
+    except (ValueError, IndexError):
+        raise ValueError("bad layout: %s" % layout)
+

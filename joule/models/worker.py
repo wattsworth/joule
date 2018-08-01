@@ -174,7 +174,7 @@ class Worker:
                                    loop=loop)
         except asyncio.TimeoutError:
             log.warning(
-                "Cannot stop %s with SIGTERM, killing process" % self.module)
+                "Cannot stop %s with SIGTERM, killing process" % self.module.name)
             self.process.kill()
 
     def log(self, msg):

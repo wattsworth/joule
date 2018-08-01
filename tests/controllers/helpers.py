@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Dict
 import numpy as np
 import asyncio
 import argparse
@@ -86,8 +86,12 @@ class MockStore(DataStore):
     async def destroy(self, stream: Stream):
         self.destroyed_stream_id = stream.id
 
-    async def info(self, stream: Stream) -> StreamInfo:
-        return self.stream_info[stream]
+    async def info(self, streams: List[Stream]) -> Dict[int, StreamInfo]:
+        info_dict = {}
+        for s in streams:
+            if s in self.stream_info:
+                info_dict[s.id] = self.stream_info[s]
+        return info_dict
 
     async def dbinfo(self) -> DbInfo:
         return DbInfo('/file/path', 0, 0, 0, 0)

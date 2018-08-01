@@ -4,7 +4,6 @@ import numpy as np
 import random
 import time
 from typing import List, Callable
-import pdb
 
 from joule.models import Stream, pipes
 from joule.models.data_store import errors
@@ -30,7 +29,7 @@ class Inserter:
         self._get_client = session_factory
         self.decimator = None
 
-    async def run(self, pipe: pipes.InputPipe, loop: Loop) -> None:
+    async def run(self, pipe: pipes.Pipe, loop: Loop) -> None:
         """insert stream data from the queue until the queue is empty"""
         cleaner_task: asyncio.Task = None
         # create the database path
@@ -83,6 +82,7 @@ class Inserter:
             if cleaner_task is not None:  # pragma: no cover
                 cleaner_task.cancel()
                 await cleaner_task
+            # TODO: catch this somewhere and stop the worker
             raise errors.DataError("NilmDB error: %s" % e)
         except (pipes.EmptyPipe, asyncio.CancelledError):
             pass

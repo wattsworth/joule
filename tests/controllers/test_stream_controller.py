@@ -22,10 +22,15 @@ class TestStreamController(AioHTTPTestCase):
     @unittest_run_loop
     async def test_stream_list(self):
         db: Session = self.app["db"]
+        my_stream: Stream = db.query(Stream).filter_by(name="stream1").one()
+        store: MockStore = self.app["data-store"]
+        mock_info = StreamInfo(start=0, end=100, rows=200)
+        store.set_info(my_stream, mock_info)
+
         resp: aiohttp.ClientResponse = await self.client.request("GET", "/streams.json")
         actual = await resp.json()
         # basic check to see if JSON response matches database structure
-        expected = folder.root(db).to_json()
+        expected = folder.root(db).to_json({my_stream.id: mock_info})
         self.assertEqual(actual, expected)
 
     @unittest_run_loop
@@ -38,7 +43,7 @@ class TestStreamController(AioHTTPTestCase):
         # can query by id
         resp = await self.client.request("GET", "/stream.json?id=%d" % my_stream.id)
         actual = await resp.json()
-        expected = {"stream": my_stream.to_json(), "data_info": mock_info.to_json()}
+        expected = my_stream.to_json({my_stream.id: mock_info})
         self.assertEqual(actual, expected)
         # can query by path
         payload = {'path': "/folder1/stream1"}

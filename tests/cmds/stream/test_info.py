@@ -45,11 +45,11 @@ class TestStreamInfo(FakeJouleTestCase):
         with open(STREAM_INFO, 'r') as f:
             orig_stream_data = json.loads(f.read())
         stream1 = copy.deepcopy(orig_stream_data)
-        stream1['stream']['decimate'] = False
-        stream1['stream']['keep_us'] = 8*60*60*1e6  # 8 hours
+        stream1['decimate'] = False
+        stream1['keep_us'] = 8*60*60*1e6  # 8 hours
         stream2 = copy.deepcopy(orig_stream_data)
-        stream2['stream']['keep_us'] = Stream.KEEP_NONE
-        stream2['stream']['description'] = 'description'
+        stream2['keep_us'] = Stream.KEEP_NONE
+        stream2['description'] = 'description'
         stream2['data_info']['start'] = None
         stream2['data_info']['end'] = None
         for stream in [stream1, stream2]:
