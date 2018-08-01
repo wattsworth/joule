@@ -105,11 +105,12 @@ class TestStreamingPipes(helpers.AsyncTestCase):
         LAYOUT = "float32_2"
         LENGTH = 500
         UNCONSUMED_ROWS = 4
+        BUFFER_SIZE = 100
         (fd_r, fd_w) = os.pipe()
         # wrap the file descriptors in numpypipes
         loop = asyncio.get_event_loop()
         npipe_in = InputPipe(layout=LAYOUT, reader_factory=reader_factory(fd_r, loop),
-                             buffer_size=100)
+                             buffer_size=BUFFER_SIZE)
         npipe_out = OutputPipe(layout=LAYOUT, writer_factory=writer_factory(fd_w, loop))
 
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
@@ -119,6 +120,9 @@ class TestStreamingPipes(helpers.AsyncTestCase):
 
         async def reader():
             data = await npipe_in.read()
+            self.assertLessEqual(len(data), BUFFER_SIZE)
+            repeat = await npipe_in.read()
+            np.testing.assert_array_equal(data, repeat)
             npipe_in.consume(len(data) - UNCONSUMED_ROWS)
             next_data = await npipe_in.read()
 

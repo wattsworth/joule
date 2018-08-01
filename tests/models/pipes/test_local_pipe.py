@@ -2,7 +2,7 @@ from tests import helpers
 import numpy as np
 import asyncio
 
-from joule.models.pipes import LocalPipe
+from joule.models.pipes import LocalPipe, PipeError
 
 
 class TestLocalPipe(helpers.AsyncTestCase):
@@ -13,6 +13,8 @@ class TestLocalPipe(helpers.AsyncTestCase):
         LENGTH = 1003
         loop = asyncio.get_event_loop()
         my_pipe = LocalPipe(LAYOUT, loop)
+        # test timeouts, since the writer is slow
+        my_pipe.TIMEOUT_INTERVAL = 0.05
         subscriber_pipe = LocalPipe(LAYOUT, loop)
         my_pipe.subscribe(subscriber_pipe)
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
@@ -21,6 +23,7 @@ class TestLocalPipe(helpers.AsyncTestCase):
 
         async def writer():
             for block in helpers.to_chunks(test_data, 270):
+                await asyncio.sleep(0.1)
                 await my_pipe.write(block)
 
         async def reader():
@@ -75,6 +78,10 @@ class TestLocalPipe(helpers.AsyncTestCase):
 
         async def reader():
             data = await my_pipe.read()
+            my_pipe.consume(0)
+            # should get the same data back
+            repeat = await my_pipe.read()
+            np.testing.assert_array_equal(data, repeat)
             my_pipe.consume(len(data) - UNCONSUMED_ROWS)
             next_data = await my_pipe.read()
             np.testing.assert_array_equal(data[-UNCONSUMED_ROWS:],
@@ -88,9 +95,17 @@ class TestLocalPipe(helpers.AsyncTestCase):
         LENGTH = 500
         loop = asyncio.get_event_loop()
         my_pipe = LocalPipe(LAYOUT, loop)
+        my_subscriber = LocalPipe(LAYOUT, loop)
+        my_pipe.subscribe(my_subscriber)
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
         my_pipe.write_nowait(test_data)
         result = my_pipe.read_nowait()
+        # read data should match written data
+        np.testing.assert_array_almost_equal(test_data['data'], result['data'])
+        np.testing.assert_array_almost_equal(
+            test_data['timestamp'], result['timestamp'])
+        # subscriber should have a copy too
+        result = my_subscriber.read_nowait()
         np.testing.assert_array_almost_equal(test_data['data'], result['data'])
         np.testing.assert_array_almost_equal(
             test_data['timestamp'], result['timestamp'])
@@ -157,7 +172,8 @@ class TestLocalPipe(helpers.AsyncTestCase):
         LAYOUT = "int32_3"
         LENGTH = 1000
         BUFFER_SIZE = 60
-        my_pipe = LocalPipe(LAYOUT, loop=asyncio.get_event_loop(), buffer_size=BUFFER_SIZE)
+        my_pipe = LocalPipe(LAYOUT, loop=asyncio.get_event_loop(),
+                            buffer_size=BUFFER_SIZE)
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
 
         async def reader():
@@ -171,3 +187,53 @@ class TestLocalPipe(helpers.AsyncTestCase):
                  asyncio.ensure_future(reader())]
 
         loop.run_until_complete(asyncio.gather(*tasks))
+
+        # buffer max is also maintained for nowait reads
+        my_pipe = LocalPipe(LAYOUT, loop=asyncio.get_event_loop(),
+                            buffer_size=BUFFER_SIZE)
+        my_pipe.write_nowait(test_data)
+        result = my_pipe.read_nowait()
+        self.assertLessEqual(len(result),BUFFER_SIZE)
+
+    def test_raises_consume_errors(self):
+        LAYOUT = "int32_3"
+        LENGTH = 1000
+        my_pipe = LocalPipe(LAYOUT, loop=asyncio.get_event_loop())
+        test_data = helpers.create_data(LAYOUT, length=LENGTH)
+        my_pipe.write_nowait(test_data)
+        read_data = my_pipe.read_nowait()
+        # can't consume more than was read
+        with self.assertRaises(PipeError) as e:
+            my_pipe.consume(len(read_data) + 1)
+        self.assertTrue('consume' in str(e.exception))
+        # can't consume less than zero
+        with self.assertRaises(PipeError) as e:
+            my_pipe.consume(-1)
+        self.assertTrue('negative' in str(e.exception))
+
+    def test_handles_interval_breaks(self):
+        LAYOUT = "int32_3"
+        LENGTH = 1000
+        my_pipe = LocalPipe(LAYOUT, loop=asyncio.get_event_loop())
+        test_data1 = helpers.create_data(LAYOUT, length=LENGTH)
+        test_data2 = helpers.create_data(LAYOUT, length=LENGTH)
+        my_pipe.write_nowait(test_data1)
+        my_pipe.close_interval_nowait()
+        my_pipe.write_nowait(test_data2)
+
+        async def reader():
+            # read the first interval
+            read_data = await my_pipe.read()
+            self.assertTrue(my_pipe.end_of_interval)
+            my_pipe.consume(len(read_data) - 20)
+            np.testing.assert_array_equal(test_data1, read_data)
+
+            # read the second interval
+            read_data = await my_pipe.read()
+            self.assertFalse(my_pipe.end_of_interval)
+            self.assertEqual(len(read_data), len(test_data2) + 20)
+            my_pipe.consume(len(read_data))
+            np.testing.assert_array_equal(test_data2, read_data[20:])
+
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(reader())

@@ -93,7 +93,6 @@ class InputPipe(Pipe):
             return  # nothing to do
         if num_rows < 0:
             raise PipeError("consume called with negative offset: %d" % num_rows)
-
         if num_rows > self.last_index:
             raise PipeError("cannot consume %d rows: only %d available"
                             % (num_rows, self.last_index))
@@ -106,4 +105,5 @@ class InputPipe(Pipe):
 
     async def close(self):
         if self.close_cb is not None:
-            self.close_cb()
+            # used to close socket pipes
+            self.close_cb()  # pragma: no cover
