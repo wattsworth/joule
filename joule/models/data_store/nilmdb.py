@@ -83,7 +83,8 @@ class NilmdbStore(DataStore):
                     decimation_level = 4 ** np.ceil(np.log(desired_decimation) /
                                                     np.log(self.decimation_factor))
                 else:
-                    callback(np.array([]), stream.layout, False)
+                    await callback(np.array([]), stream.layout, False)
+                    return
                 # make sure the target decimation level exists and has data
                 try:
                     path = compute_path(stream, decimation_level)
