@@ -112,13 +112,13 @@ class FakeJoule:
         mock_entry = self.streams[request.query['path']]
         if 'decimation-level' in request.query:
             layout = mock_entry.stream.decimated_layout
-            decimated = True
+            decimation_level = request.query['decimation-level']
         else:
             layout = mock_entry.stream.layout
-            decimated = False
+            decimation_level = 1
         resp = web.StreamResponse(status=200,
                                   headers={'joule-layout': layout,
-                                           'joule-decimated': str(decimated)})
+                                           'joule-decimation': str(decimation_level)})
         resp.enable_chunked_encoding()
         await resp.prepare(request)
         await resp.write(mock_entry.data.tostring())
