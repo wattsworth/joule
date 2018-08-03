@@ -161,7 +161,7 @@ class FakeNilmdb:
         except KeyError:
             return web.json_response({
                 "status": "404 Not Found",
-                "message": "No such stream: /joule/1",
+                "message": "No such stream: %s" % request.query["path"],
                 "traceback": ""
             }, status=404)
 

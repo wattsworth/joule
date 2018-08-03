@@ -41,7 +41,7 @@ class TestDataController(AioHTTPTestCase):
         async for _ in resp.content.iter_chunks():
             rx_chunks += 1
         self.assertEqual(nchunks, rx_chunks)
-        self.assertEqual(resp.headers['joule-decimated'], 'True')
+        self.assertEqual(resp.headers['joule-decimation'], '16')
         self.assertEqual(resp.headers['joule-layout'], stream.decimated_layout)
 
     @unittest_run_loop
@@ -55,14 +55,14 @@ class TestDataController(AioHTTPTestCase):
         resp: aiohttp.ClientResponse = await \
             self.client.get("/data.json", params={"path": "/folder1/stream1"})
         data = await resp.json()
-        self.assertFalse(data['decimated'])
-        self.assertEqual(len(data['data'][0]), n_chunks*25)
+        self.assertEqual(1, data['decimation_factor'])
+        self.assertEqual(len(data['data'][0]), n_chunks * 25)
         # can retrieve stream by id and as decimated data as well
         stream = db.query(Stream).filter_by(name="stream1").one()
         resp: aiohttp.ClientResponse = await \
             self.client.get("/data.json", params={"id": stream.id, 'decimation-level': 16})
         data = await resp.json()
-        self.assertTrue(data['decimated'])
+        self.assertEqual(data['decimation_factor'], 16)
         # only the interval is exposed, the chunking is transparent
         self.assertEqual(len(data['data']), 2)
         for interval in data['data']:

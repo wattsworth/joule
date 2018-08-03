@@ -8,12 +8,12 @@ from joule.models.pipes import InputPipe, EmptyPipe
 
 
 @click.command(name="read")
-@click.option("--start", help="timestamp or descriptive string")
-@click.option("--end", help="timestamp or descriptive string")
-@click.option("--max-rows", help="limit response data", type=int)
-@click.option("--decimation-level", help="specify a particular decimation", type=int)
-@click.option("--show-bounds", is_flag=True, help="include min/max for decimated data")
-@click.option("--mark-intervals", help="include [# interval break] tags", is_flag=True)
+@click.option('-s', "--start", help="timestamp or descriptive string")
+@click.option('-e', "--end", help="timestamp or descriptive string")
+@click.option('-r', "--max-rows", help="limit response data", type=int)
+@click.option('-d', "--decimation-level", help="specify a particular decimation", type=int)
+@click.option('-b', "--show-bounds", is_flag=True, help="include min/max for decimated data")
+@click.option('-m', "--mark-intervals", help="include [# interval break] tags", is_flag=True)
 @click.argument("stream")
 @pass_config
 def data_read(config, start, end, max_rows, decimation_level, show_bounds, mark_intervals, stream):
@@ -35,7 +35,7 @@ def data_read(config, start, end, max_rows, decimation_level, show_bounds, mark_
                                                       await response.text()))
                     exit(1)
                 decimated = False
-                if response.headers['joule-decimated'] == 'True':
+                if int(response.headers['joule-decimation']) > 1:
                     decimated = True
                 pipe = InputPipe(layout=response.headers['joule-layout'],
                                  reader=response.content)
@@ -54,6 +54,7 @@ def data_read(config, start, end, max_rows, decimation_level, show_bounds, mark_
                             click.echo("# interval break")
                 except EmptyPipe:
                     pass
+
     # set up aiohttp to handle the response as a JoulePipe
     loop = asyncio.get_event_loop()
     try:

@@ -68,6 +68,9 @@ class Daemon(object):
         workers = [Worker(m) for m in modules]
         self.supervisor = Supervisor(workers)
 
+        # save the metadata
+        self.db.commit()
+
     async def run(self, loop: Loop):
         # initialize streams in the data store
         try:

@@ -43,6 +43,8 @@ async def move(request: web.Request):
         return web.Response(text="specify an id or a path", status=400)
     if my_stream is None:
         return web.Response(text="stream does not exist", status=404)
+    if my_stream.locked or my_stream.active:
+        return web.Response(text="stream cannot be moved", status=400)
     # find or create the destination folder
     if 'destination' not in body:
         return web.Response(text="specify a destination", status=400)
@@ -78,15 +80,32 @@ async def create(request):
         destination.streams.append(new_stream)
         db.commit()
     except ValueError as e:
+        db.rollback()
         return web.Response(text="Invalid stream JSON: %r" % e, status=400)
     except (KeyError, ConfigurationError) as e:
+        db.rollback()
         return web.Response(text="Invalid stream specification: %r" % e, status=400)
     return web.json_response(data=new_stream.to_json())
 
 
-async def update(_):  # pragma: no cover
-    return web.Response(text="TODO",
-                        content_type='application/json')
+async def update(request: web.Request):
+    db: Session = request.app["db"]
+    body = await request.json()
+    if 'id' not in body:
+        return web.Response(text="Invalid stream JSON: specify id", status=400)
+
+    my_stream: Stream = db.query(Stream).get(body['id'])
+    if my_stream is None:
+        return web.Response(text="stream does not exist", status=404)
+    if my_stream.locked:
+        return web.Response(text="stream is locked", status=400)
+    try:
+        my_stream.update_attributes(body)
+        db.commit()
+    except ConfigurationError as e:
+        db.rollback()
+        return web.Response(text="error: %r" % e, status=400)
+    return web.json_response(my_stream.to_json)
 
 
 async def delete(request):
@@ -101,6 +120,8 @@ async def delete(request):
         return web.Response(text="specify an id or a path", status=400)
     if my_stream is None:
         return web.Response(text="stream does not exist", status=404)
+    if my_stream.locked or my_stream.active:
+        return web.Response(text="stream cannot be deleted", status=400)
     await data_store.destroy(my_stream)
     db.delete(my_stream)
     db.commit()

@@ -295,7 +295,10 @@ class Worker:
                 child_output.consume(len(data))
                 if len(data) > 0:
                     for s in subscribers:
-                        await s.write(data)
+                        try:
+                            await s.write(data)
+                        except (ConnectionResetError, BrokenPipeError):
+                            pass  # TODO: remove the subscriber
                 if child_output.end_of_interval:
                     for s in subscribers:
                         await s.close_interval()

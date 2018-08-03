@@ -73,6 +73,10 @@ class DataStore(ABC):  # pragma: no cover
         pass
 
     @abstractmethod
+    async def intervals(self, stream: 'Stream', start: Optional[int], end: Optional[int]):
+        pass
+
+    @abstractmethod
     async def extract(self, stream: 'Stream', start: Optional[int], end: Optional[int],
                       callback: Callable[[np.ndarray, str, bool], Coroutine],
                       max_rows: int = None, decimation_level=None):

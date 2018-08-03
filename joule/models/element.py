@@ -51,6 +51,36 @@ class Element(Base):
             'default_min': self.default_min
         }
 
+    def update_attributes(self, attrs: Dict):
+        if 'name' in attrs:
+            self.name = validate_name(attrs['name'])
+        if 'units' in attrs:
+            self.units = attrs['units']
+        try:
+            if 'plottable' in attrs:
+                self.plottable = bool(attrs['plottable'])
+            if 'offset' in attrs:
+                self.offset = float(attrs['offset'])
+            if 'scale_factor' in attrs:
+                self.scale_factor = float(attrs['scale_factor'])
+            if 'display_type' in attrs:
+                self.display_type = validate_type(attrs['display_type'])
+            if 'default_max' in attrs:
+                x = attrs['default_max']
+                if x is not None:
+                    x = float(x)
+                self.default_max = x
+            if 'default_min' in attrs:
+                x = attrs['default_min']
+                if x is not None:
+                    x = float(x)
+                self.default_min = x
+        except ValueError as e:
+            raise ConfigurationError("Invalid element configuration: %r" % e)
+        if self.default_max is not None and self.default_min is not None:
+            if self.default_max <= self.default_min:
+                raise ConfigurationError("[default_min] must be > [default_max]")
+
 
 def from_json(data: Dict) -> Element:
     return Element(id=data["id"],

@@ -176,6 +176,26 @@ class TestNilmdbStore(asynctest.TestCase):
             await self.store.extract(self.stream1, start=100, end=1000,
                                      callback=callback, decimation_level=5)
 
+    async def test_extract_empty_data(self):
+        # initialize nilmdb state
+        self.fake_nilmdb.streams['/joule/1'] = FakeStream(
+            layout=self.stream1.layout, start=100, end=1000, rows=0)
+
+        async def callback(data, layout, decimation_factor):
+            self.assertEqual(decimation_factor, 1)
+            self.assertEqual(self.stream1.layout, layout)
+            self.assertEqual(pipes.compute_dtype(self.stream1.layout), data.dtype)
+            if len(data) == 0:
+                self.assertEqual(0, len(data['timestamp']))
+            else:
+                for row in data:
+                    self.assertEqual(row, pipes.interval_token(self.stream1.layout))
+
+        # should return empty data with the correct type when there is no data
+        await self.store.extract(self.stream1, start=100, end=1000, max_rows=100, callback=callback)
+        await self.store.extract(self.stream1, start=100, end=1000, callback=callback)
+        await self.store.extract(self.stream1, start=100, end=1000, callback=callback)
+
     async def test_extract_errors(self):
         # initialize nilmdb state
         nrows = 1000

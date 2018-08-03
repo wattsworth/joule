@@ -58,20 +58,7 @@ class Pipe:
 
     @property
     def dtype(self) -> np.dtype:
-        try:
-            ltype = self.layout.split('_')[0]
-            lcount = int(self.layout.split('_')[1])
-            if ltype.startswith('int'):
-                atype = '<i' + str(int(ltype[3:]) // 8)
-            elif ltype.startswith('uint'):
-                atype = '<u' + str(int(ltype[4:]) // 8)
-            elif ltype.startswith('float'):
-                atype = '<f' + str(int(ltype[5:]) // 8)
-            else:
-                raise ValueError()
-            return np.dtype([('timestamp', '<i8'), ('data', atype, lcount)])
-        except (IndexError, ValueError):
-            raise PipeError("bad layout: [%s]" % self.layout)
+        return compute_dtype(self.layout)
 
     def _apply_dtype(self, data:np.ndarray) -> np.ndarray:
         """convert [data] to the pipe's [dtype]"""
@@ -123,9 +110,8 @@ class Pipe:
 
 
 def interval_token(layout):
-    stub = Pipe(layout=layout)
     nelem = int(layout.split('_')[1])
-    token = np.zeros(1, dtype=stub.dtype)
+    token = np.zeros(1, dtype=compute_dtype(layout))
     token['timestamp'] = 0
     token['data'] = np.zeros(nelem)
     return token
@@ -137,3 +123,20 @@ def find_interval_token(raw: bytes, layout):
     if index == -1:
         return None
     return index, index + len(token)
+
+
+def compute_dtype(layout: str) -> np.dtype:
+    try:
+        ltype = layout.split('_')[0]
+        lcount = int(layout.split('_')[1])
+        if ltype.startswith('int'):
+            atype = '<i' + str(int(ltype[3:]) // 8)
+        elif ltype.startswith('uint'):
+            atype = '<u' + str(int(ltype[4:]) // 8)
+        elif ltype.startswith('float'):
+            atype = '<f' + str(int(ltype[5:]) // 8)
+        else:
+            raise ValueError()
+        return np.dtype([('timestamp', '<i8'), ('data', atype, lcount)])
+    except (IndexError, ValueError):
+        raise ValueError("bad layout: [%s]" % layout)

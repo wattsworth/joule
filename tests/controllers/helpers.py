@@ -69,16 +69,18 @@ class MockStore(DataStore):
         if self.raise_decimation_error:
             raise InsufficientDecimationError("insufficient decimation")
         if decimation_level is not None and decimation_level > 1:
-            decimated = True
             layout = stream.decimated_layout
         else:
-            decimated = False
+            decimation_level = 1
             layout = stream.layout
         for i in range(self.nintervals):
             for x in range(self.nchunks):
-                await callback(helpers.create_data(layout, length=25), layout, decimated)
+                await callback(helpers.create_data(layout, length=25), layout, decimation_level)
             if i < (self.nintervals - 1):
-                await callback(pipes.interval_token(layout), layout, decimated)
+                await callback(pipes.interval_token(layout), layout, decimation_level)
+
+    async def intervals(self, stream: 'Stream', start: Optional[int], end: Optional[int]):
+        pass
 
     async def remove(self, stream: Stream, start: Optional[int], end: Optional[int]):
         self.removed_data_bounds = (start, end)

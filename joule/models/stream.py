@@ -35,7 +35,10 @@ class Stream(Base):
 
     datatype: DATATYPE = Column(Enum(DATATYPE), nullable=False)
     decimate: bool = Column(Boolean, default=True)
+    # do not allow property changes
     locked: bool = Column(Boolean, default=False)
+    # stream is attached to a module or socket output
+    active: bool = Column(Boolean, default=False)
 
     KEEP_ALL = -1
     KEEP_NONE = 0
@@ -55,6 +58,17 @@ class Stream(Base):
         self.description = other.description
         self.locked = other.locked
         self.elements = other.elements
+
+    def update_attributes(self, attrs: Dict) -> None:
+        if 'name' in attrs:
+            self.name = validate_name(attrs['name'])
+        if 'description' in attrs:
+            self.description = attrs['description']
+        if 'elements' in attrs:
+            element_configs = attrs['elements']
+            for e in self.elements:
+                if e.index in element_configs:
+                    e.update_attributes(element_configs[e.index])
 
     def __str__(self):
         return "Stream [{name}]".format(name=self.name)
@@ -182,3 +196,11 @@ def validate_keep(keep: str) -> int:
         raise ConfigurationError("invalid [Stream] keep"
                                  "use format #unit (eg 1w), none or all")
     return int(time * units[unit])
+
+def validate_keep_us(keep_us: int) -> int:
+    try:
+        if int(keep_us) < -1:
+            raise ValueError
+    except ValueError:
+        ConfigurationError("invalid [keep_us], must be -1, 0, or greater")
+    return int(keep_us)

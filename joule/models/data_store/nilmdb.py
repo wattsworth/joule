@@ -68,7 +68,7 @@ class NilmdbStore(DataStore):
         return loop.create_task(inserter.run(pipe, loop))
 
     async def extract(self, stream: Stream, start: Optional[int], end: Optional[int],
-                      callback: Callable[[np.ndarray, str, bool], Coroutine], max_rows: int = None,
+                      callback: Callable[[np.ndarray, str, int], Coroutine], max_rows: int = None,
                       decimation_level=None):
         # figure out appropriate decimation level
         if decimation_level is None:
@@ -83,7 +83,9 @@ class NilmdbStore(DataStore):
                     decimation_level = 4 ** np.ceil(np.log(desired_decimation) /
                                                     np.log(self.decimation_factor))
                 else:
-                    await callback(np.array([]), stream.layout, False)
+                    # create an empty array with the right data type
+                    data = np.array([], dtype=pipes.compute_dtype(stream.layout))
+                    await callback(data, stream.layout, 1)
                     return
                 # make sure the target decimation level exists and has data
                 try:
@@ -178,9 +180,10 @@ class NilmdbStore(DataStore):
         url = "{server}/stream/extract".format(server=self.server)
         params = {"path": path,
                   "binary": 1}
-        decimated = False
-        if re.search(r'~decim-(\d)+$', path):
-            decimated = True
+        decimation_factor = 1
+        r = re.search(r'~decim-(\d+)$', path)
+        if r is not None:
+            decimation_factor = int(r[1])
         async with self._get_client() as session:
             # first determine the intervals
             intervals = await self._intervals_by_path(path, start, end)
@@ -195,12 +198,12 @@ class NilmdbStore(DataStore):
                     while True:
                         try:
                             data = await reader.read()
-                            await callback(data, layout, decimated)
+                            await callback(data, layout, decimation_factor)
                             reader.consume(len(data))
                         except pipes.EmptyPipe:
                             break
                 # insert the interval token to indicate a break
-                await callback(pipes.interval_token(layout), layout, decimated)
+                await callback(pipes.interval_token(layout), layout, decimation_factor)
 
     async def _intervals_by_path(self, path: str, start: Optional[int],
                                  end: Optional[int]) -> List[Interval]:

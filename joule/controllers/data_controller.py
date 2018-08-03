@@ -47,12 +47,12 @@ async def read(request: web.Request, json=False):
     # --- Binary Streaming Handler ---
     resp = None
 
-    async def stream_data(data: np.ndarray, layout, decimated):
+    async def stream_data(data: np.ndarray, layout, factor):
         nonlocal resp
         if resp is None:
             resp = web.StreamResponse(status=200,
                                       headers={'joule-layout': layout,
-                                               'joule-decimated': str(decimated)})
+                                               'joule-decimation': str(factor)})
             resp.enable_chunked_encoding()
             await resp.prepare(request)
         await resp.write(data.tostring())
@@ -61,15 +61,15 @@ async def read(request: web.Request, json=False):
 
     data_blocks = []  # array of data segments
     data_segment = None
-    is_decimated = False
+    decimation_factor = 1
 
-    async def retrieve_data(data: np.ndarray, layout, decimated):
-        nonlocal data_blocks, data_segment, is_decimated
-        if decimated:
-            is_decimated = True
+    async def retrieve_data(data: np.ndarray, layout, factor):
+        nonlocal data_blocks, data_segment, decimation_factor
+        decimation_factor = factor
         if np.array_equal(data, pipes.interval_token(layout)):
-            data_blocks.append(data_segment.tolist())
-            data_segment = None
+            if data_segment is not None:
+                data_blocks.append(data_segment.tolist())
+                data_segment = None
         else:
             data = np.c_[data['timestamp'][:, None], data['data']]
             if data_segment is None:
@@ -97,9 +97,41 @@ async def read(request: web.Request, json=False):
         # put the last data_segment on
         if data_segment is not None:
             data_blocks.append(data_segment.tolist())
-        return web.json_response({"data": data_blocks, "decimated": is_decimated})
+        return web.json_response({"data": data_blocks, "decimation_factor": decimation_factor})
     else:
         return resp
+
+
+async def intervals(request: web.Request):
+    db: Session = request.app["db"]
+    data_store: DataStore = request.app["data-store"]
+    # find the requested stream
+    if 'path' in request.query:
+        stream = folder.find_stream_by_path(request.query['path'], db)
+    elif 'id' in request.query:
+        stream = db.query(Stream).get(request.query["id"])
+    else:
+        return web.Response(text="specify an id or a path", status=400)
+    if stream is None:
+        return web.Response(text="stream does not exist", status=404)
+    # parse time bounds if specified
+    try:
+        if 'start' in request.query:
+            start = int(request.query['start'])
+        else:
+            start = None
+        if 'end' in request.query:
+            end = int(request.query['end'])
+        else:
+            end = None
+    except ValueError:
+        return web.Response(text="[start] and [end] must be an integers", status=400)
+
+    # make sure parameters make sense
+    if (start is not None and end is not None) and start >= end:
+        return web.Response(text="[start] must be < [end]", status=400)
+
+    return web.json_response(await data_store.intervals(stream, start, end))
 
 
 async def write(request: web.Request):

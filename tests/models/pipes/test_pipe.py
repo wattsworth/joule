@@ -66,7 +66,7 @@ class TestPipe(helpers.AsyncTestCase):
     def test_checks_dtype(self):
         for layout in ['invalid', 'bad_3', 'float_abc']:
             pipe = Pipe(layout=layout)
-            with self.assertRaises(PipeError) as e:
+            with self.assertRaises(ValueError) as e:
                 _ = pipe.dtype
             self.assertTrue("layout" in "%r" % e.exception)
 
