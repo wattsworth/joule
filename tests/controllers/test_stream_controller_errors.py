@@ -65,9 +65,9 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         resp = await self.client.put("/stream/move.json", data={"path": "/folder_x1/same_name",
                                                                 "destination": "/folder_x2"})
         self.assertEqual(resp.status, 400)
-        # cannot move locked streams
+        # cannot move streams with a fixed configuration
         my_stream: Stream = db.query(Stream).filter_by(name="stream1").one()
-        my_stream.locked = True
+        my_stream.is_configured = True
         resp = await self.client.put("/stream/move.json", data={"path": "/folder1/stream1",
                                                                 "destination": "/folder8"})
         self.assertEqual(resp.status, 400)
@@ -107,7 +107,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         self.assertEqual(resp.status, 404)
         # cannot delete locked streams
         my_stream: Stream = db.query(Stream).filter_by(name="stream1").one()
-        my_stream.locked = True
+        my_stream.is_configured = True
         resp = await self.client.delete("/stream.json", params={"id": my_stream.id})
         self.assertEqual(resp.status, 400)
         self.assertTrue('locked' in await resp.text())
@@ -162,7 +162,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         self.assertTrue('JSON' in await resp.text())
 
         # cannot modify locked streams
-        my_stream.locked = True
+        my_stream.is_configured = True
         payload = {
             "id": my_stream.id,
             "stream": json.dumps({"name": "new name"})
@@ -172,7 +172,6 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         self.assertTrue('locked' in await resp.text())
 
         # stream must exist
-        my_stream.locked = True
         payload = {
             "id": 4898,
             "stream": json.dumps({"name": "new name"})

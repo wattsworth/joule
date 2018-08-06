@@ -20,7 +20,7 @@ def run(pipe_config: str, db: Session) -> Stream:
     (datatype, element_names) = _parse_inline_config(inline_config)
     my_folder = folder.find_or_create(path, db)
     # check if the stream exists in the database
-    existing_stream = db.query(Stream). \
+    existing_stream: Stream = db.query(Stream). \
         filter_by(folder=my_folder, name=name). \
         one_or_none()
     if existing_stream is not None:

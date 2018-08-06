@@ -19,7 +19,6 @@ nose==1.3.7
 nose2==0.7.4
 numpy==1.14.3
 pbr==4.0.3
-pkg-resources==0.0.0
 pluggy==0.6.0
 prettytable==0.7.2
 psutil==5.4.5
@@ -35,7 +34,6 @@ regex==2018.2.21
 requests==2.18.4
 scipy==1.1.0
 six==1.11.0
-
 SQLAlchemy==1.2.7
 stevedore==1.28.0
 tabulate==0.8.2

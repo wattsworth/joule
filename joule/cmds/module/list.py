@@ -14,7 +14,15 @@ def module_list(config):
         inputs = '\n'.join(item['inputs'].values())
         outputs = '\n'.join(item['outputs'].values())
         stats = item['statistics']
-        result.append([item['name'], inputs, outputs, stats['cpu_percent']*100.0, stats['memory'] / 2 ** 10])
+        if stats['cpu_percent'] is None:
+            cpu_stat = "\u2014"
+        else:
+            cpu_stat = stats['cpu_percent'] * 100.0
+        if stats['memory'] is None:
+            mem_stat = "\u2014"
+        else:
+            mem_stat = stats['memory'] / 2 ** 10
+        result.append([item['name'], inputs, outputs, cpu_stat, mem_stat])
     click.echo(tabulate(result,
                         headers=['Name', 'Inputs', 'Outputs', 'CPU %', "Mem (KiB)"],
                         tablefmt="fancy_grid"))

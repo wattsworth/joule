@@ -23,6 +23,7 @@ def stream_info(config, path):
     click.echo("\tDecimate:     %s" % _display_decimate(my_stream.decimate))
     click.echo()
     # display information from the data store
+    click.echo("\tStatus:       %s" % _display_status(my_stream.locked, my_stream.active))
     my_info: StreamInfo = StreamInfo(**json["data_info"])
     click.echo("\tStart:        %s" % _display_time(my_info.start))
     click.echo("\tEnd:          %s" % _display_time(my_info.end))
@@ -56,6 +57,15 @@ def _display_keep(keep: int) -> str:
     if keep == stream.Stream.KEEP_ALL:
         return "all data"
     return str(datetime.timedelta(microseconds=keep))
+
+
+def _display_status(locked: bool, active: bool) -> str:
+    if active:
+        return click.style("\u25CF ", fg="green") + "[active]"
+    elif locked:
+        return click.style("\u25CF ", fg="black") + "[configured]"
+    else:
+        return "[idle]"
 
 
 def _display_time(time: int) -> str:

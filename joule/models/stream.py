@@ -36,10 +36,11 @@ class Stream(Base):
 
     datatype: DATATYPE = Column(Enum(DATATYPE), nullable=False)
     decimate: bool = Column(Boolean, default=True)
-    # do not allow property changes
-    locked: bool = Column(Boolean, default=False)
-    # stream is attached to a module or socket output
-    active: bool = Column(Boolean, default=False)
+
+    # do not allow property changes if any of the following are true
+    is_source: bool = Column(Boolean, default=False)
+    is_destination: bool = Column(Boolean, default=False)
+    is_configured: bool = Column(Boolean, default=False)
 
     KEEP_ALL = -1
     KEEP_NONE = 0
@@ -57,7 +58,9 @@ class Stream(Base):
         self.keep_us = other.keep_us
         self.decimate = other.decimate
         self.description = other.description
-        self.locked = other.locked
+        self.is_configured = other.is_configured
+        self.is_destination = other.is_destination
+        self.is_source = other.is_source
         self.elements = other.elements
 
     def update_attributes(self, attrs: Dict) -> None:
@@ -79,6 +82,14 @@ class Stream(Base):
     def __repr__(self):
         return "<Stream(id=%r, name='%s', datatype=%r)>" % (
             self.id, self.name, self.datatype)
+
+    @property
+    def locked(self):
+        return self.is_configured or self.is_destination or self.is_source
+
+    @property
+    def active(self):
+        return self.is_source or self.is_destination
 
     @property
     def layout(self):
@@ -106,6 +117,11 @@ class Stream(Base):
             'description': self.description,
             'datatype': self.datatype.name,
             'keep_us': self.keep_us,
+            'is_configured': self.is_configured,
+            'is_source': self.is_source,
+            'is_destination': self.is_destination,
+            'locked': self.locked,  # meta attribute
+            'active': self.active,  # meta attribute
             'decimate': self.decimate,
             'elements': [e.to_json() for e in sorted(self.elements, key=attrgetter('index'))],
             'data_info': data_info
@@ -122,6 +138,9 @@ def from_json(data: Dict) -> Stream:
                   datatype=Stream.DATATYPE[data["datatype"]],
                   keep_us=data["keep_us"],
                   decimate=data["decimate"],
+                  is_configured=data["is_configured"],
+                  is_source=data["is_source"],
+                  is_destination=data["is_destination"],
                   elements=elements)
 
 
@@ -163,7 +182,7 @@ def validate_name(name: str) -> str:
     if len(name) == 0:
         raise ConfigurationError("missing name")
     if '/' in name:
-        raise ConfigurationError("invalid name, '\' not allowed")
+        raise ConfigurationError("invalid name, '\\' not allowed")
     return name
 
 

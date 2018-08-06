@@ -9,8 +9,10 @@ Loop = asyncio.AbstractEventLoop
 class LocalPipe(Pipe):
     """pipe for intra-module async communication"""
 
-    def __init__(self, layout, loop: Loop, name=None, buffer_size=3000, debug=False):
+    def __init__(self, layout, loop: Loop=None, name=None, buffer_size=3000, debug=False):
         super().__init__(name=name, layout=layout)
+        if loop is None:
+            loop = asyncio.get_event_loop()
         # tunable constants
         self.BUFFER_SIZE = buffer_size
         self.MAX_BLOCK_SIZE = int(buffer_size / 3)

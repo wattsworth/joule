@@ -30,7 +30,7 @@ def _parse_configs(configs: Configurations) -> Streams:
     for file_path, data in configs.items():
         try:
             s = stream_from_config(data)
-            s.locked = True
+            s.is_configured = True
             stream_path = _validate_path(data['Main']['path'])
             if stream_path in streams:
                 streams[stream_path].append(s)

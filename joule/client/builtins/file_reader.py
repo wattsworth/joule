@@ -1,4 +1,4 @@
-from ..helpers import utilities
+from joule import utilities
 from joule.client import ReaderModule
 import numpy as np
 

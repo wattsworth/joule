@@ -60,6 +60,12 @@ class Daemon(object):
         Base.metadata.create_all(engine)
         self.db = Session(bind=engine)
 
+        # reset flags on streams, these will be set by load_modules and load_streams
+        for stream in self.db.query(Stream).all():
+            stream.is_configured = False
+            stream.is_destination = False
+            stream.is_source = False
+
         # load modules and streams from configs
         load_streams.run(self.config.stream_directory, self.db)
         modules = load_modules.run(self.config.module_directory, self.db)
@@ -112,6 +118,8 @@ class Daemon(object):
     def _spawn_inserters(self, loop: Loop) -> asyncio.Task:
         inserter_tasks = []
         for stream in self.db.query(Stream).filter(Stream.keep_us != Stream.KEEP_NONE):
+            if not stream.is_destination:
+                continue  # only subscribe to active streams
             try:
                 pipe = pipes.LocalPipe(layout=stream.layout, loop=loop)
                 # ignore unsubscribe callback, we are never going to use it

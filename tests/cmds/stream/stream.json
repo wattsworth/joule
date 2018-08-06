@@ -5,6 +5,11 @@
    "datatype": "FLOAT32",
    "keep_us": -1,
    "decimate": true,
+   "is_configured": true,
+   "is_source": false,
+   "is_destination": true,
+   "locked": true,
+   "active": false,
   "data_info":{
       "start":1531335044038226,
       "end":1532533976823217,

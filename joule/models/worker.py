@@ -7,7 +7,6 @@ import json
 import collections
 import datetime
 import psutil
-import pdb
 
 from joule.models.module import Module
 from joule.models.stream import Stream
@@ -91,7 +90,11 @@ class Worker:
     def statistics(self) -> Statistics:
         # gather process statistics
         if self.process is not None:
-            p = psutil.Process(pid=self.process.pid)
+            try:
+                p = psutil.Process(pid=self.process.pid)
+            except psutil.NoSuchProcess:
+                return Statistics(None, None, None, None)
+
             with p.oneshot():
                 return Statistics(p.pid,
                                   p.create_time(),

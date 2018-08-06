@@ -53,10 +53,12 @@ def _parse_configs(configs: Configurations, db: Session) -> Modules:
             parsed_modules.append(module)
         except ConfigurationError as e:
             logger.error("Invalid module [%s]: %s" % (file_path, e))
-    # Register all output streams as active
+    # Designate active streams
     for module in parsed_modules:
         for stream in module.outputs.values():
-            stream.active = True
+            stream.is_destination = True
+        for stream in module.inputs.values():
+            stream.is_source = True
     return parsed_modules
 
 
