@@ -110,3 +110,34 @@ class TestDataController(AioHTTPTestCase):
         (start, end) = store.removed_data_bounds
         self.assertEqual(start, 800)
         self.assertEqual(end, 900)
+
+    @unittest_run_loop
+    async def test_interval_data(self):
+        db: Session = self.app["db"]
+        stream: Stream = db.query(Stream).filter_by(name="stream1").one()
+        resp = await self.client.get("/data/intervals.json",
+                                     params={"id": stream.id})
+        # response should be a list of intervals
+        data = await resp.json()
+        self.assertGreater(len(data), 0)
+        for interval in data:
+            self.assertEqual(2, len(interval))
+
+        # can query by path as well
+        resp = await self.client.get("/data/intervals.json",
+                                     params={"path": "/folder1/stream1"})
+        # response should be a list of intervals
+        data = await resp.json()
+        self.assertGreater(len(data), 0)
+        for interval in data:
+            self.assertEqual(2, len(interval))
+
+        # can specify time bounds
+        resp = await self.client.get("/data/intervals.json",
+                                     params={"path": "/folder1/stream1",
+                                             "start": 10,
+                                             "end": 20})
+        # the mock store returns the start end bounds as the single interval
+        data = await resp.json()
+        self.assertEqual(data, [[10, 20]])
+

@@ -111,3 +111,18 @@ class TestStreamController(AioHTTPTestCase):
         self.assertEqual(store.destroyed_stream_id, my_stream.id)
         # and the metadata
         self.assertEqual(0, db.query(Stream).filter_by(name="stream1").count())
+
+    @unittest_run_loop
+    async def test_stream_update(self):
+        db: Session = self.app["db"]
+        my_stream: Stream = db.query(Stream).filter_by(name="stream1").one()
+        # change the stream name
+        payload = {
+            "id": my_stream.id,
+            "stream": json.dumps({"name": "new name"})
+        }
+        resp = await self.client.put("/stream.json", data=payload)
+        self.assertEqual(resp.status, 200)
+        my_stream: Stream = db.query(Stream).get(my_stream.id)
+        self.assertEqual("new name", my_stream.name)
+

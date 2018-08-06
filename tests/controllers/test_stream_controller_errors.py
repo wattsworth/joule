@@ -1,6 +1,8 @@
 from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
+from sqlalchemy.orm import Session
 from aiohttp import web
 import aiohttp
+import json
 
 from joule.models import Stream, Element
 import joule.controllers
@@ -35,6 +37,8 @@ class TestStreamControllerErrors(AioHTTPTestCase):
 
     @unittest_run_loop
     async def test_stream_move(self):
+        db: Session = self.app["db"]
+
         # must specify an id or a path
         resp = await self.client.put("/stream/move.json", data={"destination": "/new/folder3"})
         self.assertEqual(resp.status, 400)
@@ -61,6 +65,13 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         resp = await self.client.put("/stream/move.json", data={"path": "/folder_x1/same_name",
                                                                 "destination": "/folder_x2"})
         self.assertEqual(resp.status, 400)
+        # cannot move locked streams
+        my_stream: Stream = db.query(Stream).filter_by(name="stream1").one()
+        my_stream.locked = True
+        resp = await self.client.put("/stream/move.json", data={"path": "/folder1/stream1",
+                                                                "destination": "/folder8"})
+        self.assertEqual(resp.status, 400)
+        self.assertTrue('locked' in await resp.text())
 
     @unittest_run_loop
     async def test_stream_create(self):
@@ -84,7 +95,9 @@ class TestStreamControllerErrors(AioHTTPTestCase):
 
     @unittest_run_loop
     async def test_stream_delete(self):
-        resp = await self.client.delete("/stream.json", params = {})
+        db: Session = self.app["db"]
+
+        resp = await self.client.delete("/stream.json", params={})
         self.assertEqual(resp.status, 400)
         # return "not found" on bad id
         resp = await self.client.delete("/stream.json", params={"id": 2348})
@@ -92,3 +105,78 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         # return "not found" on bad path
         resp = await self.client.delete("/stream.json", params={"path": "/bad/path"})
         self.assertEqual(resp.status, 404)
+        # cannot delete locked streams
+        my_stream: Stream = db.query(Stream).filter_by(name="stream1").one()
+        my_stream.locked = True
+        resp = await self.client.delete("/stream.json", params={"id": my_stream.id})
+        self.assertEqual(resp.status, 400)
+        self.assertTrue('locked' in await resp.text())
+        self.assertIsNotNone(db.query(Stream).filter_by(name="stream1").one())
+
+    @unittest_run_loop
+    async def test_stream_update(self):
+        db: Session = self.app["db"]
+        my_stream: Stream = db.query(Stream).filter_by(name="stream1").one()
+        # invalid element display_type, nothing should be saved
+        payload = {
+            "id": my_stream.id,
+            "stream": json.dumps(
+                {"name": "new name",
+                 "elements": [{"display_type": "invalid", "name": "new"},
+                              {"name": "new1"},
+                              {"name": "new3"}]})
+        }
+        resp = await self.client.put("/stream.json", data=payload)
+        self.assertEqual(resp.status, 400)
+        self.assertTrue('display_type' in await resp.text())
+
+        my_stream: Stream = db.query(Stream).get(my_stream.id)
+        self.assertEqual("stream1", my_stream.name)
+        elem_0 = [e for e in my_stream.elements if e.index == 0][0]
+        self.assertEqual(elem_0.display_type, Element.DISPLAYTYPE.CONTINUOUS)
+        self.assertEqual(elem_0.name, 'x')
+
+        # request must specify an id
+        payload = {
+            "stream": json.dumps({"name": "new name"})
+        }
+        resp = await self.client.put("/stream.json", data=payload)
+        self.assertEqual(resp.status, 400)
+        self.assertTrue('id' in await resp.text())
+
+        # request must have streams attr
+        payload = {
+            "id": my_stream.id
+        }
+        resp = await self.client.put("/stream.json", data=payload)
+        self.assertEqual(resp.status, 400)
+        self.assertTrue('stream' in await resp.text())
+
+        # streams attr must be valid json
+        payload = {
+            "id": my_stream.id,
+            "stream": "notjson"
+        }
+        resp = await self.client.put("/stream.json", data=payload)
+        self.assertEqual(resp.status, 400)
+        self.assertTrue('JSON' in await resp.text())
+
+        # cannot modify locked streams
+        my_stream.locked = True
+        payload = {
+            "id": my_stream.id,
+            "stream": json.dumps({"name": "new name"})
+        }
+        resp = await self.client.put("/stream.json", data=payload)
+        self.assertEqual(resp.status, 400)
+        self.assertTrue('locked' in await resp.text())
+
+        # stream must exist
+        my_stream.locked = True
+        payload = {
+            "id": 4898,
+            "stream": json.dumps({"name": "new name"})
+        }
+        resp = await self.client.put("/stream.json", data=payload)
+        self.assertEqual(resp.status, 404)
+        self.assertTrue('exist' in await resp.text())

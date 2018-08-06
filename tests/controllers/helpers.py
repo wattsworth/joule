@@ -80,7 +80,17 @@ class MockStore(DataStore):
                 await callback(pipes.interval_token(layout), layout, decimation_level)
 
     async def intervals(self, stream: 'Stream', start: Optional[int], end: Optional[int]):
-        pass
+        if start is None:
+            if end is None:
+                # just a random set of intervals
+                return [[0, 100],[200, 300]]
+            else:
+                return [[end - 10, end]]
+        else:
+            if end is None:
+                return [[start, start+10]]
+            else:
+                return [[start, end]]
 
     async def remove(self, stream: Stream, start: Optional[int], end: Optional[int]):
         self.removed_data_bounds = (start, end)

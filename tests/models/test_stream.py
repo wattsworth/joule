@@ -1,7 +1,6 @@
 import unittest
 
-from joule.models import (Stream, Element)
-from joule.models import stream  # for helper functions
+from joule.models import (Stream, Element, ConfigurationError, stream)
 from tests import helpers
 
 
@@ -13,7 +12,8 @@ class TestStream(unittest.TestCase):
                                        datatype=Stream.DATATYPE.FLOAT32,
                                        keep_us=us_in_week,
                                        decimate=True)
-        self.my_stream.elements.append(Element(name="e1"))
+        self.my_stream.elements.append(Element(name="e1", index=0,
+                                               display_type=Element.DISPLAYTYPE.CONTINUOUS))
         self.base_config = helpers.parse_configs(
             """[Main]
                  name = test
@@ -95,3 +95,27 @@ class TestStream(unittest.TestCase):
 
     def test_has_string_representation(self):
         self.assertRegex("%s" % self.my_stream, self.my_stream.name)
+
+    def test_updates(self):
+        self.my_stream.update_attributes({
+            "name": "new name",
+            "description": "new description",
+            "elements": [
+                {"name": "new name"},
+            ]
+        })
+        self.assertEqual("new name", self.my_stream.name)
+        self.assertEqual("new description", self.my_stream.description)
+        # updates element attributes
+        self.assertEqual("new name", self.my_stream.elements[0].name)
+
+        # number of elements in the request must match the elements in the stream
+        with self.assertRaises(ConfigurationError):
+            self.my_stream.update_attributes({
+                "name": "new name",
+                "description": "new description",
+                "elements": [
+                    {"name": "new name"},
+                    {"extra", "causes error"}
+                ]
+            })

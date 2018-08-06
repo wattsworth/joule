@@ -2,6 +2,7 @@ from aiohttp import web
 from sqlalchemy.orm import Session
 from joule.models import Stream, DataStore, stream
 import json
+import pdb
 
 from joule.models import folder, ConfigurationError
 
@@ -43,8 +44,8 @@ async def move(request: web.Request):
         return web.Response(text="specify an id or a path", status=400)
     if my_stream is None:
         return web.Response(text="stream does not exist", status=404)
-    if my_stream.locked or my_stream.active:
-        return web.Response(text="stream cannot be moved", status=400)
+    if my_stream.locked:
+        return web.Response(text="locked streams cannot be moved", status=400)
     # find or create the destination folder
     if 'destination' not in body:
         return web.Response(text="specify a destination", status=400)
@@ -90,22 +91,28 @@ async def create(request):
 
 async def update(request: web.Request):
     db: Session = request.app["db"]
-    body = await request.json()
+    body = await request.post() # request.json?
     if 'id' not in body:
-        return web.Response(text="Invalid stream JSON: specify id", status=400)
+        return web.Response(text="Invalid request: specify id", status=400)
 
     my_stream: Stream = db.query(Stream).get(body['id'])
     if my_stream is None:
         return web.Response(text="stream does not exist", status=404)
     if my_stream.locked:
         return web.Response(text="stream is locked", status=400)
+    if 'stream' not in body:
+        return web.Response(text="Invalid request: specify stream as JSON", status=400)
     try:
-        my_stream.update_attributes(body)
+        attrs = json.loads(body['stream'])
+    except ValueError:
+        return web.Response(text="error: [stream] attribute must be JSON", status=400)
+    try:
+        my_stream.update_attributes(attrs)
         db.commit()
-    except ConfigurationError as e:
+    except (ValueError, ConfigurationError) as e:
         db.rollback()
-        return web.Response(text="error: %r" % e, status=400)
-    return web.json_response(my_stream.to_json)
+        return web.Response(text="error: %s" % e, status=400)
+    return web.json_response(data=my_stream.to_json())
 
 
 async def delete(request):
@@ -121,7 +128,7 @@ async def delete(request):
     if my_stream is None:
         return web.Response(text="stream does not exist", status=404)
     if my_stream.locked or my_stream.active:
-        return web.Response(text="stream cannot be deleted", status=400)
+        return web.Response(text="locked streams cannot be deleted", status=400)
     await data_store.destroy(my_stream)
     db.delete(my_stream)
     db.commit()

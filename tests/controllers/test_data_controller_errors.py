@@ -137,3 +137,41 @@ class TestDataController(AioHTTPTestCase):
         self.assertTrue('end' in await resp.text())
         self.assertTrue('start' in await resp.text())
         params['end'] = 200
+
+    @unittest_run_loop
+    async def test_intervals_requires_path_or_id(self):
+        resp: aiohttp.ClientResponse = await \
+            self.client.get("/data/intervals.json", params={})
+        self.assertNotEqual(resp.status, 200)
+        self.assertTrue('path' in await resp.text())
+
+    @unittest_run_loop
+    async def test_intervals_errors_on_bad_stream(self):
+        resp: aiohttp.ClientResponse = await \
+            self.client.get("/data/intervals.json", params={'path': '/no/stream'})
+        self.assertEqual(resp.status, 404)
+        resp: aiohttp.ClientResponse = await \
+            self.client.get("/data/intervals.json", params={'id': '404'})
+        self.assertEqual(resp.status, 404)
+
+    @unittest_run_loop
+    async def test_interval_bounds_must_be_valid(self):
+        params = dict(path='/folder1/stream1')
+        # start must be an int
+        params['start'] = 'bad'
+        resp: aiohttp.ClientResponse = await self.client.get("/data/intervals.json", params=params)
+        self.assertNotEqual(resp.status, 200)
+        self.assertTrue('start' in await resp.text())
+        # end must be an int
+        params['start'] = 100
+        params['end'] = '200.5'
+        resp: aiohttp.ClientResponse = await self.client.get("/data/intervals.json", params=params)
+        self.assertNotEqual(resp.status, 200)
+        self.assertTrue('end' in await resp.text())
+        # start must be before end
+        params['end'] = 50
+        resp: aiohttp.ClientResponse = await self.client.get("/data/intervals.json", params=params)
+        self.assertNotEqual(resp.status, 200)
+        self.assertTrue('end' in await resp.text())
+        self.assertTrue('start' in await resp.text())
+        params['end'] = 200

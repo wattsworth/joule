@@ -58,3 +58,25 @@ class TestElementErrors(unittest.TestCase):
                 self.base_config[setting_name] = setting
                 with self.assertRaisesRegex(ConfigurationError, setting_name):
                     element.from_config(self.base_config)
+
+    def test_errors_on_invalid_update(self):
+        # value types must be correct
+        e = Element(name="test")
+        with self.assertRaises(ConfigurationError):
+            e.update_attributes({
+                "name": "new name",
+                "default_min": 'invalid',
+            })
+        with self.assertRaises(ConfigurationError):
+            e.update_attributes({
+                "name": "new name",
+                "offset": '',
+            })
+        # default_min < default_max
+        with self.assertRaises(ConfigurationError) as error:
+            e.update_attributes({
+                "name": "new name",
+                "default_min": 100,
+                "default_max": 10
+            })
+        self.assertTrue('default_min' in str(error.exception))
