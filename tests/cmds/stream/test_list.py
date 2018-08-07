@@ -25,11 +25,30 @@ class TestStreamList(FakeJouleTestCase):
         self.assertEqual(result.exit_code, 0)
         output = result.output
         # make sure the folders are listed
-        for folder in ['folder_1', 'folder_2', 'folder_3', 'folder_3_1', 'folder_4', 'folder_4_1']:
+        for folder in ['f1', 'demo', 'random']:
             self.assertTrue(folder in output)
         # make sure the streams are listed
-        for stream in ['stream_1_1', 'stream_1_2', 'stream_2_1', 'stream_3_1_1']:
+        for stream in ['stream0', 'stream1', 'copy one', 'output']:
             self.assertTrue(stream in output)
+        # should not have Legend or layout strings
+        self.assertFalse("Legend" in output)
+        # check for layout strings
+        self.assertFalse("float32_3" in output)
+        self.stop_server()
+
+    def test_lists_streams_with_options(self):
+        server = FakeJoule()
+        with open(STREAM_LIST, 'r') as f:
+            server.response = f.read()
+        url = self.start_server(server)
+        runner = CliRunner()
+        result = runner.invoke(main, ['--url', url, 'stream', 'list', '-s', '-l'])
+        self.assertEqual(result.exit_code, 0)
+        output = result.output
+        # check for the legend
+        self.assertTrue("Legend" in output)
+        # check for layout strings
+        self.assertTrue("float32_3" in output)
         self.stop_server()
 
     def test_when_server_is_not_available(self):

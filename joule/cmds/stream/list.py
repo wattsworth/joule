@@ -19,7 +19,7 @@ def stream_list(config, layout, status):
     _process_folder(tree, json, None, layout, status)
     if status:
         click.echo("Legend: " + click.style("\u25CF ", fg="green") + "active  " +
-                   click.style("\u25CF ", fg="black") + "configured")
+                   click.style("\u25CF ", fg="cyan") + "configured")
     click.echo(tree.show())
 
 
@@ -41,7 +41,7 @@ def _process_stream(tree: Tree, stream, parent_id, layout: bool, status: bool):
         if stream["active"]:
             tag = click.style("\u25CF ", fg="green") + tag
         elif stream["locked"]:
-            tag = click.style("\u25CF ", fg="black") + tag
+            tag = click.style("\u25CF ", fg="cyan") + tag
         else:
             tag = "  " + tag
     identifier = "s%d" % stream["id"]

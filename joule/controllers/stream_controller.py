@@ -73,6 +73,10 @@ async def create(request):
         return web.Response(text="provide a stream", status=400)
     try:
         new_stream = stream.from_json(json.loads(body['stream']))
+        # clear out the status flags
+        new_stream.is_configured = False
+        new_stream.is_destination = False
+        new_stream.is_source = False
         # clear out the id's
         new_stream.id = None
         for elem in new_stream.elements:
@@ -91,7 +95,7 @@ async def create(request):
 
 async def update(request: web.Request):
     db: Session = request.app["db"]
-    body = await request.post() # request.json?
+    body = await request.post()  # request.json?
     if 'id' not in body:
         return web.Response(text="Invalid request: specify id", status=400)
 

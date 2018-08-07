@@ -20,9 +20,9 @@ routes = [
     web.post('/stream.json', stream_controller.create),
     web.delete('/stream.json', stream_controller.delete),
     # --- folder routes ---
-    web.post('/folder', folder_controller.create),
-    web.put('/folder', folder_controller.update),
-    web.delete('/folder', folder_controller.delete),
+    web.put('/folder/move.json', folder_controller.move),
+    web.put('/folder.json', folder_controller.update),
+    web.delete('/folder.json', folder_controller.delete),
     # --- data routes ---
     web.get('/data', data_controller.read),
     web.get('/data.json', data_controller.read_json),

@@ -8,13 +8,6 @@ from joule.client.helpers.args import module_args
 
 class TestNilmdbStore(unittest.TestCase):
 
-    def test_yesno(self):
-        self.assertTrue(utilities.yesno("yes"))
-        self.assertFalse(utilities.yesno("no"))
-        for val in ["badval", "", None]:
-            with self.assertRaises(ValueError):
-                utilities.yesno(val)
-
     def test_module_args(self):
         # if the module config is not specified, return args
         # ignore the -h help flag, the main argparse should catch it

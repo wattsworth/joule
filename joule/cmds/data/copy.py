@@ -21,7 +21,7 @@ from joule.models import stream, Stream, pipes, StreamInfo
 def data_copy(config, start, end, source, destination):
     # retrieve the source stream
     resp = get_json(config.url + "/stream.json", params={"path": source})
-    src_stream = stream.from_json(resp['stream'])
+    src_stream = stream.from_json(resp)
     src_info: StreamInfo = StreamInfo(**resp['data_info'])
     if src_info.start is None or src_info.end is None:
         click.echo("Error [%s] has no data" % source, err=True)
@@ -47,7 +47,7 @@ def data_copy(config, start, end, source, destination):
     else:
         dest_stream = None  # to appease type checker
         try:
-            dest_stream = stream.from_json(resp.json()['stream'])
+            dest_stream = stream.from_json(resp.json())
         except ValueError:
             click.echo("Error: Invalid server response, check the URL")
             exit(1)

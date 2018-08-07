@@ -97,8 +97,9 @@ class FakeJoule:
         if request.query['path'] not in self.streams:
             return web.Response(text="stream does not exist", status=404)
         mock_entry = self.streams[request.query['path']]
-        return web.json_response({'stream': mock_entry.stream.to_json(),
-                                  'data_info': mock_entry.info.to_json()})
+        stream_json = mock_entry.stream.to_json()
+        stream_json['data_info'] = mock_entry.info.to_json()
+        return web.json_response(stream_json)
 
     async def data_remove(self, request: web.Request):
         if self.stub_data_remove:

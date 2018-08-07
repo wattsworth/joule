@@ -46,12 +46,20 @@ class TestStreamInfo(FakeJouleTestCase):
             orig_stream_data = json.loads(f.read())
         stream1 = copy.deepcopy(orig_stream_data)
         stream1['decimate'] = False
+        # stream1 is configured but not active
+        stream1['is_source'] = False
+        stream1['is_destination'] = False
+        stream1['is_configured'] = True
         stream1['keep_us'] = 8*60*60*1e6  # 8 hours
         stream2 = copy.deepcopy(orig_stream_data)
         stream2['keep_us'] = Stream.KEEP_NONE
         stream2['description'] = 'description'
         stream2['data_info']['start'] = None
         stream2['data_info']['end'] = None
+        # stream2 is idle
+        stream2['is_source'] = False
+        stream2['is_destination'] = False
+        stream2['is_configured'] = False
         for stream in [stream1, stream2]:
             server.stub_stream_info = True  # use the response text
             server.response = json.dumps(stream)

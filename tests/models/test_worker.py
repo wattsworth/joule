@@ -132,20 +132,40 @@ class TestWorker(unittest.TestCase):
         self.assertEqual(len(output1.read_nowait()), 0)
         self.assertTrue(output1.end_of_interval)
 
-    def test_stops_child_and_collects_statistics(self):
+    def test_collects_statistics(self):
         # child should listen for stop_requested flag
 
         loop = asyncio.get_event_loop()
         self.module.exec_cmd = "python " + MODULE_STOP_ON_SIGTERM
 
         async def get_statistics():
-            await asyncio.sleep(0.25)
+            await asyncio.sleep(0.1)
             statistics = self.worker.statistics()
             self.assertIsNotNone(statistics.pid)
             self.assertGreater(statistics.memory, 0)
+            # kill the process and try to get statistics again
+            os.kill(statistics.pid, signal.SIGKILL)
+            await asyncio.sleep(0.1)
+            null_statistics = self.worker.statistics()
+            self.assertIsNone(null_statistics.pid)
+            self.assertIsNone(null_statistics.memory)
 
         # no statistics available before worker starts
         self.assertEqual(self.worker.statistics().pid, None)
+
+        with self.check_fd_leakage():
+            loop.run_until_complete(asyncio.gather(
+                loop.create_task(get_statistics()),
+                loop.create_task(self.worker.run(self.supervisor.subscribe,
+                                                 loop, restart=False))
+            ))
+
+
+    def test_stops_child(self):
+        # child should listen for stop_requested flag
+
+        loop = asyncio.get_event_loop()
+        self.module.exec_cmd = "python " + MODULE_STOP_ON_SIGTERM
 
         # calling stop before run doesn't matter
         loop.run_until_complete(self.worker.stop(loop))
@@ -153,7 +173,6 @@ class TestWorker(unittest.TestCase):
         with self.check_fd_leakage():
             loop.run_until_complete(asyncio.gather(
                 loop.create_task(self._stop_worker(loop)),
-                loop.create_task(get_statistics()),
                 loop.create_task(self.worker.run(self.supervisor.subscribe,
                                                  loop, restart=True))
             ))

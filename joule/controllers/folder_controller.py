@@ -1,7 +1,7 @@
 from aiohttp import web
 
 
-async def create(request):  # pragma: no cover
+async def move(request):  # pragma: no cover
     return web.Response(text="TODO")
 
 

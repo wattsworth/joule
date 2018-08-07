@@ -70,8 +70,8 @@ class TestLocalPipe(helpers.AsyncTestCase):
         LAYOUT = "float32_2"
         LENGTH = 500
         UNCONSUMED_ROWS = 4
-        loop = asyncio.get_event_loop()
-        my_pipe = LocalPipe(LAYOUT, loop)
+        # test that the default event loop is used if loop is not specified
+        my_pipe = LocalPipe(LAYOUT, None)
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
         #    print(test_data['data'][:,1])
         my_pipe.write_nowait(test_data)
