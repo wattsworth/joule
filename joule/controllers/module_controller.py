@@ -14,7 +14,7 @@ async def index(request):
             "has_interface": worker.has_interface,
             "inputs": {},
             "outputs": {},
-            "statistics": worker.statistics().to_json()}
+            "statistics": (await worker.statistics()).to_json()}
         for c in worker.input_connections:
             worker_info['inputs'][c.name] = c.location
         for c in worker.output_connections:
@@ -37,7 +37,7 @@ async def info(request):
         "description": worker.description,
         "inputs": {},
         "outputs": {},
-        "statistics": worker.statistics().to_json()}
+        "statistics": (await worker.statistics()).to_json()}
     for c in worker.input_connections:
         data['inputs'][c.name] = c.location
     for c in worker.output_connections:

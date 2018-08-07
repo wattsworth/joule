@@ -87,14 +87,16 @@ class Worker:
         # how long to wait to restart a failed process
         self.RESTART_INTERVAL = 1
 
-    def statistics(self) -> Statistics:
+    async def statistics(self) -> Statistics:
         # gather process statistics
         if self.process is not None:
             try:
                 p = psutil.Process(pid=self.process.pid)
             except psutil.NoSuchProcess:
                 return Statistics(None, None, None, None)
-
+            # collect cpu usage over a 0.5 second interval
+            p.cpu_percent()
+            await asyncio.sleep(0.5)
             with p.oneshot():
                 return Statistics(p.pid,
                                   p.create_time(),
@@ -178,7 +180,10 @@ class Worker:
         except asyncio.TimeoutError:
             log.warning(
                 "Cannot stop %s with SIGTERM, killing process" % self.module.name)
-            self.process.kill()
+            try:
+                self.process.kill()
+            except ProcessLookupError:  # pragma: no cover
+                pass  # if the process stopped after the timeout
 
     def log(self, msg):
         timestamp = datetime.datetime.now().isoformat()

@@ -140,18 +140,19 @@ class TestWorker(unittest.TestCase):
 
         async def get_statistics():
             await asyncio.sleep(0.1)
-            statistics = self.worker.statistics()
+            statistics = await self.worker.statistics()
             self.assertIsNotNone(statistics.pid)
             self.assertGreater(statistics.memory, 0)
             # kill the process and try to get statistics again
             os.kill(statistics.pid, signal.SIGKILL)
             await asyncio.sleep(0.1)
-            null_statistics = self.worker.statistics()
+            null_statistics = await self.worker.statistics()
             self.assertIsNone(null_statistics.pid)
             self.assertIsNone(null_statistics.memory)
 
         # no statistics available before worker starts
-        self.assertEqual(self.worker.statistics().pid, None)
+        stats = loop.run_until_complete(self.worker.statistics())
+        self.assertEqual(stats.pid, None)
 
         with self.check_fd_leakage():
             loop.run_until_complete(asyncio.gather(

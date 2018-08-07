@@ -130,7 +130,7 @@ class MockWorker:
         for (name, path) in outputs.items():
             self.output_connections.append(argparse.Namespace(name=name, location=path))
 
-    def statistics(self) -> worker.Statistics:
+    async def statistics(self) -> worker.Statistics:
         return worker.Statistics(100, 100, 1.0, 100)
 
     @property

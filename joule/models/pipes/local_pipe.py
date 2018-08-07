@@ -50,8 +50,8 @@ class LocalPipe(Pipe):
                         msg = "buffer FULL"
                     else:
                         msg = "not full"
-                    print("adding [%d block] to index %d, %s" %
-                          (len(block), self.last_index, msg))
+                    print("[%s] adding [%d] to index %d, %s" %
+                          (self.name, len(block), self.last_index, msg), flush=True)
                 self.last_index += len(block)
                 if self._buffer_full():
                     break  # no more room in buffer

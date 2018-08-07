@@ -17,7 +17,7 @@ def module_list(config):
         if stats['cpu_percent'] is None:
             cpu_stat = "\u2014"
         else:
-            cpu_stat = stats['cpu_percent'] * 100.0
+            cpu_stat = "%0.1f" % float(stats['cpu_percent'])
         if stats['memory'] is None:
             mem_stat = "\u2014"
         else:
