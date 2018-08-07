@@ -121,7 +121,11 @@ class Daemon(object):
             if not stream.is_destination:
                 continue  # only subscribe to active streams
             try:
-                pipe = pipes.LocalPipe(layout=stream.layout, loop=loop)
+                if stream.name=="IV":
+                    dbg=True
+                else:
+                    dbg=False
+                pipe = pipes.LocalPipe(layout=stream.layout, loop=loop, name=stream.name, debug=dbg)
                 # ignore unsubscribe callback, we are never going to use it
                 self.supervisor.subscribe(stream, pipe)
                 task = self.data_store.spawn_inserter(stream, pipe, loop)

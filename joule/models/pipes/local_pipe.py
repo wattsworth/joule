@@ -1,4 +1,5 @@
 import numpy as np
+import time
 import asyncio
 from joule.models.pipes import Pipe
 from joule.models.pipes.errors import PipeError, EmptyPipe
@@ -9,7 +10,7 @@ Loop = asyncio.AbstractEventLoop
 class LocalPipe(Pipe):
     """pipe for intra-module async communication"""
 
-    def __init__(self, layout, loop: Loop=None, name=None, buffer_size=3000, debug=False):
+    def __init__(self, layout, loop: Loop = None, name=None, buffer_size=3000, debug=False):
         super().__init__(name=name, layout=layout)
         if loop is None:
             loop = asyncio.get_event_loop()
@@ -20,58 +21,71 @@ class LocalPipe(Pipe):
         self.debug = debug
         self.interval_break = False
         self.closed = False
+        self.read_buffer = np.empty((0,), dtype=self.dtype)
         # initialize buffer and queue
         self.queue = asyncio.Queue(loop=loop)
-        self.buffer = np.zeros(self.BUFFER_SIZE, dtype=self.dtype)
+        self.queued_rows = 0
         self.last_index = 0
         self.subscribers = []
         self.direction = Pipe.DIRECTION.TWOWAY
 
     async def read(self, flatten=False):
         self.interval_break = False
-        if not self.queue.empty() or self.last_index == 0:
-            # pull new data from queue or the buffer is empty so
-            # we have to wait for new data
-            while not self._buffer_full():
-                # if the buffer is empty and the queue is empty and the pipe is closed
-                if self.queue.empty() and self.last_index == 0 and self.closed:
-                    raise EmptyPipe()
-                try:
-                    block = await asyncio.wait_for(self.queue.get(), self.TIMEOUT_INTERVAL)
-                except asyncio.TimeoutError:
-                    # didn't get a block, run again and check for the pipe closed condition
-                    continue
-                if block is None:
-                    self.interval_break = True
-                    break
-                self.buffer[self.last_index:self.last_index + len(block)] = block
-                if self.debug:  # pragma: no cover
-                    if self._buffer_full():
-                        msg = "buffer FULL"
-                    else:
-                        msg = "not full"
-                    print("[%s] adding [%d] to index %d, %s" %
-                          (self.name, len(block), self.last_index, msg), flush=True)
-                self.last_index += len(block)
-                if self._buffer_full():
-                    break  # no more room in buffer
-                if self.queue.empty():
-                    break  # no more data in buffer
+        # if the queue is empty and we have old data, just return the old data
+        if self.queue.empty() and len(self.read_buffer) > 0:
+            return self._format_data(self.read_buffer, flatten)
 
-        return self._format_data(self.buffer[:self.last_index], flatten)
+        # otherwise wait for at least one block
+        while self.queue.empty():
+            # if the buffer is empty and the queue is empty and the pipe is closed
+            if self.queue.empty() and len(self.read_buffer) == 0 and self.closed:
+                raise EmptyPipe()
+            await asyncio.sleep(self.TIMEOUT_INTERVAL)
+
+        return self._read(flatten)
 
     def read_nowait(self, flatten=False):
-        self.interval_break = False
-        while not self._buffer_full() and not self.queue.empty():
+        # if the queue is empty and we have old data, just return the old data
+        if self.queue.empty() and len(self.read_buffer) > 0:
+            return self._format_data(self.read_buffer, flatten)
+
+        # otherwise wait for at least one block
+        while self.queue.empty():
+            # if the buffer is empty and the queue is empty and the pipe is closed
+            if self.queue.empty() and len(self.read_buffer) == 0 and self.closed:
+                raise EmptyPipe()
+            time.sleep(self.TIMEOUT_INTERVAL)
+
+        return self._read(flatten)
+
+    def _read(self, flatten=False):
+        # now put all the queued data together in a single array with the previous data
+        # this cannot be interrupted, relies on the total size of data written to the pipe
+        start = 0
+        end = len(self.read_buffer)
+        buffer = np.empty((self.queued_rows + end,), self.dtype)
+        if self.debug:
+            print("[%s:read] initialized %d row buffer" % (self.name, len(buffer)))
+            print("[%s:read] adding %d rows of unconsumed data" % (self.name, len(self.read_buffer)))
+        buffer[start:end] = self.read_buffer
+        start = end
+        while not self.queue.empty():
             block = self.queue.get_nowait()
             if block is None:
                 self.interval_break = True
-                break  # end of interval
-            self.buffer[self.last_index:self.last_index + len(block)] = block
-            self.last_index += len(block)
-            if self._buffer_full():
-                break  # no more room in buffer
-        return self._format_data(self.buffer[:self.last_index], flatten)
+                break
+            end = start + len(block)
+            buffer[start:end] = block
+            if self.debug:
+                print("[%s:read] adding [%d] to index %d" %
+                      (self.name, len(block), start), flush=True)
+            start = end
+            self.queued_rows -= len(block)
+
+        self.read_buffer = buffer[:end]
+        if self.debug:
+            print("[%s:read] returning %d rows" % (self.name, len(self.read_buffer)))
+        return self._format_data(self.read_buffer, flatten)
 
     @property
     def end_of_interval(self):
@@ -82,11 +96,10 @@ class LocalPipe(Pipe):
             return
         if num_rows < 0:
             raise PipeError("consume called with negative offset: %d" % num_rows)
-        if num_rows > self.last_index:
+        if num_rows > len(self.read_buffer):
             raise PipeError("cannot consume %d rows: only %d available"
-                            % (num_rows, self.last_index))
-        self.buffer = np.roll(self.buffer, -1 * num_rows)
-        self.last_index -= num_rows
+                            % (num_rows, len(self.read_buffer)))
+        self.read_buffer = self.read_buffer[num_rows:]
 
     async def write(self, data):
         # convert into a structured array
@@ -95,17 +108,25 @@ class LocalPipe(Pipe):
         for pipe in self.subscribers:
             await pipe.write(sarray)
 
-        # add blocks of data to our queue
-        for block in self._chunks(sarray):
-            self.queue.put_nowait(block)
+        self.queue.put_nowait(sarray)
+        self.queued_rows += len(sarray)
+        if self.debug:
+            print("[%s:write] queueing block with [%d] rows" % (self.name, len(sarray)))
 
     async def close_interval(self):
+        if self.debug:
+            print("[%s:write] closing interval" % self.name)
         await self.queue.put(None)
 
     def close_interval_nowait(self):
+        if self.debug:
+            print("[%s:write] closing interval" % self.name)
         self.queue.put_nowait(None)
 
     async def close(self):
+        self.closed = True
+
+    def close_nowait(self):
         self.closed = True
 
     def write_nowait(self, data):
@@ -115,17 +136,10 @@ class LocalPipe(Pipe):
         for pipe in self.subscribers:
             pipe.write_nowait(sarray)
 
-        # add blocks of data to our queue
-        for block in self._chunks(sarray):
-            self.queue.put_nowait(block)
+        self.queue.put_nowait(sarray)
+        self.queued_rows += len(sarray)
+        if self.debug:
+            print("[%s:write] queueing block with [%d] rows" % (self.name, len(sarray)))
 
     def subscribe(self, pipe):
         self.subscribers.append(pipe)
-
-    def _buffer_full(self):
-        return self.last_index + self.MAX_BLOCK_SIZE > self.BUFFER_SIZE
-
-    def _chunks(self, data):
-        """Yield successive MAX_BLOCK_SIZE chunks of data."""
-        for i in range(0, len(data), self.MAX_BLOCK_SIZE):
-            yield data[i:i + self.MAX_BLOCK_SIZE]

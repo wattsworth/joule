@@ -7,4 +7,5 @@ exclude_lines =
   def __repr__
   if __name__ == "__main__":
   if TYPE_CHECKING:
+  if self.debug:
 

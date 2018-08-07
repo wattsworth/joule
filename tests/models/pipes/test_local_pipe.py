@@ -1,8 +1,10 @@
 from tests import helpers
+import time
+import threading
 import numpy as np
 import asyncio
 
-from joule.models.pipes import LocalPipe, PipeError
+from joule.models.pipes import LocalPipe, PipeError, EmptyPipe
 
 
 class TestLocalPipe(helpers.AsyncTestCase):
@@ -12,11 +14,13 @@ class TestLocalPipe(helpers.AsyncTestCase):
         LAYOUT = "int8_2"
         LENGTH = 1003
         loop = asyncio.get_event_loop()
-        my_pipe = LocalPipe(LAYOUT, loop)
+        my_pipe = LocalPipe(LAYOUT, loop, name="pipe")
         # test timeouts, since the writer is slow
         my_pipe.TIMEOUT_INTERVAL = 0.05
         subscriber_pipe = LocalPipe(LAYOUT, loop)
+        subscriber_pipe2 = LocalPipe(LAYOUT, loop)
         my_pipe.subscribe(subscriber_pipe)
+        my_pipe.subscribe(subscriber_pipe2)
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
 
         #    print(test_data['data'][:,1])
@@ -64,6 +68,9 @@ class TestLocalPipe(helpers.AsyncTestCase):
                  asyncio.ensure_future(subscriber())]
 
         loop.run_until_complete(asyncio.gather(*tasks))
+
+        data = subscriber_pipe2.read_nowait()
+        np.testing.assert_array_equal(test_data, data)
 
     def test_read_data_must_be_consumed(self):
         """writes to pipe sends data to reader and any subscribers"""
@@ -130,6 +137,42 @@ class TestLocalPipe(helpers.AsyncTestCase):
         np.testing.assert_array_almost_equal(
             test_data['timestamp'], result['timestamp'])
 
+    def test_nowait_read_blocks(self):
+        LAYOUT = "int8_2"
+        LENGTH = 50
+        loop = asyncio.get_event_loop()
+        my_pipe = LocalPipe(LAYOUT, loop)
+        test_data = helpers.create_data(LAYOUT, length=LENGTH)
+        my_pipe.write_nowait(test_data)
+        self.assertEqual(len(my_pipe.read_nowait()), LENGTH)
+        # another read executes immediately because there is unconsumed data
+        self.assertEqual(len(my_pipe.read_nowait()), LENGTH)
+        # now consume the data and the next call to read will block
+        my_pipe.consume(LENGTH)
+        my_pipe.TIMEOUT_INTERVAL = 0.05
+
+        def delayed_write():
+            time.sleep(0.1)
+            my_pipe.write_nowait(test_data)
+            time.sleep(0.1)
+            my_pipe.close_nowait()
+
+        t = threading.Thread(target=delayed_write)
+        t.start()
+        ts = time.time()
+        self.assertEqual(len(my_pipe.read_nowait()), LENGTH)
+        self.assertGreater(time.time()-ts, 0.05)
+
+        # now consume the data and the next call will close the pipe
+        my_pipe.consume(LENGTH)
+        ts = time.time()
+        with self.assertRaises(EmptyPipe):
+            my_pipe.read_nowait()
+        self.assertGreater(time.time()-ts, 0.05)
+
+        t.join()
+
+
     def test_handles_flat_and_structured_arrays(self):
         """converts flat arrays to structured arrays and returns
            either flat or structured arrays depending on [flatten] parameter"""
@@ -154,47 +197,6 @@ class TestLocalPipe(helpers.AsyncTestCase):
                  asyncio.ensure_future(reader())]
         loop.run_until_complete(asyncio.gather(*tasks))
 
-    def test_breaks_writes_into_queue_blocks(self):
-        LAYOUT = "int32_3"
-        LENGTH = 1000
-        MAX_BLOCK_SIZE = 20
-        my_pipe = LocalPipe(LAYOUT, loop=asyncio.get_event_loop())
-        my_pipe.MAX_BLOCK_SIZE = MAX_BLOCK_SIZE
-        test_data = helpers.create_data(LAYOUT, length=LENGTH)
-
-        loop = asyncio.get_event_loop()
-        tasks = [asyncio.ensure_future(my_pipe.write(test_data))]
-
-        loop.run_until_complete(asyncio.gather(*tasks))
-        self.assertEqual(my_pipe.queue.qsize(), LENGTH / MAX_BLOCK_SIZE)
-
-    def test_max_buffer_length(self):
-        LAYOUT = "int32_3"
-        LENGTH = 1000
-        BUFFER_SIZE = 60
-        my_pipe = LocalPipe(LAYOUT, loop=asyncio.get_event_loop(),
-                            buffer_size=BUFFER_SIZE)
-        test_data = helpers.create_data(LAYOUT, length=LENGTH)
-
-        async def reader():
-            for i in range(5):
-                # read 5 times and do not consume so buffer is full
-                data = await my_pipe.read()
-                self.assertLessEqual(len(data), BUFFER_SIZE)
-
-        loop = asyncio.get_event_loop()
-        tasks = [asyncio.ensure_future(my_pipe.write(test_data)),
-                 asyncio.ensure_future(reader())]
-
-        loop.run_until_complete(asyncio.gather(*tasks))
-
-        # buffer max is also maintained for nowait reads
-        my_pipe = LocalPipe(LAYOUT, loop=asyncio.get_event_loop(),
-                            buffer_size=BUFFER_SIZE)
-        my_pipe.write_nowait(test_data)
-        result = my_pipe.read_nowait()
-        self.assertLessEqual(len(result),BUFFER_SIZE)
-
     def test_raises_consume_errors(self):
         LAYOUT = "int32_3"
         LENGTH = 1000
@@ -214,7 +216,7 @@ class TestLocalPipe(helpers.AsyncTestCase):
     def test_handles_interval_breaks(self):
         LAYOUT = "int32_3"
         LENGTH = 1000
-        my_pipe = LocalPipe(LAYOUT, loop=asyncio.get_event_loop())
+        my_pipe = LocalPipe(LAYOUT, loop=asyncio.get_event_loop(), name="pipe")
         test_data1 = helpers.create_data(LAYOUT, length=LENGTH)
         test_data2 = helpers.create_data(LAYOUT, length=LENGTH)
         my_pipe.write_nowait(test_data1)

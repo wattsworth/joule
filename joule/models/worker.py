@@ -89,21 +89,22 @@ class Worker:
 
     async def statistics(self) -> Statistics:
         # gather process statistics
-        if self.process is not None:
-            try:
+        try:
+            if self.process is not None:
                 p = psutil.Process(pid=self.process.pid)
-            except psutil.NoSuchProcess:
+                # collect cpu usage over a 0.5 second interval
+                p.cpu_percent()
+                await asyncio.sleep(0.5)
+                with p.oneshot():
+                    return Statistics(p.pid,
+                                      p.create_time(),
+                                      p.cpu_percent(),
+                                      p.memory_info().rss)
+            else:
+                # worker is not running, no statistics available
                 return Statistics(None, None, None, None)
-            # collect cpu usage over a 0.5 second interval
-            p.cpu_percent()
-            await asyncio.sleep(0.5)
-            with p.oneshot():
-                return Statistics(p.pid,
-                                  p.create_time(),
-                                  p.cpu_percent(),
-                                  p.memory_info().rss)
-        else:
-            # worker is not running, no statistics available
+
+        except psutil.NoSuchProcess:
             return Statistics(None, None, None, None)
 
     # provide the module attributes
@@ -304,8 +305,11 @@ class Worker:
                 if len(data) > 0:
                     for s in subscribers:
                         try:
+                            if(s.name=="IV"):
+                                print(" writing [%d] to %s" % (len(data),s.name))
                             await s.write(data)
                         except (ConnectionResetError, BrokenPipeError):
+                            print("error writing data to subscriber")
                             pass  # TODO: remove the subscriber
                 if child_output.end_of_interval:
                     for s in subscribers:

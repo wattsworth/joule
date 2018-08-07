@@ -265,7 +265,7 @@ class NilmdbStore(DataStore):
                     info[item[0]] = StreamInfo(start=item[2],
                                                end=item[3],
                                                rows=item[4],
-                                               bytes=item[4]*bytes_per_row(item[1]),
+                                               bytes=item[4] * bytes_per_row(item[1]),
                                                total_time=item[5])
                 return info
 
@@ -291,4 +291,3 @@ def bytes_per_row(layout: str) -> int:
             raise ValueError("bad layout %s" % layout)
     except (ValueError, IndexError):
         raise ValueError("bad layout: %s" % layout)
-
