@@ -63,7 +63,7 @@ def root(db: Session) -> Folder:
     return root_folder
 
 
-def find_or_create(path: str, db: Session, parent=None) -> Folder:
+def find(path: str, db: Session, create=False, parent=None) -> Optional[Folder]:
     if len(path) == 0 or path[0] != '/':
         raise ConfigurationError("invalid path [%s]" % path)
     if parent is None:
@@ -77,11 +77,13 @@ def find_or_create(path: str, db: Session, parent=None) -> Folder:
     folder: Folder = db.query(Folder).filter_by(parent=parent, name=name). \
         one_or_none()
     if folder is None:
+        if not create:
+            return None
         folder = Folder(name=name)
         parent.children.append(folder)
         db.add(folder)
     sub_path = '/' + '/'.join(reversed(path_chunks))
-    return find_or_create(sub_path, db, folder)
+    return find(sub_path, db, create=create, parent=folder)
 
 
 def find_stream_by_path(path: str, db: Session) -> Optional[Stream]:

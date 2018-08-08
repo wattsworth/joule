@@ -25,9 +25,9 @@ class TestFolder(unittest.TestCase):
         self.assertIsNone(folder.get_stream_path(stream))
 
     def test_find_or_create(self):
-        my_folder = folder.find_or_create("/new/folder/path", self.db)
+        my_folder = folder.find("/new/folder/path", self.db, create=True)
         self.assertEqual(self.db.query(Folder).count(), 4)
         # trailing slash is ignored
-        same_folder = folder.find_or_create("/new/folder/path/", self.db)
+        same_folder = folder.find("/new/folder/path/", self.db, create=True)
         self.assertEqual(self.db.query(Folder).count(), 4)
         self.assertEqual(my_folder, same_folder)

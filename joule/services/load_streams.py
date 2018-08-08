@@ -4,7 +4,7 @@ import logging
 import re
 
 from joule.models import (Stream, ConfigurationError)
-from joule.models.folder import find_or_create as find_or_create_folder
+from joule.models.folder import find as find_folder
 
 from joule.models.stream import from_config as stream_from_config
 from joule.services.helpers import (Configurations,
@@ -55,7 +55,7 @@ def _validate_path(path: str) -> str:
 
 
 def _save_stream(new_stream: Stream, path: str, db: Session) -> None:
-    my_folder = find_or_create_folder(path, db)
+    my_folder = find_folder(path, db, create=True)
     cur_stream: Stream = db.query(Stream) \
         .filter_by(folder=my_folder, name=new_stream.name) \
         .one_or_none()

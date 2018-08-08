@@ -50,7 +50,7 @@ async def move(request: web.Request):
     if 'destination' not in body:
         return web.Response(text="specify a destination", status=400)
     try:
-        destination = folder.find_or_create(body['destination'], db)
+        destination = folder.find(body['destination'], db, create=True)
     except ConfigurationError as e:
         return web.Response(text="Destination error: %s" % str(e), status=400)
     # make sure there are no other streams with the same name here
@@ -81,7 +81,7 @@ async def create(request):
         new_stream.id = None
         for elem in new_stream.elements:
             elem.id = None
-        destination = folder.find_or_create(path, db)
+        destination = folder.find(path, db, create=True)
         destination.streams.append(new_stream)
         db.commit()
     except ValueError as e:
