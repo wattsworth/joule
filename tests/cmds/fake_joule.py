@@ -48,7 +48,9 @@ class FakeJoule:
              web.delete('/data', self.data_remove),
              web.get('/modules.json', self.stub_get),
              web.get('/module.json', self.stub_get),
-             web.get('/module/logs.json', self.stub_get)])
+             web.get('/module/logs.json', self.stub_get),
+             web.put('/folder/move.json', self.move_folder),
+             web.delete('/folder.json', self.delete_folder)])
         self.stub_stream_info = False
         self.stub_stream_move = False
         self.stub_data_remove = False
@@ -56,6 +58,8 @@ class FakeJoule:
         self.stub_stream_create = False
         self.stub_data_read = False
         self.stub_data_write = False
+        self.stub_folder_move = False
+        self.stub_folder_destroy = False
         self.response = ""
         self.http_code = 200
         self.streams: Dict[str, MockDbEntry] = {}
@@ -86,6 +90,13 @@ class FakeJoule:
         if self.stub_stream_destroy:
             return web.Response(text=self.response, status=self.http_code)
         self.msgs.put(request.query['path'])
+        return web.Response(text="ok")
+
+    async def delete_folder(self, request: web.Request):
+        if self.stub_folder_destroy:
+            return web.Response(text=self.response, status=self.http_code)
+        self.msgs.put({"path": request.query['path'],
+                      "recursive": 'recursive' in request.query})
         return web.Response(text="ok")
 
     async def stub_get(self, request: web.Request):
@@ -149,6 +160,16 @@ class FakeJoule:
 
     async def move_stream(self, request: web.Request):
         if self.stub_stream_move:
+            return web.Response(text=self.response, status=self.http_code)
+        body = await request.post()
+        path = body['path']
+        destination = body['destination']
+        # so we can check that the message was received
+        self.msgs.put((path, destination))
+        return web.json_response(data={"stub": "value"})
+
+    async def move_folder(self, request: web.Request):
+        if self.stub_folder_move:
             return web.Response(text=self.response, status=self.http_code)
         body = await request.post()
         path = body['path']

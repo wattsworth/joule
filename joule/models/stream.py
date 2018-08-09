@@ -179,7 +179,7 @@ def from_config(config: configparser.ConfigParser) -> Stream:
 
 
 def validate_name(name: str) -> str:
-    if len(name) == 0:
+    if name is None or len(name) == 0:
         raise ConfigurationError("missing name")
     if '/' in name:
         raise ConfigurationError("invalid name, '\\' not allowed")

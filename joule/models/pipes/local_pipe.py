@@ -76,9 +76,6 @@ class LocalPipe(Pipe):
                 break
             end = start + len(block)
             buffer[start:end] = block
-            if self.debug:
-                print("[%s:read] adding [%d] to index %d" %
-                      (self.name, len(block), start), flush=True)
             start = end
             self.queued_rows -= len(block)
 
@@ -99,6 +96,8 @@ class LocalPipe(Pipe):
         if num_rows > len(self.read_buffer):
             raise PipeError("cannot consume %d rows: only %d available"
                             % (num_rows, len(self.read_buffer)))
+        if self.debug:
+            print("[%s:read] consumed %d rows" % (self.name, num_rows))
         self.read_buffer = self.read_buffer[num_rows:]
 
     async def write(self, data):

@@ -5,7 +5,6 @@ import warnings
 from ..fake_joule import FakeJoule, FakeJouleTestCase
 from joule.cli import main
 
-STREAM_INFO = os.path.join(os.path.dirname(__file__), 'stream.json')
 warnings.simplefilter('always')
 
 

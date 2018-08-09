@@ -44,7 +44,6 @@ class Inserter:
                 while True:
                     await asyncio.sleep(self.insert_period)
                     data = await pipe.read()
-                    pipe.consume(len(data))
                     # there might be an interval break and no new data
                     if len(data) > 0:
                         if last_ts is not None:
@@ -70,6 +69,8 @@ class Inserter:
                                     cleaner_task.cancel()
                                     await cleaner_task
                                 raise errors.DataError("NilmDB error: %s" % error)
+                            pipe.consume(len(data))
+
                         # decimate the data
                         if self.decimator is not None:
                             await self.decimator.process(data)

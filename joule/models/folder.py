@@ -36,6 +36,32 @@ class Folder(Base):
         else:
             return None
 
+    def update_attributes(self, attrs: Dict) -> None:
+        if 'name' in attrs:
+            self.name = validate_name(attrs['name'])
+        if 'description' in attrs:
+            self.description = attrs['description']
+
+    def contains_streams(self) -> bool:
+        """does this folder or any of its children have streams?"""
+        if len(self.streams) > 0:
+            return True
+        for c in self.children:
+            if c.contains_streams():
+                return True
+        return False
+
+    @property
+    def locked(self):
+        """does this folder or any of its children have locked streams?"""
+        for f in self.children:
+            if f.locked:
+                return True
+        for s in self.streams:
+            if s.locked:
+                return True
+        return False
+
     def __repr__(self):
         if self.id is None:
             return "<Folder(id=<not assigned>, name='%s')>" % self.name
@@ -102,3 +128,11 @@ def get_stream_path(stream: Stream) -> Optional[str]:
         return _get_path(folder.parent, folder.name+"/"+path)
 
     return _get_path(stream.folder, stream.name)
+
+
+def validate_name(name: str) -> str:
+    if name is None or len(name) == 0:
+        raise ConfigurationError("missing name")
+    if '/' in name:
+        raise ConfigurationError("invalid name, '\\' not allowed")
+    return name

@@ -305,8 +305,6 @@ class Worker:
                 if len(data) > 0:
                     for s in subscribers:
                         try:
-                            if(s.name=="IV"):
-                                print(" writing [%d] to %s" % (len(data),s.name))
                             await s.write(data)
                         except (ConnectionResetError, BrokenPipeError):
                             print("error writing data to subscriber")

@@ -30,6 +30,7 @@ async def get(request: web.Request):
                                      auto_decompress=False) as session:
         # proxy the request to the module
         async with session.get(str(url)) as resp:
-            return web.Response(body=resp.content,
+            data = await resp.content.read()
+            return web.Response(body=data,
                                 status=resp.status,
                                 headers=resp.headers)

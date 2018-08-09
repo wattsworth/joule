@@ -1,5 +1,7 @@
 from aiohttp import web
 import json
+import sqlalchemy
+from sqlalchemy.exc import CircularDependencyError
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -28,12 +30,17 @@ async def move(request):
     except ConfigurationError as e:
         return web.Response(text="Destination error: %s" % str(e), status=400)
     # make sure there are no other streams with the same name here
-    for peer in destination.folders:
+    for peer in destination.children:
         if peer.name == my_folder.name:
             return web.Response(text="a folder with this name is in the destination folder",
                                 status=400)
-    destination.folders.append(my_folder)
-    db.commit()
+    try:
+        destination.children.append(my_folder)
+        db.commit()
+    except CircularDependencyError:
+        db.rollback()
+        return web.Response(text="cannot place a parent in a child folder",
+                            status=400)
     return web.json_response({"stream": my_folder.to_json()})
 
 
@@ -74,14 +81,12 @@ async def delete(request):
         return web.Response(text="specify an id or a path", status=400)
     if my_folder is None:
         return web.Response(text="folder does not exist", status=404)
-    if my_folder.locked:
-        return web.Response(text="locked folders cannot be deleted", status=400)
     if 'recursive' in request.query:
         recursive = True
     else:
         recursive = False
     # check to see this folder can be deleted
-    if not my_folder.contains_streams:
+    if my_folder.contains_streams():
         return web.Response(text="remove all streams before deleting the folder", status=400)
     if recursive:
         _recursive_delete(my_folder.children, db)

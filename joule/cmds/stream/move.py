@@ -3,6 +3,7 @@ import requests
 from typing import Dict
 
 from joule.cmds.config import pass_config
+from joule.cmds import helpers
 
 
 @click.command(name="move")
@@ -14,22 +15,5 @@ def stream_move(config, stream, destination):
         "path": stream,
         "destination": destination
     }
-    _post(config.url+"/stream/move.json", data=data)
+    helpers.post_json(config.url+"/stream/move.json", data=data)
     click.echo("OK")
-
-
-def _post(url: str, data) -> Dict:
-    resp = None  # to appease type checker
-    try:
-        resp = requests.put(url, data=data)
-    except requests.ConnectionError:
-        print("Error contacting Joule server at [%s]" % url)
-        exit(1)
-    if resp.status_code != 200:
-        print("Error [%d]: %s" % (resp.status_code, resp.text))
-        exit(1)
-    try:
-        return resp.json()
-    except ValueError:
-        click.echo("Error: Invalid server response, check the URL")
-        exit(1)

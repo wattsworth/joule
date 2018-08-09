@@ -1,4 +1,5 @@
 from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
+import unittest
 from aiohttp import web
 import argparse
 import multiprocessing

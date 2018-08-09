@@ -31,3 +31,20 @@ def get_json(url: str, params=None) -> Dict:
     except ValueError:
         click.echo("Error: Invalid server response, check the URL")
         exit(1)
+
+
+def post_json(url: str, data) -> Dict:
+    resp = None  # to appease type checker
+    try:
+        resp = requests.put(url, data=data)
+    except requests.ConnectionError:
+        print("Error contacting Joule server at [%s]" % url)
+        exit(1)
+    if resp.status_code != 200:
+        print("Error [%d]: %s" % (resp.status_code, resp.text))
+        exit(1)
+    try:
+        return resp.json()
+    except ValueError:
+        click.echo("Error: Invalid server response, check the URL")
+        exit(1)
