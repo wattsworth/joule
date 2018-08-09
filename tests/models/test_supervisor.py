@@ -3,7 +3,8 @@ from joule.models import Module, Worker, Supervisor
 from typing import List
 import functools
 import asyncio
-import logging
+
+from tests import helpers
 
 
 class TestSupervisor(unittest.TestCase):
@@ -34,7 +35,7 @@ class TestSupervisor(unittest.TestCase):
         started_uuids = []
         stopped_uuids = []
 
-        async def mock_run(uuid, subscribe, loop):
+        async def mock_run(uuid, _, loop):
             started_uuids.append(uuid)
             self.assertEqual(loop, self.loop)
 
@@ -64,3 +65,22 @@ class TestSupervisor(unittest.TestCase):
         # returns None if the uuid doesn't exist
         bad_uuid = 68
         self.assertIsNone(self.supervisor.get_socket(bad_uuid))
+
+    def test_restarts_producers(self):
+        restarted = False
+
+        async def mock_restart(_):
+            nonlocal restarted
+            restarted = True
+
+        s = helpers.create_stream("test", "float32_3")
+        self.workers[0].module.outputs['output'] = s
+        self.workers[0].restart = mock_restart
+        with self.assertLogs(level="WARNING") as logs:
+            self.loop.run_until_complete(
+                self.supervisor.restart_producer(s, self.loop, msg="test"))
+        self.assertTrue('restarting' in ''.join(logs.output).lower())
+        self.assertTrue(restarted)
+        # check the worker logs
+        self.assertTrue("restarting" in ''.join(self.workers[0].logs).lower())
+        self.assertTrue("test" in ''.join(self.workers[0].logs).lower())

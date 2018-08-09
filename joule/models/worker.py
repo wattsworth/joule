@@ -136,6 +136,14 @@ class Worker:
             return SOCKET_BASE % self.module.uuid
         return "none"
 
+    def produces(self, stream: Stream) -> bool:
+        # returns True if this worker produces [stream]
+        for output in self.module.outputs.values():
+            if output == stream:
+                return True
+        else:
+            return False
+
     async def run(self, subscribe: Callable[[Stream, pipes.Pipe, Loop], Callable],
                   loop: Loop, restart: bool = True) -> None:
         self.stop_requested = False
@@ -163,11 +171,18 @@ class Worker:
                 for subscriber in self.subscribers.values():
                     for pipe in subscriber:
                         await pipe.close_interval()
+
             else:
                 break
 
+    async def restart(self, loop: Loop) -> None:
+        await self._stop_child(loop)
+
     async def stop(self, loop: Loop) -> None:
         self.stop_requested = True
+        await self._stop_child(loop)
+
+    async def _stop_child(self, loop: Loop) -> None:
         if self.process is None:
             return
         try:

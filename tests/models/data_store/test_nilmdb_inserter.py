@@ -2,6 +2,7 @@ import asynctest
 import aiohttp
 import numpy as np
 import time
+import asyncio
 
 from joule.models import Stream, Element, pipes
 from joule.models.data_store.nilmdb import NilmdbStore
@@ -113,16 +114,19 @@ class TestNilmdbInserter(asynctest.TestCase):
         with self.assertRaises(DataError):
             await task
 
-    async def test_inserter_when_nilmdb_is_not_available(self):
-        # when nilmdb server is not available
+    async def test_retries_when_nilmdb_is_not_available(self):
+        # when nilmdb server is not available the inserter should retry
         self.stream1.datatype = Stream.DATATYPE.UINT16
         source = QueueReader()
         await self.fake_nilmdb.stop()
         await source.put(helpers.create_data(layout="uint16_3").tostring())
         pipe = pipes.InputPipe(stream=self.stream1, reader=source)
-        task = self.store.spawn_inserter(self.stream1, pipe, self.loop, insert_period=0)
-        with self.assertRaises(DataError):
+        with self.assertLogs(level="WARNING") as logs:
+            task = self.store.spawn_inserter(self.stream1, pipe, self.loop, retry_interval=0.05)
+            await asyncio.sleep(0.1)
+            task.cancel()
             await task
+        self.assertTrue("retrying request" in ''.join(logs.output))
 
     async def test_inserter_clean(self):
         self.stream1.datatype = Stream.DATATYPE.UINT16

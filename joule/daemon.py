@@ -86,8 +86,18 @@ class Daemon(object):
             exit(1)
         # start the supervisor (runs the workers)
         self.supervisor.start(loop)
+
         # start inserters by subscribing to the streams
-        inserter_task_grp = self._spawn_inserters(loop)
+        inserter_tasks = []
+        for stream in self.db.query(Stream).filter(Stream.keep_us != Stream.KEEP_NONE):
+            if not stream.is_destination:
+                continue  # only subscribe to active streams
+            try:
+                task = self._spawn_inserter(stream, loop)
+                inserter_tasks.append(task)
+            except SubscriptionError as e:
+                logging.warning(e)
+        inserter_task_grp = asyncio.gather(*inserter_tasks, loop=loop)
 
         # start the API server
         app = web.Application()
@@ -115,24 +125,16 @@ class Daemon(object):
     def stop(self):
         self.stop_requested = True
 
-    def _spawn_inserters(self, loop: Loop) -> asyncio.Task:
-        inserter_tasks = []
-        for stream in self.db.query(Stream).filter(Stream.keep_us != Stream.KEEP_NONE):
-            if not stream.is_destination:
-                continue  # only subscribe to active streams
+    async def _spawn_inserter(self, stream: Stream, loop: Loop):
+        while True:
+            pipe = pipes.LocalPipe(layout=stream.layout, loop=loop, name=stream.name)
+            # ignore unsubscribe callback, we are never going to use it
+            self.supervisor.subscribe(stream, pipe)
             try:
-                if stream.name=="IV":
-                    dbg=True
-                else:
-                    dbg=False
-                pipe = pipes.LocalPipe(layout=stream.layout, loop=loop, name=stream.name, debug=dbg)
-                # ignore unsubscribe callback, we are never going to use it
-                self.supervisor.subscribe(stream, pipe)
-                task = self.data_store.spawn_inserter(stream, pipe, loop)
-                inserter_tasks.append(task)
-            except SubscriptionError as e:
-                logging.warning(e)
-        return asyncio.gather(*inserter_tasks, loop=loop)
+                await self.data_store.spawn_inserter(stream, pipe, loop)
+            except DataError as e:
+                msg = "stream [%s]: %s" % (stream.name, str(e))
+                await self.supervisor.restart_producer(stream, loop, msg=msg)
 
 
 def main(argv=None):

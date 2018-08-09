@@ -60,11 +60,12 @@ class NilmdbStore(DataStore):
                     raise errors.DataError(await resp.text())  # pragma: no cover
 
     def spawn_inserter(self, stream: Stream,
-                       pipe: pipes.Pipe, loop: Loop, insert_period=None) -> asyncio.Task:
+                       pipe: pipes.Pipe, loop: Loop, insert_period=None, retry_interval=0.5) -> asyncio.Task:
         if insert_period is None:
             insert_period = self.insert_period
         inserter = Inserter(self.server, stream,
-                            insert_period, self.cleanup_period, self._get_client)
+                            insert_period, self.cleanup_period, self._get_client,
+                            retry_interval=retry_interval)
         return loop.create_task(inserter.run(pipe, loop))
 
     async def extract(self, stream: Stream, start: Optional[int], end: Optional[int],

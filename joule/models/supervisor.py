@@ -1,6 +1,6 @@
 from typing import List, Callable
 import asyncio
-import pdb
+import logging
 
 from joule.models import Worker, Stream, pipes
 from joule.models.errors import SubscriptionError
@@ -8,6 +8,7 @@ from joule.models.errors import SubscriptionError
 Tasks = List[asyncio.Task]
 Loop = asyncio.AbstractEventLoop
 
+log = logging.getLogger('joule')
 
 class Supervisor:
 
@@ -31,6 +32,15 @@ class Supervisor:
             await worker.stop(loop)
         await self.task
 
+    async def restart_producer(self, stream: Stream, loop: Loop, msg=""):
+        # find the worker who produces this stream
+        for worker in self._workers:
+            if worker.produces(stream):
+                if msg is not None:
+                    log.warning("Restarting module [%s]: %s" % (worker.name, msg))
+                    worker.log("[Supervisor Restarting Module: %s]" % msg)
+                await worker.restart(loop)
+
     def subscribe(self, stream: Stream, pipe: pipes.Pipe) -> Callable:
         # find a worker producing this stream
         for worker in self._workers:
@@ -47,6 +57,3 @@ class Supervisor:
                 return w.interface_socket
         return None
 
-    def publish(self, stream: Stream, loop: Loop):
-        # TODO
-        pass  # pragma: no cover

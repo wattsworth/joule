@@ -4,18 +4,20 @@ import numpy as np
 import random
 import time
 from typing import List, Callable
+import logging
 
 from joule.models import Stream, pipes
 from joule.models.data_store import errors
 from joule.models.data_store.nilmdb_helpers import compute_path, ERRORS, check_for_error
 
 Loop = asyncio.AbstractEventLoop
+log = logging.getLogger('joule')
 
 
 class Inserter:
 
     def __init__(self, server: str, stream: Stream, insert_period: float, cleanup_period: float,
-                 session_factory: Callable[[], aiohttp.ClientSession]):
+                 session_factory: Callable[[], aiohttp.ClientSession], retry_interval=0.5):
         self.insert_url = "{server}/stream/insert".format(server=server)
         self.remove_url = "{server}/stream/remove".format(server=server)
         self.create_url = "{server}/stream/create".format(server=server)
@@ -28,65 +30,68 @@ class Inserter:
         self.cleanup_period = cleanup_period + cleanup_period * random.random() * 0.25
         self._get_client = session_factory
         self.decimator = None
+        self.retry_interval = retry_interval
 
     async def run(self, pipe: pipes.Pipe, loop: Loop) -> None:
         """insert stream data from the queue until the queue is empty"""
-        cleaner_task: asyncio.Task = None
         # create the database path
-        # lazy stream creation
+        # lazy stream creation,
         try:
             await self._create_path()
-            if self.stream.keep_us != Stream.KEEP_ALL:
-                cleaner_task = loop.create_task(self._clean())
+        except asyncio.CancelledError:
+            return
 
-            async with self._get_client() as session:
-                last_ts = None
-                while True:
-                    await asyncio.sleep(self.insert_period)
-                    data = await pipe.read()
-                    # there might be an interval break and no new data
-                    if len(data) > 0:
-                        if last_ts is not None:
-                            start = last_ts
-                        else:
-                            start = data['timestamp'][0]
-                        end = data['timestamp'][-1] + 1
-                        last_ts = end
-                        # lazy initialization of decimator
-                        if self.stream.decimate and self.decimator is None:
-                            self.decimator = NilmdbDecimator(self.server, self.stream, 1, 4,
-                                                             self._get_client)
-                        # send the data
-                        params = {"start": "%d" % start,
-                                  "end": "%d" % end,
-                                  "path": self.path,
-                                  "binary": '1'}
-                        async with session.put(self.insert_url, params=params,
-                                               data=data.tostring()) as resp:
-                            if resp.status != 200:
-                                error = await resp.text()
-                                if cleaner_task is not None:
-                                    cleaner_task.cancel()
-                                    await cleaner_task
-                                raise errors.DataError("NilmDB error: %s" % error)
+        cleaner_task: asyncio.Task = None
+        if self.stream.keep_us != Stream.KEEP_ALL:
+            cleaner_task = loop.create_task(self._clean())
+
+        while True:
+            try:
+                async with self._get_client() as session:
+                    last_ts = None
+                    while True:
+                        await asyncio.sleep(self.insert_period)
+                        data = await pipe.read()
+                        # there might be an interval break and no new data
+                        if len(data) > 0:
+                            if last_ts is not None:
+                                start = last_ts
+                            else:
+                                start = data['timestamp'][0]
+                            end = data['timestamp'][-1] + 1
+                            last_ts = end
+                            # lazy initialization of decimator
+                            if self.stream.decimate and self.decimator is None:
+                                self.decimator = NilmdbDecimator(self.server, self.stream, 1, 4,
+                                                                 self._get_client)
+                            # send the data
+                            params = {"start": "%d" % start,
+                                      "end": "%d" % end,
+                                      "path": self.path,
+                                      "binary": '1'}
+                            async with session.put(self.insert_url, params=params,
+                                                   data=data.tostring()) as resp:
+                                if resp.status != 200:
+                                    error = await resp.text()
+                                    if cleaner_task is not None:
+                                        cleaner_task.cancel()
+                                        await cleaner_task
+                                    raise errors.DataError("NilmDB error: %s" % error)
+                            # this was successful so consume the data
                             pipe.consume(len(data))
-
-                        # decimate the data
-                        if self.decimator is not None:
-                            await self.decimator.process(data)
-                    # check for interval breaks
-                    if pipe.end_of_interval:
-                        last_ts = None
-                        if self.decimator is not None:
-                            self.decimator.close_interval()
-        except aiohttp.ClientError as e:
-            if cleaner_task is not None:  # pragma: no cover
-                cleaner_task.cancel()
-                await cleaner_task
-            # TODO: catch this somewhere and stop the worker
-            raise errors.DataError("NilmDB error: %s" % e)
-        except (pipes.EmptyPipe, asyncio.CancelledError):
-            pass
+                            # decimate the data
+                            if self.decimator is not None:
+                                await self.decimator.process(data)
+                        # check for interval breaks
+                        if pipe.end_of_interval:
+                            last_ts = None
+                            if self.decimator is not None:
+                                self.decimator.close_interval()
+            except aiohttp.ClientError as e:  # pragma: no cover
+                log.warning("NilmDB raw inserter error: %r, retrying request", e)
+                await asyncio.sleep(self.retry_interval)  # retry the request
+            except (pipes.EmptyPipe, asyncio.CancelledError):
+                break  # terminate the inserter
         if cleaner_task is not None:
             cleaner_task.cancel()
             await cleaner_task
@@ -94,40 +99,48 @@ class Inserter:
     async def _create_path(self):
         data = {"path": compute_path(self.stream),
                 "layout": self.stream.layout}
-        async with self._get_client() as session:
-            async with session.post(self.create_url, data=data) as resp:
-                await check_for_error(resp, ignore=[ERRORS.STREAM_ALREADY_EXISTS])
+        while True:
+            try:
+                async with self._get_client() as session:
+                    async with session.post(self.create_url, data=data) as resp:
+                        await check_for_error(resp, ignore=[ERRORS.STREAM_ALREADY_EXISTS])
+                        break
+            except aiohttp.ClientError as e:  # pragma: no cover
+                log.warning("NilmDB inserter create_path error: %r, retrying request", e)
+                await asyncio.sleep(self.retry_interval)  # retry the request
 
     async def _clean(self):
-        try:
-            async with self._get_client() as session:
-                while True:
-                    await asyncio.sleep(self.cleanup_period)
-                    keep_time = int(time.time() * 1e6) - self.stream.keep_us
-                    # remove raw data
-                    params = {"start": "%d" % 0,
-                              "end": "%d" % keep_time,
-                              "path": self.path}
-                    async with session.post(self.remove_url, params=params) as resp:
-                        if resp.status != 200:  # pragma: no cover
-                            raise errors.DataError(await resp.text())
-                    # remove decimation data
-                    if self.decimator is not None:
-                        for path in self.decimator.get_paths():
-                            params["path"] = path
-                            async with session.post(self.remove_url, params=params) as resp:
-                                if resp.status != 200:  # pragma: no cover
-                                    raise errors.DataError(await resp.text())
-        except aiohttp.ClientError as e:
-            raise errors.DataError("NilmDB error: %s" % e)  # pragma: no cover
-        except asyncio.CancelledError:
-            pass
+        while True:
+            try:
+                async with self._get_client() as session:
+                    while True:
+                        await asyncio.sleep(self.cleanup_period)
+                        keep_time = int(time.time() * 1e6) - self.stream.keep_us
+                        # remove raw data
+                        params = {"start": "%d" % 0,
+                                  "end": "%d" % keep_time,
+                                  "path": self.path}
+                        async with session.post(self.remove_url, params=params) as resp:
+                            if resp.status != 200:  # pragma: no cover
+                                raise errors.DataError(await resp.text())
+                        # remove decimation data
+                        if self.decimator is not None:
+                            for path in self.decimator.get_paths():
+                                params["path"] = path
+                                async with session.post(self.remove_url, params=params) as resp:
+                                    if resp.status != 200:  # pragma: no cover
+                                        raise errors.DataError(await resp.text())
+            except aiohttp.ClientError as e:  # pragma: no cover
+                log.warning("NilmDB cleaning error: %r, retrying request", e)
+                await asyncio.sleep(self.retry_interval)  # retry the request
+            except asyncio.CancelledError:
+                break
 
 
 class NilmdbDecimator:
 
     def __init__(self, server: str, stream: Stream, from_level: int, factor: int,
-                 session_factory: Callable[[], aiohttp.ClientSession]):
+                 session_factory: Callable[[], aiohttp.ClientSession], retry_interval=0.5):
         self.stream = stream
         self.level = from_level * factor
         self.insert_url = "{server}/stream/insert".format(server=server)
@@ -144,47 +157,51 @@ class NilmdbDecimator:
         self.last_ts = None
         self.path_created = False
         self.child: NilmdbDecimator = None
+        self.retry_interval = retry_interval
         self._get_client = session_factory
         # hold off to rate limit NilmDB traffic
         self.holdoff = 0  # random.random()
 
     async def process(self, data: np.ndarray) -> None:
-        """insert stream data from the queue until the queue is empty"""
-        try:
-            if not self.path_created:
-                await self._create_path()
-                self.path_created = True
+        """decimate data and insert it, retry on error"""
+        while True:
+            try:
+                if not self.path_created:
+                    await self._create_path()
+                    self.path_created = True
 
-            async with self._get_client() as session:
-                decim_data = self._process(data)
-                if len(decim_data) == 0:
-                    return
-                if self.last_ts is not None:
-                    start = self.last_ts
-                else:
-                    start = decim_data['timestamp'][0]
-                end = decim_data['timestamp'][-1] + 1
-                self.last_ts = end
-                # lazy initialization of child
-                if self.child is None:
-                    self.child = NilmdbDecimator(self.server, self.stream, self.level,
-                                                 self.factor, self._get_client)
-                params = {"start": "%d" % start,
-                          "end": "%d" % end,
-                          "path": self.path,
-                          "binary": '1'}
-                async with session.put(self.insert_url, params=params,
-                                       data=decim_data.tostring()) as resp:
-                    if resp.status != 200:  # pragma: no cover
-                        error = await resp.text()
-                        raise errors.DataError("NilmDB error: %s" % error)
-                # feed data to child decimator
-                await self.child.process(decim_data)
-                await asyncio.sleep(self.holdoff)
-        except aiohttp.ClientError as e:  # pragma: no cover
-            raise errors.DataError("NilmDB error: %s" % e)
-        except asyncio.CancelledError:  # pragma: no cover
-            pass
+                async with self._get_client() as session:
+                    decim_data = self._process(data)
+                    if len(decim_data) == 0:
+                        return
+                    if self.last_ts is not None:
+                        start = self.last_ts
+                    else:
+                        start = decim_data['timestamp'][0]
+                    end = decim_data['timestamp'][-1] + 1
+                    self.last_ts = end
+                    # lazy initialization of child
+                    if self.child is None:
+                        self.child = NilmdbDecimator(self.server, self.stream, self.level,
+                                                     self.factor, self._get_client)
+                    params = {"start": "%d" % start,
+                              "end": "%d" % end,
+                              "path": self.path,
+                              "binary": '1'}
+                    async with session.put(self.insert_url, params=params,
+                                           data=decim_data.tostring()) as resp:
+                        if resp.status != 200:  # pragma: no cover
+                            error = await resp.text()
+                            raise errors.DataError("NilmDB error: %s" % error)
+                    # feed data to child decimator
+                    await self.child.process(decim_data)
+                    await asyncio.sleep(self.holdoff)
+                    break  # success, leave the loop
+            except aiohttp.ClientError as e:  # pragma: no cover
+                log.warning("NilmDB decimation error: %r, retrying request", e)
+                await asyncio.sleep(self.retry_interval)  # retry the request
+            except asyncio.CancelledError:  # pragma: no cover
+                break
 
     def close_interval(self):
         self.buffer = []
@@ -255,6 +272,12 @@ class NilmdbDecimator:
     async def _create_path(self):
         data = {"path": compute_path(self.stream, self.level),
                 "layout": self.stream.decimated_layout}
-        async with self._get_client() as session:
-            async with session.post(self.create_url, data=data) as resp:
-                await check_for_error(resp, ignore=[ERRORS.STREAM_ALREADY_EXISTS])
+        while True:
+            try:
+                async with self._get_client() as session:
+                    async with session.post(self.create_url, data=data) as resp:
+                        await check_for_error(resp, ignore=[ERRORS.STREAM_ALREADY_EXISTS])
+                        break
+            except aiohttp.ClientError as e:  # pragma: no cover
+                log.warning("NilmDB decimator create_path error: %r, retrying request", e)
+                await asyncio.sleep(self.retry_interval)  # retry the request

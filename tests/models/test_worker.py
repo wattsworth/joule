@@ -107,6 +107,16 @@ class TestWorker(unittest.TestCase):
         self.assertTrue(("%d" % self.module.uuid).encode('ascii') in socket)
         self.assertTrue("%d" % self.module.uuid in name)
 
+    def test_produces_returns_true_if_worker_makes_output(self):
+
+        # an output
+        self.assertTrue(self.worker.produces(self.streams[2]))
+        # an input
+        self.assertFalse(self.worker.produces(self.streams[0]))
+        # an unrelated stream
+        s = helpers.create_stream("unrelated", "uint8_10")
+        self.assertFalse(self.worker.produces(s))
+
     def test_spawns_child_process(self):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.worker.run(self.supervisor.subscribe,
@@ -161,25 +171,33 @@ class TestWorker(unittest.TestCase):
                                                  loop, restart=False))
             ))
 
-
-    def test_stops_child(self):
+    def test_restarts_and_stops_child_by_request(self):
         # child should listen for stop_requested flag
-
         loop = asyncio.get_event_loop()
+        self.worker.RESTART_INTERVAL = 0.01
         self.module.exec_cmd = "python " + MODULE_STOP_ON_SIGTERM
 
         # calling stop before run doesn't matter
         loop.run_until_complete(self.worker.stop(loop))
 
-        with self.check_fd_leakage():
-            loop.run_until_complete(asyncio.gather(
-                loop.create_task(self._stop_worker(loop)),
-                loop.create_task(self.worker.run(self.supervisor.subscribe,
-                                                 loop, restart=True))
-            ))
+        with self.assertLogs(level="WARNING") as logs:
+            with self.check_fd_leakage():
+                loop.run_until_complete(asyncio.gather(
+                    loop.create_task(self._stop_worker(loop)),
+                    loop.create_task(self._restart_worker(loop)),
+                    loop.create_task(self.worker.run(self.supervisor.subscribe,
+                                                     loop, restart=True))
+                ))
         # check to make sure it was killed by SIGTERM
         self.assertEqual(self.worker.process.returncode, -1 * signal.SIGTERM)
-
+        # the restart should be logged
+        self.assertTrue("restarting" in ''.join(logs.output).lower())
+        # make the the module started multiple times
+        num_starts = 0
+        for entry in self.worker.logs:
+            if 'starting' in entry:
+                num_starts += 1
+        self.assertEqual(num_starts, 2)
         # can call stop multiple times
         loop.run_until_complete(self.worker.stop(loop))
 
@@ -384,9 +402,13 @@ class TestWorker(unittest.TestCase):
                                              output_data['data'])
         self.assertTrue(output2.end_of_interval)
 
-    async def _stop_worker(self, loop: asyncio.AbstractEventLoop, delay=1):
+    async def _stop_worker(self, loop: asyncio.AbstractEventLoop, delay=0.5):
         await asyncio.sleep(delay)
         await self.worker.stop(loop)
+
+    async def _restart_worker(self, loop: asyncio.AbstractEventLoop, delay=0.2):
+        await asyncio.sleep(delay)
+        await self.worker.restart(loop)
 
     @contextmanager
     def check_fd_leakage(self):
