@@ -217,7 +217,13 @@ class NilmdbStore(DataStore):
         intervals = []
         async with self._get_client() as session:
             async with session.get(url, params=params) as resp:
-                await check_for_error(resp)
+                try:
+                    await check_for_error(resp)
+                except errors.DataError as e:
+                    if 'no such stream' in str(e).lower():
+                        return []
+                    else:
+                        raise e
                 text = await resp.text()
                 if text == '':
                     return []
