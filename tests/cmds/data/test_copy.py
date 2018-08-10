@@ -6,6 +6,8 @@ from aiohttp.test_utils import unused_port
 import warnings
 import time
 import numpy as np
+import asyncio
+import unittest
 
 from ..fake_joule import FakeJoule
 from joule.cli import main
@@ -34,7 +36,7 @@ class TestDataCopy(helpers.AsyncTestCase):
         multiprocessing.active_children()
         self.server_proc.join()
 
-    def test_copies_data(self):
+    def test_copies_all_data(self):
         server = FakeJoule()
         # create the source and destination streams
         src_data = create_source_data(server)  # helpers.create_data(src.layout)
@@ -50,7 +52,30 @@ class TestDataCopy(helpers.AsyncTestCase):
         self.assertEqual(result.exit_code, 0)
         mock_entry = self.msgs.get()
         np.testing.assert_array_equal(src_data, mock_entry.data)
-        self.assertEqual(mock_entry.n_intervals, 3)
+        self.assertEqual(len(mock_entry.intervals), 3)
+        self.stop_server()
+
+    def test_does_not_copy_existing_data(self):
+        server = FakeJoule()
+        # create the source and destination streams
+        src_data = create_source_data(server)  # helpers.create_data(src.layout)
+        # dest has the same intervals as source so nothing is copied
+        ts = src_data['timestamp']
+        intervals = server.streams['/test/source'].intervals
+
+        dest = Stream(id=1, name="dest", keep_us=100, datatype=Stream.DATATYPE.FLOAT32)
+        dest.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in
+                         range(3)]
+        server.add_stream('/test/destination', dest, StreamInfo(int(ts[0]), int(ts[-1]),
+                                                                len(ts)), src_data, intervals)
+        url = self.start_server(server)
+        runner = CliRunner()
+        result = runner.invoke(main, ['--url', url, 'data', 'copy',
+                                      '--start', str(ts[0]), '--end', str(ts[-1]),
+                                      '/test/source', '/test/destination'])
+        self.assertEqual(result.exit_code, 0)
+        # data write was never called
+        self.assertTrue(self.msgs.empty())
         self.stop_server()
 
     def test_creates_stream_if_necessary(self):
@@ -62,7 +87,8 @@ class TestDataCopy(helpers.AsyncTestCase):
         # source has 100 rows of data between [0, 100]
         src_data = helpers.create_data(src.layout, length=4)
         src_info = StreamInfo(int(src_data['timestamp'][0]), int(src_data['timestamp'][-1]), len(src_data))
-        server.add_stream('/test/source', src, src_info, src_data)
+        server.add_stream('/test/source', src, src_info, src_data,[[src_info.start, src_info.end]])
+        server.add_stream('/test/source', src, src_info, src_data,[[src_info.start, src_info.end]])
 
         url = self.start_server(server)
         runner = CliRunner()
@@ -220,6 +246,11 @@ def create_source_data(server):
                            src_data[50:75],
                            pipes.interval_token(src.layout),
                            src_data[75:]))
+    ts = src_data['timestamp']
+    intervals = [[ts[0], ts[24]],
+                 [ts[25], ts[49]],
+                 [ts[50], ts[74]],
+                 [ts[75], ts[99]]]
     src_info = StreamInfo(int(src_data['timestamp'][0]), int(src_data['timestamp'][-1]), len(src_data))
-    server.add_stream('/test/source', src, src_info, pipe_data)
+    server.add_stream('/test/source', src, src_info, pipe_data, intervals)
     return src_data

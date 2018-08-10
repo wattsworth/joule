@@ -89,7 +89,6 @@ def data_copy(config, start, end, source, destination, dest_url):
         exit(1)
 
     # compute the target intervals (source - dest)
-
     src_intervals = _get_intervals(src_url, src_stream, start, end)
     dest_intervals = _get_intervals(dest_url, dest_stream, start, end)
     new_intervals = interval_difference(src_intervals, dest_intervals)

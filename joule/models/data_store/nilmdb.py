@@ -116,8 +116,15 @@ class NilmdbStore(DataStore):
         await self._extract_by_path(path, start, end, layout, callback)
 
     async def intervals(self, stream: Stream, start: Optional[int], end: Optional[int]):
-        return await self._intervals_by_path(compute_path(stream),
-                                             start, end)
+        try:
+            return await self._intervals_by_path(compute_path(stream),
+                                                 start, end)
+        except errors.DataError as e:
+            # if the stream hasn't been written to it won't exist in the database
+            if ERRORS.NO_SUCH_STREAM.value in str(e):
+                return []
+            else:
+                raise e
 
     # TODO: remove path lookup, iterate until the stream decimation isn't found
     async def remove(self, stream, start: Optional[int] = None,
@@ -217,13 +224,7 @@ class NilmdbStore(DataStore):
         intervals = []
         async with self._get_client() as session:
             async with session.get(url, params=params) as resp:
-                try:
-                    await check_for_error(resp)
-                except errors.DataError as e:
-                    if 'no such stream' in str(e).lower():
-                        return []
-                    else:
-                        raise e
+                await check_for_error(resp)
                 text = await resp.text()
                 if text == '':
                     return []

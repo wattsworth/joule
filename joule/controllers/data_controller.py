@@ -91,7 +91,11 @@ async def read(request: web.Request, json=False):
     except InsufficientDecimationError as e:
         return web.Response(text="decimated data is not available: %s" % e, status=400)
     except DataError as e:
-        return web.Response(text="read error: %s" % e, status=400)
+        msg = str(e)
+        if 'no such stream' in msg.lower() and (params['decimation-level'] is not None):  # pragma: no cover
+            # clean up error message when user requested a particular decimation level
+            msg = "requested decimation level [%d] does not exist" % params['decimation-level']
+        return web.Response(text="read error: %s" % msg, status=400)
 
     if json:
         # put the last data_segment on

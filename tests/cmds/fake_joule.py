@@ -4,7 +4,7 @@ import io
 from contextlib import redirect_stdout
 import multiprocessing
 import numpy as np
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from aiohttp.test_utils import unused_port
 import time
 import signal
@@ -18,11 +18,15 @@ from joule.models import Stream, StreamInfo, pipes, stream
 
 
 class MockDbEntry:
-    def __init__(self, stream: Stream, info: StreamInfo, data: Optional[np.ndarray] = None):
+    def __init__(self, stream: Stream, info: StreamInfo, data: Optional[np.ndarray] = None,
+                 intervals=None):
         self.stream = stream
         self.info = info
         self.data = data
-        self.n_intervals = 0
+        if intervals is None:
+            intervals = []
+        self.intervals = intervals
+
 
     def add_data(self, chunk):
         if self.data is None:
@@ -45,6 +49,7 @@ class FakeJoule:
              web.delete('/stream.json', self.delete_stream),
              web.post('/data', self.data_write),
              web.get('/data', self.data_read),
+             web.get('/data/intervals.json', self.data_intervals),
              web.delete('/data', self.data_remove),
              web.get('/modules.json', self.stub_get),
              web.get('/module.json', self.stub_get),
@@ -71,8 +76,9 @@ class FakeJoule:
         with redirect_stdout(f):
             web.run_app(self.app, host='127.0.0.1', port=port)
 
-    def add_stream(self, path, stream: Stream, info: StreamInfo, data: Optional[np.ndarray]):
-        self.streams[path] = MockDbEntry(stream, info, data)
+    def add_stream(self, path, stream: Stream, info: StreamInfo, data: Optional[np.ndarray],
+                   intervals: Optional[List] = None):
+        self.streams[path] = MockDbEntry(stream, info, data, intervals)
 
     async def create_stream(self, request: web.Request):
         if self.stub_stream_create:
@@ -83,7 +89,8 @@ class FakeJoule:
             return web.Response(text='invalid request', status=400)
         new_stream = stream.from_json(json.loads(body['stream']))
         new_stream.id += 100  # give the stream  a unique id
-        self.streams[path] = MockDbEntry(new_stream, StreamInfo(None, None, None), None)
+
+        self.streams[path] = MockDbEntry(new_stream, StreamInfo(None, None, None))
         return web.json_response(data=new_stream.to_json())
 
     async def delete_stream(self, request: web.Request):
@@ -96,7 +103,7 @@ class FakeJoule:
         if self.stub_folder_destroy:
             return web.Response(text=self.response, status=self.http_code)
         self.msgs.put({"path": request.query['path'],
-                      "recursive": 'recursive' in request.query})
+                       "recursive": 'recursive' in request.query})
         return web.Response(text="ok")
 
     async def stub_get(self, request: web.Request):
@@ -121,7 +128,7 @@ class FakeJoule:
     async def data_read(self, request: web.Request):
         if self.stub_data_read:
             return web.Response(text=self.response, status=self.http_code)
-        mock_entry = self.streams[request.query['path']]
+        mock_entry = self._find_entry(request.query)
         if 'decimation-level' in request.query:
             layout = mock_entry.stream.decimated_layout
             decimation_level = request.query['decimation-level']
@@ -146,17 +153,31 @@ class FakeJoule:
         else:
             mock_entry = self.streams[request.query['path']]
         pipe = pipes.InputPipe(name="inbound", stream=mock_entry.stream, reader=request.content)
+        istart = None
+        iend = None
         while True:
             try:
                 chunk = await pipe.read()
+                if len(chunk)>0:
+                    if istart is None:
+                        istart = chunk['timestamp'][0]
+                    iend = chunk['timestamp'][-1]
                 pipe.consume(len(chunk))
-                if pipe.end_of_interval:
-                    mock_entry.n_intervals += 1
+                if pipe.end_of_interval and istart is not None and iend is not None:
+                    mock_entry.intervals.append([istart,iend])
+                    istart = None
+                    iend = None
                 mock_entry.add_data(chunk)
             except pipes.EmptyPipe:
                 break
         self.msgs.put(mock_entry)
         return web.Response(text="ok")
+
+    async def data_intervals(self, request: web.Request):
+        entry = self._find_entry(request.query)
+        intervals = [[int(x) for x in interval] for interval in entry.intervals]
+
+        return web.json_response(data=intervals)
 
     async def move_stream(self, request: web.Request):
         if self.stub_stream_move:
@@ -177,6 +198,16 @@ class FakeJoule:
         # so we can check that the message was received
         self.msgs.put((path, destination))
         return web.json_response(data={"stub": "value"})
+
+    def _find_entry(self, params):
+        if 'id' in params:
+            stream_id = int(params['id'])
+            for entry in self.streams.values():
+                if entry.stream.id == stream_id:
+                    return entry
+            else:
+                raise ValueError
+        return self.streams[params['path']]
 
 
 class FakeJouleTestCase(helpers.AsyncTestCase):
