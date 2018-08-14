@@ -327,7 +327,7 @@ class Worker:
                 if child_output.end_of_interval:
                     for s in subscribers:
                         await s.close_interval()
-                await asyncio.sleep(0.25)
+
         except (EmptyPipe, asyncio.CancelledError):
             pass
 

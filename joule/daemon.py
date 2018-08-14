@@ -116,9 +116,9 @@ class Daemon(object):
 
         # clean everything up
         await self.supervisor.stop(loop)
-        self.data_store.close()
         inserter_task_grp.cancel()
         await inserter_task_grp
+        self.data_store.close()
         await runner.cleanup()
         self.db.close()
 
@@ -132,16 +132,18 @@ class Daemon(object):
             self.supervisor.subscribe(stream, pipe)
             try:
                 await self.data_store.spawn_inserter(stream, pipe, loop)
+                break  # inserter terminated, program is closing
             except DataError as e:
                 msg = "stream [%s]: %s" % (stream.name, str(e))
                 await self.supervisor.restart_producer(stream, loop, msg=msg)
+            print("restarting inserter")
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser("Joule Daemon")
     parser.add_argument("--config", default="/etc/joule/main.conf")
     args = parser.parse_args(argv)
-
+    logging.basicConfig(level=logging.DEBUG)
     log.addFilter(LogDedupFilter())
     logging.basicConfig(
         format='%(asctime)s %(levelname)s:%(message)s',

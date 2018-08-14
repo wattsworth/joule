@@ -1,11 +1,14 @@
 import enum
 from typing import TYPE_CHECKING
 import numpy as np
+import logging
 
 from joule.models.pipes.errors import PipeError
 
 if TYPE_CHECKING:  # pragma: no cover
     from joule.models import (Module, Stream)
+
+log = logging.getLogger('joule')
 
 
 class Pipe:
@@ -20,6 +23,16 @@ class Pipe:
         self.module: 'Module' = module
         self.stream: 'Stream' = stream
         self._layout = layout
+
+    def enable_cache(self, lines: int):
+        if self.direction == Pipe.DIRECTION.INPUT:
+            raise PipeError("cannot control cache on input pipes")
+        raise PipeError("abstract method must be implemented by child")
+
+    async def flush_cache(self):
+        if self.direction == Pipe.DIRECTION.INPUT:
+            raise PipeError("cannot control cache on input pipes")
+        raise PipeError("abstract method must be implemented by child")
 
     async def read(self, flatten=False):
         if self.direction == Pipe.DIRECTION.OUTPUT:
@@ -60,7 +73,7 @@ class Pipe:
     def dtype(self) -> np.dtype:
         return compute_dtype(self.layout)
 
-    def _apply_dtype(self, data:np.ndarray) -> np.ndarray:
+    def _apply_dtype(self, data: np.ndarray) -> np.ndarray:
         """convert [data] to the pipe's [dtype]"""
         if data.ndim == 1:
             # already a structured array just verify its data type
@@ -88,6 +101,19 @@ class Pipe:
             return np.c_[data['timestamp'][:, None], data['data']]
         else:
             return data
+
+    @staticmethod
+    def _validate_data(data):
+        if type(data) is not np.ndarray:
+            raise PipeError("invalid data type must be a structured array or 2D matrix")
+        # check for valid data type
+        try:
+            if (len(data) == 0) or len(data[0]) == 0:
+                log.info("pipe write called with no data")
+                return False
+        except TypeError:
+            raise PipeError("invalid data type must be a structured array or 2D matrix")
+        return True
 
     def __repr__(self):
         msg = "<Pipe(name='%s', direction=" % self.name

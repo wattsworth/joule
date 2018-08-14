@@ -235,6 +235,22 @@ class TestNilmdbStore(asynctest.TestCase):
                                                     end=None)
         self.assertEqual([], rcvd_intervals)
 
+        # ignore 404 error if stream does not exist (return empty interval)
+        new_stream = helpers.create_stream("new", "float32_3", id=100)
+        rcvd_intervals = await self.store.intervals(new_stream,
+                                                    start=None,
+                                                    end=None)
+        self.assertEqual([], rcvd_intervals)
+
+        # propogate any other error
+        self.fake_nilmdb.stub_stream_intervals = True
+        self.fake_nilmdb.response = 'notjson'
+        self.fake_nilmdb.http_code = 500
+        with self.assertRaises(DataError):
+            await self.store.intervals(self.stream1,
+                                       start=None,
+                                       end=None)
+
     async def test_remove(self):
         # initialize nilmdb state
         self.fake_nilmdb.streams['/joule/1'] = FakeStream(

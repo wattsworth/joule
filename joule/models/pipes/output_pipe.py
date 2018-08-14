@@ -1,4 +1,6 @@
 import asyncio
+import numpy as np
+
 from joule.models.pipes import Pipe, interval_token
 
 
@@ -10,16 +12,46 @@ class OutputPipe(Pipe):
                          direction=Pipe.DIRECTION.OUTPUT)
         self.writer_factory = writer_factory
         self.writer: asyncio.StreamWriter = writer
+        # caching
+        self._caching = False
+        self._cache_index = 0
+        self._cache = None
 
     async def write(self, data):
+        if not self._validate_data(data):
+            return
+        sdata = self._apply_dtype(data)
+
+        if self._caching:
+            for row in sdata:
+                self._cache[self._cache_index] = row
+                self._cache_index += 1
+                if self._cache_index >= len(self._cache):
+                    await self.flush_cache()
+        else:
+            await self._write(sdata)
+
+    def enable_cache(self, lines: int):
+        self._caching = True
+        self._cache = np.empty(lines, self.dtype)
+        self._cache_index = 0
+
+    async def flush_cache(self):
+        if self._cache_index > 0:
+            await self._write(self._cache[:self._cache_index])
+            self._cache_index = 0
+            self._cache = np.empty(len(self._cache), self.dtype)
+
+    async def _write(self, sdata):
         if self.writer is None:
             self.writer = await self.writer_factory()
         # make sure dtype is structured
-        sdata = self._apply_dtype(data)
         self.writer.write(sdata.tostring())
         await self.writer.drain()
 
     async def close_interval(self):
+        if self._caching:
+            await self.flush_cache()
         self.writer.write(interval_token(self.layout).tostring())
         await self.writer.drain()
 

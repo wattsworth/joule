@@ -48,7 +48,7 @@ class InputPipe(Pipe):
                 raw = await asyncio.wait_for(self.reader.read(max_rows * rowbytes),
                                              self.TIMEOUT_INTERVAL)
             except asyncio.TimeoutError:
-                break
+                pass
 
             nbytes = len(raw)
             if nbytes == 0:
@@ -107,3 +107,4 @@ class InputPipe(Pipe):
         if self.close_cb is not None:
             # used to close socket pipes
             self.close_cb()  # pragma: no cover
+

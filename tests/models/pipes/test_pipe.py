@@ -49,6 +49,24 @@ class TestPipe(helpers.AsyncTestCase):
             loop.run_until_complete(pipe.write([1, 2, 3, 4]))
         self.assertTrue("abstract" in "%r" % e.exception)
 
+    def test_raises_cache_errors(self):
+        loop = asyncio.get_event_loop()
+        # input pipes cannot cache
+        pipe = Pipe(direction=Pipe.DIRECTION.INPUT)
+        with self.assertRaises(PipeError):
+            pipe.enable_cache(100)
+        with self.assertRaises(PipeError):
+            loop.run_until_complete(pipe.flush_cache())
+
+        # output pipes must implement caching
+        pipe = Pipe(direction=Pipe.DIRECTION.OUTPUT)
+        with self.assertRaises(PipeError) as e:
+            pipe.enable_cache(100)
+        self.assertTrue("abstract" in "%r" % e.exception)
+        with self.assertRaises(PipeError):
+            loop.run_until_complete(pipe.flush_cache())
+        self.assertTrue("abstract" in "%r" % e.exception)
+
     def test_raises_close_interval_errors(self):
         loop = asyncio.get_event_loop()
 

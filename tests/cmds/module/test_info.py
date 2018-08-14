@@ -1,53 +1,19 @@
-import unittest
 from click.testing import CliRunner
 import os
-import signal
-import multiprocessing
+
 from aiohttp.test_utils import unused_port
 import warnings
-import time
 import json
 import copy
-import asyncio
 
-from ..fake_joule import FakeJoule
+from ..fake_joule import FakeJoule, FakeJouleTestCase
 from joule.cli import main
 
 MODULE_INFO = os.path.join(os.path.dirname(__file__), 'module.json')
 warnings.simplefilter('always')
 
 
-class TestModuleInfo(unittest.TestCase):
-
-    def setUp(self):
-        self.loop = asyncio.new_event_loop()
-        self.loop.set_debug(True)
-        asyncio.set_event_loop(self.loop)
-
-    def tearDown(self):
-        closed = self.loop.is_closed()
-        if not closed:
-            self.loop.call_soon(self.loop.stop)
-            self.loop.run_forever()
-            self.loop.close()
-        asyncio.set_event_loop(None)
-
-    def start_server(self, server):
-        port = unused_port()
-        self.msgs = multiprocessing.Queue()
-        self.server_proc = multiprocessing.Process(target=server.start, args=(port, self.msgs))
-        self.server_proc.start()
-        time.sleep(0.01)
-        return "http://localhost:%d" % port
-
-    def stop_server(self):
-        if self.server_proc is None:
-            return
-        # aiohttp doesn't always quit with SIGTERM
-        os.kill(self.server_proc.pid, signal.SIGKILL)
-        # join any zombies
-        multiprocessing.active_children()
-        self.server_proc.join()
+class TestModuleInfo(FakeJouleTestCase):
 
     def test_shows_module_info(self):
         server = FakeJoule()

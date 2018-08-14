@@ -117,6 +117,87 @@ class TestLocalPipe(helpers.AsyncTestCase):
         np.testing.assert_array_almost_equal(
             test_data['timestamp'], result['timestamp'])
 
+    def test_invalid_write_nowait_inputs(self):
+        LAYOUT = "int8_2"
+        loop = asyncio.get_event_loop()
+        my_pipe = LocalPipe(LAYOUT, loop, name="testpipe")
+        with self.assertLogs(level="INFO"):
+            my_pipe.write_nowait(np.array([[]]))
+        with self.assertRaises(PipeError):
+            my_pipe.write_nowait([1, 2, 3])
+
+    def test_different_format_writes(self):
+        LAYOUT = "int8_2"
+        loop = asyncio.get_event_loop()
+        my_pipe = LocalPipe(LAYOUT, loop, name="testpipe")
+
+        test_data = helpers.create_data(LAYOUT, length=4, step=1, start=106)
+
+        async def write():
+            # write unstructured numpy arrays
+            await my_pipe.write(np.array([[1, 1, 1]]))
+            await my_pipe.write(np.array([[2, 2, 2],
+                                          [3, 3, 3]]))
+
+            # logs empty writes
+            with self.assertLogs(level="INFO") as logs:
+                await my_pipe.write(np.array([[]]))
+
+            # errors on invalid write types
+            bad_data = [[100, 1, 2], 'invalid', 4, None, np.array([4, 8])]
+            for data in bad_data:
+                with self.assertRaises(PipeError):
+                    await my_pipe.write(data)
+
+            # write structured numpy arrays
+            await my_pipe.write(test_data)
+
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(write())
+        result = my_pipe.read_nowait(flatten=True)
+        np.testing.assert_array_equal(result[:3], [[1, 1, 1],
+                                                   [2, 2, 2],
+                                                   [3, 3, 3]])
+        my_pipe.consume(3)
+        result = my_pipe.read_nowait()
+        np.testing.assert_array_equal(result, test_data)
+
+    def test_caching(self):
+        LAYOUT = "float32_2"
+        LENGTH = 128
+        CACHE_SIZE = 40
+        # test that the default event loop is used if loop is not specified
+        my_pipe = LocalPipe(LAYOUT, None)
+        my_pipe.enable_cache(CACHE_SIZE)
+        test_data = helpers.create_data(LAYOUT, length=LENGTH, start=1, step=1)
+
+        async def writer():
+            for block in helpers.to_chunks(test_data, 4):
+                await asyncio.sleep(.1)
+                await my_pipe.write(block)
+            await my_pipe.flush_cache()
+
+        num_reads = 0
+
+        async def reader():
+            nonlocal num_reads
+            index = 0
+            while True:
+                data = await my_pipe.read()
+                my_pipe.consume(len(data))
+                # make sure the data is correct
+                np.testing.assert_array_equal(test_data[index:index + len(data)],
+                                              data)
+                num_reads += 1
+                index += len(data)
+
+                if index == len(test_data):
+                    break
+
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(asyncio.gather(reader(), writer()))
+        self.assertLessEqual(num_reads, np.ceil(LENGTH / CACHE_SIZE))
+
     def test_nowait_read_empties_queue(self):
         LAYOUT = "int8_2"
         LENGTH = 50
@@ -137,7 +218,7 @@ class TestLocalPipe(helpers.AsyncTestCase):
         np.testing.assert_array_almost_equal(
             test_data['timestamp'], result['timestamp'])
 
-    def test_nowait_read_blocks(self):
+    def test_nowait_read_does_not_block(self):
         LAYOUT = "int8_2"
         LENGTH = 50
         loop = asyncio.get_event_loop()
@@ -147,31 +228,11 @@ class TestLocalPipe(helpers.AsyncTestCase):
         self.assertEqual(len(my_pipe.read_nowait()), LENGTH)
         # another read executes immediately because there is unconsumed data
         self.assertEqual(len(my_pipe.read_nowait()), LENGTH)
-        # now consume the data and the next call to read will block
+        # now consume the data and the next call to read execute immediately
+        # even though there is no data to be returned
         my_pipe.consume(LENGTH)
-        my_pipe.TIMEOUT_INTERVAL = 0.05
-
-        def delayed_write():
-            time.sleep(0.1)
-            my_pipe.write_nowait(test_data)
-            time.sleep(0.1)
-            my_pipe.close_nowait()
-
-        t = threading.Thread(target=delayed_write)
-        t.start()
-        ts = time.time()
-        self.assertEqual(len(my_pipe.read_nowait()), LENGTH)
-        self.assertGreater(time.time()-ts, 0.05)
-
-        # now consume the data and the next call will close the pipe
-        my_pipe.consume(LENGTH)
-        ts = time.time()
-        with self.assertRaises(EmptyPipe):
-            my_pipe.read_nowait()
-        self.assertGreater(time.time()-ts, 0.05)
-
-        t.join()
-
+        self.assertEqual(0, len(my_pipe.read_nowait(flatten=True)))
+        return
 
     def test_handles_flat_and_structured_arrays(self):
         """converts flat arrays to structured arrays and returns

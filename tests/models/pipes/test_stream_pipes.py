@@ -164,3 +164,59 @@ class TestStreamingPipes(helpers.AsyncTestCase):
         # close the pipes
         loop.run_until_complete(asyncio.gather(npipe_in.close(),
                                                npipe_out.close()))
+
+    def test_caching(self):
+        LAYOUT = "float32_2"
+        LENGTH = 128
+        CACHE_SIZE = 40
+        (fd_r, fd_w) = os.pipe()
+        loop = asyncio.get_event_loop()
+        npipe_in = InputPipe(layout=LAYOUT, reader_factory=reader_factory(fd_r, loop))
+        npipe_in.TIMEOUT_INTERVAL = 2
+        npipe_out = OutputPipe(layout=LAYOUT, writer_factory=writer_factory(fd_w, loop))
+        npipe_out.enable_cache(CACHE_SIZE)
+        test_data = helpers.create_data(LAYOUT, length=LENGTH, start=1, step=1)
+
+        async def writer():
+            for block in helpers.to_chunks(test_data, 4):
+                await asyncio.sleep(.1)
+                await npipe_out.write(block)
+            await npipe_out.flush_cache()
+            await npipe_out.close()
+
+        num_reads = 0
+
+        async def reader():
+            nonlocal num_reads
+            index = 0
+            while True:
+                data = await npipe_in.read()
+                npipe_in.consume(len(data))
+                # make sure the data is correct
+                np.testing.assert_array_equal(test_data[index:index+len(data)],
+                                              data)
+                num_reads += 1
+                index += len(data)
+
+                if index == len(test_data):
+                    break
+
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(asyncio.gather(reader(), writer()))
+        self.assertLessEqual(num_reads, np.ceil(LENGTH/CACHE_SIZE))
+        # close the pipes
+        loop.run_until_complete(asyncio.gather(npipe_in.close(),
+                                               npipe_out.close()))
+
+    def test_invalid_write_inputs(self):
+        LAYOUT = "int8_2"
+        loop = asyncio.get_event_loop()
+        my_pipe = OutputPipe(layout=LAYOUT)
+
+        async def test():
+            with self.assertLogs(level="INFO"):
+                await my_pipe.write(np.array([[]]))
+            with self.assertRaises(PipeError):
+                await my_pipe.write([1, 2, 3])
+
+        loop.run_until_complete(test())

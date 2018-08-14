@@ -1,15 +1,9 @@
 from click.testing import CliRunner
-import os
-import signal
-import multiprocessing
 from aiohttp.test_utils import unused_port
 import warnings
-import time
 import numpy as np
-import asyncio
-import unittest
 
-from ..fake_joule import FakeJoule
+from ..fake_joule import FakeJoule, FakeJouleTestCase
 from joule.cli import main
 from joule.models import Stream, Element, StreamInfo, pipes
 from tests import helpers
@@ -17,24 +11,7 @@ from tests import helpers
 warnings.simplefilter('always')
 
 
-class TestDataCopy(helpers.AsyncTestCase):
-
-    def start_server(self, server):
-        port = unused_port()
-        self.msgs = multiprocessing.Queue()
-        self.server_proc = multiprocessing.Process(target=server.start, args=(port, self.msgs))
-        self.server_proc.start()
-        time.sleep(0.01)
-        return "http://localhost:%d" % port
-
-    def stop_server(self):
-        if self.server_proc is None:
-            return
-        # aiohttp doesn't always quit with SIGTERM
-        os.kill(self.server_proc.pid, signal.SIGKILL)
-        # join any zombies
-        multiprocessing.active_children()
-        self.server_proc.join()
+class TestDataCopy(FakeJouleTestCase):
 
     def test_copies_all_data(self):
         server = FakeJoule()
@@ -49,6 +26,7 @@ class TestDataCopy(helpers.AsyncTestCase):
         url = self.start_server(server)
         runner = CliRunner()
         result = runner.invoke(main, ['--url', url, 'data', 'copy', '/test/source', '/test/destination'])
+        _print_result_on_error(result)
         self.assertEqual(result.exit_code, 0)
         mock_entry = self.msgs.get()
         np.testing.assert_array_equal(src_data, mock_entry.data)
@@ -73,6 +51,7 @@ class TestDataCopy(helpers.AsyncTestCase):
         result = runner.invoke(main, ['--url', url, 'data', 'copy',
                                       '--start', str(ts[0]), '--end', str(ts[-1]),
                                       '/test/source', '/test/destination'])
+        _print_result_on_error(result)
         self.assertEqual(result.exit_code, 0)
         # data write was never called
         self.assertTrue(self.msgs.empty())
@@ -87,8 +66,8 @@ class TestDataCopy(helpers.AsyncTestCase):
         # source has 100 rows of data between [0, 100]
         src_data = helpers.create_data(src.layout, length=4)
         src_info = StreamInfo(int(src_data['timestamp'][0]), int(src_data['timestamp'][-1]), len(src_data))
-        server.add_stream('/test/source', src, src_info, src_data,[[src_info.start, src_info.end]])
-        server.add_stream('/test/source', src, src_info, src_data,[[src_info.start, src_info.end]])
+        server.add_stream('/test/source', src, src_info, src_data, [[src_info.start, src_info.end]])
+        server.add_stream('/test/source', src, src_info, src_data, [[src_info.start, src_info.end]])
 
         url = self.start_server(server)
         runner = CliRunner()
@@ -229,6 +208,13 @@ class TestDataCopy(helpers.AsyncTestCase):
         self.assertEqual(result.exit_code, 1)
         self.assertTrue('Error' in result.output and 'destination' in result.output)
         self.stop_server()
+
+
+def _print_result_on_error(result):
+    if result.exit_code == -1:
+        print("exception: ", result.exception)
+    if result.exit_code != 0:
+        print("output: ", result.output)
 
 
 def create_source_data(server):

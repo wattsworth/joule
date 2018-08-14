@@ -74,6 +74,7 @@ class FakeNilmdb:
         self.runner = None
         self.error_on_paths = {}  # (msg, status) tuples to return for path
         self.stub_stream_create = False
+        self.stub_stream_intervals = False
         self.http_code = 200
         self.response = ''
         # record of transactions
@@ -177,6 +178,8 @@ class FakeNilmdb:
         return resp
 
     async def stream_intervals(self, request: web.Request):
+        if self.stub_stream_intervals:
+            return web.Response(status=self.http_code, text=self.response)
         try:
             stream = self.streams[request.query["path"]]
         except KeyError:
