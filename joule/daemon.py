@@ -18,6 +18,8 @@ from joule.services import (load_modules, load_streams, load_config, load_databa
 import joule.controllers
 
 log = logging.getLogger('joule')
+async_log = logging.getLogger('asyncio')
+async_log.setLevel(logging.INFO)
 Loop = asyncio.AbstractEventLoop
 
 
