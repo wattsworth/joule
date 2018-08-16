@@ -14,10 +14,10 @@ from joule.models import stream, folder
 
 def run(pipe_config: str, db: Session) -> Stream:
     # separate the configuration pieces
-    (path, name, inline_config) = _parse_pipe_config(pipe_config)
+    (path, name, inline_config) = parse_pipe_config(pipe_config)
     name = stream.validate_name(name)
     # parse the inline configuration
-    (datatype, element_names) = _parse_inline_config(inline_config)
+    (datatype, element_names) = parse_inline_config(inline_config)
     my_folder = folder.find(path, db, create=True)
     # check if the stream exists in the database
     existing_stream: Stream = db.query(Stream). \
@@ -42,7 +42,7 @@ def run(pipe_config: str, db: Session) -> Stream:
     return my_stream
 
 
-def _parse_pipe_config(pipe_config: str) -> (str, str, str):
+def parse_pipe_config(pipe_config: str) -> (str, str, str):
     # convert /path/name:datatype[e0,e1,e2] into (/path, name, datatype[e0,e1,e2])
     if ':' in pipe_config:
         full_path = pipe_config.split(':')[0]
@@ -60,7 +60,7 @@ def _parse_pipe_config(pipe_config: str) -> (str, str, str):
     return path, name, inline_config
 
 
-def _parse_inline_config(inline_config: str) -> (Stream.DATATYPE, List[str]):
+def parse_inline_config(inline_config: str) -> (Stream.DATATYPE, List[str]):
     if len(inline_config) == 0:
         return None, None
     try:

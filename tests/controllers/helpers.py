@@ -7,7 +7,9 @@ import argparse
 from typing import Optional, Callable, Coroutine
 
 from joule.models.data_store.errors import DataError, InsufficientDecimationError
-from joule.models import (Base, DataStore, Stream, StreamInfo, DbInfo, pipes, worker)
+from joule.models import (Base, DataStore, Stream,
+                          StreamInfo, DbInfo, pipes,
+                          worker, SubscriptionError)
 from joule.services import parse_pipe_config
 from tests import helpers
 
@@ -136,3 +138,26 @@ class MockWorker:
     @property
     def logs(self):
         return ["log entry1", "log entry2"]
+
+
+class MockSupervisor:
+    def __init__(self):
+        self.subscription_pipe = None
+        self.subscribed_stream = None
+        self.raise_error = False
+
+    def subscribe(self, stream: Stream, pipe: pipes.LocalPipe):
+        if self.raise_error:
+            raise SubscriptionError()
+
+        self.subscribed_stream = stream
+        while True:
+            try:
+                data = self.subscription_pipe.read_nowait()
+                self.subscription_pipe.consume(len(data))
+                pipe.write_nowait(data)
+            except pipes.EmptyPipe:
+                pipe.close_nowait()
+                break
+            if self.subscription_pipe.end_of_interval:
+                pipe.close_interval_nowait()

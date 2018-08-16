@@ -54,7 +54,9 @@ class LocalPipe(Pipe):
         # if the queue is empty and we have old data, just return the old data
         if self.queue.empty() and len(self.read_buffer) > 0:
             return self._format_data(self.read_buffer, flatten)
-
+        # if the buffer is empty and the queue is empty and the pipe is closed
+        if self.queue.empty() and len(self.read_buffer) == 0 and self.closed:
+            raise EmptyPipe()
         # do not wait for new data, return an empty array if nothing else is available
         return self._read(flatten)
 

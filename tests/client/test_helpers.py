@@ -1,19 +1,18 @@
-import unittest
 import sys
 import tempfile
 
-from joule import utilities
 from joule.client.helpers.args import module_args
+from tests.helpers import AsyncTestCase
 
 
-class TestNilmdbStore(unittest.TestCase):
+class TestNilmdbStore(AsyncTestCase):
 
     def test_module_args(self):
         # if the module config is not specified, return args
         # ignore the -h help flag, the main argparse should catch it
-        sys.argv = ['exec_cmd','arg1','arg2', '-h']
+        sys.argv = ['exec_cmd', 'arg1', 'arg2', '-h']
         arg_list = module_args()
-        self.assertEqual(['arg1','arg2', '-h'], arg_list)
+        self.assertEqual(['arg1', 'arg2', '-h'], arg_list)
         # if the module config file is present in the args
         # parse it and add the included arguments
         with tempfile.NamedTemporaryFile() as f:
@@ -32,7 +31,6 @@ class TestNilmdbStore(unittest.TestCase):
             sys.argv = ['exec_cmd', 'arg1', '--module_config', f.name]
             arg_list = module_args()
             self.assertEqual(['arg1', '--module_config', f.name,
-                              '--marg1','test1',
-                              '--marg2','test2'], arg_list)
-
+                              '--marg1', 'test1',
+                              '--marg2', 'test2'], arg_list)
 

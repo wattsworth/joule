@@ -4,9 +4,9 @@ import aiohttp
 import numpy as np
 from sqlalchemy.orm import Session
 
-from joule.models import folder, Stream, Folder, StreamInfo
+from joule.models import folder, Stream, Folder, StreamInfo, pipes
 import joule.controllers
-from .helpers import create_db, MockStore
+from .helpers import create_db, MockStore, MockSupervisor
 from tests import helpers
 
 
@@ -18,6 +18,8 @@ class TestDataController(AioHTTPTestCase):
         app["db"] = create_db(["/folder1/stream1:float32[x, y, z]",
                                "/folder2/deeper/stream2:int8[val1, val2]"])
         app["data-store"] = MockStore()
+        self.supervisor = MockSupervisor()
+        app["supervisor"] = self.supervisor
         return app
 
     @unittest_run_loop
@@ -67,6 +69,32 @@ class TestDataController(AioHTTPTestCase):
         self.assertEqual(len(data['data']), 2)
         for interval in data['data']:
             self.assertEqual(len(interval), n_chunks * 25)
+
+    @unittest_run_loop
+    async def test_subscribes_to_data(self):
+        db: Session = self.app["db"]
+        my_stream = db.query(Stream).filter_by(name="stream1").one()
+        blk1 = helpers.create_data(my_stream.layout)
+        blk2 = helpers.create_data(my_stream.layout, length=50)
+        my_pipe = pipes.LocalPipe(my_stream.layout)
+        my_pipe.write_nowait(blk1)
+        my_pipe.close_interval_nowait()
+        my_pipe.write_nowait(blk2)
+        my_pipe.close_nowait()
+        self.supervisor.subscription_pipe = my_pipe
+        async with self.client.get("/data", params={"id": my_stream.id,
+                                                    "subscribe": '1'}) as resp:
+            pipe = pipes.InputPipe(stream=my_stream, reader=resp.content)
+            rx_blk1 = await pipe.read()
+            pipe.consume(len(rx_blk1))
+            np.testing.assert_array_equal(blk1, rx_blk1)
+            self.assertTrue(pipe.end_of_interval)
+
+            rx_blk2 = await pipe.read()
+            pipe.consume(len(rx_blk2))
+            np.testing.assert_array_equal(blk2, rx_blk2)
+            with self.assertRaises(pipes.EmptyPipe):
+                await pipe.read()
 
     @unittest_run_loop
     async def test_write_data(self):
@@ -140,4 +168,3 @@ class TestDataController(AioHTTPTestCase):
         # the mock store returns the start end bounds as the single interval
         data = await resp.json()
         self.assertEqual(data, [[10, 20]])
-

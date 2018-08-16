@@ -27,7 +27,6 @@ class MockDbEntry:
             intervals = []
         self.intervals = intervals
 
-
     def add_data(self, chunk):
         if self.data is None:
             self.data = chunk

@@ -1,11 +1,10 @@
 from sqlalchemy.orm import Session
 from aiohttp import web
 import numpy as np
-import asyncio
-import pdb
 
-from joule.models import folder, DataStore, Stream, InsufficientDecimationError, DataError
-from joule.models import pipes
+from joule.models import (folder, DataStore, Stream,
+                          InsufficientDecimationError, DataError,
+                          pipes, Supervisor, SubscriptionError)
 
 
 async def read_json(request: web.Request):
@@ -13,6 +12,13 @@ async def read_json(request: web.Request):
 
 
 async def read(request: web.Request, json=False):
+    if 'subscribe' in request.query:
+        return await _subscribe(request, json)
+    else:
+        return await _read(request, json)
+
+
+async def _read(request: web.Request, json):
     db: Session = request.app["db"]
     data_store: DataStore = request.app["data-store"]
     # find the requested stream
@@ -104,6 +110,44 @@ async def read(request: web.Request, json=False):
         return web.json_response({"data": data_blocks, "decimation_factor": decimation_factor})
     else:
         return resp
+
+
+async def _subscribe(request: web.Request, json: bool):
+    db: Session = request.app["db"]
+    supervisor: Supervisor = request.app['supervisor']
+
+    if json:
+        return web.Response(text="JSON subscription not implemented", status=400)
+
+    # find the requested stream
+    if 'path' in request.query:
+        stream = folder.find_stream_by_path(request.query['path'], db)
+    elif 'id' in request.query:
+        stream = db.query(Stream).get(request.query["id"])
+    else:
+        return web.Response(text="specify an id or a path", status=400)
+    if stream is None:
+        return web.Response(text="stream does not exist", status=404)
+    pipe = pipes.LocalPipe(stream.layout)
+    try:
+        supervisor.subscribe(stream, pipe)
+    except SubscriptionError:
+        return web.Response(text="stream is not being produced", status=400)
+    resp = web.StreamResponse(status=200,
+                              headers={'joule-layout': stream.layout,
+                                       'joule-decimation': '1'})
+    resp.enable_chunked_encoding()
+    await resp.prepare(request)
+    while True:
+        try:
+            data = await pipe.read()
+        except pipes.EmptyPipe:
+            return resp
+        pipe.consume(len(data))
+        if len(data) > 0:
+            await resp.write(data.tostring())
+        if pipe.end_of_interval:
+            await resp.write(pipes.interval_token(stream.layout).tostring())
 
 
 async def intervals(request: web.Request):

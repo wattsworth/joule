@@ -3,7 +3,7 @@ from aiohttp import web
 import aiohttp
 
 import joule.controllers
-from .helpers import create_db, MockStore
+from .helpers import create_db, MockStore, MockSupervisor
 
 
 class TestDataController(AioHTTPTestCase):
@@ -14,6 +14,8 @@ class TestDataController(AioHTTPTestCase):
         app["db"] = create_db(["/folder1/stream1:float32[x, y, z]",
                                "/folder2/deeper/stream2:int8[val1, val2]"])
         app["data-store"] = MockStore()
+        self.supervisor = MockSupervisor()
+        app["supervisor"] = self.supervisor
         return app
 
     @unittest_run_loop
@@ -83,6 +85,35 @@ class TestDataController(AioHTTPTestCase):
         self.assertNotEqual(resp.status, 200)
         self.assertTrue('decimation-level' in await resp.text())
         params['decimation-level'] = 20
+
+    @unittest_run_loop
+    async def test_subscribe_requires_path_or_id(self):
+        resp: aiohttp.ClientResponse = await \
+            self.client.get("/data", params={'subscribe': '1'})
+        self.assertNotEqual(resp.status, 200)
+        self.assertTrue('path' in await resp.text())
+
+    @unittest_run_loop
+    async def test_subscribe_errors_on_invalid_stream(self):
+        resp: aiohttp.ClientResponse = await \
+            self.client.get("/data", params={'path': '/no/stream', 'subscribe': '1'})
+        self.assertEqual(resp.status, 404)
+        resp: aiohttp.ClientResponse = await \
+            self.client.get("/data", params={'id': '404', 'subscribe': '1'})
+        self.assertEqual(resp.status, 404)
+
+    @unittest_run_loop
+    async def test_subscribe_errors_on_unproduced_stream(self):
+        self.supervisor.raise_error = True
+        resp: aiohttp.ClientResponse = await \
+            self.client.get("/data", params={'path': '/folder1/stream1', 'subscribe': '1'})
+        self.assertEqual(resp.status, 400)
+
+    @unittest_run_loop
+    async def test_subscribe_does_not_support_json(self):
+        resp: aiohttp.ClientResponse = await \
+            self.client.get("/data.json", params={'path': '/folder1/stream1', 'subscribe': '1'})
+        self.assertEqual(resp.status, 400)
 
     @unittest_run_loop
     async def test_write_requires_path_or_id(self):
