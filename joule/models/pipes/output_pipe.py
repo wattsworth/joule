@@ -6,12 +6,13 @@ from joule.models.pipes import Pipe, interval_token
 
 class OutputPipe(Pipe):
 
-    def __init__(self, name=None, stream=None, layout=None,
+    def __init__(self, name=None, stream=None, layout=None, close_cb=None,
                  writer: asyncio.StreamWriter=None, writer_factory=None):
         super().__init__(name=name, stream=stream, layout=layout,
                          direction=Pipe.DIRECTION.OUTPUT)
         self.writer_factory = writer_factory
         self.writer: asyncio.StreamWriter = writer
+        self.close_cb = close_cb
         # caching
         self._caching = False
         self._cache_index = 0
@@ -63,3 +64,5 @@ class OutputPipe(Pipe):
             # Hack to close the transport
             await asyncio.sleep(0.01)
             self.writer = None
+        if self.close_cb is not None:
+            await self.close_cb()

@@ -87,7 +87,10 @@ class FakeJoule:
         if path == '':  # check for invalid value (eg)
             return web.Response(text='invalid request', status=400)
         new_stream = stream.from_json(json.loads(body['stream']))
-        new_stream.id += 100  # give the stream  a unique id
+        if new_stream.id is None:
+            new_stream.id = 150
+        else:
+            new_stream.id += 100  # give the stream  a unique id
 
         self.streams[path] = MockDbEntry(new_stream, StreamInfo(None, None, None))
         return web.json_response(data=new_stream.to_json())

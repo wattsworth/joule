@@ -106,5 +106,5 @@ class InputPipe(Pipe):
     async def close(self):
         if self.close_cb is not None:
             # used to close socket pipes
-            self.close_cb()  # pragma: no cover
+            await self.close_cb()
 

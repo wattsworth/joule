@@ -43,7 +43,7 @@ async def build_network_pipes(inputs: Dict[str, str], outputs: Dict[str, str],
 
     pipes_out = {}
     for name in outputs:
-        path, my_stream = _parse_stream(inputs[name])
+        path, my_stream = _parse_stream(outputs[name])
         pipes_out[name] = await _request_network_output(path, my_stream, url, loop)
 
     return pipes_in, pipes_out
@@ -59,7 +59,7 @@ async def _request_network_input(path: str, my_stream: Stream, url: str,
             path, my_stream.layout, src_stream.layout))
     # if the input is *live* make sure the stream is being produced
     if not src_stream.is_destination and (start_time is None and end_time is None):
-        raise ConfigurationError("Input[%s] is not being produced, specify time bounds for historic execution" % path)
+        raise ConfigurationError("Input [%s] is not being produced, specify time bounds for historic execution" % path)
     # all checks passed, subscribe to the input
     pipe = pipes.LocalPipe(src_stream.layout, name="path")
     if start_time is None and end_time is None:
@@ -69,7 +69,7 @@ async def _request_network_input(path: str, my_stream: Stream, url: str,
 
     async def close():
         task.cancel()
-        await task()
+        await task
 
     pipe.close_cb = close
 
@@ -78,11 +78,12 @@ async def _request_network_input(path: str, my_stream: Stream, url: str,
 
 async def _live_reader(url: str, my_stream: Stream, pipe_out: pipes.Pipe):
     async with aiohttp.ClientSession() as session:
-        params = {'id': my_stream.id}
-        async with session.get(url + "/data/live", params=params) as response:
-            if response.status != 200:
+        params = {'id': my_stream.id, 'subscribe': '1'}
+        async with session.get(url + "/data", params=params) as response:
+            if response.status != 200:  # pragma: no cover
                 msg = await response.text()
                 print("Error reading input [%s]: " % my_stream.name, msg)
+                await pipe_out.close()
                 return
             pipe_in = pipes.InputPipe(stream=my_stream, reader=response.content)
             try:
@@ -93,16 +94,18 @@ async def _live_reader(url: str, my_stream: Stream, pipe_out: pipes.Pipe):
                     if pipe_in.end_of_interval:
                         await pipe_out.close_interval()
             except (asyncio.CancelledError, pipes.EmptyPipe):
-                return
+                pass
+            await pipe_out.close()
 
 
 async def _historic_reader(url: str, my_stream: Stream, pipe_out: pipes.Pipe, start_time, end_time):
     async with aiohttp.ClientSession() as session:
         params = {'id': my_stream.id, 'start': start_time, 'end': end_time}
         async with session.get(url + "/data", params=params) as response:
-            if response.status != 200:
+            if response.status != 200:  # pragma: no cover
                 msg = await response.text()
                 print("Error reading input [%s]: " % my_stream.name, msg)
+                await pipe_out.close()
                 return
             pipe_in = pipes.InputPipe(stream=my_stream, reader=response.content)
             try:
@@ -113,39 +116,36 @@ async def _historic_reader(url: str, my_stream: Stream, pipe_out: pipes.Pipe, st
                     if pipe_in.end_of_interval:
                         await pipe_out.close_interval()
             except (asyncio.CancelledError, pipes.EmptyPipe):
-                await pipe_out.close()
-                return
+                pass
+            await pipe_out.close()
 
 
 async def _request_network_output(path: str, my_stream: Stream, url: str, loop: Loop):
     # check if the output exists, create it if not
-    resp = get(url + "/stream.json", params={"id": my_stream.id})
+    resp = get(url + "/stream.json", params={"path": path})
     if resp.status_code == 404:
         dest_stream = await _create_stream(url, path, my_stream)
     else:
         dest_stream = stream.from_json(resp.json())
 
     if dest_stream.layout != my_stream.layout:
-        raise ConfigurationError("Output [%s] configured for [%d] but source is [%d]" % (
+        raise ConfigurationError("Output [%s] configured for [%s] but destination is [%s]" % (
             path, my_stream.layout, dest_stream.layout))
     # raise a warning if the element names do not match
     actual_names = [e.name for e in dest_stream.elements]
     requested_names = [e.name for e in my_stream.elements]
-    if actual_names != requested_names:
+    if actual_names != requested_names:   # pragma: no cover
         click.confirm("Element names do not match, continue?", abort=True)
     # make sure the stream is not currently produced
     if dest_stream.is_destination:
-        raise ConfigurationError("Output [%s] is already being produced")
+        raise ConfigurationError("Output [%s] is already being produced" % path)
 
     # all checks passed, subscribe to the output
-    pipe = pipes.LocalPipe(my_stream.layout, name=path)
-    task = loop.create_task(_live_writer(url, my_stream, pipe))
-
     async def close():
-        await task()
+        await task
 
-    pipe.close_cb = close
-
+    pipe = pipes.LocalPipe(my_stream.layout, name=path, close_cb=close)
+    task = loop.create_task(_output_writer(url, dest_stream, pipe))
     return pipe
 
 
@@ -156,13 +156,13 @@ async def _create_stream(url, path, my_stream: Stream):
         "stream": json.dumps(my_stream.to_json())
     }
     resp = requests.post(url + "/stream.json", data=body)
-    if resp.status_code != 200:
+    if resp.status_code != 200:  # pragma: no cover
         raise ConfigurationError("Error creating output [%s]:" % path, resp.content.decode())
     else:
         return stream.from_json(resp.json())
 
 
-async def _live_writer(url, my_stream: Stream, pipe):
+async def _output_writer(url, my_stream: Stream, pipe):
     async with aiohttp.ClientSession() as session:
         async def _data_sender():
             try:
@@ -179,7 +179,7 @@ async def _live_writer(url, my_stream: Stream, pipe):
         async with session.post(url + "/data",
                                 params={"id": my_stream.id},
                                 data=_data_sender()) as response:
-            if response.status != 200:
+            if response.status != 200:  # pragma: no cover
                 msg = await response.text()
                 print("Error writing output [%s]" % my_stream.name, msg)
 
@@ -192,7 +192,8 @@ def _parse_stream(pipe_config) -> Tuple[str, stream.Stream]:
     (datatype, element_names) = parse_inline_config(inline_config)
     elements = []
     for i in range(len(element_names)):
-        elements.append(Element(name=element_names[i], index=i))
+        elements.append(Element(name=element_names[i], index=i,
+                                display_type=Element.DISPLAYTYPE.CONTINUOUS))
     my_stream = Stream(name=name, keep_us=Stream.KEEP_ALL, datatype=datatype)
     my_stream.elements = elements
     return path + '/' + my_stream.name, my_stream

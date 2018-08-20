@@ -12,7 +12,7 @@ log = logging.getLogger('joule')
 class LocalPipe(Pipe):
     """pipe for intra-module async communication"""
 
-    def __init__(self, layout, loop: Loop = None, name=None, buffer_size=3000, debug=False):
+    def __init__(self, layout, loop: Loop = None, name=None, buffer_size=3000, close_cb=None, debug=False):
         super().__init__(name=name, layout=layout)
         if loop is None:
             loop = asyncio.get_event_loop()
@@ -24,6 +24,7 @@ class LocalPipe(Pipe):
         self.interval_break = False
         self.closed = False
         self.read_buffer = np.empty((0,), dtype=self.dtype)
+        self.close_cb = close_cb
         # initialize buffer and queue
         self.queue = asyncio.Queue(loop=loop)
         self.queued_rows = 0
@@ -169,9 +170,13 @@ class LocalPipe(Pipe):
 
     async def close(self):
         self.closed = True
+        if self.close_cb is not None:
+            await self.close_cb()
 
     def close_nowait(self):
         self.closed = True
+        if self.close_cb is not None:
+            raise PipeError("close_cb cannot be executed, use async")
 
     def subscribe(self, pipe):
         self.subscribers.append(pipe)
