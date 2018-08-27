@@ -3,14 +3,17 @@ import asyncio
 import aiohttp
 import click
 import requests
+import logging
 from typing import Dict, Tuple, Optional
 
 from joule.models import (stream, Stream, Element, pipes, ConfigurationError)
 from joule.cmds.helpers import get_json, get
 from joule.services.parse_pipe_config import parse_pipe_config, parse_inline_config
+from joule.utilities import timestamp_to_human
 
 Loop = asyncio.AbstractEventLoop
 Pipes = Dict[str, pipes.Pipe]
+log = logging.getLogger('joule')
 
 """ Create Numpy Pipes based for a module """
 
@@ -35,7 +38,10 @@ def build_fd_pipes(pipe_args: str, loop: Loop) -> Tuple[Pipes, Pipes]:
 
 
 async def build_network_pipes(inputs: Dict[str, str], outputs: Dict[str, str],
-                              url: str, start_time, end_time, loop):
+                              url: str, start_time, end_time, loop, force=False):
+    if not force:
+        _display_warning(outputs.values(), start_time, end_time)
+
     pipes_in = {}
     for name in inputs:
         path, my_stream = _parse_stream(inputs[name])
@@ -44,9 +50,26 @@ async def build_network_pipes(inputs: Dict[str, str], outputs: Dict[str, str],
     pipes_out = {}
     for name in outputs:
         path, my_stream = _parse_stream(outputs[name])
-        pipes_out[name] = await _request_network_output(path, my_stream, url, loop)
+        pipes_out[name] = await _request_network_output(path, my_stream, url, start_time, end_time, loop)
 
     return pipes_in, pipes_out
+
+
+def _display_warning(paths, start_time, end_time):
+    # warn about data removal for historic execution
+    if start_time is not None or end_time is not None:
+        if end_time is None:
+            msg = "after [%s]" % timestamp_to_human(start_time)
+        elif start_time is None:
+            msg = "before [%s]" % timestamp_to_human(end_time)
+        else:
+            msg = "between [%s - %s]" % (timestamp_to_human(start_time),
+                                         timestamp_to_human(end_time))
+        output_paths = ", ".join([x.split(':')[0] for x in paths])
+        if not click.confirm("This will remove any data %s in the output streams [%s]" % (
+                msg, output_paths)):
+            print("cancelled")
+            exit(1)
 
 
 async def _request_network_input(path: str, my_stream: Stream, url: str,
@@ -69,7 +92,10 @@ async def _request_network_input(path: str, my_stream: Stream, url: str,
 
     async def close():
         task.cancel()
-        await task
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
 
     pipe.close_cb = close
 
@@ -78,6 +104,7 @@ async def _request_network_input(path: str, my_stream: Stream, url: str,
 
 async def _live_reader(url: str, my_stream: Stream, pipe_out: pipes.Pipe):
     async with aiohttp.ClientSession() as session:
+        print("requesting live connection to [%s]" % my_stream.name)
         params = {'id': my_stream.id, 'subscribe': '1'}
         async with session.get(url + "/data", params=params) as response:
             if response.status != 200:  # pragma: no cover
@@ -100,7 +127,12 @@ async def _live_reader(url: str, my_stream: Stream, pipe_out: pipes.Pipe):
 
 async def _historic_reader(url: str, my_stream: Stream, pipe_out: pipes.Pipe, start_time, end_time):
     async with aiohttp.ClientSession() as session:
-        params = {'id': my_stream.id, 'start': start_time, 'end': end_time}
+        print("requesting historic connection to [%s]" % my_stream.name)
+        params = {'id': my_stream.id}
+        if start_time is not None:
+            params['start'] = start_time
+        if end_time is not None:
+            params['end'] = end_time
         async with session.get(url + "/data", params=params) as response:
             if response.status != 200:  # pragma: no cover
                 msg = await response.text()
@@ -115,18 +147,20 @@ async def _historic_reader(url: str, my_stream: Stream, pipe_out: pipes.Pipe, st
                     await pipe_out.write(data)
                     if pipe_in.end_of_interval:
                         await pipe_out.close_interval()
-            except (asyncio.CancelledError, pipes.EmptyPipe):
+            except (asyncio.CancelledError, pipes.EmptyPipe) as e:
                 pass
             await pipe_out.close()
 
 
-async def _request_network_output(path: str, my_stream: Stream, url: str, loop: Loop):
+async def _request_network_output(path: str, my_stream: Stream, url: str, start_time, end_time, loop: Loop):
     # check if the output exists, create it if not
     resp = get(url + "/stream.json", params={"path": path})
     if resp.status_code == 404:
         dest_stream = await _create_stream(url, path, my_stream)
     else:
         dest_stream = stream.from_json(resp.json())
+        if start_time is not None or end_time is not None:
+            await _remove_data(url, dest_stream, start_time, end_time)
 
     if dest_stream.layout != my_stream.layout:
         raise ConfigurationError("Output [%s] configured for [%s] but destination is [%s]" % (
@@ -134,8 +168,10 @@ async def _request_network_output(path: str, my_stream: Stream, url: str, loop: 
     # raise a warning if the element names do not match
     actual_names = [e.name for e in dest_stream.elements]
     requested_names = [e.name for e in my_stream.elements]
-    if actual_names != requested_names:   # pragma: no cover
-        click.confirm("Element names do not match, continue?", abort=True)
+    if actual_names != requested_names:  # pragma: no cover
+        if not (click.confirm("[%s] elements do not match, continue?" % path)):
+            raise ConfigurationError("cancelled")
+
     # make sure the stream is not currently produced
     if dest_stream.is_destination:
         raise ConfigurationError("Output [%s] is already being produced" % path)
@@ -150,38 +186,62 @@ async def _request_network_output(path: str, my_stream: Stream, url: str, loop: 
 
 
 async def _create_stream(url, path, my_stream: Stream):
-    print("creating destination stream")
+    print("creating destination stream [%s]" % path)
+    folder_path = '/'.join(path.split('/')[:-1])
     body = {
-        "path": path,
+        "path": folder_path,
         "stream": json.dumps(my_stream.to_json())
     }
     resp = requests.post(url + "/stream.json", data=body)
     if resp.status_code != 200:  # pragma: no cover
-        raise ConfigurationError("Error creating output [%s]:" % path, resp.content.decode())
+        raise ConfigurationError(("Error creating output [%s]:" % path), resp.content.decode())
     else:
         return stream.from_json(resp.json())
 
 
-async def _output_writer(url, my_stream: Stream, pipe):
-    async with aiohttp.ClientSession() as session:
-        async def _data_sender():
-            try:
-                while True:
-                    data = await pipe.read()
-                    pipe.consume(len(data))
-                    if len(data) > 0:
-                        yield data.tostring()
-                    if pipe.end_of_interval:
-                        yield pipes.interval_token(my_stream.layout).tostring()
-            except pipes.EmptyPipe:
-                pass
+async def _remove_data(url, my_stream: Stream, start_time, end_time):
+    params = {"id": my_stream.id}
+    if start_time is not None:
+        params['start'] = int(start_time)
+    if end_time is not None:
+        params['end'] = int(end_time)
+    resp = requests.delete(url + "/data", params=params)
+    if resp.status_code != 200:  # pragma: no cover
+        raise ConfigurationError(("Error removing output data [%s]:" % my_stream.name),
+                                 resp.content.decode())
 
-        async with session.post(url + "/data",
-                                params={"id": my_stream.id},
-                                data=_data_sender()) as response:
-            if response.status != 200:  # pragma: no cover
-                msg = await response.text()
-                print("Error writing output [%s]" % my_stream.name, msg)
+
+async def _output_writer(url, my_stream: Stream, pipe):
+    output_complete = False
+
+    async def _data_sender():
+        log.info("starting data sender")
+        nonlocal output_complete
+        try:
+            while True:
+                data = await pipe.read()
+                if len(data) > 0:
+                    yield data.tostring()
+                if pipe.end_of_interval:
+                    yield pipes.interval_token(my_stream.layout).tostring()
+                pipe.consume(len(data))
+        except pipes.EmptyPipe:
+            pass
+        output_complete = True
+
+    while not output_complete:
+        # disable total timeout, this is going to be a long session :)
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=None)) as session:
+            try:
+                async with session.post(url + "/data",
+                                        params={"id": my_stream.id},
+                                        data=_data_sender()) as response:
+                    if response.status != 200:  # pragma: no cover
+                        msg = await response.text()
+                        print("Error writing output [%s]" % my_stream.name, msg)
+                        return
+            except aiohttp.ClientError as e:
+                log.info("Error submitting data to joule [%s], retrying" % str(e))
 
 
 def _parse_stream(pipe_config) -> Tuple[str, stream.Stream]:

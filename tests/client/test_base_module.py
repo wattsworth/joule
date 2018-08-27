@@ -4,7 +4,9 @@ import os
 import signal
 import time
 import threading
+import tempfile
 from aiohttp import web
+from unittest import mock
 
 from joule.client import BaseModule
 from tests import helpers
@@ -21,7 +23,7 @@ class SimpleModule(BaseModule):
 
     # generates warnings because the pipe variable is none
     def routes(self):
-        return[web.get('/', self.index)]
+        return [web.get('/', self.index)]
 
     async def index(self, request):
         return web.Response(text="hello world")
@@ -33,6 +35,11 @@ class SimpleModule(BaseModule):
             await asyncio.sleep(0.01)
         # only get here if module listens for stop request
         self.completed = True
+
+
+class NetworkedModule(BaseModule):
+    def run_as_task(self, parsed_args, loop):
+        return asyncio.ensure_future(self._build_pipes(parsed_args, loop))
 
 
 class TestBaseModule(helpers.AsyncTestCase):
@@ -85,4 +92,42 @@ class TestBaseModule(helpers.AsyncTestCase):
         t.join()
         self.assertFalse(module.completed)
 
+    # builds network pipes if pipe arg is 'unset'
+    def test_builds_network_pipes(self):
+        module = NetworkedModule()
+        built_pipes = False
 
+        async def mock_builder(inputs, outputs, url, start_time, end_time, loop, force):
+            nonlocal built_pipes
+            built_pipes = True
+            self.assertEqual(len(inputs), 2)
+            self.assertEqual(inputs['input1'], '/test/input1:float32[x,y,z]')
+            self.assertEqual(len(outputs), 2)
+            self.assertEqual(outputs['output2'], '/test/output2:float32[x,y,z]')
+
+            return {}, {}
+
+        with mock.patch('joule.client.base_module.helpers.build_network_pipes',
+                        new=mock_builder):
+            with tempfile.NamedTemporaryFile() as f:
+                f.write(str.encode(
+                    """
+                    [Main]
+                    name = test
+                    exec_cmd = runit.sh
+                    [Arguments]
+    
+                    [Inputs]
+                    input1 = /test/input1:float32[x,y,z]
+                    input2 = /test/input2:float32[x,y,z]
+    
+                    [Outputs]
+                    output1 = /test/output1:float32[x,y,z]
+                    output2 = /test/output2:float32[x,y,z]
+                    """))
+                f.flush()
+                args = argparse.Namespace(socket='none', pipes='unset',
+                                          start_time='1 hour ago', end_time=None, force=True,
+                                          module_config=f.name, url='http://localhost:8088')
+                module.start(args)
+                self.assertTrue(built_pipes)

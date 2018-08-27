@@ -60,7 +60,6 @@ def _display_keep(keep: int) -> str:
 
 
 def _display_status(locked: bool, active: bool) -> str:
-    print(locked, active)
     if active:
         return click.style("\u25CF ", fg="green") + "[active]"
     elif locked:

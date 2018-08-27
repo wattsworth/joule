@@ -23,6 +23,7 @@ class Pipe:
         self.module: 'Module' = module
         self.stream: 'Stream' = stream
         self._layout = layout
+        self.closed = False
 
     def enable_cache(self, lines: int):
         if self.direction == Pipe.DIRECTION.INPUT:

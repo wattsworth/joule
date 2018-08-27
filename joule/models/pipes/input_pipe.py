@@ -104,6 +104,7 @@ class InputPipe(Pipe):
         return self.interval_break
 
     async def close(self):
+        self.closed = True
         if self.close_cb is not None:
             # used to close socket pipes
             await self.close_cb()

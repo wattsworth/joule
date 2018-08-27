@@ -85,12 +85,12 @@ class MockStore(DataStore):
         if start is None:
             if end is None:
                 # just a random set of intervals
-                return [[0, 100],[200, 300]]
+                return [[0, 100], [200, 300]]
             else:
                 return [[end - 10, end]]
         else:
             if end is None:
-                return [[start, start+10]]
+                return [[start, start + 10]]
             else:
                 return [[start, end]]
 
@@ -161,3 +161,8 @@ class MockSupervisor:
                 break
             if self.subscription_pipe.end_of_interval:
                 pipe.close_interval_nowait()
+
+        def unsubscribe():
+            pass
+
+        return unsubscribe

@@ -3,8 +3,10 @@ import argparse
 import sys
 import os
 import configparser
+import dateparser
+from typing import Tuple
 
-from joule.models import module
+from joule.models import module, ConfigurationError
 
 """ helpers for handling module arguments
     Complicated because we want to look for module_config
@@ -43,3 +45,24 @@ def _append_args(module_config_file):
         args += ["--" + arg, value]
     return args
 
+
+def read_module_config(file_path: str) -> configparser.ConfigParser:
+    config = configparser.ConfigParser()
+    try:
+        # can only happen if process does not have read permissions
+        if len(config.read(file_path)) != 1:
+            raise ConfigurationError("Cannot read module config [%s]" % file_path)
+    except configparser.Error as e:
+        raise ConfigurationError("Invalid module config: %s" % str(e))
+    return config
+
+
+def validate_time_bounds(start: str, end: str) -> Tuple[int, int]:
+    if start is not None:
+        start = int(dateparser.parse(start).timestamp() * 1e6)
+    if end is not None:
+        end = int(dateparser.parse(end).timestamp() * 1e6)
+    if start is not None and end is not None:
+        if start >= end:
+            raise ConfigurationError("start [%d] must be < end [%d]" % (start, end))
+    return start, end

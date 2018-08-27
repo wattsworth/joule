@@ -19,9 +19,17 @@ from joule.models.pipes import InputPipe, EmptyPipe
 def data_read(config, start, end, max_rows, decimation_level, show_bounds, mark_intervals, stream):
     params = {"path": stream}
     if start is not None:
-        params['start'] = int(dateparser.parse(start).timestamp() * 1e6)
+        time = dateparser.parse(start)
+        if time is None:
+            click.echo("Error: invalid start time: [%s]" % start)
+            exit(1)
+        params['start'] = int(time.timestamp() * 1e6)
     if end is not None:
-        params['end'] = int(dateparser.parse(end).timestamp() * 1e6)
+        time = dateparser.parse(end)
+        if time is None:
+            click.echo("Error: invalid end time: [%s]" % end)
+            exit(1)
+        params['end'] = int(time.timestamp() * 1e6)
     if max_rows is not None:
         params['max-rows'] = max_rows
     if decimation_level is not None:

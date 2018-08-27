@@ -19,7 +19,7 @@ def timestamp_to_human(timestamp: int) -> str:
     if timestamp == max_timestamp:
         return "(maximum)"
     dt = datetime.datetime.fromtimestamp(timestamp_to_unix(timestamp))
-    return dt.strftime("%a, %d %b %Y %H:%M:%S.%f %z")
+    return dt.strftime("%a, %d %b %Y %H:%M:%S %z")
 
 
 def unix_to_timestamp(unix):

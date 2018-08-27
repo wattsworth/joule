@@ -1,6 +1,7 @@
 import asyncio
 
 from . import base_module
+from joule.models import ConfigurationError
 
 
 class CompositeModule(base_module.BaseModule):
@@ -11,8 +12,15 @@ class CompositeModule(base_module.BaseModule):
         assert False, "implement in child class"  # pragma: no cover
 
     def run_as_task(self, parsed_args, loop):
-        coro = self._build_pipes(parsed_args, loop)
-        (pipes_in, pipes_out) = loop.run_until_complete(coro)
+        # to appease type checker
+        pipes_in = {}
+        pipes_out = {}
+        try:
+            coro = self._build_pipes(parsed_args, loop)
+            (pipes_in, pipes_out) = loop.run_until_complete(coro)
+        except ConfigurationError as e:
+            print("Configuration Error: %s" % str(e))
+            exit(1)
         coro = self.setup(parsed_args,
                           pipes_in,
                           pipes_out,

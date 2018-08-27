@@ -145,11 +145,10 @@ def main(argv=None):
     parser = argparse.ArgumentParser("Joule Daemon")
     parser.add_argument("--config", default="/etc/joule/main.conf")
     args = parser.parse_args(argv)
-    logging.basicConfig(level=logging.DEBUG)
     log.addFilter(LogDedupFilter())
     logging.basicConfig(
         format='%(asctime)s %(levelname)s:%(message)s',
-        level=logging.WARNING)
+        level=logging.DEBUG)
     if args.config is not None:
         if os.path.isfile(args.config) is False:
             log.error("Invalid configuration: cannot load file [%s]" % args.config)

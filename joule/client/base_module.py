@@ -7,7 +7,7 @@ import logging
 import socket
 
 from . import helpers
-from joule.models import pipes
+from joule.models import pipes, ConfigurationError
 
 Pipes = Dict[str, pipes.Pipe]
 Loop = asyncio.AbstractEventLoop
@@ -54,7 +54,7 @@ class BaseModule:
         loop.add_signal_handler(signal.SIGTERM, stop_task)
         try:
             loop.run_until_complete(task)
-        except asyncio.CancelledError:
+        except asyncio.CancelledError: # TODO: catch EmptyPipe errors?
             pass
         if runner is not None:
             loop.run_until_complete(runner.cleanup())
@@ -88,12 +88,17 @@ class BaseModule:
                          default="unset",
                          help="specify directory of stream configs " +
                               "for isolated execution")
+        grp.add_argument("--url", default="http://localhost:8088",
+                         help="joule node for isolated execution")
         # --start_time: historical isolation mode
-        grp.add_argument("--start_time",
+        grp.add_argument("--start_time", default=None,
                          help="input start time for historic isolation")
         # --end_time: historical isolation mode
-        grp.add_argument("--end_time",
+        grp.add_argument("--end_time", default=None,
                          help="input end time for historic isolation")
+        # --force: do not ask for confirmation
+        grp.add_argument("--force", action="store_true",
+                         help="do not ask for confirmation before dangerous operations")
 
         parser.formatter_class = argparse.RawDescriptionHelpFormatter
         self.custom_args(parser)
@@ -101,8 +106,26 @@ class BaseModule:
     async def _build_pipes(self, parsed_args, loop: Loop) -> Tuple[Pipes, Pipes]:
         pipe_args = parsed_args.pipes
 
-        # run the module within joule
-        (pipes_in, pipes_out) = helpers.build_fd_pipes(pipe_args, loop)
+        # figure out whether we should run with fd's or network sockets
+        if pipe_args == 'unset':
+            start, end = helpers.validate_time_bounds(parsed_args.start_time,
+                                                      parsed_args.end_time)
+            if parsed_args.module_config == 'unset':
+                raise ConfigurationError('must specify module config')
+            inputs = {}
+            outputs = {}
+            module_config = helpers.read_module_config(parsed_args.module_config)
+            if 'Inputs' in module_config:
+                for name, path in module_config['Inputs'].items():
+                    inputs[name] = path
+            if 'Outputs' in module_config:
+                for name, path in module_config['Outputs'].items():
+                    outputs[name] = path
+            (pipes_in, pipes_out) = await helpers.build_network_pipes(
+                inputs, outputs, parsed_args.url, start, end, loop, parsed_args.force)
+        else:
+            # run the module within joule
+            (pipes_in, pipes_out) = helpers.build_fd_pipes(pipe_args, loop)
         # keep track of the pipes so they can be closed
         self.pipes = list(pipes_in.values()) + list(pipes_out.values())
         return pipes_in, pipes_out

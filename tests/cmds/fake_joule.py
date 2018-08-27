@@ -75,9 +75,9 @@ class FakeJoule:
         with redirect_stdout(f):
             web.run_app(self.app, host='127.0.0.1', port=port)
 
-    def add_stream(self, path, stream: Stream, info: StreamInfo, data: Optional[np.ndarray],
+    def add_stream(self, path, my_stream: Stream, info: StreamInfo, data: Optional[np.ndarray],
                    intervals: Optional[List] = None):
-        self.streams[path] = MockDbEntry(stream, info, data, intervals)
+        self.streams[path] = MockDbEntry(my_stream, info, data, intervals)
 
     async def create_stream(self, request: web.Request):
         if self.stub_stream_create:
@@ -92,7 +92,7 @@ class FakeJoule:
         else:
             new_stream.id += 100  # give the stream  a unique id
 
-        self.streams[path] = MockDbEntry(new_stream, StreamInfo(None, None, None))
+        self.streams[path+'/'+new_stream.name] = MockDbEntry(new_stream, StreamInfo(None, None, None))
         return web.json_response(data=new_stream.to_json())
 
     async def delete_stream(self, request: web.Request):

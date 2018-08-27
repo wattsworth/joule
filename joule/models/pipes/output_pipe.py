@@ -57,6 +57,9 @@ class OutputPipe(Pipe):
         await self.writer.drain()
 
     async def close(self):
+        self.closed = True
+        if self.close_cb is not None:
+            await self.close_cb()
         if self.writer is not None:
             self.writer.close()
             # TODO: available in python3.7
@@ -64,5 +67,3 @@ class OutputPipe(Pipe):
             # Hack to close the transport
             await asyncio.sleep(0.01)
             self.writer = None
-        if self.close_cb is not None:
-            await self.close_cb()

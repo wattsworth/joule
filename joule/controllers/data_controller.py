@@ -1,10 +1,14 @@
 from sqlalchemy.orm import Session
 from aiohttp import web
 import numpy as np
+import asyncio
+import logging
 
 from joule.models import (folder, DataStore, Stream,
                           InsufficientDecimationError, DataError,
                           pipes, Supervisor, SubscriptionError)
+
+log = logging.getLogger('joule')
 
 
 async def read_json(request: web.Request):
@@ -109,6 +113,8 @@ async def _read(request: web.Request, json):
             data_blocks.append(data_segment.tolist())
         return web.json_response({"data": data_blocks, "decimation_factor": decimation_factor})
     else:
+        if resp is None:
+            return web.json_response(text="this stream has no data", status=400)
         return resp
 
 
@@ -130,7 +136,7 @@ async def _subscribe(request: web.Request, json: bool):
         return web.Response(text="stream does not exist", status=404)
     pipe = pipes.LocalPipe(stream.layout)
     try:
-        supervisor.subscribe(stream, pipe)
+        unsubscribe = supervisor.subscribe(stream, pipe)
     except SubscriptionError:
         return web.Response(text="stream is not being produced", status=400)
     resp = web.StreamResponse(status=200,
@@ -138,16 +144,22 @@ async def _subscribe(request: web.Request, json: bool):
                                        'joule-decimation': '1'})
     resp.enable_chunked_encoding()
     await resp.prepare(request)
-    while True:
-        try:
-            data = await pipe.read()
-        except pipes.EmptyPipe:
-            return resp
-        pipe.consume(len(data))
-        if len(data) > 0:
-            await resp.write(data.tostring())
-        if pipe.end_of_interval:
-            await resp.write(pipes.interval_token(stream.layout).tostring())
+    try:
+        while True:
+            try:
+                data = await pipe.read()
+            except pipes.EmptyPipe:
+                unsubscribe()
+                return resp
+            pipe.consume(len(data))
+            if len(data) > 0:
+                await resp.write(data.tostring())
+            if pipe.end_of_interval:
+                await resp.write(pipes.interval_token(stream.layout).tostring())
+    except asyncio.CancelledError as e:
+        unsubscribe()
+        # propogate the CancelledError up
+        raise e
 
 
 async def intervals(request: web.Request):
@@ -195,9 +207,16 @@ async def write(request: web.Request):
     if stream is None:
         return web.Response(text="stream does not exist", status=404)
     # spawn in inserter task
+    stream.is_destination = True
+    db.commit()
     pipe = pipes.InputPipe(name="inbound", stream=stream, reader=request.content)
     task = data_store.spawn_inserter(stream, pipe, request.loop, insert_period=0)
-    await task
+    try:
+        await task
+    except DataError as e:
+        return web.Response(text=str(e), status=400)
+    stream.is_destination = False
+    db.commit()
     return web.Response(text="ok")
 
 

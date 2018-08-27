@@ -318,12 +318,12 @@ class Worker:
                 data = await child_output.read()
                 child_output.consume(len(data))
                 if len(data) > 0:
-                    for s in subscribers:
+                    for i in range(len(subscribers)):
                         try:
-                            await s.write(data)
+                            await subscribers[i].write(data)
                         except (ConnectionResetError, BrokenPipeError):
-                            print("error writing data to subscriber")
-                            pass  # TODO: remove the subscriber
+                            log.warning("subsriber write error [%s] " % subscribers[i].stream)
+                            del subscribers[i]
                 if child_output.end_of_interval:
                     for s in subscribers:
                         await s.close_interval()

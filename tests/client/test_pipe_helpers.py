@@ -26,7 +26,7 @@ class TestPipeHelpers(FakeJouleTestCase):
             pipes_in, pipes_out = await build_network_pipes({'input': '/test/source:uint8[x,y,z]'},
                                                             {},
                                                             url,
-                                                            0, 100, loop)
+                                                            0, 100, loop, force=True)
             blk1 = await pipes_in['input'].read()
             self.assertTrue(pipes_in['input'].end_of_interval)
             pipes_in['input'].consume(len(blk1))
@@ -39,7 +39,10 @@ class TestPipeHelpers(FakeJouleTestCase):
             with self.assertRaises(pipes.EmptyPipe):
                 await pipes_in['input'].read()
 
-        loop.run_until_complete(runner())
+        f = io.StringIO()
+        with redirect_stdout(f):
+            loop.run_until_complete(runner())
+        self.assertIn("historic connection", f.getvalue())
         self.stop_server()
 
     def test_builds_live_input_pipes(self):
@@ -66,7 +69,10 @@ class TestPipeHelpers(FakeJouleTestCase):
             with self.assertRaises(pipes.EmptyPipe):
                 await pipes_in['input'].read()
 
-        loop.run_until_complete(runner())
+        f = io.StringIO()
+        with redirect_stdout(f):
+            loop.run_until_complete(runner())
+        self.assertIn("live connection", f.getvalue())
         self.stop_server()
 
     def test_builds_output_pipes(self):
@@ -107,7 +113,7 @@ class TestPipeHelpers(FakeJouleTestCase):
 
         async def runner():
             # the destination does not exist
-            resp = requests.get(url+'/stream.json?path=/test/dest')
+            resp = requests.get(url + '/stream.json?path=/test/dest')
             self.assertEqual(resp.status_code, 404)
             pipes_in, pipes_out = await build_network_pipes({},
                                                             {'output': '/test/dest:uint8[e0,e1,e2]'},
@@ -115,8 +121,9 @@ class TestPipeHelpers(FakeJouleTestCase):
                                                             None, None, loop)
             await pipes_out['output'].close()
             # make sure the stream exists
-            resp = requests.get(url+'/stream.json?path=/test/dest')
+            resp = requests.get(url + '/stream.json?path=/test/dest')
             self.assertEqual(resp.status_code, 200)
+
         f = io.StringIO()
         with redirect_stdout(f):
             loop.run_until_complete(runner())
@@ -128,8 +135,10 @@ class TestPipeHelpers(FakeJouleTestCase):
 
         # must specify an inline configuration
         with self.assertRaises(ConfigurationError) as e:
-            loop.run_until_complete(build_network_pipes({'input': '/test/source'},
-                                                        {}, 'empty', 10, 20, loop))
+            f = io.StringIO()
+            with redirect_stdout(f):
+                loop.run_until_complete(build_network_pipes({'input': '/test/source'},
+                                                            {}, 'empty', 10, 20, loop, force=True))
         self.assertIn('inline', str(e.exception))
 
     def test_input_errors(self):
@@ -140,8 +149,10 @@ class TestPipeHelpers(FakeJouleTestCase):
 
         # errors on layout differences
         with self.assertRaises(ConfigurationError) as e:
-            loop.run_until_complete(build_network_pipes({'input': '/test/source:uint8[x,y]'},
-                                                        {}, url, 10, 20, loop))
+            f = io.StringIO()
+            with redirect_stdout(f):
+                loop.run_until_complete(build_network_pipes({'input': '/test/source:uint8[x,y]'},
+                                                            {}, url, 10, 20, loop, force=True))
         self.assertIn('uint8_3', str(e.exception))
 
         # errors if live stream is requested but unavailable
