@@ -92,7 +92,7 @@ class FakeJoule:
         else:
             new_stream.id += 100  # give the stream  a unique id
 
-        self.streams[path+'/'+new_stream.name] = MockDbEntry(new_stream, StreamInfo(None, None, None))
+        self.streams[path + '/' + new_stream.name] = MockDbEntry(new_stream, StreamInfo(None, None, None))
         return web.json_response(data=new_stream.to_json())
 
     async def delete_stream(self, request: web.Request):
@@ -124,7 +124,12 @@ class FakeJoule:
     async def data_remove(self, request: web.Request):
         if self.stub_data_remove:
             return web.Response(text=self.response, status=self.http_code)
-        self.msgs.put((request.query['path'], request.query['start'], request.query['end']))
+        tag = '??'
+        if 'path' in request.query:
+            tag = request.query['path']
+        elif 'id' in request.query:
+            tag = request.query['id']
+        self.msgs.put((tag, request.query['start'], request.query['end']))
         return web.Response(text="ok")
 
     async def data_read(self, request: web.Request):
@@ -160,13 +165,13 @@ class FakeJoule:
         while True:
             try:
                 chunk = await pipe.read()
-                if len(chunk)>0:
+                if len(chunk) > 0:
                     if istart is None:
                         istart = chunk['timestamp'][0]
                     iend = chunk['timestamp'][-1]
                 pipe.consume(len(chunk))
                 if pipe.end_of_interval and istart is not None and iend is not None:
-                    mock_entry.intervals.append([istart,iend])
+                    mock_entry.intervals.append([istart, iend])
                     istart = None
                     iend = None
                 mock_entry.add_data(chunk)

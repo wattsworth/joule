@@ -2,6 +2,7 @@ import asyncio
 import numpy as np
 import requests
 import io
+from unittest import mock
 from contextlib import redirect_stdout
 
 from joule.utilities.pipe_builders import build_network_pipes
@@ -38,10 +39,10 @@ class TestPipeHelpers(FakeJouleTestCase):
             with self.assertRaises(pipes.EmptyPipe):
                 await pipes_in['input'].read()
 
-        f = io.StringIO()
-        with redirect_stdout(f):
+        with self.assertLogs(level='INFO') as log:
             loop.run_until_complete(runner())
-        self.assertIn("historic connection", f.getvalue())
+        log_dump = ' '.join(log.output)
+        self.assertIn("historic connection", log_dump)
         self.stop_server()
 
     def test_builds_live_input_pipes(self):
@@ -68,10 +69,10 @@ class TestPipeHelpers(FakeJouleTestCase):
             with self.assertRaises(pipes.EmptyPipe):
                 await pipes_in['input'].read()
 
-        f = io.StringIO()
-        with redirect_stdout(f):
+        with self.assertLogs(level='INFO') as log:
             loop.run_until_complete(runner())
-        self.assertIn("live connection", f.getvalue())
+        log_dump = ' '.join(log.output)
+        self.assertIn("live connection", log_dump)
         self.stop_server()
 
     def test_builds_output_pipes(self):
@@ -88,7 +89,7 @@ class TestPipeHelpers(FakeJouleTestCase):
             pipes_in, pipes_out = await build_network_pipes({},
                                                             {'output': '/test/dest:uint8[e0,e1,e2]'},
                                                             url,
-                                                            None, None, loop)
+                                                            10, 100, loop, force=True)
             await pipes_out['output'].write(blk1)
             await pipes_out['output'].close_interval()
             await pipes_out['output'].write(blk2)
@@ -96,11 +97,72 @@ class TestPipeHelpers(FakeJouleTestCase):
             await pipes_out['output'].close()
 
         loop.run_until_complete(runner())
+        # first msg should be the data removal
+        (stream_id, start, end) = self.msgs.get()
+        self.assertEqual(int(stream_id), 8)
+        self.assertEqual(int(start), 10)
+        self.assertEqual(int(end), 100)
+        # next message should be the output data
         mock_entry: MockDbEntry = self.msgs.get()
         np.testing.assert_array_equal(mock_entry.data[:len(blk1)], blk1)
         np.testing.assert_array_equal(mock_entry.data[len(blk1):], blk2)
         self.assertEqual(mock_entry.intervals, [[10, 19], [200, 209]])
 
+        self.stop_server()
+
+    def test_warns_before_data_removal(self):
+        server = FakeJoule()
+        create_destination(server)
+
+        url = self.start_server(server)
+        loop = asyncio.get_event_loop()
+
+        async def runner():
+            with mock.patch('joule.utilities.pipe_builders.click') as mock_click:
+                mock_click.confirm = mock.Mock(return_value=False)
+                with self.assertRaises(SystemExit):
+                    await build_network_pipes({},
+                                              {'output': '/test/dest:uint8[e0,e1,e2]'},
+                                              url,
+                                              1472500708000000, 1476475108000000,
+                                              loop, force=False)
+                msg = mock_click.confirm.call_args[0][0]
+                # check for start time
+                self.assertIn("29 Aug", msg)
+                # check for end time
+                self.assertIn("14 Oct", msg)
+
+                # if end_time not specified anything *after* start is removed
+                mock_click.confirm = mock.Mock(return_value=False)
+                with self.assertRaises(SystemExit):
+                    await build_network_pipes({},
+                                              {'output': '/test/dest:uint8[e0,e1,e2]'},
+                                              url,
+                                              1472500708000000, None,
+                                              loop, force=False)
+                msg = mock_click.confirm.call_args[0][0]
+                # check for start time
+                self.assertIn("29 Aug", msg)
+                # check for *after*
+                self.assertIn("after", msg)
+
+                # if start_time not specified anything *before* end is removed
+                mock_click.confirm = mock.Mock(return_value=False)
+                with self.assertRaises(SystemExit):
+                    await build_network_pipes({},
+                                              {'output': '/test/dest:uint8[e0,e1,e2]'},
+                                              url,
+                                              None, 1476475108000000,
+                                              loop, force=False)
+                msg = mock_click.confirm.call_args[0][0]
+                # check for *before*
+                self.assertIn("before", msg)
+                # check for end time
+                self.assertIn("14 Oct", msg)
+
+        # suppress "cancelled" notifications when program exits
+        with self.assertLogs(level='INFO'):
+            loop.run_until_complete(runner())
         self.stop_server()
 
     def test_creates_output_stream_if_necessary(self):
@@ -123,10 +185,10 @@ class TestPipeHelpers(FakeJouleTestCase):
             resp = requests.get(url + '/stream.json?path=/test/dest')
             self.assertEqual(resp.status_code, 200)
 
-        f = io.StringIO()
-        with redirect_stdout(f):
+        with self.assertLogs(level='INFO') as log:
             loop.run_until_complete(runner())
-        self.assertIn('creating', f.getvalue())
+        log_dump = ' '.join(log.output)
+        self.assertIn('creating', log_dump)
         self.stop_server()
 
     def test_configuration_errors(self):
@@ -134,11 +196,11 @@ class TestPipeHelpers(FakeJouleTestCase):
 
         # must specify an inline configuration
         with self.assertRaises(ConfigurationError) as e:
-            f = io.StringIO()
-            with redirect_stdout(f):
+            with self.assertLogs(level='INFO') as log:
                 loop.run_until_complete(build_network_pipes({'input': '/test/source'},
                                                             {}, 'empty', 10, 20, loop, force=True))
-        self.assertIn('inline', str(e.exception))
+            log_dump = ' '.join(log.output)
+            self.assertIn('inline', log_dump)
 
     def test_input_errors(self):
         server = FakeJoule()
@@ -148,8 +210,7 @@ class TestPipeHelpers(FakeJouleTestCase):
 
         # errors on layout differences
         with self.assertRaises(ConfigurationError) as e:
-            f = io.StringIO()
-            with redirect_stdout(f):
+            with self.assertLogs(level='INFO'):
                 loop.run_until_complete(build_network_pipes({'input': '/test/source:uint8[x,y]'},
                                                             {}, url, 10, 20, loop, force=True))
         self.assertIn('uint8_3', str(e.exception))
@@ -186,7 +247,7 @@ class TestPipeHelpers(FakeJouleTestCase):
 
 def create_destination(server):
     # create an empty destination stream
-    dest = Stream(id=0, name="dest", keep_us=100, datatype=Stream.DATATYPE.UINT8)
+    dest = Stream(id=8, name="dest", keep_us=100, datatype=Stream.DATATYPE.UINT8)
     dest.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
 
     # destination has no data

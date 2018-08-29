@@ -73,3 +73,6 @@ class OutputPipe(Pipe):
             # Hack to close the transport
             await asyncio.sleep(0.01)
             self.writer = None
+        # close any subscribers
+        for pipe in self.subscribers:
+            await pipe.close()

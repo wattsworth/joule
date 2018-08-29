@@ -73,7 +73,7 @@ def _display_warning(paths, start_time, end_time):
         output_paths = ", ".join([x.split(':')[0] for x in paths])
         if not click.confirm("This will remove any data %s in the output streams [%s]" % (
                 msg, output_paths)):
-            print("cancelled")
+            log.info("cancelled")
             exit(1)
 
 
@@ -110,12 +110,12 @@ def request_network_input(path: str, my_stream: stream.Stream, url: str,
 
 async def _live_reader(url: str, my_stream: stream.Stream, pipe_out: pipes.Pipe):
     async with aiohttp.ClientSession() as session:
-        print("requesting live connection to [%s]" % my_stream.name)
+        log.info("requesting live connection to [%s]" % my_stream.name)
         params = {'id': my_stream.id, 'subscribe': '1'}
         async with session.get(url + "/data", params=params) as response:
             if response.status != 200:  # pragma: no cover
                 msg = await response.text()
-                print("Error reading input [%s]: " % my_stream.name, msg)
+                log.error("Error reading input [%s]: " % my_stream.name, msg)
                 await pipe_out.close()
                 return
             pipe_in = pipes.InputPipe(stream=my_stream, reader=response.content)
@@ -133,7 +133,7 @@ async def _live_reader(url: str, my_stream: stream.Stream, pipe_out: pipes.Pipe)
 
 async def _historic_reader(url: str, my_stream: stream.Stream, pipe_out: pipes.Pipe, start_time, end_time):
     async with aiohttp.ClientSession() as session:
-        print("requesting historic connection to [%s]" % my_stream.name)
+        log.info("requesting historic connection to [%s]" % my_stream.name)
         params = {'id': my_stream.id}
         if start_time is not None:
             params['start'] = start_time
@@ -142,7 +142,7 @@ async def _historic_reader(url: str, my_stream: stream.Stream, pipe_out: pipes.P
         async with session.get(url + "/data", params=params) as response:
             if response.status != 200:  # pragma: no cover
                 msg = await response.text()
-                print("Error reading input [%s]: " % my_stream.name, msg)
+                log.error("Error reading input [%s]: " % my_stream.name, msg)
                 await pipe_out.close()
                 return
             pipe_in = pipes.InputPipe(stream=my_stream, reader=response.content)
@@ -193,7 +193,7 @@ async def request_network_output(path: str, my_stream: stream.Stream, url: str, 
 
 
 async def _create_stream(url, path, my_stream: stream.Stream):
-    print("creating destination stream [%s]" % path)
+    log.info("creating destination stream [%s]" % path)
     folder_path = '/'.join(path.split('/')[:-1])
     body = {
         "path": folder_path,
@@ -245,9 +245,9 @@ async def _output_writer(url, my_stream: stream.Stream, pipe):
                                         data=_data_sender()) as response:
                     if response.status != 200:  # pragma: no cover
                         msg = await response.text()
-                        print("Error writing output [%s]" % my_stream.name, msg)
+                        log.error("Error writing output [%s]" % my_stream.name, msg)
                         return
-            except aiohttp.ClientError as e:
+            except aiohttp.ClientError as e:  # pragma: no cover
                 log.info("Error submitting data to joule [%s], retrying" % str(e))
 
 

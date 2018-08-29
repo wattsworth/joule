@@ -53,15 +53,18 @@ def run(pipe_config: str, db: Session) -> Stream:
 
 
 def strip_remote_pipe_config(pipe_config: str) -> (str, str):
-    # check for the remote URL and port, return stripped config and info
-    if pipe_config[0] == '/':
-        return pipe_config, None
-    # this is a remote stream, parse the URL and port
-    pieces = pipe_config.split(':')[0]
-    url = pieces[0]
-    pieces = pieces[1].split('/')
-    port = int(pieces[0])
-    pipe_config = '/' + pieces[1]
+    try:
+        # check for the remote URL and port, return stripped config and info
+        if pipe_config[0] == '/':
+            return pipe_config, None
+        # this is a remote stream, parse the URL and port
+        pieces = pipe_config.split(':')[0]
+        url = pieces[0]
+        pieces = pieces[1].split('/')
+        port = int(pieces[0])
+        pipe_config = '/' + pieces[1]
+    except (ValueError, IndexError):
+        raise ConfigurationError("invalid pipe configuration [%s]" % pipe_config)
     return pipe_config, '%s:%d' % (url, port)
 
 

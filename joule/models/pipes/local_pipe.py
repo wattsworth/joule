@@ -175,8 +175,13 @@ class LocalPipe(Pipe):
         self.closed = True
         if self.close_cb is not None:
             await self.close_cb()
+        # close any subscribers
+        for pipe in self.subscribers:
+            await pipe.close()
 
     def close_nowait(self):
         self.closed = True
+        if len(self.subscribers) > 0:
+            raise PipeError("cannot close_nowait subscribers, use async")
         if self.close_cb is not None:
             raise PipeError("close_cb cannot be executed, use async")

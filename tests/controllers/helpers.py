@@ -147,7 +147,7 @@ class MockSupervisor:
         self.subscribed_stream = None
         self.raise_error = False
 
-    def subscribe(self, stream: Stream, pipe: pipes.LocalPipe):
+    def subscribe(self, stream: Stream, pipe: pipes.LocalPipe, loop: Loop):
         if self.raise_error:
             raise SubscriptionError()
 

@@ -4,7 +4,8 @@ import logging
 
 from joule.models import Worker, Stream, pipes
 from joule.errors import SubscriptionError
-
+from joule.utilities.pipe_builders import request_network_input
+from joule.utilities.pipe_builders import request_network_output
 
 Tasks = List[asyncio.Task]
 Loop = asyncio.AbstractEventLoop
@@ -70,7 +71,6 @@ class Supervisor:
         return None
 
     async def _connect_remote_outputs(self, worker: Worker, loop: Loop):
-        from joule.utilities.pipe_builders import request_network_output
         remote_streams = [stream for stream in worker.subscribers if stream.is_remote]
         for stream in remote_streams:
             pipe = await request_network_output(stream.remote_path, stream,
@@ -80,9 +80,7 @@ class Supervisor:
             self.remote_outputs[stream] = pipe
 
     def _connect_remote_input(self, stream: Stream, pipe: pipes.Pipe, loop: Loop):
-        from joule.utilities.pipe_builders import request_network_input
         if stream in self.remote_inputs:
-            # TODO: support subscriptions to OutputPipes
             return self.remote_inputs[stream].subscribe(pipe)
 
         request_network_input(stream.remote_path,
