@@ -6,7 +6,8 @@ import logging
 
 from joule.models import (folder, DataStore, Stream,
                           InsufficientDecimationError, DataError,
-                          pipes, Supervisor, SubscriptionError)
+                          pipes, Supervisor)
+from joule.errors import SubscriptionError
 
 log = logging.getLogger('joule')
 
@@ -136,7 +137,7 @@ async def _subscribe(request: web.Request, json: bool):
         return web.Response(text="stream does not exist", status=404)
     pipe = pipes.LocalPipe(stream.layout)
     try:
-        unsubscribe = supervisor.subscribe(stream, pipe)
+        unsubscribe = supervisor.subscribe(stream, pipe, asyncio.get_event_loop())
     except SubscriptionError:
         return web.Response(text="stream is not being produced", status=400)
     resp = web.StreamResponse(status=200,

@@ -6,7 +6,8 @@ import requests
 import logging
 from typing import Dict, Tuple, Optional
 
-from joule.models import (stream, Stream, Element, pipes, ConfigurationError)
+from joule.models import stream, Element, pipes
+from joule.errors import ConfigurationError
 from joule.cmds.helpers import get_json, get
 from joule.services.parse_pipe_config import parse_pipe_config, parse_inline_config
 from joule.utilities import timestamp_to_human
@@ -38,19 +39,23 @@ def build_fd_pipes(pipe_args: str, loop: Loop) -> Tuple[Pipes, Pipes]:
 
 
 async def build_network_pipes(inputs: Dict[str, str], outputs: Dict[str, str],
-                              url: str, start_time, end_time, loop, force=False):
+                              url: str, start_time: Optional[int], end_time: Optional[int],
+                              loop: Loop, force=False):
     if not force:
         _display_warning(outputs.values(), start_time, end_time)
 
     pipes_in = {}
     for name in inputs:
         path, my_stream = _parse_stream(inputs[name])
-        pipes_in[name] = await _request_network_input(path, my_stream, url, start_time, end_time, loop)
+        pipe = pipes.LocalPipe(my_stream.layout, name=path)
+        pipes_in[name] = request_network_input(path, my_stream, url, pipe,
+                                               loop, start_time, end_time)
 
     pipes_out = {}
     for name in outputs:
         path, my_stream = _parse_stream(outputs[name])
-        pipes_out[name] = await _request_network_output(path, my_stream, url, start_time, end_time, loop)
+        pipes_out[name] = await request_network_output(path, my_stream, url, loop,
+                                                       start_time, end_time)
 
     return pipes_in, pipes_out
 
@@ -72,8 +77,10 @@ def _display_warning(paths, start_time, end_time):
             exit(1)
 
 
-async def _request_network_input(path: str, my_stream: Stream, url: str,
-                                 start_time: Optional[int], end_time: Optional[int], loop: Loop):
+def request_network_input(path: str, my_stream: stream.Stream, url: str,
+                          pipe: pipes.Pipe, loop: Loop,
+                          start_time: Optional[int] = None,
+                          end_time: Optional[int] = None):
     # make sure the input is compatible
     resp = get_json(url + "/stream.json", params={"path": path})
     src_stream = stream.from_json(resp)
@@ -84,7 +91,6 @@ async def _request_network_input(path: str, my_stream: Stream, url: str,
     if not src_stream.is_destination and (start_time is None and end_time is None):
         raise ConfigurationError("Input [%s] is not being produced, specify time bounds for historic execution" % path)
     # all checks passed, subscribe to the input
-    pipe = pipes.LocalPipe(src_stream.layout, name="path")
     if start_time is None and end_time is None:
         task = loop.create_task(_live_reader(url, src_stream, pipe))
     else:
@@ -102,7 +108,7 @@ async def _request_network_input(path: str, my_stream: Stream, url: str,
     return pipe
 
 
-async def _live_reader(url: str, my_stream: Stream, pipe_out: pipes.Pipe):
+async def _live_reader(url: str, my_stream: stream.Stream, pipe_out: pipes.Pipe):
     async with aiohttp.ClientSession() as session:
         print("requesting live connection to [%s]" % my_stream.name)
         params = {'id': my_stream.id, 'subscribe': '1'}
@@ -125,7 +131,7 @@ async def _live_reader(url: str, my_stream: Stream, pipe_out: pipes.Pipe):
             await pipe_out.close()
 
 
-async def _historic_reader(url: str, my_stream: Stream, pipe_out: pipes.Pipe, start_time, end_time):
+async def _historic_reader(url: str, my_stream: stream.Stream, pipe_out: pipes.Pipe, start_time, end_time):
     async with aiohttp.ClientSession() as session:
         print("requesting historic connection to [%s]" % my_stream.name)
         params = {'id': my_stream.id}
@@ -147,12 +153,13 @@ async def _historic_reader(url: str, my_stream: Stream, pipe_out: pipes.Pipe, st
                     await pipe_out.write(data)
                     if pipe_in.end_of_interval:
                         await pipe_out.close_interval()
-            except (asyncio.CancelledError, pipes.EmptyPipe) as e:
+            except (asyncio.CancelledError, pipes.EmptyPipe):
                 pass
             await pipe_out.close()
 
 
-async def _request_network_output(path: str, my_stream: Stream, url: str, start_time, end_time, loop: Loop):
+async def request_network_output(path: str, my_stream: stream.Stream, url: str, loop: Loop,
+                                 start_time=None, end_time=None):
     # check if the output exists, create it if not
     resp = get(url + "/stream.json", params={"path": path})
     if resp.status_code == 404:
@@ -185,7 +192,7 @@ async def _request_network_output(path: str, my_stream: Stream, url: str, start_
     return pipe
 
 
-async def _create_stream(url, path, my_stream: Stream):
+async def _create_stream(url, path, my_stream: stream.Stream):
     print("creating destination stream [%s]" % path)
     folder_path = '/'.join(path.split('/')[:-1])
     body = {
@@ -199,7 +206,7 @@ async def _create_stream(url, path, my_stream: Stream):
         return stream.from_json(resp.json())
 
 
-async def _remove_data(url, my_stream: Stream, start_time, end_time):
+async def _remove_data(url, my_stream: stream.Stream, start_time, end_time):
     params = {"id": my_stream.id}
     if start_time is not None:
         params['start'] = int(start_time)
@@ -211,7 +218,7 @@ async def _remove_data(url, my_stream: Stream, start_time, end_time):
                                  resp.content.decode())
 
 
-async def _output_writer(url, my_stream: Stream, pipe):
+async def _output_writer(url, my_stream: stream.Stream, pipe):
     output_complete = False
 
     async def _data_sender():
@@ -254,6 +261,6 @@ def _parse_stream(pipe_config) -> Tuple[str, stream.Stream]:
     for i in range(len(element_names)):
         elements.append(Element(name=element_names[i], index=i,
                                 display_type=Element.DISPLAYTYPE.CONTINUOUS))
-    my_stream = Stream(name=name, keep_us=Stream.KEEP_ALL, datatype=datatype)
+    my_stream = stream.Stream(name=name, keep_us=stream.Stream.KEEP_ALL, datatype=datatype)
     my_stream.elements = elements
     return path + '/' + my_stream.name, my_stream

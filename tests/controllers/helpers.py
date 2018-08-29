@@ -9,7 +9,8 @@ from typing import Optional, Callable, Coroutine
 from joule.models.data_store.errors import DataError, InsufficientDecimationError
 from joule.models import (Base, DataStore, Stream,
                           StreamInfo, DbInfo, pipes,
-                          worker, SubscriptionError)
+                          worker)
+from joule.errors import SubscriptionError
 from joule.services import parse_pipe_config
 from tests import helpers
 

@@ -2,7 +2,8 @@ import os
 import configparser
 import ipaddress
 
-from joule.models import config, ConfigurationError
+from joule.models import config
+from joule.errors import ConfigurationError
 
 
 def run(custom_values=None, verify=True) -> config.JouleConfig:

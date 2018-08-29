@@ -3,7 +3,7 @@ import configparser
 import tempfile
 
 from joule.services import load_config
-from joule.models import ConfigurationError
+from joule.errors import ConfigurationError
 
 
 class TestLoadConfigErrors(unittest.TestCase):

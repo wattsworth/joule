@@ -5,7 +5,7 @@ import logging
 import tempfile
 import os
 from joule.models import (Base, Stream, Folder,
-                          Element, Module, Pipe)
+                          Element, Module)
 from joule.services import load_modules
 
 logger = logging.getLogger('joule')

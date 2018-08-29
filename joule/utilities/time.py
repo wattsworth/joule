@@ -1,6 +1,8 @@
 import datetime
 
 # --------- Utility functions from Jim Paris ------------
+
+
 def time_now():
     return datetime.datetime.now().timestamp() * 1e6
 

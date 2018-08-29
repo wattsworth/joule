@@ -1,5 +1,5 @@
 import enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 import numpy as np
 import logging
 
@@ -24,6 +24,7 @@ class Pipe:
         self.stream: 'Stream' = stream
         self._layout = layout
         self.closed = False
+        self.subscribers: List['Pipe'] = []
 
     def enable_cache(self, lines: int):
         if self.direction == Pipe.DIRECTION.INPUT:
@@ -59,6 +60,18 @@ class Pipe:
         if self.direction == Pipe.DIRECTION.INPUT:
             raise PipeError("cannot write to an input pipe")
         raise PipeError("abstract method must be implemented by child")
+
+    def subscribe(self, pipe):
+        if self.direction == Pipe.DIRECTION.INPUT:
+            raise PipeError("cannot subscribe to an input pipe")
+
+        self.subscribers.append(pipe)
+
+        def unsubscribe():
+            i = self.subscribers.index(pipe)
+            del self.subscribers[i]
+
+        return unsubscribe
 
     async def close(self):
         # close the pipe, optionally implemented by the child

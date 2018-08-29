@@ -2,9 +2,9 @@ from aiohttp import web
 from sqlalchemy.orm import Session
 from joule.models import Stream, DataStore, stream
 import json
-import pdb
 
-from joule.models import folder, ConfigurationError
+from joule.models import folder
+from joule.errors import ConfigurationError
 
 
 async def index(request: web.Request):

@@ -2,7 +2,7 @@ from sqlalchemy.orm import relationship, backref, Session
 from sqlalchemy import Column, Integer, String, ForeignKey
 from typing import List, TYPE_CHECKING, Optional, Dict
 import logging
-from joule.models.errors import ConfigurationError
+from joule.errors import ConfigurationError
 from joule.models.stream import Stream
 from joule.models.data_store.data_store import StreamInfo
 from joule.models.meta import Base

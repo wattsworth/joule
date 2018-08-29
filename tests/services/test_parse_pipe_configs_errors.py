@@ -1,8 +1,8 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 import unittest
-from joule.models import (Base, Stream, Folder,
-                          Element, ConfigurationError)
+from joule.models import Base
+from joule.errors import ConfigurationError
 from joule.services import parse_pipe_config
 
 

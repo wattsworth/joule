@@ -21,6 +21,7 @@ class OutputPipe(Pipe):
     async def write(self, data):
         if not self._validate_data(data):
             return
+        # make sure dtype is structured
         sdata = self._apply_dtype(data)
 
         if self._caching:
@@ -46,7 +47,12 @@ class OutputPipe(Pipe):
     async def _write(self, sdata):
         if self.writer is None:
             self.writer = await self.writer_factory()
-        # make sure dtype is structured
+
+        # send data to subscribers
+        for pipe in self.subscribers:
+            await pipe.write(sdata)
+
+        # send data out
         self.writer.write(sdata.tostring())
         await self.writer.drain()
 

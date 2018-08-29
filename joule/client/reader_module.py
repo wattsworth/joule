@@ -1,10 +1,10 @@
 import asyncio
 import numpy as np
 import logging
-from . import base_module
+from joule.client.base_module import BaseModule
 
 
-class ReaderModule(base_module.BaseModule):
+class ReaderModule(BaseModule):
 
     async def run(self, parsed_args, output):
         # some logic...

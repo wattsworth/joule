@@ -1,7 +1,8 @@
 from typing import Dict
 import logging
 import configparser
-from joule.models import DatabaseConfig, ConfigurationError, config
+from joule.models import DatabaseConfig, config
+from joule.errors import ConfigurationError
 from joule.services.helpers import load_configs
 
 logger = logging.getLogger('joule')

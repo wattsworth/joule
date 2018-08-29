@@ -4,7 +4,8 @@ from sqlalchemy.orm import Session
 
 from tests import helpers
 from joule.services import parse_pipe_config
-from joule.models import Stream, Base, folder, Folder, ConfigurationError
+from joule.models import Stream, Base, folder, Folder
+from joule.errors import ConfigurationError
 
 
 class TestFolder(unittest.TestCase):

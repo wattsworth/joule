@@ -11,7 +11,7 @@ import psutil
 from joule.models.module import Module
 from joule.models.stream import Stream
 from joule.models.folder import get_stream_path
-from joule.models.errors import SubscriptionError
+from joule.errors import SubscriptionError
 from joule.models import pipes
 from joule.models.pipes.errors import EmptyPipe
 
@@ -204,10 +204,6 @@ class Worker:
     def log(self, msg):
         timestamp = datetime.datetime.now().isoformat()
         self._logs.append("[%s]: %s" % (timestamp, msg))
-        if self.process is None:
-            pid = '???'
-        else:
-            pid = self.process.pid
         # print("[%s: %s] " % (self.module.name, pid) + msg)
 
     @property
@@ -227,7 +223,7 @@ class Worker:
 
         return unsubscribe
 
-    async def _spawn_child(self, subscribe: Callable[[Stream, pipes.Pipe], Callable],
+    async def _spawn_child(self, subscribe: Callable[[Stream, pipes.Pipe, Loop], Callable],
                            loop: Loop) -> None:
         # lock so fd's don't pollute other modules
         await popen_lock.acquire()
@@ -332,7 +328,7 @@ class Worker:
             pass
 
     async def _subscribe_to_inputs(self,
-                                   subscribe: Callable[[Stream, pipes.Pipe], Callable],
+                                   subscribe: Callable[[Stream, pipes.Pipe, Loop], Callable],
                                    loop: Loop):
         # configure input pipes            [module]<==[worker]
         for (name, stream) in self.module.inputs.items():
@@ -343,7 +339,7 @@ class Worker:
             pipe = pipes.OutputPipe(name=name, stream=stream,
                                     writer=writer)
             try:
-                unsubscribe = subscribe(stream, pipe)
+                unsubscribe = subscribe(stream, pipe, loop)
             except SubscriptionError as e:
                 os.close(r)
                 await pipe.close()

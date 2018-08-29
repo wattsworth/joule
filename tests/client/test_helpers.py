@@ -2,7 +2,7 @@ import sys
 import tempfile
 
 from joule.client.helpers.args import module_args, validate_time_bounds, read_module_config
-from joule.models import ConfigurationError
+from joule.errors import ConfigurationError
 from tests.helpers import AsyncTestCase
 
 

@@ -4,9 +4,9 @@ import unittest
 import tempfile
 import logging
 import os
-import pdb
 import warnings
-from joule.models import (Base, Stream, Folder, Element, ConfigurationError)
+
+from joule.models import (Base, Stream, Folder, Element)
 from joule.services import load_streams
 
 logger = logging.getLogger('joule')

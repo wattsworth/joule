@@ -2,8 +2,8 @@ from sqlalchemy.orm import Session
 from typing import List, Dict, TYPE_CHECKING
 import logging
 
-from joule.models import (Module, Stream,
-                          ConfigurationError)
+from joule.models import (Module, Stream)
+from joule.errors import ConfigurationError
 from joule.models.module import from_config as module_from_config
 
 from joule.services import parse_pipe_config

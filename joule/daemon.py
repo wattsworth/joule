@@ -10,8 +10,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from typing import List
 
-from joule.models import (Base, Worker, Supervisor, config, ConfigurationError,
-                          SubscriptionError, DataStore, Stream, pipes)
+from joule.models import (Base, Worker, Supervisor, config,
+                          DataStore, Stream, pipes)
+from joule.errors import ConfigurationError, SubscriptionError
 from joule.models import NilmdbStore
 from joule.models.data_store.errors import DataError
 from joule.services import (load_modules, load_streams, load_config, load_databases)
@@ -87,7 +88,7 @@ class Daemon(object):
             log.error("Database error: %s" % e)
             exit(1)
         # start the supervisor (runs the workers)
-        self.supervisor.start(loop)
+        await self.supervisor.start(loop)
 
         # start inserters by subscribing to the streams
         inserter_tasks = []
@@ -131,7 +132,7 @@ class Daemon(object):
         while True:
             pipe = pipes.LocalPipe(layout=stream.layout, loop=loop, name=stream.name)
             # ignore unsubscribe callback, we are never going to use it
-            self.supervisor.subscribe(stream, pipe)
+            self.supervisor.subscribe(stream, pipe, loop)
             try:
                 await self.data_store.spawn_inserter(stream, pipe, loop)
                 break  # inserter terminated, program is closing

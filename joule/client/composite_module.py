@@ -1,7 +1,8 @@
 import asyncio
 
 from . import base_module
-from joule.models import ConfigurationError
+from joule.errors import ConfigurationError
+#from joule.models import ConfigurationError
 
 
 class CompositeModule(base_module.BaseModule):

@@ -2,31 +2,21 @@ import unittest
 from joule.models import Module, Worker, Supervisor
 from typing import List
 import functools
-import asyncio
 
 from tests import helpers
+from tests.helpers import AsyncTestCase
 
 
-class TestSupervisor(unittest.TestCase):
+class TestSupervisor(AsyncTestCase):
     NUM_WORKERS = 4
 
     def setUp(self):
-        self.loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
-        self.loop.set_debug(True)
-
+        super().setUp()
         self.workers: List[Worker] = []
         for x in range(TestSupervisor.NUM_WORKERS):
             module = Module(name="m%d" % x, exec_cmd="", uuid=x)
             self.workers.append(Worker(module))
         self.supervisor = Supervisor(self.workers)
-
-    def tearDown(self):
-        closed = self.loop.is_closed()
-        if not closed:
-            self.loop.call_soon(self.loop.stop)
-            self.loop.run_forever()
-            self.loop.close()
-        asyncio.set_event_loop(None)
 
     def test_returns_workers(self):
         self.assertEqual(self.workers, self.supervisor.workers)
@@ -47,7 +37,7 @@ class TestSupervisor(unittest.TestCase):
             worker.run = functools.partial(mock_run, worker.module.uuid)
             worker.stop = functools.partial(mock_stop, worker.module.uuid)
 
-        self.supervisor.start(self.loop)
+        self.loop.run_until_complete(self.supervisor.start(self.loop))
         self.loop.run_until_complete(self.supervisor.stop(self.loop))
         # make sure each worker ran
         for worker in self.workers:

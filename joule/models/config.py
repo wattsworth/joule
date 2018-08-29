@@ -3,11 +3,8 @@ Configuration data structure for joule
 Use load_configs to retrieve Configs object
 """
 
-import configparser
-import ipaddress
-import os
 import enum
-from joule.models import ConfigurationError
+from joule.errors import ConfigurationError
 
 DEFAULT_CONFIG = {
     "Main":

@@ -1,6 +1,6 @@
 import unittest
 from unittest import mock
-from joule.models import (ConfigurationError)
+from joule.errors import ConfigurationError
 from joule.models import stream  # for helper functions
 from tests import helpers
 

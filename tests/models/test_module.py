@@ -1,5 +1,5 @@
-from joule.models import module, ConfigurationError, Stream, Element
-
+from joule.models import module, Stream, Element
+from joule.errors import ConfigurationError
 from tests import helpers
 import unittest
 

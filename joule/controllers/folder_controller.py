@@ -1,11 +1,11 @@
 from aiohttp import web
 import json
-import sqlalchemy
 from sqlalchemy.exc import CircularDependencyError
 from sqlalchemy.orm import Session
 from typing import List
 
-from joule.models import folder, Folder, ConfigurationError
+from joule.models import folder, Folder
+from joule.errors import ConfigurationError
 
 
 async def move(request):

@@ -4,10 +4,9 @@ import requests
 import io
 from contextlib import redirect_stdout
 
-from joule.client.helpers import pipes
-
-from joule.client.helpers.pipes import build_network_pipes
-from joule.models import Stream, Element, StreamInfo, pipes, ConfigurationError
+from joule.utilities.pipe_builders import build_network_pipes
+from joule.models import Stream, Element, StreamInfo, pipes
+from joule.errors import ConfigurationError
 
 from tests import helpers
 from tests.cmds.fake_joule import FakeJoule, FakeJouleTestCase, MockDbEntry

@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import os
 import signal
+import sys
 import time
 import threading
 import tempfile
@@ -104,11 +105,12 @@ class TestBaseModule(helpers.AsyncTestCase):
             self.assertEqual(inputs['input1'], '/test/input1:float32[x,y,z]')
             self.assertEqual(len(outputs), 2)
             self.assertEqual(outputs['output2'], '/test/output2:float32[x,y,z]')
-
             return {}, {}
 
-        with mock.patch('joule.client.base_module.helpers.build_network_pipes',
-                        new=mock_builder):
+        module_mock = mock.Mock()
+        module_mock.build_network_pipes = mock_builder
+        with mock.patch.dict(sys.modules,
+                             {'joule.utilities.pipe_builders': module_mock}):
             with tempfile.NamedTemporaryFile() as f:
                 f.write(str.encode(
                     """

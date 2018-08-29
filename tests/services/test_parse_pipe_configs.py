@@ -2,7 +2,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 import unittest
 from joule.models import (Base, Stream, Folder,
-                          Element, ConfigurationError)
+                          Element)
+from joule.errors import ConfigurationError
 from joule.services import parse_pipe_config
 
 
@@ -75,5 +76,5 @@ class TestParsePipeConfig(unittest.TestCase):
             parse_pipe_config.run("/test/deeper/stream2:int8[e0,x]", self.db)
 
     def test_errors_if_unconfigured_stream_not_in_db(self):
-        with self.assertRaisesRegex(ConfigurationError, "configuration"):
+        with self.assertRaisesRegex(ConfigurationError, "/test/deeper/new_stream"):
             parse_pipe_config.run("/test/deeper/new_stream", self.db)

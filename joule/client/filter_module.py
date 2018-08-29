@@ -1,5 +1,5 @@
 import asyncio
-from joule.models import ConfigurationError
+#from joule.models import ConfigurationError
 from . import base_module
 
 
@@ -17,7 +17,7 @@ class FilterModule(base_module.BaseModule):
         try:
             coro = self._build_pipes(parsed_args, loop)
             (pipes_in, pipes_out) = loop.run_until_complete(coro)
-        except ConfigurationError as e:
+        except ValueError as e:
             print("Configuration Error: %s" % str(e))
             exit(1)
         return asyncio.ensure_future(

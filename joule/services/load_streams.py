@@ -3,9 +3,9 @@ from typing import Dict ,List
 import logging
 import re
 
-from joule.models import (Stream, ConfigurationError)
+from joule.models import Stream
+from joule.errors import ConfigurationError
 from joule.models.folder import find as find_folder
-
 from joule.models.stream import from_config as stream_from_config
 from joule.services.helpers import (Configurations,
                                     load_configs)

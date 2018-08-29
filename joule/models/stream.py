@@ -4,12 +4,11 @@ from sqlalchemy import (Column, Integer, String,
 from typing import List, Dict, TYPE_CHECKING
 import configparser
 import enum
-import json
 import re
 from operator import attrgetter
 
 from joule.models.meta import Base
-from joule.models.errors import ConfigurationError
+from joule.errors import ConfigurationError
 from joule.models.data_store.data_store import StreamInfo
 from joule.models import element
 
@@ -101,8 +100,33 @@ class Stream(Base):
         return "float32_%d" % (len(self.elements) * 3)
 
     @property
-    def data_width(self):
+    def data_width(self) -> int:
         return len(self.elements) + 1
+
+    @property
+    def is_remote(self) -> bool:
+        try:
+            return self._remote_url is not None
+        except AttributeError:
+            return False
+
+    @property
+    def remote_url(self) -> str:
+        try:
+            return self._remote_url
+        except AttributeError:
+            return ''
+
+    @property
+    def remote_path(self) -> str:
+        try:
+            return self._remote_path
+        except AttributeError:
+            return ''
+
+    def set_remote(self, url: str, path: str):
+        self._remote_url = url
+        self._remote_path = path
 
     def to_json(self, info: Dict[int, StreamInfo] = None):
 

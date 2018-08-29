@@ -1,13 +1,11 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 import unittest
-import tempfile
 import logging
 import configparser
 from unittest import mock
-import os
 
-from joule.models import (ConfigurationError, Base)
+from joule.models import Base
 from joule.services import load_streams
 
 logger = logging.getLogger('joule')

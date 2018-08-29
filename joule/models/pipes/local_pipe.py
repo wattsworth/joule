@@ -29,7 +29,6 @@ class LocalPipe(Pipe):
         self.queue = asyncio.Queue(loop=loop)
         self.queued_rows = 0
         self.last_index = 0
-        self.subscribers = []
         self.direction = Pipe.DIRECTION.TWOWAY
         # caching
         self._caching = False
@@ -138,7 +137,11 @@ class LocalPipe(Pipe):
         sarray = self._apply_dtype(data)
         # send data to subscribers
         for pipe in self.subscribers:
-            pipe.write_nowait(sarray)
+            if type(pipe) is LocalPipe:
+                p: LocalPipe = pipe  # to appease type checker
+                p.write_nowait(sarray)
+            else:
+                log.error("cannot write_nowait to subscriber [%s]" % pipe.name)
 
         self.queue.put_nowait(sarray)
         self.queued_rows += len(sarray)
@@ -177,6 +180,3 @@ class LocalPipe(Pipe):
         self.closed = True
         if self.close_cb is not None:
             raise PipeError("close_cb cannot be executed, use async")
-
-    def subscribe(self, pipe):
-        self.subscribers.append(pipe)

@@ -1,6 +1,7 @@
 import unittest
 
-from joule.models import (Stream, Element, ConfigurationError, stream)
+from joule.models import (Stream, Element, stream)
+from joule.errors import ConfigurationError
 from tests import helpers
 
 

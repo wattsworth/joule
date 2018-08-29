@@ -1,15 +1,17 @@
 import argparse
 import asyncio
 import signal
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, TYPE_CHECKING
 from aiohttp import web
 import logging
 import socket
 
-from . import helpers
-from joule.models import pipes, ConfigurationError
+from joule.client import helpers
+from joule.errors import ConfigurationError
+if TYPE_CHECKING:
+    from joule.models import pipes
 
-Pipes = Dict[str, pipes.Pipe]
+Pipes = Dict[str, 'pipes.Pipe']
 Loop = asyncio.AbstractEventLoop
 
 
@@ -54,7 +56,7 @@ class BaseModule:
         loop.add_signal_handler(signal.SIGTERM, stop_task)
         try:
             loop.run_until_complete(task)
-        except asyncio.CancelledError: # TODO: catch EmptyPipe errors?
+        except asyncio.CancelledError:  # TODO: catch EmptyPipe errors?
             pass
         if runner is not None:
             loop.run_until_complete(runner.cleanup())
@@ -104,6 +106,8 @@ class BaseModule:
         self.custom_args(parser)
 
     async def _build_pipes(self, parsed_args, loop: Loop) -> Tuple[Pipes, Pipes]:
+        from joule.utilities.pipe_builders import build_fd_pipes, build_network_pipes
+
         pipe_args = parsed_args.pipes
 
         # figure out whether we should run with fd's or network sockets
@@ -121,11 +125,11 @@ class BaseModule:
             if 'Outputs' in module_config:
                 for name, path in module_config['Outputs'].items():
                     outputs[name] = path
-            (pipes_in, pipes_out) = await helpers.build_network_pipes(
+            pipes_in, pipes_out = await build_network_pipes(
                 inputs, outputs, parsed_args.url, start, end, loop, parsed_args.force)
         else:
             # run the module within joule
-            (pipes_in, pipes_out) = helpers.build_fd_pipes(pipe_args, loop)
+            (pipes_in, pipes_out) = build_fd_pipes(pipe_args, loop)
         # keep track of the pipes so they can be closed
         self.pipes = list(pipes_in.values()) + list(pipes_out.values())
         return pipes_in, pipes_out

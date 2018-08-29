@@ -1,5 +1,5 @@
 import unittest
-from joule.models import (ConfigurationError)
+from joule.errors import ConfigurationError
 from joule.models import module  # for helper functions
 from tests import helpers
 

@@ -3,7 +3,8 @@ import unittest
 import logging
 import tempfile
 import os
-from joule.models import (DatabaseConfig, ConfigurationError)
+from joule.models import (DatabaseConfig)
+from joule.errors import ConfigurationError
 from joule.services import load_databases
 
 logger = logging.getLogger('joule')

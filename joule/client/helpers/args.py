@@ -6,7 +6,7 @@ import configparser
 import dateparser
 from typing import Tuple
 
-from joule.models import module, ConfigurationError
+from joule.errors import ConfigurationError
 
 """ helpers for handling module arguments
     Complicated because we want to look for module_config
@@ -35,6 +35,7 @@ def module_args():
 
 
 def _append_args(module_config_file):
+    from joule.models import module
     # if a module_config is specified add its args
     module_config = configparser.ConfigParser()
     with open(module_config_file, 'r') as f:
