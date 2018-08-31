@@ -97,10 +97,18 @@ class MedianFilter(joule.FilterModule):
         N = parsed_args.window
         stream_in = inputs["input"]
         stream_out = outputs["output"]
-        while(not self.stop_requested):
+        while not self.stop_requested:
             sarray_in = await stream_in.read()
             # not enough data, wait for more
-            if(len(sarray_in) < (N * 2)):
+            if len(sarray_in) < (N * 2):
+                # check if the pipe is closed
+                if stream_in.closed:
+                    return
+                # check if this is the end of an interval
+                # if so we can't use this data so discard it
+                if stream_in.end_of_interval:
+                    stream_in.consume(len(sarray_in))
+                    await stream_out.close_interval()
                 await asyncio.sleep(0.1)
                 continue
             # allocate output array

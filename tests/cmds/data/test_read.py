@@ -107,3 +107,12 @@ class TestDataRead(FakeJouleTestCase):
         self.assertTrue("test error" in result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()
+
+    def test_handles_bad_parameters(self):
+        runner = CliRunner()
+        result = runner.invoke(main, ['--url', 'none', 'data', 'read', '/test/source', '--start', 'invalid'])
+        self.assertIn('start time', result.output)
+        self.assertEqual(result.exit_code, 1)
+        result = runner.invoke(main, ['--url', 'none', 'data', 'read', '/test/source', '--end', 'invalid'])
+        self.assertIn('end time', result.output)
+        self.assertEqual(result.exit_code, 1)

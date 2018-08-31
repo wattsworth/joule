@@ -8,7 +8,7 @@ import argparse
 from tests import helpers
 from joule.client.builtins.mean_filter import MeanFilter
 
-WINDOW = 5
+WINDOW = 9
 WIDTH = 4
 REPS_PER_BLOCK = 9
 NUM_BLOCKS = 3
@@ -37,6 +37,10 @@ class TestMeanFilter(helpers.AsyncTestCase):
                 pipe_in.write_nowait(input_block)
                 await asyncio.sleep(0.1)
                 prev_ts = ts[-1] + 1
+            # now put in an extra block after an interval break
+            await pipe_in.close_interval()
+            # all 1's (even timestamps)
+            await pipe_in.write(np.ones((100, WIDTH + 1)))
             await asyncio.sleep(0.2)
             my_filter.stop()
 
@@ -53,5 +57,9 @@ class TestMeanFilter(helpers.AsyncTestCase):
         expected = base_output * range(int(WINDOW / 2), int(WINDOW / 2) + WIDTH)
         np.testing.assert_array_equal(expected,
                                       result['data'])
+        self.assertTrue(pipe_out.end_of_interval)
+        pipe_out.consume(len(result))
+        # now read the extra block and make sure it has all the data
+        result = pipe_out.read_nowait(flatten=True)
+        self.assertEqual(len(result), 100 - WINDOW + 1)
         loop.close()
-

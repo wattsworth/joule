@@ -8,8 +8,7 @@ import socket
 
 from joule.client import helpers
 from joule.errors import ConfigurationError
-if TYPE_CHECKING:
-    from joule.models import pipes
+from joule.models import pipes
 
 Pipes = Dict[str, 'pipes.Pipe']
 Loop = asyncio.AbstractEventLoop
@@ -56,7 +55,7 @@ class BaseModule:
         loop.add_signal_handler(signal.SIGTERM, stop_task)
         try:
             loop.run_until_complete(task)
-        except asyncio.CancelledError:  # TODO: catch EmptyPipe errors?
+        except (asyncio.CancelledError, pipes.EmptyPipe):
             pass
         if runner is not None:
             loop.run_until_complete(runner.cleanup())

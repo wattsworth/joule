@@ -1,10 +1,9 @@
 from tests import helpers
-import time
-import threading
+from unittest import mock
 import numpy as np
 import asyncio
 
-from joule.models.pipes import LocalPipe, PipeError, EmptyPipe
+from joule.models.pipes import LocalPipe, PipeError, OutputPipe
 
 
 class TestLocalPipe(helpers.AsyncTestCase):
@@ -175,6 +174,10 @@ class TestLocalPipe(helpers.AsyncTestCase):
             for block in helpers.to_chunks(test_data, 4):
                 await asyncio.sleep(.1)
                 await my_pipe.write(block)
+            # closing the interval should flush the data
+            await my_pipe.close_interval()
+            # add a dummy section after the interval break
+            await my_pipe.write(np.ones((35, 3)))
             await my_pipe.flush_cache()
 
         num_reads = 0
@@ -193,6 +196,9 @@ class TestLocalPipe(helpers.AsyncTestCase):
 
                 if index == len(test_data):
                     break
+            # now get the dummy section after the interval break
+            data = await my_pipe.read(flatten=True)
+            np.testing.assert_array_equal(data, np.ones((35, 3)))
 
         loop = asyncio.get_event_loop()
         loop.run_until_complete(asyncio.gather(reader(), writer()))
@@ -300,3 +306,24 @@ class TestLocalPipe(helpers.AsyncTestCase):
 
         loop = asyncio.get_event_loop()
         loop.run_until_complete(reader())
+
+    def test_nowait_function_exceptions(self):
+        pipe = LocalPipe(layout="float32_3")
+        subscriber = LocalPipe(layout="float32_3", close_cb=mock.Mock())
+        fd_subscriber = OutputPipe()
+        # cannot close_nowait if there is a callback
+        with self.assertRaises(PipeError):
+            subscriber.close_nowait()
+
+        # can write_nowait if only localpipe subscribers
+        pipe.subscribe(subscriber)
+        pipe.write_nowait(np.ones((100, 4)))
+        # cannot if any subscribers are not localpipes
+        pipe.subscribe(fd_subscriber)
+        with self.assertRaises(PipeError):
+            pipe.write_nowait(np.ones((100, 4)))
+
+        # cannot close_nowait if there are subscribers
+        pipe.subscribe(subscriber)
+        with self.assertRaises(PipeError):
+            pipe.close_nowait()

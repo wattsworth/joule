@@ -141,7 +141,7 @@ class LocalPipe(Pipe):
                 p: LocalPipe = pipe  # to appease type checker
                 p.write_nowait(sarray)
             else:
-                log.error("cannot write_nowait to subscriber [%s]" % pipe.name)
+                raise PipeError("cannot write_nowait to subscriber [%s]" % pipe.name)
 
         self.queue.put_nowait(sarray)
         self.queued_rows += len(sarray)

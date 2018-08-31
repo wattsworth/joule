@@ -1,9 +1,12 @@
 from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 from aiohttp import web
 import aiohttp
+from sqlalchemy.orm import Session
 
+from joule.models import Stream
 import joule.controllers
 from .helpers import create_db, MockStore, MockSupervisor
+from tests import helpers
 
 
 class TestDataController(AioHTTPTestCase):
@@ -35,9 +38,18 @@ class TestDataController(AioHTTPTestCase):
         self.assertEqual(resp.status, 404)
 
     @unittest_run_loop
+    async def test_read_errors_on_no_data(self):
+        store: MockStore = self.app['data-store']
+        store.configure_extract(0, no_data=True)
+        params = {'path': '/folder1/stream1', 'decimation-level': 64}
+        resp: aiohttp.ClientResponse = await self.client.get("/data", params=params)
+        self.assertNotEqual(resp.status, 200)
+        self.assertTrue('no data' in await resp.text())
+
+    @unittest_run_loop
     async def test_read_errors_on_decimation_failure(self):
         store: MockStore = self.app['data-store']
-        store.configure_extract(10,decimation_error=True)
+        store.configure_extract(10, decimation_error=True)
         params = {'path': '/folder1/stream1', 'decimation-level': 64}
         resp: aiohttp.ClientResponse = await self.client.get("/data", params=params)
         self.assertNotEqual(resp.status, 200)
@@ -206,3 +218,16 @@ class TestDataController(AioHTTPTestCase):
         self.assertTrue('end' in await resp.text())
         self.assertTrue('start' in await resp.text())
         params['end'] = 200
+
+    @unittest_run_loop
+    async def test_invalid_writes_propoage_data_error(self):
+        db: Session = self.app["db"]
+        store: MockStore = self.app['data-store']
+        store.raise_data_error = True
+        stream: Stream = db.query(Stream).filter_by(name="stream1").one()
+        data = helpers.create_data(stream.layout)
+        resp: aiohttp.ClientResponse = await \
+            self.client.post("/data", params={"path": "/folder1/stream1"},
+                             data=data.tostring())
+        self.assertEqual(resp.status, 400)
+        self.assertIn(await resp.text(), 'test error')

@@ -4,6 +4,7 @@ from typing import List, Dict
 import numpy as np
 import asyncio
 import argparse
+from unittest import mock
 from typing import Optional, Callable, Coroutine
 
 from joule.models.data_store.errors import DataError, InsufficientDecimationError
@@ -37,10 +38,13 @@ class MockStore(DataStore):
         self.nchunks = 3
         self.nintervals = 1
         self.raise_data_error = False
+        self.raise_decimation_error = False
+        self.no_data = False
         self.raise_data_error = False
         self.inserted_data = False
         self.removed_data_bounds = (None, None)
         self.destroyed_stream_id = None
+        self.raise_data_error = False
 
     async def initialize(self, streams: List[Stream]):
         pass
@@ -49,24 +53,30 @@ class MockStore(DataStore):
                      data: np.ndarray, start: int, end: int):
         pass
 
-    async def spawn_inserter(self, stream: Stream, pipe: pipes.InputPipe,
-                             loop: Loop, insert_period=None) -> asyncio.Task:
+    def spawn_inserter(self, stream: Stream, pipe: pipes.InputPipe,
+                       loop: Loop, insert_period=None) -> asyncio.Task:
         async def task():
+            if self.raise_data_error:
+                raise DataError("test error")
             self.inserted_data = True
 
         return loop.create_task(task())
 
     def configure_extract(self, nchunks, nintervals=1,
                           decimation_error=False,
-                          data_error=False):
+                          data_error=False,
+                          no_data=False):
         self.nchunks = nchunks
         self.nintervals = nintervals
         self.raise_decimation_error = decimation_error
         self.raise_data_error = data_error
+        self.no_data = no_data
 
     async def extract(self, stream: Stream, start: Optional[int], end: Optional[int],
                       callback: Callable[[np.ndarray, str, bool], Coroutine],
                       max_rows: int = None, decimation_level=1):
+        if self.no_data:
+            return  # do not call the callback func
         if self.raise_data_error:
             raise DataError("nilmdb error")
         if self.raise_decimation_error:
@@ -146,6 +156,13 @@ class MockSupervisor:
         self.subscription_pipe = None
         self.subscribed_stream = None
         self.raise_error = False
+        # if True do not close the pipe (simulate an ongoing transaction)
+        self.hang_pipe = False
+        self.unsubscribe_mock = mock.Mock()
+        self.unsubscribe_calls = 0
+
+    def unsubscribe(self):
+        self.unsubscribe_calls += 1
 
     def subscribe(self, stream: Stream, pipe: pipes.LocalPipe, loop: Loop):
         if self.raise_error:
@@ -158,12 +175,10 @@ class MockSupervisor:
                 self.subscription_pipe.consume(len(data))
                 pipe.write_nowait(data)
             except pipes.EmptyPipe:
-                pipe.close_nowait()
+                if not self.hang_pipe:
+                    pipe.close_nowait()
                 break
             if self.subscription_pipe.end_of_interval:
                 pipe.close_interval_nowait()
-
-        def unsubscribe():
-            pass
-
-        return unsubscribe
+        # return a mock as the unsubscribe callback
+        return self.unsubscribe
