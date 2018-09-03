@@ -1,5 +1,5 @@
 from joule import FilterModule, EmptyPipe
-import sys
+import asyncio
 
 
 class SimpleFilter(FilterModule):
@@ -17,7 +17,6 @@ class SimpleFilter(FilterModule):
                 data = await input1.read()
                 input1.consume(len(data))
                 data['data'] *= 2.0
-                sys.stdout.flush()
                 await output1.write(data)
                 if input1.end_of_interval:
                     await output1.close_interval()
@@ -26,7 +25,6 @@ class SimpleFilter(FilterModule):
         while True:
             try:
                 data = await input2.read()
-                print("here!")
                 input2.consume(len(data))
                 data['data'] *= 3.0
                 await output2.write(data)
@@ -34,6 +32,9 @@ class SimpleFilter(FilterModule):
                     await output2.close_interval()
             except EmptyPipe:
                 break
+        # delay so worker output handler has time to process
+        # the results
+        await asyncio.sleep(2)
 
 
 if __name__ == "__main__":

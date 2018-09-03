@@ -12,12 +12,29 @@ log = logging.getLogger('joule')
 
 
 class Pipe:
+    """
+    This encapsulates streams and connects to modules
+
+    .. note::
+
+       There are many different kinds of pipes
+
+    """
     class DIRECTION(enum.Enum):
         INPUT = enum.auto()
         OUTPUT = enum.auto()
         TWOWAY = enum.auto()
 
     def __init__(self, name=None, direction=None, module=None, stream=None, layout=None):
+        """
+
+        :param name: optional name for the pipe, useful for debugging
+        :param direction: data flow
+        :type direction: DIRECTION
+        :param module: what??
+        :param stream: optional stream
+        :param layout: the data layout
+        """
         self.name: str = name
         self.direction: Pipe.DIRECTION = direction
         self.module: 'Module' = module
@@ -27,6 +44,13 @@ class Pipe:
         self.subscribers: List['Pipe'] = []
 
     def enable_cache(self, lines: int):
+        """
+
+        :param lines: cache size (approximate)
+        :type lines: int
+        :return: None
+
+        """
         if self.direction == Pipe.DIRECTION.INPUT:
             raise PipeError("cannot control cache on input pipes")
         raise PipeError("abstract method must be implemented by child")
@@ -37,6 +61,19 @@ class Pipe:
         raise PipeError("abstract method must be implemented by child")
 
     async def read(self, flatten=False):
+        """
+
+        :param flatten: return a 2D unstructured array
+        :return: numpy.ndarray
+
+        >>> data = await pipe.read()
+        [1, 2, 3]
+        >>> data = await pipe.read(flatten=True)
+        # the same data is returned again
+        [1,2,3]
+        >>> pipe.consume(len(data))
+        # next call to read will return only new data
+        """
         if self.direction == Pipe.DIRECTION.OUTPUT:
             raise PipeError("cannot read from an output pipe")
 
@@ -52,6 +89,16 @@ class Pipe:
         return False
 
     async def write(self, data):
+        """
+
+        Args:
+            data (numpy.ndarray): either a 1D structured array or 2D unstructured array
+
+        Returns: None
+
+        >>> await pipe.write([[1000, 2, 3],[1001, 3, 4]])
+
+        """
         if self.direction == Pipe.DIRECTION.INPUT:
             raise PipeError("cannot write to an input pipe")
         raise PipeError("abstract method must be implemented by child")

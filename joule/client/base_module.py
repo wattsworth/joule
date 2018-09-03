@@ -1,10 +1,12 @@
 import argparse
 import asyncio
 import signal
-from typing import List, Tuple, Dict, TYPE_CHECKING
+
+from typing import List, Tuple, Dict, Optional
 from aiohttp import web
 import logging
 import socket
+import logging
 
 from joule.client import helpers
 from joule.errors import ConfigurationError
@@ -12,7 +14,7 @@ from joule.models import pipes
 
 Pipes = Dict[str, 'pipes.Pipe']
 Loop = asyncio.AbstractEventLoop
-
+log = logging.getLogger('joule')
 
 class BaseModule:
 
@@ -21,7 +23,7 @@ class BaseModule:
         self.pipes: List[pipes.Pipe] = []
         self.STOP_TIMEOUT = 2
 
-    def run_as_task(self, parsed_args, loop):
+    def run_as_task(self, parsed_args, app: web.Application, loop):
         assert False, "implement in child class"  # pragma: no cover
 
     def custom_args(self, parser):
@@ -42,8 +44,16 @@ class BaseModule:
         loop = asyncio.get_event_loop()
         self.stop_requested = False
 
-        runner = loop.run_until_complete(self._start_interface(parsed_args))
-        task = self.run_as_task(parsed_args, loop)
+        runner: web.AppRunner = loop.run_until_complete(self._start_interface(parsed_args))
+        app = None
+        if runner is not None:
+            app = runner.app
+        try:
+            task = self.run_as_task(parsed_args, app, loop)
+        except ConfigurationError as e:
+            log.error("ERROR: " + str(e))
+            loop.close()
+            exit(1)
 
         def stop_task():
             # give task no more than 2 seconds to exit
@@ -136,7 +146,7 @@ class BaseModule:
     def routes(self):
         return []  # override in child to implement a web interface
 
-    async def _start_interface(self, args):
+    async def _start_interface(self, args) -> Optional[web.AppRunner]:
         routes = self.routes()
         # socket config is 'unset' when run as a standalone process
         if args.socket == 'unset':

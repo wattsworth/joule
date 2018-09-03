@@ -27,6 +27,9 @@ compute an output value.
   cannot keep up with the input and the Joule Pipe buffers are
   accumulating data.
 
+.. autoclass:: joule.models.pipes.Pipe
+   :members:
+
 .. currentmodule:: joule
 
 .. class:: NumpyPipe

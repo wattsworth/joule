@@ -41,12 +41,12 @@ class TestPipe(helpers.AsyncTestCase):
         # input pipes cannot write
         pipe = Pipe(direction=Pipe.DIRECTION.INPUT)
         with self.assertRaises(PipeError):
-            loop.run_until_complete(pipe.write([1, 2, 3, 4]))
+            loop.run_until_complete(pipe.write(np.array([1, 2, 3, 4])))
 
         # output pipes must implement write
         pipe = Pipe(direction=Pipe.DIRECTION.OUTPUT)
         with self.assertRaises(PipeError) as e:
-            loop.run_until_complete(pipe.write([1, 2, 3, 4]))
+            loop.run_until_complete(pipe.write(np.array([1, 2, 3, 4])))
         self.assertTrue("abstract" in "%r" % e.exception)
 
     def test_raises_cache_errors(self):
@@ -104,3 +104,18 @@ class TestPipe(helpers.AsyncTestCase):
         for data in [data1, data2, data3]:
             with self.assertRaises(PipeError):
                 _ = pipe._apply_dtype(data)
+
+    def test_subscribe(self):
+        LAYOUT="uint8_4"
+        # cannot subscribe to input pipes
+        input_pipe = Pipe(layout=LAYOUT, direction=Pipe.DIRECTION.INPUT)
+        output_pipe = Pipe(layout=LAYOUT, direction=Pipe.DIRECTION.OUTPUT)
+        subscriber = Pipe(layout=LAYOUT, direction=Pipe.DIRECTION.OUTPUT)
+        with self.assertRaises(PipeError):
+            input_pipe.subscribe(subscriber)
+        # can subscribe to output pipes
+        unsubscribe = output_pipe.subscribe(subscriber)
+        self.assertIn(subscriber, output_pipe.subscribers)
+        # can unsubscribe
+        unsubscribe()
+        self.assertNotIn(subscriber, output_pipe.subscribers)

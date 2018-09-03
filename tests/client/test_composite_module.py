@@ -47,7 +47,7 @@ class TestCompositeModule(helpers.AsyncTestCase):
                                           "inputs": {}}))
         data = helpers.create_data(self.stream.layout)
         args = argparse.Namespace(pipes=pipe_arg, socket="unset", mock_data=data)
-        # run the reader module
+        # run the composite module
         loop = asyncio.new_event_loop()
         loop.set_debug(True)
         asyncio.set_event_loop(loop)
@@ -57,3 +57,14 @@ class TestCompositeModule(helpers.AsyncTestCase):
         received_data = self.loop.run_until_complete(pipe.read())
         np.testing.assert_array_equal(data['timestamp'], received_data['timestamp'])
         np.testing.assert_array_almost_equal(data['data']*2, received_data['data'])
+
+    def test_handles_bad_pipe_configs(self):
+        args = argparse.Namespace(pipes="invalid config", socket="unset")
+        loop = asyncio.new_event_loop()
+        loop.set_debug(True)
+        asyncio.set_event_loop(loop)
+        module = SimpleComposite()
+        with self.assertLogs(level="ERROR"):
+            with self.assertRaises(SystemExit):
+                module.start(args)
+        asyncio.set_event_loop(self.loop)

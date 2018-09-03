@@ -6,12 +6,15 @@ from joule.client.base_module import BaseModule
 
 class ReaderModule(BaseModule):
 
+    async def setup(self, parsed_args, app, output):
+        pass
+
     async def run(self, parsed_args, output):
         # some logic...
         # await output.write(np_array)
         assert False, "implement in child class"  # pragma: no cover
 
-    def run_as_task(self, parsed_args, loop):
+    def run_as_task(self, parsed_args, app, loop):
         # check if we should use stdout (no fd's and no configs)
         if(parsed_args.pipes == "unset" and
            parsed_args.module_config == "unset"):
@@ -23,6 +26,7 @@ class ReaderModule(BaseModule):
                 logging.error("Reader Module must a have a single output called 'output'")
                 return loop.create_task(asyncio.sleep(0))
             output = pipes_out['output']
+        loop.run_until_complete(self.setup(parsed_args, app, output))
         return loop.create_task(self.run(parsed_args, output))
 
     

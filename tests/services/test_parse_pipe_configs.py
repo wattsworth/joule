@@ -58,6 +58,12 @@ class TestParsePipeConfig(unittest.TestCase):
         # retrieved the existsing stream from the database
         self.assertEqual(my_stream, existing_stream)
 
+    def test_parses_remote_stream_configs(self):
+        my_stream = parse_pipe_config.run("remote.com:3000 /path/to/stream:float32[x,y]", self.db)
+        self.assertTrue(my_stream.is_remote)
+        self.assertEqual(my_stream.remote_url, "remote.com:3000")
+        self.assertEqual(my_stream.remote_path, "/path/to/stream")
+
     def test_errors_on_invalid_configs(self):
         bad_configs = ["no/leading/slash", "/", "/invalid/datatype:uknown[x,y]",
                        "/bad/syntax:int[", "/bad/syntax:missing"]

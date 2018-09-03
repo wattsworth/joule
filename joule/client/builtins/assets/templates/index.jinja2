@@ -1,0 +1,41 @@
+{% extends 'base.jinja2' %}
+
+{% block head %}
+  <script src="assets/js/index.js"></script>
+  <link rel="stylesheet" type="text/css" href="assets/css/index.css">
+
+{% endblock %}
+
+{% block body %}
+
+  <div class="row">
+    {% for input in inputs %}
+      <div class="col-md-3 col-sm-6 p-2">
+        <div class="card text-center">
+          <div class="card-body" id="{{ input['id'] }}">
+            <span class="max-val">
+              {{ input['max'] }}
+            </span>
+            <span class="val-box">
+              <span class="val">
+                {{ input['value'] }}
+              </span>
+            </span>
+            <span class="min-val">
+              {{ input['min'] }}
+            </span>
+          </div>
+          <div class="card-footer">
+            <span class="stream lead">
+              {{ input['stream'] }}:
+            </span>
+            <span class="lead">
+              {{ input['element'] }}
+            </span>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+{% endblock %}

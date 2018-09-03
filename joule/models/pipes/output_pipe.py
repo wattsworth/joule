@@ -64,6 +64,9 @@ class OutputPipe(Pipe):
 
     async def close(self):
         self.closed = True
+        # if the cache is enabled, flush it
+        if self._caching:
+            await self.flush_cache()
         if self.close_cb is not None:
             await self.close_cb()
         if self.writer is not None:

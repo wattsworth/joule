@@ -20,9 +20,12 @@ log = logging.getLogger('joule')
 
 
 def build_fd_pipes(pipe_args: str, loop: Loop) -> Tuple[Pipes, Pipes]:
-    pipe_json = json.loads(json.loads(pipe_args))
-    dest_args = pipe_json['outputs']
-    src_args = pipe_json['inputs']
+    try:
+        pipe_json = json.loads(json.loads(pipe_args))
+        dest_args = pipe_json['outputs']
+        src_args = pipe_json['inputs']
+    except (KeyError, json.JSONDecodeError):
+        raise ConfigurationError("invalid pipes argument")
     pipes_out = {}
     pipes_in = {}
     for name, arg in dest_args.items():

@@ -316,37 +316,6 @@ class TestWorker(unittest.TestCase):
         # child runs until stopped
         self.module.exec_cmd = "python " + MODULE_SIMPLE_FILTER
 
-        async def mock_child():
-            # wait until the worker has "started" the child
-            await asyncio.sleep(0.5)
-            # create pipes from fd's
-            inputs: List[pipes.Pipe] = []
-            for c in self.worker.input_connections:
-                rf = pipes.reader_factory(c.child_fd, loop)
-                inputs.append(pipes.InputPipe(name='c-' + c.name,
-                                              stream=c.stream,
-                                              reader_factory=rf))
-            outputs = []
-            for c in self.worker.output_connections:
-                wf = pipes.writer_factory(c.child_fd, loop)
-                outputs.append(pipes.OutputPipe(name='c-' + c.name + "[%d]" % c.child_fd,
-                                                stream=c.stream,
-                                                writer_factory=wf))
-
-            # read input and send it to output
-            for x in range(2):  # expect 2 intervals of data
-                for i in [0, 1]:
-                    data = await inputs[i].read(flatten=True) * (i + 2.0)
-                    await outputs[i].write(data)
-                    self.assertEqual(len(data), 100)
-                    self.assertTrue(inputs[i].end_of_interval)
-                    await outputs[i].close_interval()
-                    inputs[i].consume(len(data))
-            await outputs[0].close()
-            await outputs[1].close()
-
-            await asyncio.sleep(10)
-
         interval1_data = helpers.create_data('float32_3')
         interval2_data = helpers.create_data('float32_3')
 
@@ -368,16 +337,36 @@ class TestWorker(unittest.TestCase):
             await input2.close_interval()
             await input2.close()
 
-        #logging.basicConfig(level=logging.DEBUG)
-
         # subscribe to the module outputs
         output1 = pipes.LocalPipe(layout=self.streams[2].layout, loop=loop, name="output1", debug=False)
         output2 = pipes.LocalPipe(layout=self.streams[3].layout, loop=loop, name="output2", debug=False)
-        self.worker.subscribe(self.streams[2], output1)
-        self.worker.subscribe(self.streams[3], output2)
-        loop.run_until_complete(asyncio.gather(mock_producers(),
-            self.worker.run(self.supervisor.subscribe, loop, restart=False)))
 
+        # create a slow subscriber that times out
+        class SlowPipe(pipes.Pipe):
+            async def write(self, data):
+                await asyncio.sleep(5)
+
+            async def close_interval(self):
+                pass
+        slow_pipe = SlowPipe(stream=helpers.create_stream('slow stream', self.streams[2].layout))
+        self.worker.subscribe(self.streams[2], slow_pipe)
+        self.worker.SUBSCRIBER_TIMEOUT=0.1
+
+        # create a subscriber that errors out
+        class ErrorPipe(pipes.Pipe):
+            async def write(self, data):
+                raise BrokenPipeError()
+        error_pipe = ErrorPipe(stream=helpers.create_stream('error stream', self.streams[2].layout))
+        self.worker.subscribe(self.streams[3], error_pipe)
+        self.worker.subscribe(self.streams[3], output2)
+
+        self.worker.subscribe(self.streams[2], output1)
+        with self.assertLogs() as log:
+            loop.run_until_complete(asyncio.gather(mock_producers(),
+                                                   self.worker.run(self.supervisor.subscribe, loop, restart=False)))
+        log_dump = ' '.join(log.output)
+        self.assertIn("subscriber write error", log_dump)
+        self.assertIn("timed out", log_dump)
         # check stream2, should be stream0*2.0 [] stream0*2.0
         output_data = output1.read_nowait()
         output1.consume(len(output_data))

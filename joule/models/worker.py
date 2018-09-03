@@ -86,6 +86,8 @@ class Worker:
         self.SIGTERM_TIMEOUT = 2
         # how long to wait to restart a failed process
         self.RESTART_INTERVAL = 1
+        # how to wait for a subscriber to accept data
+        self.SUBSCRIBER_TIMEOUT = 1
 
     async def statistics(self) -> Statistics:
         # gather process statistics
@@ -304,8 +306,7 @@ class Worker:
 
         return asyncio.gather(*tasks)
 
-    @staticmethod
-    async def _output_handler(child_output: pipes.Pipe,
+    async def _output_handler(self, child_output: pipes.Pipe,
                               subscribers: List[pipes.Pipe]):
         """given a numpy pipe, get data and put it
            into each queue in [output_queues] """
@@ -314,15 +315,21 @@ class Worker:
                 data = await child_output.read()
                 child_output.consume(len(data))
                 if len(data) > 0:
-                    for i in range(len(subscribers)):
+                    for pipe in subscribers[:]:
+                        #if child_output.name=='output2':
+                        #    print("writing to %d subscribers" % len(subscribers))
                         try:
-                            await subscribers[i].write(data)
+                            await asyncio.wait_for(pipe.write(data),
+                                                   self.SUBSCRIBER_TIMEOUT)
                         except (ConnectionResetError, BrokenPipeError):
-                            log.warning("subsriber write error [%s] " % subscribers[i].stream)
-                            del subscribers[i]
+                            log.warning("subscriber write error [%s] " % pipe.stream)
+                            subscribers.remove(pipe)
+                        except asyncio.TimeoutError:
+                            log.warning("subscriber [%s] timed out" % pipe.stream)
+                            await pipe.close_interval()
                 if child_output.end_of_interval:
-                    for s in subscribers:
-                        await s.close_interval()
+                    for pipe in subscribers:
+                        await pipe.close_interval()
 
         except (EmptyPipe, asyncio.CancelledError):
             pass

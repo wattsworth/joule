@@ -28,7 +28,9 @@ class TestParsePipeConfigErrors(unittest.TestCase):
             "/bad/elements:float32[x,",
             "/bad/elements:float32[x,y",
             "/bad/elements:float32[,",
-            "//too/many//slashes"
+            "//too/many//slashes",
+            "remote.stream/without/space"
+            "remote:3000 /no/inline_config"
         ]
         for config in bad_configs:
             with self.assertRaises(ConfigurationError):

@@ -16,7 +16,7 @@ from joule.models import stream, folder
 
 def run(pipe_config: str, db: Session) -> Stream:
     # check for a remote stream config
-    (pipe_config, url) = strip_remote_pipe_config(pipe_config)
+    (pipe_config, url) = strip_remote_config(pipe_config)
     local = url is None
     # separate the configuration pieces
     (path, name, inline_config) = parse_pipe_config(pipe_config)
@@ -36,7 +36,12 @@ def run(pipe_config: str, db: Session) -> Stream:
             return existing_stream
     # if the stream doesn't exist it or its remote, it *must* have inline configuration
     if len(inline_config) == 0:
-        raise ConfigurationError("add inline config or *.conf file for stream [%s]" % pipe_config)
+        if local:
+            msg = "add inline config or *.conf file for stream [%s]" % pipe_config
+        else:
+            msg = "remote streams must have inline config"
+        raise ConfigurationError(msg)
+
     # build the stream from inline config
     my_stream = stream.Stream(name=name,
                               datatype=datatype)
@@ -48,24 +53,22 @@ def run(pipe_config: str, db: Session) -> Stream:
         my_folder.streams.append(my_stream)
         db.add(my_stream)
     else:
-        my_stream.set_remote(url, path)
+        my_stream.set_remote(url, path+'/'+my_stream.name)
     return my_stream
 
 
-def strip_remote_pipe_config(pipe_config: str) -> (str, str):
+def strip_remote_config(pipe_config: str) -> (str, str):
     try:
-        # check for the remote URL and port, return stripped config and info
+        # check for the remote URL return stripped config and info
         if pipe_config[0] == '/':
             return pipe_config, None
-        # this is a remote stream, parse the URL and port
-        pieces = pipe_config.split(':')[0]
+        # this is a remote stream, separate out the URL
+        pieces = pipe_config.split(' ')
         url = pieces[0]
-        pieces = pieces[1].split('/')
-        port = int(pieces[0])
-        pipe_config = '/' + pieces[1]
+        pipe_config = pieces[1]
     except (ValueError, IndexError):
         raise ConfigurationError("invalid pipe configuration [%s]" % pipe_config)
-    return pipe_config, '%s:%d' % (url, port)
+    return pipe_config, url
 
 
 def parse_pipe_config(pipe_config: str) -> (str, str, str):
@@ -76,7 +79,8 @@ def parse_pipe_config(pipe_config: str) -> (str, str, str):
     else:
         full_path = pipe_config
         inline_config = ""
-    if '/' not in full_path:
+    if '/' not in full_path:  # pragma: no cover
+        # this is a double check, missing / will be caught earlier
         raise ConfigurationError("invalid path [%s]" % pipe_config)
     path_chunks = full_path.split('/')
     name = path_chunks.pop()
