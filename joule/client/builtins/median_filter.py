@@ -102,7 +102,7 @@ class MedianFilter(joule.FilterModule):
             # not enough data, wait for more
             if len(sarray_in) < (N * 2):
                 # check if the pipe is closed
-                if stream_in.closed:
+                if stream_in.closed:  # pragma: no cover
                     return
                 # check if this is the end of an interval
                 # if so we can't use this data so discard it
@@ -120,7 +120,9 @@ class MedianFilter(joule.FilterModule):
             sarray_out['timestamp'] = sarray_in['timestamp'][bound:-bound]
             await stream_out.write(sarray_out)
             stream_in.consume(len(sarray_out))
-
+            # hard to isolate in test, usually hits line 109
+            if stream_in.end_of_interval:  # pragma: no cover
+                await stream_out.close_interval()
 
 def main():  # pragma: no cover
     r = MedianFilter()

@@ -65,6 +65,5 @@ class TestCompositeModule(helpers.AsyncTestCase):
         asyncio.set_event_loop(loop)
         module = SimpleComposite()
         with self.assertLogs(level="ERROR"):
-            with self.assertRaises(SystemExit):
-                module.start(args)
+            module.start(args)
         asyncio.set_event_loop(self.loop)

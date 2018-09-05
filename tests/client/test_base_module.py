@@ -133,3 +133,4 @@ class TestBaseModule(helpers.AsyncTestCase):
                                           module_config=f.name, url='http://localhost:8088')
                 module.start(args)
                 self.assertTrue(built_pipes)
+

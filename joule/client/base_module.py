@@ -22,6 +22,7 @@ class BaseModule:
         self.stop_requested = False
         self.pipes: List[pipes.Pipe] = []
         self.STOP_TIMEOUT = 2
+        self.runner = None
 
     def run_as_task(self, parsed_args, app: web.Application, loop):
         assert False, "implement in child class"  # pragma: no cover
@@ -44,16 +45,16 @@ class BaseModule:
         loop = asyncio.get_event_loop()
         self.stop_requested = False
 
-        runner: web.AppRunner = loop.run_until_complete(self._start_interface(parsed_args))
+        self.runner: web.AppRunner = loop.run_until_complete(self._start_interface(parsed_args))
         app = None
-        if runner is not None:
-            app = runner.app
+        if self.runner is not None:
+            app = self.runner.app
         try:
             task = self.run_as_task(parsed_args, app, loop)
         except ConfigurationError as e:
             log.error("ERROR: " + str(e))
-            loop.close()
-            exit(1)
+            self._cleanup(loop)
+            return
 
         def stop_task():
             # give task no more than 2 seconds to exit
@@ -67,8 +68,11 @@ class BaseModule:
             loop.run_until_complete(task)
         except (asyncio.CancelledError, pipes.EmptyPipe):
             pass
-        if runner is not None:
-            loop.run_until_complete(runner.cleanup())
+        self._cleanup(loop)
+        
+    def _cleanup(self, loop: Loop):
+        if self.runner is not None:
+            loop.run_until_complete(self.runner.cleanup())
         for pipe in self.pipes:
             loop.run_until_complete(pipe.close())
         loop.close()
@@ -124,7 +128,7 @@ class BaseModule:
             start, end = helpers.validate_time_bounds(parsed_args.start_time,
                                                       parsed_args.end_time)
             if parsed_args.module_config == 'unset':
-                raise ConfigurationError('must specify module config')
+                raise ConfigurationError('must specify --module_config')
             inputs = {}
             outputs = {}
             module_config = helpers.read_module_config(parsed_args.module_config)

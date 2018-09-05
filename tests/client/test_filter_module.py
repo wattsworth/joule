@@ -66,3 +66,19 @@ class TestFilterModule(helpers.AsyncTestCase):
         received_data = self.loop.run_until_complete(from_filter.read())
         np.testing.assert_array_equal(data['timestamp'], received_data['timestamp'])
         np.testing.assert_array_almost_equal(data['data']*2, received_data['data'])
+
+    def test_error_on_invalid_params(self):
+        # if pipes is not set, must specify a module_config
+        module = SimpleFilter()
+        args = argparse.Namespace(socket='none', pipes='unset',
+                                  module_config='unset',
+                                  start_time=None, end_time=None)
+        # run the module
+        loop = asyncio.new_event_loop()
+        loop.set_debug(True)
+        asyncio.set_event_loop(loop)
+        with self.assertLogs(level="ERROR") as logs:
+            module.start(args)
+        log_dump = ' '.join(logs.output).lower()
+        self.assertTrue('module_config' in log_dump)
+        asyncio.set_event_loop(self.loop)
