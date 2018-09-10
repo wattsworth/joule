@@ -4,7 +4,6 @@ import signal
 
 from typing import List, Tuple, Dict, Optional
 from aiohttp import web
-import logging
 import socket
 import logging
 
@@ -15,6 +14,7 @@ from joule.models import pipes
 Pipes = Dict[str, 'pipes.Pipe']
 Loop = asyncio.AbstractEventLoop
 log = logging.getLogger('joule')
+
 
 class BaseModule:
 
@@ -27,15 +27,65 @@ class BaseModule:
     def run_as_task(self, parsed_args, app: web.Application, loop):
         assert False, "implement in child class"  # pragma: no cover
 
-    def custom_args(self, parser):
+    def custom_args(self, parser: argparse.ArgumentParser):
+        """
+
+        Implement this method to add custom command line arguments to the module.
+
+        .. code-block:: python
+
+            class ModuleDemo(BaseModule):
+
+                def custom_args(self, parser):
+                     parser.description = "**module description**"
+                     # add optional help text to the argument
+                     parser.add_argument("--arg", help="custom argument")
+                     # parse json input
+                     parser.add_argument("--json_arg", type=json.loads)
+                     # a yes|no argument that resolves to True|False
+                     parser.add_argument("--flag_arg", type=joule.yesno)
+
+                #... other module code
+
+
+        Always use keyword arguments with modules so they can be specified
+        in the **[Arguments]** section  of module configuration file
+
+        Use the ``type`` parameter to specify a parser function. The parser
+        function should accept a string input and return the appropriate object.
+
+        """
         # parser.add_argument("--custom_flag")
         pass  # pragma: no cover
 
     def stop(self):
+        """
+        Implement this method to override the default shutdown strategy which simply sets
+        the ``stop_requested`` flag. If a module does not terminate within a few seconds
+        of this method being called Joule will forcibly stop the module with SIGKILL.
+        """
         # override in client for alternate shutdown strategy
         self.stop_requested = True
 
-    def start(self, parsed_args=None):
+    def start(self, parsed_args: argparse.Namespace=None):
+        """
+        Execute the module. Do not implement this function. Creates an event loop and
+        executes the :meth:`run` coroutine.
+
+        Args:
+            parsed_args: omit to parse the command line arguments
+
+        .. code-block:: python
+
+            class ModuleDemo(BaseModule):
+                # body of module...
+                # at a minimum the run coroutine must be implemented
+
+            if __name__ == "__main__":
+                my_module = ModuleDemo()
+                my_module.start()
+        """
+
         if parsed_args is None:  # pragma: no cover
             parser = argparse.ArgumentParser()
             self._build_args(parser)
@@ -148,6 +198,26 @@ class BaseModule:
         return pipes_in, pipes_out
 
     def routes(self):
+        """
+        Implement this method to register HTTP handlers for the module. Return
+        an array of handlers. This creates a visualization interface.
+
+        .. code-block:: python
+
+            class ModuleDemo(BaseModule):
+
+                def routes(self):
+                    return [
+                        web.get('/', self.index),
+                        # other handlers ...
+                    ]
+
+                async def index(self, request):
+                    return web.Response(text="Hello World")
+
+                #... other module code
+
+        """
         return []  # override in child to implement a web interface
 
     async def _start_interface(self, args) -> Optional[web.AppRunner]:

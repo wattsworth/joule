@@ -1,12 +1,12 @@
-.. _getting-started:
+.. _quick-start:
 
-===============
-Getting Started
-===============
+===========
+Quick Start
+===========
 
 Joule is part of the Wattsworth software stack. See
 http://wattsworth.net/install.html for installation details. Before continuing
-make sure Joule is installed and the database is accessible:
+make sure Joule is installed and the jouled service is running:
 
 
 .. raw:: html
@@ -17,13 +17,13 @@ make sure Joule is installed and the database is accessible:
   <div class="code bash"><b>$> joule --version</b>
    joule 0.1.5
 
-   <b>$> nilmtool info</b>
+   <b>$> joule info</b>
    Client version: 1.10.3 Server version:
    1.10.3 <i>#... more output</i>
 
   </div>
   
-This guide will step through the implementation of the two stage pipeline shown below:
+This guide will step through the implementation of the three stage pipeline shown below:
 
 .. image:: /images/getting_started_pipeline.png
 
@@ -239,6 +239,12 @@ both modules are running:
             total data: 147 rows, 14.600001 seconds
 
   </div>
+
+The Visualizer Module
+---------------------
+
+Details on using the visualizer module
+
 
 Next Steps
 ----------

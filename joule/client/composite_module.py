@@ -1,4 +1,7 @@
 import asyncio
+import argparse
+from typing import Dict
+from joule.models.pipes.pipe import Pipe as Pipe
 
 from . import base_module
 from joule.errors import ConfigurationError
@@ -7,9 +10,22 @@ from joule.errors import ConfigurationError
 
 class CompositeModule(base_module.BaseModule):
 
-    async def setup(self, parsed_args, inputs, outputs, loop):
-        # call run for other modules
-        # return [coro, coro, ...]
+    async def setup(self, parsed_args: argparse.Namespace, inputs: Dict[str, Pipe],
+                    outputs: Dict[str, Pipe], loop: asyncio.AbstractEventLoop):
+        """
+        This method must be implemented
+
+        Args:
+            parsed_args: parsed command line arguments
+            inputs: pipe connections to input streams. Keys are the names specified in the module configuration file
+            outputs: pipe connections ot output streams. Keys are the names specified in the module configuration
+            loop: the current event loop
+
+        Returns:
+            array of coroutine objects
+
+        """
+
         assert False, "implement in child class"  # pragma: no cover
 
     def run_as_task(self, parsed_args, app, loop):

@@ -8,11 +8,9 @@ Joule: Decentralized Data Processing
 ====================================
 
 Joule is a framework for decentralized data processing. Joule
-distributes computation into independent executable ``modules`` that are
-connected by timestamped data flows called
-``streams``. Streams can connect modules executing on any device in the
-network enabling complex pipelines that distribute computation from edge
-nodes all the way to the data center.
+distributes computation into independent executable :ref:`modules` that are
+connected by :ref:`pipes` which carry timestamped data flows called
+:ref:`streams`.
 
 .. image:: /images/module_stream.png
    :width: 400px
@@ -28,8 +26,8 @@ more computationally intensive tasks like training new ML models (module 4).
 
 .. image:: /images/pipeline_example.png
 
-See the :ref:`getting-started` for quick introduction. Then read
-:ref:`using-joule` for an overview of how the system works.
+See the :ref:`quick-start` for a hands-on introduction with an example data pipeline. Then read
+:ref:`using-joule` for more detailed information on how to configure Joule for your own pipelines.
 
 Contributing & Running Tests
 ----------------------------
@@ -38,32 +36,20 @@ Unittests can be run using nose2, see **joule/htmlcov** for code coverage.
 
 .. code-block:: bash
 
-		$> cd joule
-		$> nose2 # run all unittests
-
-End to end tests are run from the ``tests/e2e`` directory and require
-docker-compose and the NilmDB container. See
-https://docs.docker.com/compose/install/ for details on installing
-docker-compose. The NilmDB container is available by request on `Docker Hub`_.
-
-.. code-block:: bash
-
-		$> cd test/e2e
-		$> ./runner.sh # run end-to-end tests
-
-.. _Docker Hub: https://hub.docker.com/
+    $> cd joule
+    $> nose2 # run all unittests
 
 
 .. toctree::
-   :maxdepth: 3
+    :maxdepth: 3
 
-   getting_started
-   using_joule
-   reader_modules
-   filter_modules
-   composite_modules
-   Module Docs <module_docs>
-   streams
-   integration_testing
-   nilmdb
+    quick_start
+    using_joule
+    modules
+    pipes
+    streams
+    joule CLI <cli>
+    Web Interfaces <interfaces>
+    Module Docs <module_docs>
+    integration_testing
 

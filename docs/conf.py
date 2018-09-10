@@ -94,7 +94,7 @@ html_theme = 'sphinx_rtd_theme' #'alabaster'
 #
 
 html_theme_options = {
-    "logo": "logo.png",
+    #"logo": "logo.png",
 }
 
 html_sidebars = {
@@ -146,6 +146,8 @@ latex_documents = [
      'John Donnal', 'manual'),
 ]
 
+# -- Options for Napoleon autodoc extension -------------------------------
+napoleon_include_init_with_doc = False
 
 # -- Options for manual page output ---------------------------------------
 

@@ -17,6 +17,17 @@ if TYPE_CHECKING:
 
 
 class Stream(Base):
+    """
+    Attributes:
+        name (str): stream name
+        description (str): stream description
+        datatype (Stream.DATATYPE): data representation on disk see :ref:`sec-streams`
+        decimate (bool): whether to store decimated data for stream visualization
+        folder (joule.Folder): parent Folder
+        elements (List[joule.Element]): array of stream elements
+        keep_us (int): microseconds of data to keep (KEEP_NONE=0, KEEP_ALL=-1).
+
+    """
     __tablename__ = 'stream'
     id: int = Column(Integer, primary_key=True)
     name: str = Column(String, nullable=False)
@@ -44,6 +55,7 @@ class Stream(Base):
     KEEP_ALL = -1
     KEEP_NONE = 0
     keep_us: int = Column(Integer, default=KEEP_ALL)
+
 
     description: str = Column(String)
     folder_id: int = Column(Integer, ForeignKey('folder.id'))
@@ -84,14 +96,24 @@ class Stream(Base):
 
     @property
     def locked(self):
+        """
+        bool: true if the stream has a configuration file or is an active
+         part of the data pipeline. Attributes of locked streams cannot be changed.
+        """
         return self.is_configured or self.is_destination or self.is_source
 
     @property
     def active(self):
+        """
+        bool: true if the stream is part of the data pipeline
+        """
         return self.is_source or self.is_destination
 
     @property
     def layout(self):
+        """
+        str: formatted string specifying the datatype and number of elements
+        """
         return "%s_%d" % (self.datatype.name.lower(), len(self.elements))
 
     @property
@@ -105,6 +127,9 @@ class Stream(Base):
 
     @property
     def is_remote(self) -> bool:
+        """
+        bool: true if the stream resides on a remote system
+        """
         try:
             return self._remote_url is not None
         except AttributeError:
@@ -112,6 +137,9 @@ class Stream(Base):
 
     @property
     def remote_url(self) -> str:
+        """
+        str: URL of remote host, blank if the stream is local
+        """
         try:
             return self._remote_url
         except AttributeError:
@@ -119,16 +147,32 @@ class Stream(Base):
 
     @property
     def remote_path(self) -> str:
+        """
+        str: path on remote host, blank if the stream is local
+        """
         try:
             return self._remote_path
         except AttributeError:
             return ''
 
     def set_remote(self, url: str, path: str):
+        """
+        Associate the stream with a remote system
+        Args:
+            url: remote URL
+            path: stream path on remote system
+        """
         self._remote_url = url
         self._remote_path = path
 
-    def to_json(self, info: Dict[int, StreamInfo] = None):
+    def to_json(self, info: Dict[int, StreamInfo] = None) -> Dict:
+        """
+          Args:
+            info: optional content added to ``data_info`` field
+
+        Returns: Dictionary of Stream attributes
+
+        """
 
         if info is not None and self.id in info:
             data_info = info[self.id].to_json()
@@ -153,6 +197,16 @@ class Stream(Base):
 
 
 def from_json(data: Dict) -> Stream:
+    """
+    Construct a Stream from a dictionary of attributes produced by
+    :meth:`Stream.to_json`
+
+    Args:
+        data: attribute dictionary
+
+    Returns: Stream
+
+    """
     elements = []
     for item in data["elements"]:
         elements.append(element.from_json(item))
@@ -169,6 +223,17 @@ def from_json(data: Dict) -> Stream:
 
 
 def from_config(config: configparser.ConfigParser) -> Stream:
+    """
+    Construct a Stream from a configuration file
+
+    Args:
+        config: parsed *.conf file
+
+    Returns: Stream
+
+    Raises: ConfigurationError
+
+    """
     try:
         main_configs: configparser.ConfigParser = config["Main"]
     except KeyError as e:

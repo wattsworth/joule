@@ -10,15 +10,26 @@ log = logging.getLogger('joule')
 
 
 class LocalPipe(Pipe):
-    """pipe for intra-module async communication"""
+    """
+           Pipe for intra-module communication.
 
-    def __init__(self, layout, loop: Loop = None, name=None, buffer_size=3000, close_cb=None, debug=False):
+           Args:
+               layout: ``datatype_width``, for example ``float32_3`` for a three element stream
+                 must. See Stream.layout
+           Keyword Args:
+               loop: specify a an event loop, otherwise the default one is used
+               name: useful for debugging with multiple pipes
+               close_cb: callback coroutine executed when pipe closes
+               debug: enable to log pipe usage events
+    """
+
+    def __init__(self, layout: str, loop: Loop = None, name: str = None,
+                 close_cb = None, debug: bool = False):
+
         super().__init__(name=name, layout=layout)
         if loop is None:
             loop = asyncio.get_event_loop()
         # tunable constants
-        self.BUFFER_SIZE = buffer_size
-        self.MAX_BLOCK_SIZE = int(buffer_size / 3)
         self.TIMEOUT_INTERVAL = 0.5
         self.debug = debug
         self.interval_break = False
@@ -36,6 +47,17 @@ class LocalPipe(Pipe):
         self._cache = None
 
     async def read(self, flatten=False):
+        """
+        Read stream data. By default this method returns a structured
+        array with ``timestamp`` and ``data`` fields. This method is a coroutine.
+
+        Args:
+            flatten: if ``True`` return an unstructured array (flat 2D matrix) with timestamps
+              in the first column
+
+        Returns: Numpy.ndarray
+
+        """
         self.interval_break = False
         # if the queue is empty and we have old data, just return the old data
         if self.queue.empty() and len(self.read_buffer) > 0:
@@ -92,6 +114,14 @@ class LocalPipe(Pipe):
         return self.interval_break
 
     def consume(self, num_rows):
+        """
+        Flush data from the read buffer. The next call to :meth:`read` will
+        return any unflushed data followed by new incoming data.
+
+        Args:
+            num_rows: number of rows to flush from the read buffer
+
+        """
         if num_rows == 0:
             return
         if num_rows < 0:
@@ -103,7 +133,15 @@ class LocalPipe(Pipe):
             print("[%s:read] consumed %d rows" % (self.name, num_rows))
         self.read_buffer = self.read_buffer[num_rows:]
 
-    async def write(self, data):
+    async def write(self, data: np.ndarray):
+        """
+        Write timestamped data to the pipe. Timestamps must be monotonically increasing
+         and should not overlap with existing stream data in the database. This method is a coroutine.
+        Args:
+            data: Numpy array, may be a structured array with ``timestamp`` and ``data`` fields
+              or an unstructured array with timestamps in the first column.
+
+        """
         if not self._validate_data(data):
             return
         # convert into a structured array
@@ -149,17 +187,36 @@ class LocalPipe(Pipe):
             print("[%s:write] queueing block with [%d] rows" % (self.name, len(sarray)))
 
     def enable_cache(self, lines: int):
+        """
+        Turn on caching for pipe writes. Data is only transmitted once the cache is full.
+        This improves system performance especially if :meth:`write` is called
+        rapidly with short arrays. Once enabled, caching cannot be disabled.
+
+        Args:
+            lines: cache size
+
+        """
         self._caching = True
         self._cache = np.empty(lines, self.dtype)
         self._cache_index = 0
 
     async def flush_cache(self):
+        """
+        Force a pipe flush even if the cache is not full. Raises an error if caching is not
+        enabled.
+
+        """
         if self._cache_index > 0:
             await self._write(self._cache[:self._cache_index])
             self._cache_index = 0
             self._cache = np.empty(len(self._cache), self.dtype)
 
     async def close_interval(self):
+        """
+        Signal a break in the data stream. This should be used to indicate missing data.
+        Data returned from :meth:`read` will be chunked by interval boundaries.
+
+        """
         if self.debug:
             print("[%s:write] closing interval" % self.name)
         if self._caching:
@@ -172,6 +229,11 @@ class LocalPipe(Pipe):
         self.queue.put_nowait(None)
 
     async def close(self):
+        """
+        Close the pipe. This also closes any subscribers. If ``close_cb`` is defined
+        it will be executed before the subscribers are closed.
+
+        """
         self.closed = True
         if self.close_cb is not None:
             await self.close_cb()

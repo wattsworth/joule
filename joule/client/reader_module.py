@@ -1,17 +1,44 @@
 import asyncio
 import numpy as np
 import logging
+import argparse
+
 from joule.client.base_module import BaseModule
+from joule.models.pipes import Pipe
 
 
 class ReaderModule(BaseModule):
-
+    """
+    Inherit from this class and implement a :meth:`run` coroutine to create a Joule reader module.
+    Other methods documented below may be implemented as desired.
+    """
     async def setup(self, parsed_args, app, output):
         pass
 
-    async def run(self, parsed_args, output):
-        # some logic...
-        # await output.write(np_array)
+    async def run(self, parsed_args: argparse.Namespace, output: Pipe):
+        """
+        This method must be implemented. It should run in a loop, if it returns the module
+        stops.
+
+        Args:
+            parsed_args: command line arguments, configure with :meth:`custom_args`
+            output: pipe connection to the output data stream
+
+        .. code-block:: python
+
+            class ModuleDemo(ReaderModule):
+
+                def run(self, parsed_args, output):
+                     while(not self.stop_requested):
+                        data = self.read_sensor()
+                        await output.write(data)
+
+                def self.read_sensor(self) -> np.ndarray:
+                    # custom logic specific to the reader
+
+                #... other module code
+
+        """
         assert False, "implement in child class"  # pragma: no cover
 
     def run_as_task(self, parsed_args, app, loop):

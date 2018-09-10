@@ -13,7 +13,8 @@ log = logging.getLogger('joule')
 
 class Pipe:
     """
-    This encapsulates streams and connects to modules
+    This encapsulates streams and connects to modules.
+    Some more infos2
 
     .. note::
 

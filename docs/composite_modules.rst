@@ -155,16 +155,6 @@ The following methods are available for the child class to override. The
 
 .. method:: setup(parsed_args, inputs, outputs)
 
-  * ``parsed_args`` -- `Namespace`_ object with the parsed command line arguments.
-    Customize the argument structure by overriding :meth:`~custom_args`.
-  * ``inputs`` -- Dictionary of :class:`joule.NumpyPipe` connections to
-    input streams.  These should match the **[Inputs]** in the module
-    configuration file (see :ref:`sec-modules` for example
-    configuration file)
-  * ``outputs`` -- Dictionary of :class:`joule.NumpyPipe` connections to
-    output streams.  These should match the **[Outputs]** in the
-    module configuration file (see :ref:`sec-modules` for example
-    configuration file)
     
   This should return an array of coroutine objects (tasks). See ExampleComposite for typical usage.
 
