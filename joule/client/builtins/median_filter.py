@@ -82,10 +82,10 @@ ARGS_DESC = """
 
 
 class MedianFilter(joule.FilterModule):
-    "Compute the median of the input"
+    """Compute the median of the input"""
 
-    def __init__(self):
-        super(MedianFilter, self).__init__()
+   # def __init__(self):
+   #     super(MedianFilter, self).__init__()
 
     def custom_args(self, parser):  # pragma: no cover
         parser.add_argument("window", type=int,
@@ -123,6 +123,7 @@ class MedianFilter(joule.FilterModule):
             # hard to isolate in test, usually hits line 109
             if stream_in.end_of_interval:  # pragma: no cover
                 await stream_out.close_interval()
+
 
 def main():  # pragma: no cover
     r = MedianFilter()

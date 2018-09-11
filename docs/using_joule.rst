@@ -142,7 +142,20 @@ attempts to connect an output pipe to a stream that already has a producer, Joul
 Stream Configuration
 --------------------
 
-:ref:`streams` are timestamped data flows. The configuration format is shown below:
+Streams are timestamped data flows. They are composed of one or more elements as shown
+below. Timestamps are in Unix microseconds (elapsed time since January 1, 1970).
+
+ ========= ======== ======== === ========
+ Timestamp Element1 Element2 ... ElementN
+ ========= ======== ======== === ========
+ 1003421   0.0      10.5     ... 2.3
+ 1003423   1.0      -8.0     ... 2.3
+ 1003429   8.0      12.5     ... 2.3
+ 1003485   4.0      83.5     ... 2.3
+ ...       ...      ...      ... ...
+ ========= ======== ======== === ========
+
+The configuration format is shown below:
 
 .. raw:: html
 

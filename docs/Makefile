@@ -20,7 +20,7 @@ help:
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 livehtml:
-	sphinx-autobuild -H 0.0.0.0 $(SOURCEDIR) $(BUILDDIR)/html -z ../joule -E
+	sphinx-autobuild -H 0.0.0.0 $(SOURCEDIR) $(BUILDDIR)/html -z ../joule -i *___ -E
 
 deploy: html
 	rsync -r --delete $(BUILDDIR)/html/ portal.wattsworth.net:/var/www/docs/joule 

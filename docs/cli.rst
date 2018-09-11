@@ -53,31 +53,3 @@ Command Line Interface
       [27 Jan 2017 18:22:48] Starting moving average filter with window size 9
       #... additional output
       </div>
-
-``joule docs`` -- manage module documentation
-
-  Manage the contents of the `Module Documentation`_. See
-  :ref:`sec-module-documentation` for details on writing module
-  documentation.
-
-  .. raw:: html
-
-      <div class="header bash">
-      Command Line:
-      </div>
-      <div class="code bash"><b>$>joule docs add joule-random-reader</b>
-      added documentation for [Random Reader]
-
-      <b>$>joule docs update joule-random-reader</b>
-      updated documentation for [Random Reader]
-
-      <b>$>joule docs list</b>
-      Documented modules:
-	Random Reader
-	...other modules
-
-      <b>$>joule docs remove "Random Reader"</b>
-      removed documentation for [Random Reader]
-      </div>
-
-.. _Module Documentation: /modules

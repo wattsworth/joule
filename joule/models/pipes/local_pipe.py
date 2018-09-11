@@ -136,7 +136,8 @@ class LocalPipe(Pipe):
     async def write(self, data: np.ndarray):
         """
         Write timestamped data to the pipe. Timestamps must be monotonically increasing
-         and should not overlap with existing stream data in the database. This method is a coroutine.
+        and should not overlap with existing stream data in the database. This method is a coroutine.
+
         Args:
             data: Numpy array, may be a structured array with ``timestamp`` and ``data`` fields
               or an unstructured array with timestamps in the first column.

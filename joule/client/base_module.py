@@ -17,7 +17,10 @@ log = logging.getLogger('joule')
 
 
 class BaseModule:
-
+    """
+    This is an abstract class and should not be inherited directly. Instead inherit from one of
+    the following children :class:`joule.ReaderModule`, :class:`joule.FilterModule`, or :class:`joule.CompositeModule`
+    """
     def __init__(self):
         self.stop_requested = False
         self.pipes: List[pipes.Pipe] = []
@@ -30,7 +33,7 @@ class BaseModule:
     def custom_args(self, parser: argparse.ArgumentParser):
         """
 
-        Implement this method to add custom command line arguments to the module.
+        Override to add custom command line arguments to the module.
 
         .. code-block:: python
 
@@ -60,7 +63,7 @@ class BaseModule:
 
     def stop(self):
         """
-        Implement this method to override the default shutdown strategy which simply sets
+        Override to change the default shutdown strategy which simply sets
         the ``stop_requested`` flag. If a module does not terminate within a few seconds
         of this method being called Joule will forcibly stop the module with SIGKILL.
         """
@@ -69,7 +72,7 @@ class BaseModule:
 
     def start(self, parsed_args: argparse.Namespace=None):
         """
-        Execute the module. Do not implement this function. Creates an event loop and
+        Execute the module. Do not override this function. Creates an event loop and
         executes the :meth:`run` coroutine.
 
         Args:
@@ -199,7 +202,7 @@ class BaseModule:
 
     def routes(self):
         """
-        Implement this method to register HTTP handlers for the module. Return
+        Override to register HTTP handlers for the module. Return
         an array of handlers. This creates a visualization interface.
 
         .. code-block:: python

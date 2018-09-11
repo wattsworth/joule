@@ -13,6 +13,15 @@ class ReaderModule(BaseModule):
     Other methods documented below may be implemented as desired.
     """
     async def setup(self, parsed_args, app, output):
+        """
+        Configure the module, executes before :meth:`run`
+
+        Args:
+            parsed_args:
+            app:
+            output:
+
+        """
         pass
 
     async def run(self, parsed_args: argparse.Namespace, output: Pipe):

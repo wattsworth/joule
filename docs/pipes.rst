@@ -46,16 +46,3 @@ Caching
 Subscribers
 +++++++++++
 
-API
-+++
-
-.. autoclass:: joule.InputPipe
-    :members:
-
-.. autoclass:: joule.OutputPipe
-    :members:
-
-.. autoclass:: joule.LocalPipe
-    :members:
-
-

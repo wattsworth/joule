@@ -5,7 +5,8 @@
    :caption: Source: ``example_modules/example_reader.py``
    :linenos:
 
-   from joule import ReaderModule, time_now
+   from joule import ReaderModule
+   from joule.utilities import time_now
    import asyncio
    import numpy as np
 
@@ -48,17 +49,37 @@ asyncio.sleep coroutine is used instead of the time.sleep function.
     :caption: Source: ``example_modules/high_bandwidth_reader.py``
     :linenos:
 
-    #process 1kHz data in 1Hz chunks
+    from joule import ReaderModule
+    from joule.utilities import time_now
+    import asyncio
+    import numpy as np
+
+
     class HighBandwidthReader(ReaderModule):
-      def run(self, parsed_args, output):
-        while(1):
-          # read from sensor buffer
-          data = np.random((1,1000))
-          # use system clock for first sample
-          base_ts = time_now()
-          # extrapolate timestamps for other samples in chunk
-          ts = np.linspace(base_ts,base_ts+1e6,1000)
-          # write chunk to output stream
-          await output.write(np.hstack((ts[:,None], data[:,None])))
-          # create a 1Hz chunking interval
-          await asyncio.sleep(1)
+        #Produce 1Hz sawtooth waveform at specified sample rate
+
+        def custom_args(self, parser):
+            grp = parser.add_argument_group("module",
+                                            "module specific arguments")
+            grp.add_argument("--rate", type=float,
+                             required=True,
+                             help="sample rate in Hz")
+
+        async def run(self, parsed_args, output):
+            start_ts = time_now()
+            #run 5 times per second
+            period=1
+            samples_per_period=np.round(parsed_args.rate*period)
+            while(1):
+                end_ts = start_ts+period*1e6
+                ts = np.linspace(start_ts,end_ts,
+                                 samples_per_period,endpoint=False)
+                vals=np.linspace(0,33,samples_per_period)
+                start_ts = end_ts
+                chunk = np.hstack((ts[:,None], vals[:,None]))
+                await output.write(chunk)
+                await asyncio.sleep(period)
+
+    if __name__ == "__main__":
+        r = HighBandwidthReader()
+        r.start()

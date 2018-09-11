@@ -4,6 +4,9 @@ import datetime
 
 
 def time_now():
+    """
+    :return:     current time in UNIX microseconds
+    """
     return datetime.datetime.now().timestamp() * 1e6
 
 
