@@ -107,3 +107,7 @@ Testing
 
 .. include:: composite_module/testing.rst
 
+User Interfaces
++++++++++++++++
+
+.. include:: interfaces.rst

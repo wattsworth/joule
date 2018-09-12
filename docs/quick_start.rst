@@ -28,8 +28,8 @@ This guide will step through the implementation of the three stage pipeline show
 .. image:: /images/getting_started_pipeline.png
 
 
-The Reader Module
------------------
+The Data Source
+---------------
 
 The first module is a data reader. Reader modules "read" data into the
 Joule pipeline. This data can come from embedded sensors, HTTP API's,
@@ -146,8 +146,8 @@ new module is running:
 
   </div>
 
-The Filter Module
------------------
+The Data Processor
+------------------
 
 Now let's add a filter to smooth out the random data produced by the
 reader. Joule provides a built-in moving average filter, **mean**,
@@ -240,10 +240,39 @@ both modules are running:
 
   </div>
 
-The Visualizer Module
----------------------
+The User Interface
+------------------
 
-Details on using the visualizer module
+Now let's add a user interface to complete the pipeline.
+ Joule provides a built-in
+ visualizer module.  See the `Module Documentation`_ page
+for more details on this and other Joule modules.
+
+Add the following file to the configuration directory to add the
+module to the pipeline.
+
+.. raw:: html
+
+  <div class="header ini">
+  /etc/joule/module_configs/user_interface.conf
+  </div>
+  <div class="code ini"><span>[Main]</span>
+  <b>exec_cmd =</b> joule-visualizer-filter
+  <b>name =</b> User Interface
+
+  <span>[Arguments]</span>
+  <b>title =</b> Quick Start Data Pipeline
+
+  <span>[Inputs]</span>
+  <b>input =</b> /demo/smoothed
+
+  <span>[Outputs]</span>
+
+  </div>
+
+To find the URL of the interface run joule module list.
+
+Then open a browser and navigate to the site.
 
 
 Next Steps

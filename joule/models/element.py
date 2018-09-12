@@ -12,6 +12,18 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class Element(Base):
+    """
+    Attributes:
+        name (str): element name
+        index (int): order of element in the stream
+        units (str): data unit (eg Watts, Volts, etc)
+        plottable (bool): whether the data can be visualized as a time series
+        offset (float): linear scaling y=mx+b, only applied to Lumen visualizations
+        scale_factor (float): linear scaling only applied to Lumen visualizations
+        default_min (float): fix lower limit on autoscaling in Lumen visualizations
+        default_max (float): fix upper limit on autoscaling in Lumen visualizations
+        display_type (Element.DISPLAYTYPE): visualization type
+    """
     __tablename__ = 'element'
     id: int = Column(Integer, primary_key=True)
     index: int = Column(Integer, nullable=False)
@@ -38,6 +50,12 @@ class Element(Base):
         return "<Element(name='%s', units='%s', display_type=%s)>" % (self.name, self.units, self.display_type)
 
     def to_json(self):
+        """
+
+        Returns: Dictionary of Element attributes
+
+        """
+
         return {
             'id': self.id,
             'index': self.index,

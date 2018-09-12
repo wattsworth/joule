@@ -45,11 +45,8 @@ Unittests can be run using nose2, see **joule/htmlcov** for code coverage.
 
     quick_start
     using_joule
+    cli
     modules
     pipes
-    joule CLI <cli>
-    Web Interfaces <interfaces>
-    Module Docs <module_docs>
-    integration_testing
     api_reference
 
