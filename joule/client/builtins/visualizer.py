@@ -1,6 +1,6 @@
 import asyncio
 from aiohttp import web
-from joule.client.reader_module import ReaderModule
+from joule.client.filter_module import FilterModule
 import aiohttp_jinja2
 import jinja2
 import os
@@ -10,14 +10,21 @@ CSS_DIR = os.path.join(os.path.dirname(__file__), 'assets', 'css')
 JS_DIR = os.path.join(os.path.dirname(__file__), 'assets', 'js')
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), 'assets', 'templates')
 
+ARGS_DESC = """
+TODO
+"""
 
-class Visualizer(ReaderModule):
+class Visualizer(FilterModule):
 
-    async def setup(self, parsed_args, app, output):
+    async def setup(self, parsed_args, app, inputs, outputs):
         loader = jinja2.FileSystemLoader(TEMPLATES_DIR)
         aiohttp_jinja2.setup(app, loader=loader)
 
-    async def run(self, parsed_args, output):
+    def custom_args(self, parser):
+        parser.add_argument("--title", help="page title")
+        parser.description = ARGS_DESC
+
+    async def run(self, parsed_args, inputs, outputs):
         while True:
             await asyncio.sleep(1)
 
@@ -57,6 +64,10 @@ class Visualizer(ReaderModule):
         return inputs
 
 
-if __name__ == "__main__":
+def main():  # pragma: no cover
     r = Visualizer()
     r.start()
+
+
+if __name__ == "__main__":
+    main()

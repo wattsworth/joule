@@ -14,12 +14,15 @@ make sure Joule is installed and the jouled service is running:
   <div class="header bash">
   Command Line:
   </div>
-  <div class="code bash"><b>$> joule --version</b>
-   joule 0.1.5
+  <div class="code bash">
+  <i># ensure the joule CLI is installed</i>
+  <b>$> joule --version</b>
+  joule, version 0.9
 
-   <b>$> joule info</b>
-   Client version: 1.10.3 Server version:
-   1.10.3 <i>#... more output</i>
+  <i># confirm the local joule server is running</i>
+  <b>$> joule info</b>
+  Server Version: 0.9
+  Status: online
 
   </div>
   
@@ -63,8 +66,8 @@ Try out **random** on the command line:
 
   </div>
 
-Now let's add this module to our pipeline. We need to create a module
-configuration file to tell Joule how to execute the module and where
+Now let's add this module to our pipeline. We need to create a :ref:`sec-modules` file
+to tell Joule how to execute the module and where
 to connect its output. To do this create the following file:
 
 
@@ -75,48 +78,20 @@ to connect its output. To do this create the following file:
   </div>
   <div class="code ini"><span>[Main]</span>
   <b>exec_cmd =</b> joule-random-reader
-  <b>name =</b> Random Data
+  <b>name =</b> Data Source
 
   <span>[Arguments]</span>
   <b>width = </b>2
   <b>rate  = </b>10
-  
-  <span>[Inputs]</span>
-  <i># a reader has no input streams</i>
 
   <span>[Outputs]</span>
-  <b>output =</b> /demo/random
+  <b>output =</b> /demo/random:float32[x,y]
   </div>
 
-This connects the module to a stream called ``/demo/random``. For more
-details on the configuration format see :ref:`sec-modules`. Joule
-will generate an error if a module is connected to an unconfigured
-stream. Configure the stream by creating the following file:
-
-
-.. raw:: html
-
-  <div class="header ini">
-  /etc/joule/stream_configs/demo_reader.conf
-  </div>
-  <div class="code ini"><span>[Main]</span>
-  <b>name =</b> Random Data
-  <b>path =</b> /demo/random
-  <b>datatype =</b> float32
-  <b>keep =</b> 1w
-
-  <span>[Element1]</span>
-  <b>name =</b> rand1
-
-  <span>[Element2]</span>
-   <b>name =</b> rand2
-  </div>
-
-The stream configuration file specifies what kind of data the stream holds and how
-long to store it in the database. For more details on the configuration format see
-:ref:`sec-streams`.
-
-Now the pipeline is ready to execute. Restart joule and check that the
+This connects the module to the stream **/demo/random**. The stream is configured
+inline after the colon (:). This specifies a **float32** datatype and two elements named
+**x** and **y**. To control other stream options create a :ref:`sec-streams` file
+in **/etc/joule/stream_configs**. Now the pipeline is ready to execute. Restart joule and check that the
 new module is running:
 
 .. raw:: html
@@ -124,25 +99,42 @@ new module is running:
   <div class="header bash">
   Command Line:
   </div>
-  <div class="code bash"><b>$> sudo service jouled restart</b>
+  <div class="code bash"><i># restart joule to use the new configuration files</i>
+  <b>$> sudo systemctl joule.service restart</b>
 
-  <i># check status using the joule CLI</i>
-  <b>$> joule modules</b>
-  +-------------+---------+--------------+---------+-----+
-  | Module      | Inputs | Outputs | Status  | CPU |
-  +-------------+---------+--------------+---------+-----+
-  | Demo Reader |         | /demo/random | running | 0%  |
-  +-------------+---------+--------------+---------+-----+
+  <i># check pipeline status using the joule CLI</i>
+  <b>$> joule module list</b>
+  ╒═════════════╤══════════╤══════════════╤═════════╤═════════════╕
+  │ Name        │ Inputs   │ Outputs      │   CPU % │   Mem (KiB) │
+  ╞═════════════╪══════════╪══════════════╪═════════╪═════════════╡
+  │ Data Source │          │ /demo/random │       0 │       62868 │
+  ╘═════════════╧══════════╧══════════════╧═════════╧═════════════╛
 
-  <b>$> joule logs "Demo Reader"</b>
-  [27 Jan 2017 18:05:41] ---starting module---
-  [27 Jan 2017 18:05:41] Starting random stream: 2 elements @ 10.0Hz
+  <i># check module logs for any errors</i>
+  <b>$> joule module logs "Data Source"</b>
+  [2018-09-12T15:51:38.845242]: ---starting module---
 
-  <i># confirm data is entering NilmDB</i>
-  <b>$> nilmtool list -E /demo/random</b>
-  /demo/random
-  interval extents: Fri, 27 Jan 2017 <i># ... </i>
-  total data: 1559 rows, 155.700002 seconds
+
+  <i># confirm the pipeline is producing data</i>
+  <b>$> joule stream info /demo/random</b>
+        Name:         random
+        Description:  —
+        Datatype:     float32
+        Keep:         all data
+        Decimate:     yes
+
+        Status:       ● [active]
+        Start:        2018-09-12 15:51:39.811572
+        End:          2018-09-12 15:52:59.711573
+        Rows:         800
+
+    ╒════════╤═════════╤════════════╤═══════════╕
+    │  Name  │  Units  │  Display   │  Min,Max  │
+    ╞════════╪═════════╪════════════╪═══════════╡
+    │   x    │    —    │ continuous │   auto    │
+    ├────────┼─────────┼────────────┼───────────┤
+    │   y    │    —    │ continuous │   auto    │
+    ╘════════╧═════════╧════════════╧═══════════╛
 
   </div>
 
@@ -166,7 +158,7 @@ the module to the pipeline create the following file:
   </div>
   <div class="code ini"><span>[Main]</span>
   <b>exec_cmd =</b> joule-mean-filter
-  <b>name =</b> Demo Filter
+  <b>name =</b> Data Processor
 
   <span>[Arguments]</span>
   <b>window =</b> 11
@@ -175,34 +167,11 @@ the module to the pipeline create the following file:
   <b>input =</b> /demo/random
 
   <span>[Outputs]</span>
-  <b>output =</b> /demo/smoothed
+  <b>output =</b> /demo/smoothed:float32[x,y]
   </div>
 
-The input stream is already configured. The output will have the same
-datatype and number of elements.  To configure this stream create the
-following file:
-
-
-
-.. raw:: html
-
-  <div class="header ini">
-  /etc/joule/stream_configs/my_filter.conf
-  </div>
-  <div class="code ini"><span>[Main]</span>
-  <b>name =</b> Filtered Data
-  <b>path =</b> /demo/smoothed
-  <b>datatype =</b> float32
-  <b>keep =</b> 1w
-
-  <span>[Element1]</span>
-  <b>name =</b> filtered1
-
-  <span>[Element2]</span>
-  <b>name =</b> filtered2
-  </div>
-
-Now the pipeline is fully configured.  Restart joule and check that
+The input stream is already configured by the producer module. The output will have the same
+datatype and number of elements. Now the pipeline is fully configured.  Restart joule and check that
 both modules are running:
 
 .. raw:: html
@@ -210,33 +179,49 @@ both modules are running:
   <div class="header bash">
   Command Line:
   </div>
-  <div class="code bash"><b>$> sudo systemctl restart joule.service</b>
+  <div class="code bash"><i># restart joule to use the new configuration files</i>
+  <b>$> sudo systemctl joule.service restart</b>
 
-  <i># check status using joule CLI</i>
-  <b>$> joule modules</b>
-  +-------------+--------------+----------------+---------+-----+
-  | Module      | Inputs      | Outputs   | Status  | CPU |
-  +-------------+--------------+----------------+---------+-----+
-  | Demo Reader |              | /demo/random   | running | 0%  |
-  | Demo Filter | /demo/random | /demo/smoothed | running | 0%  |
-  +-------------+--------------+----------------+---------+-----+
+  <i># check pipeline status using the joule CLI</i>
+  <b>$> joule module list</b>
+  ╒════════════════╤══════════════╤════════════════╤═════════╤═════════════╕
+  │ Name           │ Inputs       │ Outputs        │   CPU % │   Mem (KiB) │
+  ╞════════════════╪══════════════╪════════════════╪═════════╪═════════════╡
+  │ Data Processor │ /demo/random │ /demo/smoothed │       0 │       63880 │
+  ├────────────────┼──────────────┼────────────────┼─────────┼─────────────┤
+  │ Data Source    │              │ /demo/random   │       0 │       63172 │
+  ╘════════════════╧══════════════╧════════════════╧═════════╧═════════════╛
 
-  <b>$> joule logs "Demo Reader"</b>
+
+  <b>$> joule logs "Data Processor"</b>
   [27 Jan 2017 18:22:48] ---starting module---
   [27 Jan 2017 18:22:48] Starting random stream: 2 elements @ 10.0Hz
 
-  <b>$> joule logs "Demo Filter"</b>
-  [27 Jan 2017 18:22:48] ---starting module---
-  [27 Jan 2017 18:22:48] Starting moving average filter with window size 9
+  <b>$> joule logs "Data Processor"</b>
+  [2018-09-12T16:00:34.298364]: ---starting module---
 
-  <i># confirm data is entering NilmDB</i>
-  <b>$> nilmtool list -E -n /demo/*</b>
-  /demo/filtered
-    interval extents: Fri, 27 Jan 2017 <i># ...</i>
-	    total data: 132 rows, 13.100001 seconds
-  /demo/smoothed
-    interval extents: Fri, 27 Jan 2017 <i># ...</i>
-            total data: 147 rows, 14.600001 seconds
+
+  <i># confirm the pipeline is producing data (check /demo/raw as well)</i>
+  <b>$> joule stream info /demo/smoothed</b>
+
+        Name:         smoothed
+        Description:  —
+        Datatype:     float32
+        Keep:         all data
+        Decimate:     yes
+
+        Status:       ● [active]
+        Start:        2018-09-12 16:00:35.788668
+        End:          2018-09-12 16:02:29.688669
+        Rows:         1140
+
+    ╒════════╤═════════╤════════════╤═══════════╕
+    │  Name  │  Units  │  Display   │  Min,Max  │
+    ╞════════╪═════════╪════════════╪═══════════╡
+    │   x    │    —    │ continuous │   auto    │
+    ├────────┼─────────┼────────────┼───────────┤
+    │   y    │    —    │ continuous │   auto    │
+    ╘════════╧═════════╧════════════╧═══════════╛
 
   </div>
 
@@ -259,6 +244,7 @@ module to the pipeline.
   <div class="code ini"><span>[Main]</span>
   <b>exec_cmd =</b> joule-visualizer-filter
   <b>name =</b> User Interface
+  <b>has_interface =</b> yes
 
   <span>[Arguments]</span>
   <b>title =</b> Quick Start Data Pipeline
@@ -266,11 +252,10 @@ module to the pipeline.
   <span>[Inputs]</span>
   <b>input =</b> /demo/smoothed
 
-  <span>[Outputs]</span>
-
   </div>
 
-To find the URL of the interface run joule module list.
+The URL of the interface is available in the module info:
+
 
 Then open a browser and navigate to the site.
 

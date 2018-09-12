@@ -25,3 +25,5 @@ treelib==1.5.3
 tzlocal==1.5.1
 urllib3==1.23
 yarl==1.2.6
+Jinja2==2.10
+aiohttp-jinja2==1.0.0

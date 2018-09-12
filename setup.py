@@ -53,7 +53,8 @@ setup(
             'joule-random-reader = joule.client.builtins.random_reader:main',
             'joule-file-reader = joule.client.builtins.file_reader:main',
             'joule-mean-filter = joule.client.builtins.mean_filter:main',
-            'joule-median-filter = joule.client.builtins.median_filter:main'
+            'joule-median-filter = joule.client.builtins.median_filter:main',
+            'joule-visualizer-filter = joule.client.builtins.visualizer:main'
         ]
     },
     #options={

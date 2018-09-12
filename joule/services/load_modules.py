@@ -65,7 +65,7 @@ def _parse_configs(configs: Configurations, db: Session) -> Modules:
 def _connect_outputs(config: 'ConfigParser', db: Session) -> StreamConnections:
     outputs: StreamConnections = {}
     if 'Outputs' not in config:
-        raise ConfigurationError("Missing section [Outputs]")
+        return outputs
     for name, pipe_config in config['Outputs'].items():
         try:
             outputs[name] = parse_pipe_config.run(pipe_config, db)
@@ -78,7 +78,7 @@ def _connect_outputs(config: 'ConfigParser', db: Session) -> StreamConnections:
 def _connect_inputs(config: 'ConfigParser', db: Session) -> StreamConnections:
     inputs: StreamConnections = {}
     if 'Inputs' not in config:
-        raise ConfigurationError("Missing section [Inputs]")
+        return inputs
     for name, pipe_config in config['Inputs'].items():
         try:
             inputs[name] = parse_pipe_config.run(pipe_config, db)

@@ -13,4 +13,4 @@ async def dbinfo(request: web.Request):
 
 
 async def version(request: web.Request):
-    return web.Response(text="not-set")
+    return web.json_response(data={'version': "0.9"})

@@ -10,7 +10,7 @@ from joule.controllers import (
 routes = [
     web.get('/', root_controller.index),
     web.get('/dbinfo', root_controller.dbinfo),
-    web.get('/version', root_controller.version),
+    web.get('/version.json', root_controller.version),
     # --- stream controller routes ---
     # list all streams
     web.get('/streams.json', stream_controller.index),
