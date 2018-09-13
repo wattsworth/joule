@@ -1,10 +1,13 @@
 import asyncio
 from aiohttp import web
-from joule.client.filter_module import FilterModule
 import aiohttp_jinja2
 import jinja2
+import statistics
 import os
 import random
+import numpy as np
+
+from joule.client.filter_module import FilterModule
 
 CSS_DIR = os.path.join(os.path.dirname(__file__), 'assets', 'css')
 JS_DIR = os.path.join(os.path.dirname(__file__), 'assets', 'js')
@@ -27,9 +30,9 @@ class Visualizer(FilterModule):
                 self.elements.append({
                     'stream': pipe.stream.name,
                     'element': element.name,
-                    'value': '--',
-                    'min': '--',
-                    'max': '--',
+                    'value': '&mdash;',
+                    'min': '&mdash;',
+                    'max': '&mdash;',
                     'id': element.id
                 })
         if len(self.elements) == 0:
@@ -49,8 +52,31 @@ class Visualizer(FilterModule):
                 self._update_mock_data()
                 await asyncio.sleep(1)
         while True:
-            # compute max, mean, and min
-            pass
+            offset = 0
+            for pipe in inputs.values():
+                data = await pipe.read()
+                pipe.consume(len(data))
+                if len(data) == 0:
+                    continue
+                for i in range(len(pipe.stream.elements)):
+                    data_mean = float(np.mean(data['data'][i]))
+                    data_min = float(np.min(data['data'][i]))
+                    data_max = float(np.max(data['data'][i]))
+                    self.elements[i + offset]['value'] = data_mean
+                    # compute the new min value
+                    if type(self.elements[i + offset]['min']) is str:
+                        self.elements[i + offset]['min'] = data_min
+                    else:
+                        global_min = self.elements[i + offset]['min']
+                        self.elements[i + offset]['min'] = min((data_min, global_min))
+                    # compute the new max value
+                    if type(self.elements[i + offset]['max']) is str:
+                        self.elements[i + offset]['max'] = data_max
+                    else:
+                        global_max = self.elements[i + offset]['max']
+                        self.elements[i + offset]['max'] = max((data_max, global_max))
+                offset += len(pipe.stream.elements)
+            await asyncio.sleep(1)
 
     def routes(self):
         return [
@@ -70,6 +96,10 @@ class Visualizer(FilterModule):
 
     async def reset(self, request):
         # clear the max and min values
+        for element in self.elements:
+            element['min'] = "&mdash;"
+            element['max'] = "&mdash;"
+
         return web.json_response(data=self.elements)
 
     def _update_mock_data(self):

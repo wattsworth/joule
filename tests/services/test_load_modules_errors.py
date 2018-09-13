@@ -33,32 +33,6 @@ class TestLoadModulesErrors(unittest.TestCase):
         all_logs = ' '.join(logs.output).lower()
         self.assertTrue('exec_cmd' in all_logs)
 
-    def test_outputs_section_required(self):
-        conf_str = """
-                    [Main]
-                    name=bad module
-                    exec_cmd=runit.sh
-                    [Inputs]
-                    input=/path/to/input
-                    """
-        with self.assertLogs(level="ERROR") as logs:
-            attempt_load(conf_str, self.db)
-        all_logs = ' '.join(logs.output).lower()
-        self.assertTrue('outputs' in all_logs)
-
-    def test_inputs_section_required(self):
-        conf_str = """
-                    [Main]
-                    name=bad module
-                    exec_cmd=runit.sh
-                    [Outputs]
-                    output=/path/to/output:int64[x,y,z]
-                    """
-        with self.assertLogs(level="ERROR") as logs:
-            attempt_load(conf_str, self.db)
-        all_logs = ' '.join(logs.output).lower()
-        self.assertTrue('inputs' in all_logs)
-
     def test_streams_must_be_configured(self):
         conf_str = """
                     [Main]

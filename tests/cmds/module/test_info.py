@@ -24,14 +24,11 @@ class TestModuleInfo(FakeJouleTestCase):
         result = runner.invoke(main, ['--url', url, 'module', 'info', 'ModuleName'])
         self.assertEqual(result.exit_code, 0)
         # make sure stream inputs and outputs are listed
-        output = result.output.split('\n')
-        input_line = [x for x in output if 'my_input' in x][0]
-        self.assertTrue("/folder_1/random" in input_line)
-        output_line = [x for x in output if 'my_output' in x][0]
-        self.assertTrue("/folder_1/filtered" in output_line)
+        self.assertIn("/folder_1/random", result.output)
+        self.assertIn("/folder_1/filtered", result.output)
         # check for name and description
-        self.assertTrue('ModuleName' in result.output)
-        self.assertTrue('the module description' in result.output)
+        self.assertIn('ModuleName', result.output)
+        self.assertIn('the module description', result.output)
         self.stop_server()
 
     def test_handles_different_module_configurations(self):

@@ -24,9 +24,9 @@ class LocalPipe(Pipe):
     """
 
     def __init__(self, layout: str, loop: Loop = None, name: str = None,
-                 close_cb = None, debug: bool = False):
+                 close_cb = None, debug: bool = False, stream=None):
 
-        super().__init__(name=name, layout=layout)
+        super().__init__(name=name, layout=layout, stream=stream)
         if loop is None:
             loop = asyncio.get_event_loop()
         # tunable constants

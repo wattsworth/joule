@@ -90,9 +90,12 @@ def request_network_input(path: str, my_stream: stream.Stream, url: str,
     if src_stream.layout != my_stream.layout:
         raise ConfigurationError("Input [%s] configured for [%s] but source is [%s]" % (
             path, my_stream.layout, src_stream.layout))
+
     # if the input is *live* make sure the stream is being produced
     if not src_stream.is_destination and (start_time is None and end_time is None):
         raise ConfigurationError("Input [%s] is not being produced, specify time bounds for historic execution" % path)
+    # replace the stub stream (from config file) with actual stream
+    pipe.stream = src_stream
     # all checks passed, subscribe to the input
     if start_time is None and end_time is None:
         task = loop.create_task(_live_reader(url, src_stream, pipe))
@@ -190,7 +193,7 @@ async def request_network_output(path: str, my_stream: stream.Stream, url: str, 
     async def close():
         await task
 
-    pipe = pipes.LocalPipe(my_stream.layout, name=path, close_cb=close)
+    pipe = pipes.LocalPipe(dest_stream.layout, name=path, stream=dest_stream, close_cb=close)
     task = loop.create_task(_output_writer(url, dest_stream, pipe))
     return pipe
 
