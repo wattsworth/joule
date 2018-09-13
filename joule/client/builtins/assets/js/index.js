@@ -3,7 +3,7 @@ $(function () {
 });
 
 function loadData() {
-    let entries = $('.min-val,.max-val,.val');
+    let entries = $('.min-val,.max-val,.val').not('.static');
     $.get("data.json", function (data) {
         let i;
         entries.fadeTo(800, 0, callback=function () {

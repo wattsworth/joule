@@ -14,54 +14,82 @@ ARGS_DESC = """
 TODO
 """
 
+
 class Visualizer(FilterModule):
 
     async def setup(self, parsed_args, app, inputs, outputs):
         loader = jinja2.FileSystemLoader(TEMPLATES_DIR)
         aiohttp_jinja2.setup(app, loader=loader)
+        app["title"] = parsed_args.title
+        self.elements = []
+        for pipe in inputs.values():
+            for element in pipe.stream.elements:
+                self.elements.append({
+                    'stream': pipe.stream.name,
+                    'element': element.name,
+                    'value': '--',
+                    'min': '--',
+                    'max': '--',
+                    'id': element.id
+                })
+        if len(self.elements) == 0:
+            self.mock_data = True
+            self.elements = self._create_mock_elements(4)
+
+        else:
+            self.mock_data = False
 
     def custom_args(self, parser):
-        parser.add_argument("--title", help="page title")
+        parser.add_argument("--title", default="Data Visualizer", help="page title")
         parser.description = ARGS_DESC
 
     async def run(self, parsed_args, inputs, outputs):
+        if self.mock_data:
+            while True:
+                self._update_mock_data()
+                await asyncio.sleep(1)
         while True:
-            await asyncio.sleep(1)
+            # compute max, mean, and min
+            pass
 
     def routes(self):
         return [
             web.get('/', self.index),
             web.get('/data.json', self.data),
+            web.post('/reset.json', self.reset),
             web.static('/assets/css', CSS_DIR),
             web.static('/assets/js', JS_DIR)
         ]
 
     @aiohttp_jinja2.template('index.jinja2')
     async def index(self, request):
-        return {'inputs': self._create_mock_data()}
+        return {'title': request.app['title'], 'elements': self.elements}
 
     async def data(self, request):
-        return web.json_response(data=self._create_mock_data())
+        return web.json_response(data=self.elements)
 
-    async def hello(self, request):
-        print("got hello page!")
-        return web.Response(text="the hello handler")
+    async def reset(self, request):
+        # clear the max and min values
+        return web.json_response(data=self.elements)
 
-    def _create_mock_data(self):
-        inputs = []
-        for x in range(4):
-            value = random.randint(1, 101)
-            min = value - random.randint(1, 101)
-            max = value + random.randint(1, 101)
-            inputs.append({
+    def _update_mock_data(self):
+        for element in self.elements:
+            element['value'] = random.randint(1, 101)
+            element['min'] = element['value'] - random.randint(1, 101)
+            element['max'] = element['value'] + random.randint(1, 101)
+
+    def _create_mock_elements(self, num_elements: int):
+        elements = []
+        for x in range(num_elements):
+            elements.append({
                 'stream': 'test',
                 'element': 'elem%d' % x,
-                'value': value,
-                'min': min,
-                'max': max,
+                'value': '--',
+                'min': '--',
+                'max': '--',
                 'id': x
             })
-        return inputs
+        return elements
 
 
 def main():  # pragma: no cover

@@ -192,16 +192,10 @@ both modules are running:
   │ Data Source    │              │ /demo/random   │       0 │       63172 │
   ╘════════════════╧══════════════╧════════════════╧═════════╧═════════════╛
 
-
-  <b>$> joule logs "Data Processor"</b>
-  [27 Jan 2017 18:22:48] ---starting module---
-  [27 Jan 2017 18:22:48] Starting random stream: 2 elements @ 10.0Hz
-
   <b>$> joule logs "Data Processor"</b>
   [2018-09-12T16:00:34.298364]: ---starting module---
 
-
-  <i># confirm the pipeline is producing data (check /demo/raw as well)</i>
+  <i># confirm the pipeline is producing data (check /demo/random as well)</i>
   <b>$> joule stream info /demo/smoothed</b>
 
         Name:         smoothed
@@ -250,14 +244,49 @@ module to the pipeline.
   <b>title =</b> Quick Start Data Pipeline
 
   <span>[Inputs]</span>
-  <b>input =</b> /demo/smoothed
-
+  <b>smoothed =</b> /demo/smoothed
+  <b>random =</b> /demo/random
   </div>
 
 The URL of the interface is available in the module info:
 
+.. raw:: html
 
-Then open a browser and navigate to the site.
+    <div class="header bash">
+    Command Line:
+    </div>
+    <div class="code bash"><i># restart joule to use the new configuration files</i>
+    <b>$> sudo systemctl joule.service restart</b>
+
+    <i># check pipeline status using the joule CLI</i>
+    <b>$> joule module list</b>
+    ╒════════════════╤════════════════╤════════════════╤═════════╤═════════════╕
+    │ Name           │ Inputs         │ Outputs        │   CPU % │   Mem (KiB) │
+    ╞════════════════╪════════════════╪════════════════╪═════════╪═════════════╡
+    │ Data Processor │ /demo/random   │ /demo/smoothed │       2 │       63924 │
+    ├────────────────┼────────────────┼────────────────┼─────────┼─────────────┤
+    │ User Interface │ /demo/smoothed │                │       0 │       64548 │
+    │                │ /demo/random   │                │         │             │
+    ├────────────────┼────────────────┼────────────────┼─────────┼─────────────┤
+    │ Data Source    │                │ /demo/random   │       0 │       62748 │
+    ╘════════════════╧════════════════╧════════════════╧═════════╧═════════════╛
+
+    <i># check the module info to find the interface URL</i>
+    <b>$> joule module info "User Interface"</b>
+    Name:
+        User Interface
+    Description:
+
+    Interface URL:
+        http://localhost:8088/interface/1/
+    Inputs:
+        smoothed: /demo/smoothed
+        random: /demo/random
+    Outputs:
+        --none--
+    </div>
+
+Open a browser and navigate to the specified URL to view the interface.
 
 
 Next Steps

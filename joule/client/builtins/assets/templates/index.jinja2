@@ -9,6 +9,11 @@
 {% block body %}
 
   <div class="row">
+    <div class="col-12">
+      <h1 class="display-2 border-bottom border-light">{{ title }}</h1>
+    </div>
+  </div>
+  <div class="row">
     {% for input in inputs %}
       <div class="col-md-3 col-sm-6 p-2">
         <div class="card text-center">
@@ -36,6 +41,35 @@
         </div>
       </div>
     {% endfor %}
+  </div>
+  <div class="row">
+    <div class="col-12">
+      <div class="col-md-3 col-sm-6 p-2">
+        <div class="card text-center">
+          <div class="card-body">
+            <span class="max-val static">
+              maximum
+            </span>
+            <span class="val-box">
+              <span class="val static">
+                average
+              </span>
+            </span>
+            <span class="min-val static">
+              minimum
+            </span>
+          </div>
+          <div class="card-footer">
+            <span class="stream lead">
+              Stream:
+            </span>
+            <span class="lead">
+              Element
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
 {% endblock %}

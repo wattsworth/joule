@@ -33,8 +33,10 @@ async def info(request):
         return web.Response(text="module does not exist", status=404)
     worker = worker[0]
     data = {
+        "id": worker.uuid,
         "name": worker.name,
         "description": worker.description,
+        "has_interface": worker.has_interface,
         "inputs": {},
         "outputs": {},
         "statistics": (await worker.statistics()).to_json()}
