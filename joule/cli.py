@@ -1,5 +1,5 @@
 import click
-from joule.cmds import info, streams, data, module, folders, pass_config
+from joule.cmds import info, initialize, streams, data, module, folders, pass_config
 
 
 @click.group()
@@ -11,6 +11,7 @@ def main(config, url):
 
 
 main.add_command(info)
+main.add_command(initialize)
 main.add_command(streams)
 main.add_command(data)
 main.add_command(module)
