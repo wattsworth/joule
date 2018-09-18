@@ -109,7 +109,7 @@ def _make_joule_directory(path):
             exit(1)
         # check if directory exists
         if not os.path.isdir(path):
-            os.mkdir(path)
+            os.makedirs(path)
         # set ownership to joule user
         shutil.chown(path, user="joule", group="joule")
     except PermissionError:
