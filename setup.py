@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from setuptools import setup, find_packages
+import versioneer
 
 PROJECT = 'Joule'
 
@@ -13,8 +14,8 @@ except IOError:
 
 setup(
     name=PROJECT,
-    version='0.8.1',  # versioneer.get_version(),
-    #cmdclass=versioneer.get_cmdclass(),
+    version = versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     description='Process manager for embedded systems',
     long_description=long_description,
 
@@ -45,7 +46,7 @@ setup(
                       'aiohttp-jinja2',
                       'jinja2'],
     namespace_packages=[],
-    packages=find_packages(),
+    packages=['joule'],
     include_package_data=True,
 
     entry_points={

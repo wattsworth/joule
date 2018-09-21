@@ -1,2 +1,5 @@
 recursive-include joule/resources *
+recursive-include joule/client/builtin/assets *
 prune tests
+include versioneer.py
+include joule/_version.py

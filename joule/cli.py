@@ -4,7 +4,7 @@ from joule.cmds import info, initialize, streams, data, module, folders, pass_co
 
 @click.group()
 @click.option('-u', '--url', default="http://localhost:8088", help="Joule Server")
-@click.version_option(version=0.8)
+@click.version_option()
 @pass_config
 def main(config, url):
     config.url = url
