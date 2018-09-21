@@ -41,7 +41,7 @@ def get_config():
     cfg = VersioneerConfig()
     cfg.VCS = "git"
     cfg.style = "pep440"
-    cfg.tag_prefix = "'joule-'"
+    cfg.tag_prefix = "joule-"
     cfg.parentdir_prefix = "None"
     cfg.versionfile_source = "joule/_version.py"
     cfg.verbose = False
@@ -483,7 +483,6 @@ def get_versions():
 
     cfg = get_config()
     verbose = cfg.verbose
-
     try:
         return git_versions_from_keywords(get_keywords(), cfg.tag_prefix,
                                           verbose)

@@ -1,6 +1,6 @@
 from aiohttp import web
 from joule.models import DataStore
-
+import joule
 
 async def index(request: web.Request):
     return web.Response(text="Joule server")
@@ -13,7 +13,7 @@ async def dbinfo(request: web.Request):
 
 
 async def version_json(request: web.Request):
-    return web.json_response(data={'version': "0.8"})
+    return web.json_response(data={'version': joule.__version__})
 
 async def version(request: web.Request):
-    return web.Response(text = "0.8")
+    return web.Response(text = joule.__version__)
