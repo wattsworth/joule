@@ -19,7 +19,7 @@ def info(config):
 
 
 @click.command(name="initialize")
-def initialize():
+def initialize():  # pragma: no cover
     click.echo("1. creating joule user ", nl=False)
     proc = subprocess.run("useradd -r -G dialout joule".split(" "), stderr=subprocess.PIPE)
     if proc.returncode == 0:
@@ -101,7 +101,7 @@ def initialize():
     click.echo("[" + click.style("OK", fg='green') + "]")
 
 
-def _make_joule_directory(path):
+def _make_joule_directory(path):  # pragma: no cover
     try:
         if os.path.isfile(path):
             click.echo("\n "+click.style("ERROR", fg='red') +
@@ -116,6 +116,6 @@ def _make_joule_directory(path):
         _run_as_root()
 
 
-def _run_as_root():
+def _run_as_root():  # pragma: no cover
     click.echo("[" + click.style("ERROR", fg="red") + "]\n run as [sudo joule initialize]")
     exit(1)

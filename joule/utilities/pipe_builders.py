@@ -182,8 +182,7 @@ async def request_network_output(path: str, my_stream: stream.Stream, url: str, 
     actual_names = [e.name for e in dest_stream.elements]
     requested_names = [e.name for e in my_stream.elements]
     if actual_names != requested_names:  # pragma: no cover
-        if not (click.confirm("[%s] elements do not match, continue?" % path)):
-            raise ConfigurationError("cancelled")
+        log.warning("[%s] elements do not match the existing stream" % path)
 
     # make sure the stream is not currently produced
     if dest_stream.is_destination:

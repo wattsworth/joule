@@ -18,7 +18,7 @@ TODO
 """
 
 
-class Visualizer(FilterModule):
+class Visualizer(FilterModule):  # pragma: no cover
 
     async def setup(self, parsed_args, app, inputs, outputs):
         loader = jinja2.FileSystemLoader(TEMPLATES_DIR)

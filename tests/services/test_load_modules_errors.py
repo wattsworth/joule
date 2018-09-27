@@ -40,8 +40,7 @@ class TestLoadModulesErrors(unittest.TestCase):
                     exec_cmd=runit.sh
                     [Outputs]
                     output=/path/not/configured
-                    [Inputs]
-                    # none
+                    # no inputs
                     """
         with self.assertLogs(level="ERROR") as logs:
             attempt_load(conf_str, self.db)

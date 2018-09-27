@@ -3,7 +3,7 @@ import asyncio
 import logging
 
 from joule.models import Worker, Stream, pipes
-from joule.errors import SubscriptionError
+from joule.errors import SubscriptionError, ConfigurationError
 from joule.utilities.pipe_builders import request_network_input
 from joule.utilities.pipe_builders import request_network_output
 
@@ -29,8 +29,12 @@ class Supervisor:
         # returns a co-routine
         tasks: Tasks = []
         for worker in self._workers:
-            await self._connect_remote_outputs(worker, loop)
-            tasks.append(loop.create_task(worker.run(self.subscribe, loop)))
+            if await self._connect_remote_outputs(worker, loop):
+                # only start workers that have valid configurations
+                tasks.append(loop.create_task(worker.run(self.subscribe, loop)))
+            else:
+                log.error("Module [%s] requested an invalid remote output" % worker.name)
+                worker.log("cannot start module, remote outputs are not available")
         self.task = asyncio.gather(*tasks, loop=loop)
 
     async def stop(self, loop: Loop):
@@ -72,17 +76,24 @@ class Supervisor:
 
     async def _connect_remote_outputs(self, worker: Worker, loop: Loop):
         remote_streams = [stream for stream in worker.subscribers if stream.is_remote]
-        for stream in remote_streams:
-            pipe = await request_network_output(stream.remote_path, stream,
-                                                stream.remote_url, loop)
-            # ignore unsubscribe cb, not used
-            worker.subscribe(stream, pipe)
-            self.remote_outputs[stream] = pipe
+        try:
+            for stream in remote_streams:
+                pipe = await request_network_output(stream.remote_path, stream,
+                                                    stream.remote_url, loop)
+                # ignore unsubscribe cb, not used
+                worker.subscribe(stream, pipe)
+                self.remote_outputs[stream] = pipe
+        except ConfigurationError:
+            return False
+        return True
 
     def _connect_remote_input(self, stream: Stream, pipe: pipes.Pipe, loop: Loop):
         if stream in self.remote_inputs:
             return self.remote_inputs[stream].subscribe(pipe)
 
-        request_network_input(stream.remote_path,
-                              stream, stream.remote_url, pipe, loop)
-        self.remote_inputs[stream] = pipe
+        try:
+            request_network_input(stream.remote_path,
+                                  stream, stream.remote_url, pipe, loop)
+            self.remote_inputs[stream] = pipe
+        except ConfigurationError as e:
+            raise SubscriptionError from e

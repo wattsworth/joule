@@ -29,6 +29,12 @@ class TestStreamController(AioHTTPTestCase):
         self.assertEqual(resp.status, 200)
         # version is some non-empty string
         self.assertTrue(len(version) > 0)
+        # check JSON version
+        resp: aiohttp.ClientResponse = await self.client.request("GET", "/version.json")
+        data = await resp.json()
+        self.assertEqual(resp.status, 200)
+        # version is some non-empty string
+        self.assertTrue(len(data['version']) > 0)
 
     @unittest_run_loop
     async def test_dbinfo(self):

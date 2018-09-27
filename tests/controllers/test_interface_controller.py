@@ -1,5 +1,6 @@
 from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 import unittest
+import aiohttp
 from aiohttp import web
 import argparse
 import multiprocessing
@@ -23,15 +24,30 @@ class InterfaceModule(FilterModule):
     def routes(self):
         return[
             web.get('/', self.index),
-            web.get('/test', self.test)
+            web.get('/test', self.get_test),
+            web.post('/test_json', self.post_json),
+            web.post('/test_form', self.post_form)
         ]
 
     async def index(self, request):
-        return web.Response(text="index")
+        data = request.query
+        sdata = json.dumps(dict(data))
+        return web.Response(text=sdata)
 
-    async def test(self, request):
+    async def get_test(self, request):
         self.stop_requested = True
-        return web.Response(text="Hello World")
+        data = request.query
+        sdata = json.dumps(dict(data))
+        return web.Response(text=sdata)
+
+    async def post_json(self, request):
+        data = await request.json()
+        return web.Response(text=json.dumps(data))
+
+    async def post_form(self, request):
+        self.stop_requested = True
+        data = await request.post()
+        return web.Response(text=json.dumps(dict(data)))
 
 
 class TestInterfaceController(AioHTTPTestCase):
@@ -61,13 +77,47 @@ class TestInterfaceController(AioHTTPTestCase):
             proc.start()
         loop.close()
         asyncio.set_event_loop(old_loop)
+        payload = {'param1': '1', 'param2': '2'}
         # passes root as / to module
-        resp = await self.client.request("GET", "/interface/101")
+        resp = await self.client.request("GET", "/interface/101?param1=1&param2=2")
         msg = await resp.text()
-        self.assertEqual(msg, 'index')
+        self.assertEqual(payload, json.loads(msg))
         # another path, this one shuts down the module
-        resp = await self.client.request("GET", "/interface/101/test")
+        resp = await self.client.request("GET", "/interface/101/test?param1=1&param2=2")
         msg = await resp.text()
         proc.join()
         self.assertEqual(resp.status, 200)
-        self.assertEqual("Hello World", msg)
+        self.assertEqual(payload, json.loads(msg))
+
+    @unittest_run_loop
+    async def test_proxies_post_requests(self):
+        # start up the module
+        module = InterfaceModule()
+        args = argparse.Namespace(socket='interface.test',
+                                  pipes=json.dumps(json.dumps(
+                                      {'inputs': {}, 'outputs': {}})))
+        old_loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        proc = multiprocessing.Process(target=module.start, args=(args,))
+        f = io.StringIO()
+        with redirect_stdout(f):
+            proc.start()
+        loop.close()
+        asyncio.set_event_loop(old_loop)
+        # POST json (preserves types)
+        payload = {'param1': 1, 'param2': '2'}
+        resp = await self.client.request("POST", "/interface/101/test_json", json=payload)
+        msg = await resp.text()
+        self.assertEqual(payload, json.loads(msg))
+        # POST form data (does not preserve types)
+        payload = {'param1': '1', 'param2': '2'}
+        data = aiohttp.FormData()
+        data.add_field('param1', '1')
+        data.add_field('param2', '2')
+        resp = await self.client.request("POST", "/interface/101/test_form", data=data)
+        msg = await resp.text()
+        self.assertEqual(payload, json.loads(msg))
+        proc.join()
+        self.assertEqual(resp.status, 200)
+        self.assertEqual(payload, json.loads(msg))

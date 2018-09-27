@@ -47,8 +47,7 @@ class TestConfigureModules(unittest.TestCase):
               exec_cmd = runit.sh
             [Arguments]
               key = value
-            [Inputs]
-              # reader
+            # no inputs
             [Outputs]
               raw = /test/stream1
             """,
@@ -70,7 +69,7 @@ class TestConfigureModules(unittest.TestCase):
               exec_cmd = runit3.sh
             [Inputs]
               source = /missing/stream
-            [Outputs]
+            # no outputs
             """,
             # ignored: mismatched stream config
             """

@@ -1,5 +1,5 @@
 [run]
-omit = joule/testing/e2eutils/nilmtool.py, joule/testing/e2eutils/joule.py, joule/daemon.py
+omit = joule/testing/e2eutils/nilmtool.py, joule/testing/e2eutils/joule.py, joule/daemon.py, joule/_version.py
 
 [report]
 exclude_lines =

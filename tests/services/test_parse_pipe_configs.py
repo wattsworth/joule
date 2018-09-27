@@ -61,7 +61,7 @@ class TestParsePipeConfig(unittest.TestCase):
     def test_parses_remote_stream_configs(self):
         my_stream = parse_pipe_config.run("remote.com:3000 /path/to/stream:float32[x,y]", self.db)
         self.assertTrue(my_stream.is_remote)
-        self.assertEqual(my_stream.remote_url, "remote.com:3000")
+        self.assertEqual(my_stream.remote_url, "http://remote.com:3000")
         self.assertEqual(my_stream.remote_path, "/path/to/stream")
 
     def test_errors_on_invalid_configs(self):

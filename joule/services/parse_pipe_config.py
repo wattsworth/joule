@@ -64,7 +64,7 @@ def strip_remote_config(pipe_config: str) -> (str, str):
             return pipe_config, None
         # this is a remote stream, separate out the URL
         pieces = pipe_config.split(' ')
-        url = pieces[0]
+        url = "http://"+pieces[0]
         pipe_config = pieces[1]
     except (ValueError, IndexError):
         raise ConfigurationError("invalid pipe configuration [%s]" % pipe_config)

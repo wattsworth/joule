@@ -35,9 +35,9 @@ routes = [
     web.get('/module.json', module_controller.info),
     web.get('/module/logs.json', module_controller.logs),
     # --- interface routes ---
-    web.get('/interface/{id}', interface_controller.get),
-    web.get('/interface/{id}/{path:.*}', interface_controller.get),
-    web.post('/interface/{id}/{path:.*}', interface_controller.post)
+    web.get('/interface/{id}', interface_controller.proxy),
+    web.get('/interface/{id}/{path:.*}', interface_controller.proxy),
+    web.post('/interface/{id}/{path:.*}', interface_controller.proxy)
 
     # TODO: routes for stream tags /streams/tags
 ]

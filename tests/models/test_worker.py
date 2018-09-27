@@ -320,10 +320,12 @@ class TestWorker(unittest.TestCase):
         interval2_data = helpers.create_data('float32_3')
 
         async def mock_producers():
-            await asyncio.sleep(0.5)
-
+            # await asyncio.sleep(0.5)
+            subscribers = self.producers[0].subscribers[self.streams[0]]
+            while len(subscribers) == 0:
+                await asyncio.sleep(0.01)
             # add two intervals of mock data to the producer queues
-            input1 = self.producers[0].subscribers[self.streams[0]][0]
+            input1 = subscribers[0]#self.producers[0].subscribers[self.streams[0]][0]
             await input1.write(interval1_data)
             await input1.close_interval()
             await input1.write(interval2_data)
@@ -337,6 +339,8 @@ class TestWorker(unittest.TestCase):
             await input2.close_interval()
             await input2.close()
 
+            await asyncio.sleep(2)
+
         # subscribe to the module outputs
         output1 = pipes.LocalPipe(layout=self.streams[2].layout, loop=loop, name="output1", debug=False)
         output2 = pipes.LocalPipe(layout=self.streams[3].layout, loop=loop, name="output2", debug=False)
@@ -344,26 +348,29 @@ class TestWorker(unittest.TestCase):
         # create a slow subscriber that times out
         class SlowPipe(pipes.Pipe):
             async def write(self, data):
-                await asyncio.sleep(5)
+                await asyncio.sleep(10)
 
             async def close_interval(self):
                 pass
+
         slow_pipe = SlowPipe(stream=helpers.create_stream('slow stream', self.streams[2].layout))
         self.worker.subscribe(self.streams[2], slow_pipe)
-        self.worker.SUBSCRIBER_TIMEOUT=0.1
+        self.worker.SUBSCRIBER_TIMEOUT = 0.1
 
         # create a subscriber that errors out
         class ErrorPipe(pipes.Pipe):
             async def write(self, data):
                 raise BrokenPipeError()
+
         error_pipe = ErrorPipe(stream=helpers.create_stream('error stream', self.streams[2].layout))
         self.worker.subscribe(self.streams[3], error_pipe)
         self.worker.subscribe(self.streams[3], output2)
 
         self.worker.subscribe(self.streams[2], output1)
         with self.assertLogs() as log:
-            loop.run_until_complete(asyncio.gather(mock_producers(),
-                                                   self.worker.run(self.supervisor.subscribe, loop, restart=False)))
+            loop.run_until_complete(asyncio.gather(
+                self.worker.run(self.supervisor.subscribe, loop, restart=False),
+                mock_producers()))
         log_dump = ' '.join(log.output)
         self.assertIn("subscriber write error", log_dump)
         self.assertIn("timed out", log_dump)

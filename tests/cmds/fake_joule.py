@@ -41,20 +41,23 @@ class FakeJoule:
         self.runner = None
         self.app = web.Application()
         self.app.router.add_routes(
-            [web.get('/streams.json', self.stub_get),
-             web.get('/stream.json', self.stream_info),
-             web.post('/stream.json', self.create_stream),
-             web.put('/stream/move.json', self.move_stream),
-             web.delete('/stream.json', self.delete_stream),
-             web.post('/data', self.data_write),
-             web.get('/data', self.data_read),
-             web.get('/data/intervals.json', self.data_intervals),
-             web.delete('/data', self.data_remove),
-             web.get('/modules.json', self.stub_get),
-             web.get('/module.json', self.stub_get),
-             web.get('/module/logs.json', self.stub_get),
-             web.put('/folder/move.json', self.move_folder),
-             web.delete('/folder.json', self.delete_folder)])
+            [
+                web.get('/version.json', self.stub_get),
+                web.get('/streams.json', self.stub_get),
+                web.get('/stream.json', self.stream_info),
+                web.post('/stream.json', self.create_stream),
+                web.put('/stream/move.json', self.move_stream),
+                web.delete('/stream.json', self.delete_stream),
+                web.post('/data', self.data_write),
+                web.get('/data', self.data_read),
+                web.get('/data/intervals.json', self.data_intervals),
+                web.delete('/data', self.data_remove),
+                web.get('/modules.json', self.stub_get),
+                web.get('/module.json', self.stub_get),
+                web.get('/module/logs.json', self.stub_get),
+                web.put('/folder/move.json', self.move_folder),
+                web.delete('/folder.json', self.delete_folder)
+            ])
         self.stub_stream_info = False
         self.stub_stream_move = False
         self.stub_data_remove = False
