@@ -4,6 +4,7 @@ from typing import Dict
 
 from joule.cmds.helpers import get_json
 from joule.cmds.config import pass_config
+from joule.errors import ConnectionError
 
 
 @click.command(name="info")
@@ -11,7 +12,10 @@ from joule.cmds.config import pass_config
 @pass_config
 def module_info(config, name):
     payload = {'name': name}
-    json = get_json(config.url + "/module.json", params=payload)
+    try:
+        json = get_json(config.url + "/module.json", params=payload)
+    except ConnectionError as e:
+        raise click.ClickException(str(e)) from e
     # display module information
     click.echo()
     click.echo("Name:\n\t%s" % json['name'])

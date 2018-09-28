@@ -119,6 +119,8 @@ def find_stream_by_path(path: str, db: Session) -> Optional[Stream]:
 
 # return the file path
 def get_stream_path(stream: Stream) -> Optional[str]:
+    if stream.is_remote:
+        return "[%s] %s" % (stream.remote_url, stream.remote_path)
     if stream.folder is None:
         return None
 

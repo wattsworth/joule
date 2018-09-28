@@ -3,7 +3,7 @@ import asyncio
 import logging
 
 from joule.models import Worker, Stream, pipes
-from joule.errors import SubscriptionError, ConfigurationError
+from joule.errors import SubscriptionError, ConfigurationError, ConnectionError
 from joule.utilities.pipe_builders import request_network_input
 from joule.utilities.pipe_builders import request_network_output
 
@@ -18,8 +18,11 @@ class Supervisor:
     def __init__(self, workers: List[Worker]):
         self._workers = workers
         self.task: asyncio.Task = None
+        self.remote_tasks: List[asyncio.Task] = []
         self.remote_outputs: Dict[Stream, pipes.Pipe] = {}
         self.remote_inputs: Dict[Stream, pipes.Pipe] = {}
+
+        self.REMOTE_HANDLER_RESTART_INTERVAL = 1
 
     @property
     def workers(self):
@@ -29,22 +32,29 @@ class Supervisor:
         # returns a co-routine
         tasks: Tasks = []
         for worker in self._workers:
-            if await self._connect_remote_outputs(worker, loop):
-                # only start workers that have valid configurations
-                tasks.append(loop.create_task(worker.run(self.subscribe, loop)))
-            else:
-                log.error("Module [%s] requested an invalid remote output" % worker.name)
-                worker.log("cannot start module, remote outputs are not available")
+            await self._connect_remote_outputs(worker, loop)
+            tasks.append(loop.create_task(worker.run(self.subscribe, loop)))
         self.task = asyncio.gather(*tasks, loop=loop)
 
     async def stop(self, loop: Loop):
+        print("trying to stop %d workers" % len(self._workers))
         for worker in self._workers:
             await worker.stop(loop)
-        await self.task
-        for pipe in self.remote_outputs.values():
-            await pipe.close()
-        for pipe in self.remote_inputs.values():
-            await pipe.close()
+        try:
+            await self.task
+        except Exception as e:
+            log.info("Supervisor worker shutdown exception: %s " % str(e))
+        print("all workers stopped, stopping %d remote tasks" % len(self.remote_tasks))
+        for task in self.remote_tasks:
+            task.cancel()
+            print("cancelled ", id(task))
+            try:
+                await task
+            except Exception as e:
+                log.info("Supervisor remote i/o shutdown exception: %s " % str(e))
+                raise e
+        print("all remote tasks stopped, supervisor stopped")
+
 
     async def restart_producer(self, stream: Stream, loop: Loop, msg=""):
         # find the worker who produces this stream
@@ -75,25 +85,93 @@ class Supervisor:
         return None
 
     async def _connect_remote_outputs(self, worker: Worker, loop: Loop):
+        """ Provide a pipe to the worker for each remote stream, spawn a
+            task that reads from the worker's pipe and writes out to a remote
+            network pipe, if the remote network pipe goes down or is not available,
+            continuously try to restore it
+        """
         remote_streams = [stream for stream in worker.subscribers if stream.is_remote]
+        print("[%s] has %d remote outputs" % (worker.name, len(remote_streams)))
+        for stream in remote_streams:
+            src_pipe = pipes.LocalPipe(stream.layout, loop, stream=stream)
+            # ignore unsubscribe cb, not used
+            worker.subscribe(stream, src_pipe)
+            task = loop.create_task(self._handle_remote_output(src_pipe, stream, loop))
+            print("created output task: ", id(task))
+            self.remote_tasks.append(task)
+
+    async def _handle_remote_output(self, src_pipe: pipes.Pipe, dest_stream: Stream, loop: Loop):
+        """
+        Continuously tries to make a connection to dest_stream and write src_pipe's data to it
+        """
+        dest_pipe = None
         try:
-            for stream in remote_streams:
-                pipe = await request_network_output(stream.remote_path, stream,
-                                                    stream.remote_url, loop)
-                # ignore unsubscribe cb, not used
-                worker.subscribe(stream, pipe)
-                self.remote_outputs[stream] = pipe
-        except ConfigurationError:
-            return False
-        return True
+            while True:
+                try:
+                    dest_pipe = await request_network_output(dest_stream.remote_path, dest_stream,
+                                                             dest_stream.remote_url, loop)
+                    while True:
+                        data = await src_pipe.read()
+                        await dest_pipe.write(data)
+                        src_pipe.consume(len(data))
+
+                except ConfigurationError as e:
+                    log.error("Subscriber::_handle_remote_output: %s" % str(e))
+                    await asyncio.sleep(self.REMOTE_HANDLER_RESTART_INTERVAL)
+        except asyncio.CancelledError:
+            print("output cancelled")
+            pass
+        await src_pipe.close()
+        if dest_pipe is not None:
+            await dest_pipe.close()
+        print("remote_output terminated")
 
     def _connect_remote_input(self, stream: Stream, pipe: pipes.Pipe, loop: Loop):
+        """
+        Spawn a task that maintains a connection with [stream] and provides the data to [pipe]
+        """
+        # somebody is already listening to stream, just subscribe to that pipe
         if stream in self.remote_inputs:
             return self.remote_inputs[stream].subscribe(pipe)
 
+        # this is the first subscriber, spawn an input task to feed the pipe
+        task = loop.create_task(self._handle_remote_input(stream, pipe, loop))
+        print("created input task: ", id(task))
+
+        self.remote_inputs[stream] = pipe
+        self.remote_tasks.append(task)
+
+    async def _handle_remote_input(self, src_stream: Stream, dest_pipe: pipes.Pipe, loop: Loop):
+        """
+        Continuously tries to make a connection to src_stream and write its data to dest_pipe
+        """
+        src_pipe = None
         try:
-            request_network_input(stream.remote_path,
-                                  stream, stream.remote_url, pipe, loop)
-            self.remote_inputs[stream] = pipe
-        except ConfigurationError as e:
-            raise SubscriptionError from e
+            while True:
+                try:
+                    print("requesting input stream!")
+                    src_pipe = pipes.LocalPipe(src_stream.layout, loop, stream=src_stream)
+                    request_network_input(src_stream.remote_path, src_stream, src_stream.remote_url,
+                                          src_pipe, loop)
+                    try:
+                        while True:
+                            data = await src_pipe.read()
+                            if not dest_pipe.closed:
+                                await dest_pipe.write(data)
+                            else:
+                                log.info("destination [%s] is closed, OK if this is during shutdown" % dest_pipe.stream.name)
+                            src_pipe.consume(len(data))
+                    except pipes.EmptyPipe:
+                        print("src_pipe is empty :(")
+                        await dest_pipe.close_interval()
+                    log.error("Subscriber:: _handle_remote_input: connection terminated unexepectedly")
+                except (ConfigurationError, ConnectionError) as e:
+                    log.error("Subscriber::_handle_remote_input: %s" % str(e))
+                await asyncio.sleep(self.REMOTE_HANDLER_RESTART_INTERVAL)
+        except asyncio.CancelledError:
+            print("input cancelled")
+            pass
+        await dest_pipe.close()
+        if src_pipe is not None:
+            await src_pipe.close()
+        print("remote_input terminated")

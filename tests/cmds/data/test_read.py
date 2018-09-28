@@ -1,11 +1,7 @@
-import unittest
 from click.testing import CliRunner
-import os
-import signal
-import multiprocessing
+
 from aiohttp.test_utils import unused_port
 import warnings
-import time
 import numpy as np
 
 from ..fake_joule import FakeJoule, FakeJouleTestCase

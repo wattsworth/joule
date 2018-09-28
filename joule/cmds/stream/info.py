@@ -5,6 +5,7 @@ import datetime
 from joule.cmds.helpers import get_json
 from joule.cmds.config import pass_config
 from joule.models import stream, StreamInfo
+from joule.errors import ConnectionError
 
 
 @click.command(name="info")
@@ -12,7 +13,10 @@ from joule.models import stream, StreamInfo
 @pass_config
 def stream_info(config, path):
     payload = {'path': path}
-    json = get_json(config.url + "/stream.json", params=payload)
+    try:
+        json = get_json(config.url + "/stream.json", params=payload)
+    except ConnectionError as e:
+        raise click.ClickException(str(e)) from e
     my_stream: stream.Stream = stream.from_json(json)
     # display stream information
     click.echo()

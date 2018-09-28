@@ -1,10 +1,9 @@
 import click
-import requests
 from treelib import Tree
-from typing import Dict
 
 from joule.cmds.helpers import get_json
 from joule.cmds.config import pass_config
+from joule.errors import ConnectionError
 
 
 @click.command(name="list")
@@ -12,7 +11,10 @@ from joule.cmds.config import pass_config
 @click.option("--status", "-s", is_flag=True, help="include stream status")
 @pass_config
 def stream_list(config, layout, status):
-    json = get_json(config.url + "/streams.json")
+    try:
+        json = get_json(config.url + "/streams.json")
+    except ConnectionError as e:
+        raise click.ClickException(str(e)) from e
 
     json["name"] = ""
     tree = Tree()

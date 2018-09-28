@@ -88,6 +88,8 @@ class Worker:
         self.RESTART_INTERVAL = 1
         # how to wait for a subscriber to accept data
         self.SUBSCRIBER_TIMEOUT = 1
+        # how long to try restarting if worker is currently missing inputs
+        self.RESTART_AFTER_MISSING_INPUTS = 5
 
     async def statistics(self) -> Statistics:
         # gather process statistics
@@ -161,7 +163,7 @@ class Worker:
             except SubscriptionError as e:
                 log.error("Cannot start module [%s]: %s" % (self.module.name, e))
                 self.log("inputs are not available: %s" % e)
-                return
+                break
             self.log("---module terminated---")
             if restart:
                 await asyncio.sleep(self.RESTART_INTERVAL)

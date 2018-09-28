@@ -1,6 +1,7 @@
-from typing import Dict, Union
+from typing import Dict
 import requests
-import click
+
+from joule.errors import ConnectionError
 
 
 def get(url: str, params=None) -> requests.Response:
@@ -10,41 +11,34 @@ def get(url: str, params=None) -> requests.Response:
     # stream is available, any connection errors should be caught by
     # the check for the source stream which occurs first
     except requests.ConnectionError:  # pragma: no cover
-        click.echo("Error contacting Joule server at [%s]" % url)
-        exit(1)
+        msg = "Cannot contact Joule server at [%s]" % url
+        raise ConnectionError(msg)
 
 
 def get_json(url: str, params=None) -> Dict:
-
-    resp = None  # to appease type checker
     try:
         resp = requests.get(url, params=params)
-    except requests.ConnectionError:
-        click.echo("Error contacting Joule server at [%s]" % url)
-        exit(1)
+    except requests.ConnectionError as e:
+        raise ConnectionError("Cannot contact Joule server at [%s]" % url) from e
     if resp.status_code != 200:
-        click.echo("Error %s [%d]: %s" % (url, resp.status_code, resp.text))
-        exit(1)
+        raise ConnectionError("%s [%d]: %s" % (url,
+                                                     resp.status_code,
+                                                     resp.text))
     try:
         data = resp.json()
         return data
-    except ValueError:
-        click.echo("Error: Invalid server response, check the URL")
-        exit(1)
+    except ValueError as e:
+        raise ConnectionError("Invalid server response, check the URL") from e
 
 
 def post_json(url: str, data) -> Dict:
-    resp = None  # to appease type checker
     try:
         resp = requests.put(url, data=data)
-    except requests.ConnectionError:
-        print("Error contacting Joule server at [%s]" % url)
-        exit(1)
+    except requests.ConnectionError as e:
+        raise ConnectionError("Cannot contact Joule server at [%s]" % url) from e
     if resp.status_code != 200:
-        print("Error [%d]: %s" % (resp.status_code, resp.text))
-        exit(1)
+        raise ConnectionError("[%d]: %s" % (resp.status_code, resp.text))
     try:
         return resp.json()
-    except ValueError:
-        click.echo("Error: Invalid server response, check the URL")
-        exit(1)
+    except ValueError as e:
+        raise ConnectionError("Invalid server response, check the URL") from e

@@ -21,14 +21,12 @@ def data_read(config, start, end, max_rows, decimation_level, show_bounds, mark_
     if start is not None:
         time = dateparser.parse(start)
         if time is None:
-            click.echo("Error: invalid start time: [%s]" % start)
-            exit(1)
+            raise click.ClickException("Error: invalid start time: [%s]" % start)
         params['start'] = int(time.timestamp() * 1e6)
     if end is not None:
         time = dateparser.parse(end)
         if time is None:
-            click.echo("Error: invalid end time: [%s]" % end)
-            exit(1)
+            raise click.ClickException("Error: invalid end time: [%s]" % end)
         params['end'] = int(time.timestamp() * 1e6)
     if max_rows is not None:
         params['max-rows'] = max_rows
@@ -39,9 +37,8 @@ def data_read(config, start, end, max_rows, decimation_level, show_bounds, mark_
         async with aiohttp.ClientSession() as session:
             async with session.get(config.url + "/data", params=params) as response:
                 if response.status != 200:
-                    click.echo("Error %s [%d]: %s" % (config.url, response.status,
-                                                      await response.text()))
-                    exit(1)
+                    raise click.ClickException("Error %s [%d]: %s" % (config.url, response.status,
+                                                                      await response.text()))
                 decimated = False
                 if int(response.headers['joule-decimation']) > 1:
                     decimated = True

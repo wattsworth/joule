@@ -130,11 +130,15 @@ async def _live_reader(url: str, my_stream: stream.Stream, pipe_out: pipes.Pipe)
                     data = await pipe_in.read()
                     pipe_in.consume(len(data))
                     await pipe_out.write(data)
+                    print("wrote %d rows" % len(data))
                     if pipe_in.end_of_interval:
                         await pipe_out.close_interval()
             except (asyncio.CancelledError, pipes.EmptyPipe):
                 pass
-            await pipe_out.close()
+            except aiohttp.ClientError as e:
+                log.error("pipe_builders::_live_reader: %s" % str(e))
+    await pipe_out.close()
+    print("live_reader done")
 
 
 async def _historic_reader(url: str, my_stream: stream.Stream, pipe_out: pipes.Pipe, start_time, end_time):

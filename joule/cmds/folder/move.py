@@ -2,6 +2,7 @@ import click
 
 from joule.cmds import helpers
 from joule.cmds.config import pass_config
+from joule.errors import ConnectionError
 
 
 @click.command(name="move")
@@ -13,7 +14,10 @@ def folder_move(config, folder, destination):
         "path": folder,
         "destination": destination
     }
-    helpers.post_json(config.url+"/folder/move.json", data=data)
+    try:
+        helpers.post_json(config.url+"/folder/move.json", data=data)
+    except ConnectionError as e:
+        raise click.ClickException(str(e)) from e
     click.echo("OK")
 
 

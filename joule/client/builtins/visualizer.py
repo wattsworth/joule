@@ -25,6 +25,7 @@ class Visualizer(FilterModule):  # pragma: no cover
         aiohttp_jinja2.setup(app, loader=loader)
         app["title"] = parsed_args.title
         self.elements = []
+        dom_id = 0  # DOM id for javascript manipulation
         for pipe in inputs.values():
             for element in pipe.stream.elements:
                 self.elements.append({
@@ -33,8 +34,9 @@ class Visualizer(FilterModule):  # pragma: no cover
                     'value': '&mdash;',
                     'min': '&mdash;',
                     'max': '&mdash;',
-                    'id': element.id
+                    'id': dom_id
                 })
+                dom_id+=1
         if len(self.elements) == 0:
             self.mock_data = True
             self.elements = self._create_mock_elements(4)
@@ -56,6 +58,8 @@ class Visualizer(FilterModule):  # pragma: no cover
             for pipe in inputs.values():
                 data = await pipe.read()
                 pipe.consume(len(data))
+                print("got %d rows from %s" % (len(data), pipe.stream.name), flush=True)
+                print("pipe.stream.elements: %d" % len(pipe.stream.elements))
                 if len(data) == 0:
                     continue
                 for i in range(len(pipe.stream.elements)):
@@ -76,6 +80,8 @@ class Visualizer(FilterModule):  # pragma: no cover
                         global_max = self.elements[i + offset]['max']
                         self.elements[i + offset]['max'] = max((data_max, global_max))
                 offset += len(pipe.stream.elements)
+            for e in self.elements:
+                print(e)
             await asyncio.sleep(1)
 
     def routes(self):

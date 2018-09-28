@@ -55,7 +55,9 @@ class Element(Base):
         Returns: Dictionary of Element attributes
 
         """
-
+        if self.display_type is None:
+            # make up a default value
+            self.display_type = Element.DISPLAYTYPE.CONTINUOUS
         return {
             'id': self.id,
             'index': self.index,

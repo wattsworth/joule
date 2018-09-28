@@ -1,9 +1,8 @@
 import click
-import requests
-from typing import Dict
 
 from joule.cmds.config import pass_config
 from joule.cmds import helpers
+from joule.errors import ConnectionError
 
 
 @click.command(name="move")
@@ -15,5 +14,8 @@ def stream_move(config, stream, destination):
         "path": stream,
         "destination": destination
     }
-    helpers.post_json(config.url+"/stream/move.json", data=data)
+    try:
+        helpers.post_json(config.url+"/stream/move.json", data=data)
+    except ConnectionError as e:
+        raise click.ClickException(str(e)) from e
     click.echo("OK")

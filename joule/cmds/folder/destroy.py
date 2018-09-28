@@ -13,7 +13,6 @@ def folder_destroy(config, folder, recursive):
         params["recursive"] = True
     resp = requests.delete(config.url + "/folder.json", params=params)
     if resp.status_code != 200:
-        click.echo("Error [%d]: %s" % (resp.status_code, resp.text))
-        exit(1)
+        raise click.ClickException("Error [%d]: %s" % (resp.status_code, resp.text))
     else:
         click.echo("OK")

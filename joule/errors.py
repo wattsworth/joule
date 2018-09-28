@@ -10,3 +10,9 @@ class SubscriptionError(Exception):
     Error subscribing to a stream that is not available
     """
     pass
+
+
+class ConnectionError(Exception):
+    """
+    Error connecting to a Joule server
+    """

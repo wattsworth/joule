@@ -3,12 +3,16 @@ from tabulate import tabulate
 
 from joule.cmds.helpers import get_json
 from joule.cmds.config import pass_config
+from joule.errors import ConnectionError
 
 
 @click.command(name="list")
 @pass_config
 def module_list(config):
-    json = get_json(config.url + "/modules.json")
+    try:
+        json = get_json(config.url + "/modules.json")
+    except ConnectionError as e:
+        raise click.ClickException(str(e)) from e
     result = []
     for item in json:
         inputs = '\n'.join(item['inputs'].values())

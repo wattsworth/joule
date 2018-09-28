@@ -113,7 +113,10 @@ class NilmdbStore(DataStore):
             layout = stream.decimated_layout
         else:
             layout = stream.layout
-        await self._extract_by_path(path, start, end, layout, callback)
+        try:
+            await self._extract_by_path(path, start, end, layout, callback)
+        except aiohttp.ClientError as e:
+            raise errors.DataError(str(e))
 
     async def intervals(self, stream: Stream, start: Optional[int], end: Optional[int]):
         try:

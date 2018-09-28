@@ -18,10 +18,8 @@ def data_remove(config, start, end, stream):
     try:
         resp = requests.delete(config.url+"/data", params=params)
     except requests.ConnectionError:
-        click.echo("Error contacting Joule server at [%s]" % config.url)
-        exit(1)
+        raise click.ClickException("Error contacting Joule server at [%s]" % config.url)
     if resp.status_code != 200:
-        click.echo("Error [%d]: %s" % (resp.status_code, resp.text))
-        exit(1)
+        raise click.ClickException("Error [%d]: %s" % (resp.status_code, resp.text))
     else:
         click.echo("OK")

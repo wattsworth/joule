@@ -12,6 +12,7 @@ from joule.cmds.config import pass_config
 from joule.cmds.helpers import get_json, get
 from joule.models import stream, Stream, pipes, StreamInfo
 from joule.utilities import interval_difference
+from joule.errors import ConnectionError
 
 Interval = Tuple[int, int]
 
@@ -29,12 +30,15 @@ def data_copy(config, start, end, source, destination, dest_url):
         dest_url = src_url
 
     # retrieve the source stream
-    resp = get_json(src_url + "/stream.json", params={"path": source})
+    try:
+        resp = get_json(src_url + "/stream.json", params={"path": source})
+    except ConnectionError as e:
+        raise click.ClickException(str(e))
+
     src_stream = stream.from_json(resp)
     src_info: StreamInfo = StreamInfo(**resp['data_info'])
     if src_info.start is None or src_info.end is None:
-        click.echo("Error [%s] has no data" % source, err=True)
-        exit(1)
+        raise click.ClickException("[%s] has no data" % source)
     # retrieve the destination stream (create it if necessary)
     resp = get(dest_url + "/stream.json", params={"path": destination})
     if resp.status_code == 404:
@@ -49,8 +53,7 @@ def data_copy(config, start, end, source, destination, dest_url):
         }
         resp = requests.post(dest_url + "/stream.json", data=body)
         if resp.status_code != 200:
-            click.echo("Error: invalid destination: %s" % resp.content.decode(), err=True)
-            exit(1)
+            raise click.ClickException("Invalid destination: %s" % resp.content.decode())
         else:
             dest_stream = stream.from_json(resp.json())
     else:
@@ -58,14 +61,12 @@ def data_copy(config, start, end, source, destination, dest_url):
         try:
             dest_stream = stream.from_json(resp.json())
         except ValueError:
-            click.echo("Error: Invalid server response, check the URL")
-            exit(1)
+            raise click.ClickException("Invalid server response, check the URL")
 
     # make sure streams are compatible
     if src_stream.layout != dest_stream.layout:
-        click.echo("Error: source (%s) and destination (%s) datatypes are not compatible" % (
+        raise click.ClickException("Error: source (%s) and destination (%s) datatypes are not compatible" % (
             src_stream.layout, dest_stream.layout))
-        exit(1)
     # warn if the elements are not the same
     element_warning = False
     src_elements = sorted(src_stream.elements, key=attrgetter('index'))
@@ -83,10 +84,9 @@ def data_copy(config, start, end, source, destination, dest_url):
     if end is not None:
         end = int(dateparser.parse(end).timestamp() * 1e6)
     if (start is not None) and (end is not None) and ((end - start) <= 0):
-        click.echo("Error: start [%s] must be before end [%s]" % (
+        raise click.ClickException("Error: start [%s] must be before end [%s]" % (
             datetime.datetime.fromtimestamp(start / 1e6),
             datetime.datetime.fromtimestamp(end / 1e6)))
-        exit(1)
 
     # compute the target intervals (source - dest)
     src_intervals = _get_intervals(src_url, src_stream, start, end)
@@ -114,8 +114,7 @@ def data_copy(config, start, end, source, destination, dest_url):
             async with session.get(src_url + "/data", params=params) as src_response:
                 if src_response.status != 200:
                     msg = await src_response.text()
-                    click.echo("Error reading from source: %s" % msg)
-                    exit(1)
+                    raise click.ClickException("Error reading from source: %s" % msg)
 
                 pipe = pipes.InputPipe(stream=dest_stream, reader=src_response.content)
 
@@ -144,8 +143,7 @@ def data_copy(config, start, end, source, destination, dest_url):
                                         data=_data_sender()) as dest_response:
                     if dest_response.status != 200:
                         msg = await dest_response.text()
-                        click.echo("Error writing to destination: %s" % msg)
-                        exit(1)
+                        raise click.ClickException("Error writing to destination: %s" % msg)
 
     # set up aiohttp to handle the response as a JoulePipe
     loop = asyncio.get_event_loop()
@@ -156,8 +154,7 @@ def data_copy(config, start, end, source, destination, dest_url):
     # it is only generated if the joule server stops during the
     # data read/write
     except aiohttp.ClientError as e:  # pragma: no cover
-        click.echo("Error: ", e)
-        exit(1)
+        raise click.ClickException("Error: %s" % str(e))
     loop.close()
 
 

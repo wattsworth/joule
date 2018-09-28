@@ -122,7 +122,12 @@ class Daemon(object):
         inserter_task_grp.cancel()
         await inserter_task_grp
         self.data_store.close()
-        await runner.cleanup()
+        print("all stoppd except web server")
+        try:
+            await asyncio.wait_for(runner.shutdown(), 5)
+            await asyncio.wait_for(runner.cleanup(), 5)
+        except asyncio.TimeoutError:
+            log.warning("unclean server shutdown, subscribed clients?")
         self.db.close()
 
     def stop(self):
