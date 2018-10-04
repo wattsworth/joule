@@ -11,8 +11,8 @@ and can be restarted without interrupting the data flow. There are three basic t
 :ref:`sec-reader`, :ref:`sec-filter`, and :ref:`sec-composite`.
 
 Examples in the documentation below are available at http://git.wattsworth.net/wattsworth/example_modules.
-This repository provides templates for the basic module types as well as
-unit and integration testing infrastructure.
+This repository provides serveral examples of each module types and can be used as a template
+to design your own installable Joule modules.
 
 .. raw:: html
 
@@ -20,10 +20,30 @@ unit and integration testing infrastructure.
   Command Line:
   </div>
   <div class="code bash"><b>$> git clone https://git.wattsworth.net/wattsworth/example_modules.git</b>
-  <b>$> cd example_modules</b>
-  <i># install nose2 and asynctest module to run tests</i>
-  <b>$> sudo pip3 install nose2 asynctest</b>
+  <i># To install modules system-wide: </i>
+  <b>$> python3 setup.py install </b>
+  <i># To run unittests: </i>
+  <b>$> python3 setup.py tests</b>
   </div>
+
+The layout of the repository is shown below.
+
+.. code-block:: none
+
+    example_modules/
+    ├── jouleexamples
+    │   ├── example_composite.py
+    │   ├── example_filter.py
+    │   ├── example_reader.py
+    │   └── ... other modules
+    ├── module_configs
+    │   ├── example_composite.conf
+    │   ├── example_filter.conf
+    │   ├── example_reader.conf
+    │   └── ... other module configs
+    ├── README.rst
+    └── stream_configs
+        └── ... stream config examples
 
 .. _sec-reader:
 
@@ -69,10 +89,14 @@ Examples
 
 .. include:: filter_module/example.rst
 
+.. _sec-filter-development:
+
 Development
 '''''''''''
 
 .. include:: filter_module/development.rst
+
+.. _sec-filter-testing:
 
 Testing
 '''''''

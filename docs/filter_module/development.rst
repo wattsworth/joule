@@ -1,13 +1,17 @@
 
-Filter modules may be executed outside of the Joule environment in
-either **live** or **historic** mode. jouled must be running on the local
-machine in order for the filter to
-to connect to it's input and output streams.  The module and output stream
-configuration files are required for the filter to request and/or create
-the appropriate streams from jouled.
+During development it is often helpful to run modules as standalone
+processes in order to use debuggers such as pdb or visualization tools like matplotlib.pyplot.
+Filter (and Composite) modules may be executed outside of the Joule environment in
+either **live** or **historic** mode. When executed independently the module configuration
+file must be provided so that the module can request the appropriate stream connections from
+Joule.
+
+.. note::
+    The joule service must be running in order to run filters as standalone processes
+
 
 **Live Isolation**
-Connect filter inputs to live streams produced by the jouled pipeline.
+Connect filter inputs to live streams produced by the current joule pipeline.
 Specify the module configuration file and a directory with configurations
 for each output stream.
 

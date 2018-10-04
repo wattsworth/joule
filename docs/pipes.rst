@@ -6,9 +6,10 @@ Pipes
 Joule pipes provide a protocol independent interface to data
 streams. This decouples module design from pipeline
 implementation. There are three different pipe implementations,
-:ref:`joule.LocalPipe`, :ref:`InputPipe`, and :ref:`OutputPipe` all of which derive from the common parent
-:ref:`joule.Pipe`. The LocalPipe is intended for intra-module communication (see :ref:`joule.CompositeModule`).
-It is bidirectional meaning it supports both read and write operations. The InputPipe and OutputPipe are unidirectional
+:class:`joule.LocalPipe`, :class:`joule.InputPipe`, and :class:`joule.OutputPipe` all of which derive
+from the abstract base class
+:class:`joule.Pipe`. **LocalPipe**'s are intended for intra-module communication (see :ref:`sec-composite`).
+It is bidirectional meaning it supports both read and write operations. **InputPipe**'s and OutputPipe are unidirectional
 supporting only read and write respectively. These are intended for inter-module communication with
 one module's OutputPipe connected to another's InputPipe. The figure below
 illustrates how pipes move stream data between modules.
@@ -35,36 +36,52 @@ be running on the same machine.
 Intervals
 +++++++++
 
-Streams represent continuous time series data. In order to communicate the absence of data
-in a stream the producer can close the current data interval. By default calls to write
-are assumed to be contiguous, that is there are no missing samples in the stream. If the producer
-needs to indicate that some samples are missing it should explicitly close the current interval.
+Streams are divided into intervals of continuous time series data.
+The first write to a pipe starts a new stream interval. Subsequent writes append
+data to this interval. This indicates to data consumers that there are no missing samples
+in the stream. To indicate missing data the producer closes the
+ interval. A new interval is started on the next write. The plot below shows a stream
+with three seperate intervals indicating two regions of missing data.
 
 .. image:: /images/intervals.png
 
-Producer:
+Data Producers
+    The code snippet below shows how a data producer indicates missing samples using intervals.
+    In normal operation the sensor output is a single continuous stream interval. If the sensor
+    has an error the exception handler closes the current interval and logs the event. See :ref:`IntermittentReader`
+    for a complete example.
 
 .. code-block:: python
 
-    try:
-        data = sensor.read()
-        await pipe.write(data)
-    except SensorException:
-        log.error("sensor error!")
-        await pipe.close_interval()
+    while True:
+        try:
+            data = sensor.read()
+            await pipe.write(data)
+        except SensorException:
+            log.error("sensor error!")
+            await pipe.close_interval()
 
-Consumer:
+Data Consumers
+    The code snippet below shows how a data consumer detects interval breaks in a stream. At an
+    interval boundary read will return data up to the end of the current interval and set the end_of_interval
+    flag. The next call to read will return data from the new interval and clear the flag. Any unconsumed data
+    will be returned with the next read even though it is from a previous interval. Therefore it is best practice to completely
+    consume data on an interval break and reset any buffers to their initial state as suggested with the fir_filter
+    logic below. See :ref:`MedianFilter` for a complete example on handling interval boundaries.
 
 .. code-block:: python
 
-    while(1):
+    while True:
         data = await pipe.read()
         pipe.consume(len(data))
         output = fir_filter.run(data)
         if(pipe.end_of_interval):
             fir_filter.reset()
 
-Filters should propagate input interval breaks to the outputs
+
+In general filters should propagate input interval breaks to their outputs. In other words unless
+a filter can restore missing input data, it should have at least as much missing output data. The snippet below
+shows the logic for propagating interval breaks.
 
 .. code-block:: python
 
@@ -73,12 +90,6 @@ Filters should propagate input interval breaks to the outputs
         await output_pipe.write(data)
         if data.end_of_interval:
             await output_pipe.close_interval()
-
-On an interval break, read will return only data within the current interval and the end_of_interval flag is set.
-The next call to read clears the end_of_interval flag. Note: If the data is not consumed the next call
-to read will return data from before and after the interval break. Therefore it is best practice to completely
-consume data on an interval break and reset any buffers to their initial state as shown in the consumer snippet
-above.
 
 
 Caching

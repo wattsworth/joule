@@ -2,6 +2,7 @@ import asyncio
 import numpy as np
 import logging
 import argparse
+import sys
 
 from joule.client.base_module import BaseModule
 from joule.models.pipes import Pipe
@@ -12,6 +13,7 @@ class ReaderModule(BaseModule):
     Inherit from this class and implement a :meth:`run` coroutine to create a Joule reader module.
     Other methods documented below may be implemented as desired.
     """
+
     async def setup(self, parsed_args, app, output):
         """
         Configure the module, executes before :meth:`run`
@@ -52,8 +54,8 @@ class ReaderModule(BaseModule):
 
     def run_as_task(self, parsed_args, app, loop):
         # check if we should use stdout (no fd's and no configs)
-        if(parsed_args.pipes == "unset" and
-           parsed_args.module_config == "unset"):
+        if (parsed_args.pipes == "unset" and
+                parsed_args.module_config == "unset"):
             output = StdoutPipe()
         else:
             coro = self._build_pipes(parsed_args, loop)
@@ -65,7 +67,7 @@ class ReaderModule(BaseModule):
         loop.run_until_complete(self.setup(parsed_args, app, output))
         return loop.create_task(self.run(parsed_args, output))
 
-    
+
 class StdoutPipe:
     @staticmethod
     async def write(data: np.ndarray):
@@ -76,6 +78,9 @@ class StdoutPipe:
             ts = row[0]
             vals = row[1:]
             print("%d %s" % (ts, " ".join([repr(x) for x in vals])))
+
+    async def close_interval(self):
+        print("--- interval gap ---", file=sys.stderr)
 
     async def close(self):
         pass

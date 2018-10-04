@@ -1,61 +1,41 @@
-.. code-block:: python
-  :caption: Source: ``example_modules/example_composite.py``
-  :linenos:
 
-  import argparse
-  from joule import CompositeModule, LocalNumpyPipe
+.. literalinclude:: /../../example_modules/jouleexamples/example_composite.py
+   :language: python
+   :caption: Source: ``example_modules/jouleexamples/example_composite.py``
+   :linenos:
 
-  from high_bandwidth_reader import HighBandwidthReader
-  from example_filter import ExampleFilter
-
-  class ExampleComposite(CompositeModule):
-    """ Merge reader and filter into a single module:
-                [reader -> filter]->
-    """
-    async def setup(self, parsed_args,
-                    inputs, outputs):
-
-      #1.) create nested modules
-      my_reader = HighBandwidthReader()
-      my_filter = ExampleFilter()
-
-      #2.) create local pipes for interior streams
-      pipe = LocalNumpyPipe(name="raw", layout="float32_1")
-
-      #3.) convert modules into tasks
-      #  output is an interior stream (write-end)
-      parsed_args = argparse.Namespace(rate=100)
-      task1 = my_reader.run(parsed_args, pipe)
-      #  raw is an interior stream (read-end)
-      #  filtered is an exterior stream
-      parsed_args = argparse.Namespace()
-      task2 = my_filter.run(parsed_args,
-                            {"raw": pipe},
-                            {"filtered": outputs["filtered"]})
-
-      #4.) tasks are executed in the main event loop
-      return [task1, task2]
-
-  if __name__ == "__main__":
-    r = ExampleComposite()
-    r.start()
-
-Composite modules should extend the base :class:`CompositeModule` class. The
-child class must implement the :meth:`joule.CompositeModule.setup` coroutine
+The child class must implement the :meth:`joule.CompositeModule.setup` coroutine
 which should perform the following:
 
-  1. Create nested modules
+  1. Create modules
   2. Create local pipes for interior streams
-  3. Convert modules into tasks by calling :meth:`joule.BaseModule.run` with the appropriate parameters
-  4. Return tasks for execution in the main event loop
+  3. Start modules by calling :meth:`joule.BaseModule.run` with the appropriate parameters
+  4. Return module tasks for execution in the main event loop
 
-Because this module is a composite of a :class:`joule.ReaderModule` and a
-:class:`joule.FilterModule` it has no inputs and a single output. In this example the
-nested modules receive parsed_args directly. In more complex scenario
-it is often necessary to construct a Namespace object for each module with
-the particular arguments it requires. Make sure *all* arguments are specified and match the expected data types
+This example contains a :ref:`sec-high-bandwidth-reader` connected to a :ref:`sec-median-filter`.
+The modules are connected with a :class:`joule.LocalPipe` and the output of the
+filter is connected to a :class:`joule.OutputPipe` named **filtered**.
+
+Creating Module Arguments
+  In the example above, both modules receive the **parsed_args** parameter directly.
+  In more complex scenarios it is often necessary to construct a :class:`argparse.Namespace` object
+  for each module with the particular arguments it requires. Make sure *all* arguments are specified
+  and match the expected data types The code snipped below constructs an appropriate Namespace
+  object for the ArgumentParser configuration.
 
 .. code:: python
+
+  import json
+  import argparse
+
+  # example ArgumentParser
+
+  args = argparse.ArgumentParser("demo")
+  args.add_argument("--arg1", required=True)  # modules should use keyword arguments
+  args.add_argument("--arg2", type=int, required=True)
+  args.add_argument("--arg3", type=json.loads, required=True)
+
+  # to produce these arguments manually:
 
   module_args = argparse.Namespace(**{
   "arg1": "a string",  # type not specified

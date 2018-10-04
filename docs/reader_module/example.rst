@@ -1,27 +1,14 @@
 
-.. highlight:: python
+.. _sec-basic-reader:
 
-.. code-block:: python
-   :caption: Source: ``example_modules/example_reader.py``
+Basic Reader
+^^^^^^^^^^^^
+
+.. literalinclude:: /../../example_modules/jouleexamples/example_reader.py
+   :language: python
+   :caption: Source: ``example_modules/jouleexamples/example_reader.py``
    :linenos:
 
-   from joule import ReaderModule
-   from joule.utilities import time_now
-   import asyncio
-   import numpy as np
-
-   class ExampleReader(ReaderModule):
-     "Example reader: generates random values"
-
-     async def run(self, parsed_args, output):
-        while(1):
-          value = np.random.rand()  # data from sensor
-          await output.write(np.array([[time_now(), value]]))
-          await asyncio.sleep(1)
-
-   if __name__ == "__main__":
-     r = ExampleReader()
-     r.start()
 
 Reader modules should extend the base :class:`joule.ReaderModule` class. The
 child class must implement the :meth:`joule.ReaderModule.run` coroutine which should perform
@@ -45,41 +32,27 @@ asyncio.sleep coroutine is used instead of the time.sleep function.
     the data should be written in chunks as shown below. Write frequency should be 1Hz
     or lower to reduce inter-process communication and network overhead.
 
-  .. code-block:: python
-    :caption: Source: ``example_modules/high_bandwidth_reader.py``
-    :linenos:
+.. _sec-high-bandwidth-reader:
 
-    from joule import ReaderModule
-    from joule.utilities import time_now
-    import asyncio
-    import numpy as np
+High Bandwidth Reader
+^^^^^^^^^^^^^^^^^^^^^
+
+.. literalinclude:: /../../example_modules/jouleexamples/high_bandwidth_reader.py
+   :language: python
+   :caption: Source: ``example_modules/jouleexamples/high_bandwidth_reader.py``
+   :linenos:
+
+Describe the argument parsing setup
+
+.. _sec-intermittent-reader:
+
+Intermittent Reader
+^^^^^^^^^^^^^^^^^^^
+
+Another example showing how to handle sensor errors by creating intervals
 
 
-    class HighBandwidthReader(ReaderModule):
-        #Produce 1Hz sawtooth waveform at specified sample rate
-
-        def custom_args(self, parser):
-            grp = parser.add_argument_group("module",
-                                            "module specific arguments")
-            grp.add_argument("--rate", type=float,
-                             required=True,
-                             help="sample rate in Hz")
-
-        async def run(self, parsed_args, output):
-            start_ts = time_now()
-            #run 5 times per second
-            period=1
-            samples_per_period=np.round(parsed_args.rate*period)
-            while(1):
-                end_ts = start_ts+period*1e6
-                ts = np.linspace(start_ts,end_ts,
-                                 samples_per_period,endpoint=False)
-                vals=np.linspace(0,33,samples_per_period)
-                start_ts = end_ts
-                chunk = np.hstack((ts[:,None], vals[:,None]))
-                await output.write(chunk)
-                await asyncio.sleep(period)
-
-    if __name__ == "__main__":
-        r = HighBandwidthReader()
-        r.start()
+.. literalinclude:: /../../example_modules/jouleexamples/intermittent_reader.py
+   :language: python
+   :caption: Source: ``example_modules/jouleexamples/intermittent_reader.py``
+   :linenos:
