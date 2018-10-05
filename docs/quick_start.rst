@@ -11,21 +11,19 @@ make sure Joule is installed and the jouled service is running:
 
 .. raw:: html
 
-  <div class="header bash">
-  Command Line:
-  </div>
-  <div class="code bash">
-  <i># ensure the joule CLI is installed</i>
-  <b>$> joule --version</b>
+  <div class="bash-code">
+
+  # ensure the joule CLI is installed
+  $> joule --version
   joule, version 0.9
 
-  <i># confirm the local joule server is running</i>
-  <b>$> joule info</b>
+  # confirm the local joule server is running
+  $> joule info
   Server Version: 0.9
   Status: online
 
   </div>
-  
+
 This guide will step through the implementation of the three stage pipeline shown below:
 
 .. image:: /images/getting_started_pipeline.png
@@ -51,18 +49,17 @@ Try out **random** on the command line:
 
 .. raw:: html
 
-  <div class="header bash">
-  Command Line:
-  </div>
-  <div class="code bash"><b>$> joule-random-reader -h</b>
-  <i>#  ... module documentation (available at http://docs.wattsworth.net/modules)</i>
+  <div class="bash-code">
 
-  <b>$> joule-random-reader --width 2 --rate 10</b>
+  $> joule-random-reader -h
+  #  ... module documentation (available at http://docs.wattsworth.net/modules)
+
+  $> joule-random-reader --width 2 --rate 10
   1485188853650944 0.32359053067687582 0.70028608966895545
   1485188853750944 0.72139550945715136 0.39218791387411422
   1485188853850944 0.40728044378612194 0.26446072057019654
   1485188853950944 0.61021957330250398 0.27359526775709841
-  <i># output continues, hit ctrl-c to stop </i>
+  # output continues, hit ctrl-c to stop
 
   </div>
 
@@ -73,19 +70,21 @@ to connect its output. To do this create the following file:
 
 .. raw:: html
 
-  <div class="header ini">
-  /etc/joule/module_configs/my_reader.conf
-  </div>
-  <div class="code ini"><span>[Main]</span>
-  <b>exec_cmd =</b> joule-random-reader
-  <b>name =</b> Data Source
+  <div class="config-file">
 
-  <span>[Arguments]</span>
-  <b>width = </b>2
-  <b>rate  = </b>10
+  : /etc/joule/module_configs/my_reader.conf
 
-  <span>[Outputs]</span>
-  <b>output =</b> /demo/random:float32[x,y]
+  [Main]
+  exec_cmd = joule-random-reader
+  name = Data Source
+
+  [Arguments]
+  width = 2
+  rate  = 10
+
+  [Outputs]
+  output = /demo/random:float32[x,y]
+
   </div>
 
 This connects the module to the stream **/demo/random**. The stream is configured
@@ -96,27 +95,25 @@ new module is running:
 
 .. raw:: html
 
-  <div class="header bash">
-  Command Line:
-  </div>
-  <div class="code bash"><i># restart joule to use the new configuration files</i>
-  <b>$> sudo systemctl joule.service restart</b>
+  <div class="bash-code">
+  # restart joule to use the new configuration files
+  $> sudo service joule restart
 
-  <i># check pipeline status using the joule CLI</i>
-  <b>$> joule module list</b>
+  # check pipeline status using the joule CLI
+  $> joule module list
   ╒═════════════╤══════════╤══════════════╤═════════╤═════════════╕
   │ Name        │ Inputs   │ Outputs      │   CPU % │   Mem (KiB) │
   ╞═════════════╪══════════╪══════════════╪═════════╪═════════════╡
   │ Data Source │          │ /demo/random │       0 │       62868 │
   ╘═════════════╧══════════╧══════════════╧═════════╧═════════════╛
 
-  <i># check module logs for any errors</i>
-  <b>$> joule module logs "Data Source"</b>
+  # check module logs for any errors
+  $> joule module logs "Data Source"
   [2018-09-12T15:51:38.845242]: ---starting module---
 
 
-  <i># confirm the pipeline is producing data</i>
-  <b>$> joule stream info /demo/random</b>
+  # confirm the pipeline is producing data
+  $> joule stream info /demo/random
         Name:         random
         Description:  —
         Datatype:     float32
@@ -153,22 +150,25 @@ the module to the pipeline create the following file:
 
 .. raw:: html
 
-  <div class="header ini">
-  /etc/joule/module_configs/demo_filter.conf
-  </div>
-  <div class="code ini"><span>[Main]</span>
-  <b>exec_cmd =</b> joule-mean-filter
-  <b>name =</b> Data Processor
+    <div class="config-file">
 
-  <span>[Arguments]</span>
-  <b>window =</b> 11
-  
-  <span>[Inputs]</span>
-  <b>input =</b> /demo/random
+    : /etc/joule/module_configs/demo_filter.conf
 
-  <span>[Outputs]</span>
-  <b>output =</b> /demo/smoothed:float32[x,y]
-  </div>
+    [Main]
+    exec_cmd = joule-mean-filter
+    name = Data Processor
+
+    [Arguments]
+    window = 11
+
+    [Inputs]
+    input = /demo/random
+
+    [Outputs]
+    output = /demo/smoothed:float32[x,y]
+
+    </div>
+
 
 The input stream is already configured by the producer module. The output will have the same
 datatype and number of elements. Now the pipeline is fully configured.  Restart joule and check that
@@ -176,14 +176,13 @@ both modules are running:
 
 .. raw:: html
 
-  <div class="header bash">
-  Command Line:
-  </div>
-  <div class="code bash"><i># restart joule to use the new configuration files</i>
-  <b>$> sudo systemctl joule.service restart</b>
+  <div class="bash-code">
 
-  <i># check pipeline status using the joule CLI</i>
-  <b>$> joule module list</b>
+  # restart joule to use the new configuration files
+  $> sudo service joule restart
+
+  # check pipeline status using the joule CLI
+  $> joule module list
   ╒════════════════╤══════════════╤════════════════╤═════════╤═════════════╕
   │ Name           │ Inputs       │ Outputs        │   CPU % │   Mem (KiB) │
   ╞════════════════╪══════════════╪════════════════╪═════════╪═════════════╡
@@ -192,11 +191,11 @@ both modules are running:
   │ Data Source    │              │ /demo/random   │       0 │       63172 │
   ╘════════════════╧══════════════╧════════════════╧═════════╧═════════════╛
 
-  <b>$> joule logs "Data Processor"</b>
+  $> joule logs "Data Processor"
   [2018-09-12T16:00:34.298364]: ---starting module---
 
-  <i># confirm the pipeline is producing data (check /demo/random as well)</i>
-  <b>$> joule stream info /demo/smoothed</b>
+  # confirm the pipeline is producing data (check /demo/random as well)
+  $> joule stream info /demo/smoothed
 
         Name:         smoothed
         Description:  —
@@ -222,44 +221,43 @@ both modules are running:
 The User Interface
 ------------------
 
-Now let's add a user interface to complete the pipeline.
- Joule provides a built-in
- visualizer module.  See the `Module Documentation`_ page
-for more details on this and other Joule modules.
+Now let's add a user interface to complete the pipeline. Joule provides a built-in
+visualizer module.  See the `Module Documentation`_ page for more details on this
+and other Joule modules.
 
 Add the following file to the configuration directory to add the
 module to the pipeline.
 
 .. raw:: html
 
-  <div class="header ini">
-  /etc/joule/module_configs/user_interface.conf
-  </div>
-  <div class="code ini"><span>[Main]</span>
-  <b>exec_cmd =</b> joule-visualizer-filter
-  <b>name =</b> User Interface
-  <b>has_interface =</b> yes
+  <div class="config-file">
 
-  <span>[Arguments]</span>
-  <b>title =</b> Quick Start Data Pipeline
+  : /etc/joule/module_configs/user_interface.conf
 
-  <span>[Inputs]</span>
-  <b>smoothed =</b> /demo/smoothed
-  <b>random =</b> /demo/random
+  [Main]
+  exec_cmd = joule-visualizer-filter
+  name = User Interface
+  has_interface = yes
+
+  [Arguments]
+  title = Quick Start Data Pipeline
+
+  [Inputs]
+  smoothed = /demo/smoothed
+  random = /demo/random
+
   </div>
 
 The URL of the interface is available in the module info:
 
 .. raw:: html
 
-    <div class="header bash">
-    Command Line:
-    </div>
-    <div class="code bash"><i># restart joule to use the new configuration files</i>
-    <b>$> sudo systemctl joule.service restart</b>
+    <div class="bash-code">
+    # restart joule to use the new configuration files
+    $> sudo service joule restart
 
-    <i># check pipeline status using the joule CLI</i>
-    <b>$> joule module list</b>
+    # check pipeline status using the joule CLI
+    $> joule module list
     ╒════════════════╤════════════════╤════════════════╤═════════╤═════════════╕
     │ Name           │ Inputs         │ Outputs        │   CPU % │   Mem (KiB) │
     ╞════════════════╪════════════════╪════════════════╪═════════╪═════════════╡
@@ -271,8 +269,8 @@ The URL of the interface is available in the module info:
     │ Data Source    │                │ /demo/random   │       0 │       62748 │
     ╘════════════════╧════════════════╧════════════════╧═════════╧═════════════╛
 
-    <i># check the module info to find the interface URL</i>
-    <b>$> joule module info "User Interface"</b>
+    # check the module info to find the interface URL
+    $> joule module info "User Interface"
     Name:
         User Interface
     Description:
@@ -284,6 +282,7 @@ The URL of the interface is available in the module info:
         random: /demo/random
     Outputs:
         --none--
+
     </div>
 
 Open a browser and navigate to the specified URL to view the interface.

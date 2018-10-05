@@ -18,18 +18,17 @@ Joule is a system service. Use the ``joule`` command to interact with the servic
 
 .. raw:: html
 
-    <div class="header bash">
-    Command Line:
-    </div>
-    <div class="code bash"><i># use systemctl to start, stop, or restart the joule service</i>
-    <b>$> sudo systemctl restart joule.service</b>
+    <div class="bash-code">
 
-    <i># use journalctl to view service logs</i>
-    <b>$> sudo journalctl -u joule.service</b>
+    # joule is a systemd service
+    $> sudo service joule restart
+
+    # use journalctl to view joule logs
+    $> sudo journalctl -u joule.service
     ... journalctl output
 
-    <i># use the joule CLI to interact with the service</i>
-    <b>$> joule info</b>
+    # use the joule CLI to interact with the service
+    $> joule info
     whatever is produced by joule info
 
     </div>
@@ -46,30 +45,32 @@ Module Configuration
 
 .. raw:: html
 
-    <div class="header ini">
-    Module Configuration File
-    </div>
-    <div class="code ini"><span>[Main]</span>
-    <i>#required settings (examples)</i>
-    <b>exec_cmd =</b> /path/to/module.py
-    <b>name =</b> Processing Module
-    <i>#optional settings (defaults)</i>
-    <b>description =</b>
-    <b>has_interface = </b>no
+    <div class="config-file">
 
-    <span>[Arguments]</span>
-    <b>arg =</b> value
-    <i>#additional keyword arguments ...</i>
+    : Module Configuration File
 
-    <span>[Inputs]</span>
-    <b>in1 =</b> /stream/path/input1
-    <b>in2 =</b> /stream/path/input2
-    <i>#additional inputs ... </i>
+    [Main]
+    #required settings (examples)
+    exec_cmd = /path/to/module.py
+    name = Processing Module
 
-    <span>[Outputs]</span>
-    <b>out1 =</b> /stream/path/output1
-    <b>out2 =</b> /stream/path/output2
-    <i>#additional outputs ... </i>
+    #optional settings (defaults)
+    description =
+    has_interface = no
+
+    [Arguments]
+    arg = value
+    #additional keyword arguments ...
+
+    [Inputs]
+    in1 = /stream/path/input1
+    in2 = /stream/path/input2
+    #additional inputs ...
+
+    [Outputs]</span>
+    out1 = /stream/path/output1
+    out2 = /stream/path/output2
+    #additional outputs ...
 
     </div>
 
@@ -106,17 +107,19 @@ file. At a minimum the configuration specifies a pipe name and a stream path sho
 
 .. raw:: html
 
-    <div class="header ini">
-    Pipe Configuration Format
-    </div>
-    <div class="code ini"><i>#1. basic configuration [pipe name] = [stream path]</i>
-    <b>simple =</b> /stream/path/simple
+    <div class="config-file">
 
-    <i>#2. with inline stream configuration</i>
-    <b>inline =</b> /stream/path/inline:float32[x,y,z]
+    : Pipe Configuration Format
 
-    <i>#3. remote connection, must include inline stream config</i>
-    <b>remote =</b> node2.net:8088 /stream/path/remote:float32[x,y,z]
+    #1. basic configuration [pipe name] = [stream path]
+    simple = /stream/path/simple
+
+    #2. with inline stream configuration
+    inline = /stream/path/inline:float32[x,y,z]
+
+    #3. remote connection, must include inline stream config
+    remote = node2.net:8088 /stream/path/remote:float32[x,y,z]
+
     </div>
 
 The pipe configuration can also include an inline stream configuration. This can be used in place of a :ref:`sec-streams`
@@ -159,30 +162,34 @@ The configuration format is shown below:
 
 .. raw:: html
 
-  <div class="header ini">
-  Stream Configuration File
-  </div>
-  <div class="code ini"><span>[Main]</span>
-  <i>#required settings (examples)</i>
-  <b>name</b> = stream name
-  <b>path</b> = /stream/path
-  <b>datatype</b> = float32
-  <b>keep</b> = 1w
-  <i>#optional settings (defaults)</i>
-  <b>decimate</b> = yes
+  <div class="config-file">
 
-  <span>[Element1]</span>
-  <i>#required settings (examples)</i>
-  <b>name</b>         = stream name
-  <i>#optional settings (defaults)</i>
-  <b>plottable</b>    = yes
-  <b>discrete</b>     = no
-  <b>offset</b>       = 0.0
-  <b>scale_factor</b> = 1.0
-  <b>default_max</b>  =
-  <b>default_min</b>  =
+  : Stream Configuration File
 
-  <i>#additional elements...</i>
+  [Main]
+  #required settings (examples)
+  name = stream name
+  path = /stream/path
+  datatype = float32
+  keep = 1w
+
+  #optional settings (defaults)
+  decimate = yes
+
+  [Element1]
+  #required settings (examples)
+  name         = stream name
+
+  #optional settings (defaults)
+  plottable    = yes
+  discrete     = no
+  offset       = 0.0
+  scale_factor = 1.0
+  default_max  =
+  default_min  =
+
+  #additional elements...
+
   </div>
 
 Stream configuration files must end with the **.conf** suffix and should be placed in
@@ -238,25 +245,27 @@ full set of options and their default settings:
 
 .. raw:: html
 
-  <div class="header ini">
-  /etc/joule/main.conf
-  </div>
-  <div class="code ini"><i>#default settings shown</i>
-  <span>[NilmDB]</span>
-  <b>url =</b> http://localhost/nilmdb
-  <b>InsertionPeriod =</b> 5
-  <b>CleanupPeriod =</b> 600
+  <div class="config-file">
 
-  <span>[ProcDB]</span>
-  <b>DbPath =</b> /tmp/joule-proc-db.sqlite
-  <b>MaxLogLines =</b> 100
+  : /etc/joule/main.conf
 
-  <span>[Jouled]</span>
-  <b>ModuleDirectory =</b> /etc/joule/module_configs
-  <b>StreamDirectory =</b> /etc/joule/stream_configs
-  <b>ModuleDocs =</b> /etc/joule/module_docs.json
-  <b>IPAddress =</b> 127.0.0.1
-  <b>Port =</b> 1234
+  #default settings shown
+  [NilmDB]
+  url = http://localhost/nilmdb
+  InsertionPeriod = 5
+  CleanupPeriod = 600
+
+  [ProcDB]
+  DbPath = /tmp/joule-proc-db.sqlite
+  MaxLogLines = 100
+
+  [Jouled]
+  ModuleDirectory = /etc/joule/module_configs
+  StreamDirectory = /etc/joule/stream_configs
+  ModuleDocs = /etc/joule/module_docs.json
+  IPAddress = 127.0.0.1
+  Port = 1234
+
   </div>
 
 See the list below for information on each setting.

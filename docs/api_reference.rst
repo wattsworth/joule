@@ -19,6 +19,9 @@ Modules
 Pipes
 +++++
 
+.. autoclass:: joule.Pipe
+    :members:
+
 .. autoclass:: joule.InputPipe
     :members:
 

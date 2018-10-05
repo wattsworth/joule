@@ -23,14 +23,17 @@ Basic Interface
 Bootstrap Interface
 ^^^^^^^^^^^^^^^^^^^
 
-Typical web interfaces require more complex HTML, cascading style sheets (CSS) for data
-presentation, and javascript for interactive page elements. The example below illustrates
+Typical web interfaces require more complex HTML, cascading style sheets (CSS), and javascript. The example below
+provides a complete module implementation using the `Bootstrap <http://getbootstrap.com/>`_ CSS framework
+and `Jinja <http://jinja.pocoo.org/>`_ HTML templates.
 
-A more pratical interface is shown be
 .. literalinclude:: /../../example_modules/jouleexamples/bootstrap_interface.py
    :language: python
    :caption: Source: ``example_modules/jouleexamples/bootstrap_interface.py``
    :linenos:
+
+In addition to the module code itself this interface requires several additional files located in the assets directory
+as shown:
 
 .. code-block:: none
     :caption: file layout for ComplexInterface assets
@@ -45,15 +48,26 @@ A more pratical interface is shown be
             ├── layout.jinja2
             └── index.jinja2
 
+The HTML templates are stored in ``assets/templates``. **layout.jinja2** is common to all views and provides hooks
+to customize the content and inject additional stylesheet and script tags. The module home page renders **index.jinja**
+which is shown below:
+
 .. literalinclude:: /../../example_modules/jouleexamples/assets/templates/index.jinja2
    :language: jinja
    :caption: Source: ``example_modules/jouleexamples/assets/templates/index.jinja2``
    :linenos:
 
+Notice that additional CSS and javascript assets that are injected into the appropriate blocks in the layout template.
+Bootstrap classes provide a simple and powerful mechanism for creating a basic page, but in some cases it may be
+necessary to add custom CSS to fine tune an element's appearance.
+
 .. literalinclude:: /../../example_modules/jouleexamples/assets/css/index.css
    :language: css
    :caption: Source: ``example_modules/jouleexamples/assets/css/index.css``
    :linenos:
+
+Javascript makes websites interactive. This file makes repeated calls to the server for new data.
+Using AJAX requests rather than reloading the entire page improves the user's experience and reduces network traffic.
 
 .. literalinclude:: /../../example_modules/jouleexamples/assets/js/index.js
    :language: js

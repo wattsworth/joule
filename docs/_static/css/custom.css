@@ -21,6 +21,7 @@
   padding: 15px;
   margin-left: 20px;
   margin-right: 30px;
+    margin-bottom: 15px;
   white-space: pre;
   font-family: monospace;
   font-size: 14px;
@@ -166,4 +167,63 @@
   font-weight: bold;
   font-style: normal;
   color: black;
+}
+
+/* styles for CLI page */
+
+#command-line-interface h3{
+  display: inline;
+  font-family: monospace;
+  font-size: 1.6rem;
+  font-weight: 200;
+}
+
+#command-line-interface h3 + p {
+  display: inline;
+  font-style: italic;
+}
+
+#command-line-interface .docutils dl{
+    font-weight: 100;
+}
+
+#command-line-interface .docutils dt{
+    margin-bottom: 0px;
+    font-weight: 100;
+    margin-top: 5px;
+}
+
+#command-line-interface .docutils dd{
+    margin-bottom: 0px;
+}
+
+.cli-hr{
+    margin-top: 0px;
+    margin-bottom: 8px;
+}
+.cli-cmd{
+    font-size: 1.2rem;
+    font-family: monospace;
+    font-weight: bold;
+    display: inline;
+    margin-bottom: 10px;
+}
+.cli-args{
+    font-size: 1.2rem;
+    color: gray;
+    font-family: monospace;
+}
+.arg-div{
+    display: flex;
+}
+.arg-dt{
+    font-family: monospace;
+    font-size: 1.2rem;
+    color: gray;
+    min-width: 140px;
+}
+.arg-dd{
+    flex-grow: 4;
+    margin-left: 10px;
+
 }

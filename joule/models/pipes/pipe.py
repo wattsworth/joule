@@ -46,10 +46,12 @@ class Pipe:
 
     def enable_cache(self, lines: int):
         """
+        Turn on caching for pipe writes. Data is only transmitted once the cache is full.
+        This improves system performance especially if :meth:`write` is called
+        rapidly with short arrays. Once enabled, caching cannot be disabled.
 
-        :param lines: cache size (approximate)
-        :type lines: int
-        :return: None
+        Args:
+            lines: cache size
 
         """
         if self.direction == Pipe.DIRECTION.INPUT:
@@ -57,15 +59,25 @@ class Pipe:
         raise PipeError("abstract method must be implemented by child")
 
     async def flush_cache(self):
+        """
+        Force a pipe flush even if the cache is not full. Raises an error if caching is not
+        enabled.
+
+        """
         if self.direction == Pipe.DIRECTION.INPUT:
             raise PipeError("cannot control cache on input pipes")
         raise PipeError("abstract method must be implemented by child")
 
     async def read(self, flatten=False):
         """
+        Read stream data. By default this method returns a structured
+        array with ``timestamp`` and ``data`` fields. This method is a coroutine.
 
-        :param flatten: return a 2D unstructured array
-        :return: numpy.ndarray
+        Args:
+            flatten: return an unstructured array (flat 2D matrix) with timestamps in the first column
+
+        Returns:
+            numpy.ndarray
 
         >>> data = await pipe.read()
         [1, 2, 3]
@@ -81,6 +93,15 @@ class Pipe:
         raise PipeError("abstract method must be implemented by child")
 
     def consume(self, num_rows):
+        """
+        Flush data from the read buffer. The next call to :meth:`read` will
+        return any unflushed data followed by new incoming data.
+
+        Args:
+            num_rows: number of rows to flush from the read buffer
+
+        """
+
         if self.direction == Pipe.DIRECTION.OUTPUT:
             raise PipeError("cannot consume from an output pipe")
         raise PipeError("abstract method must be implemented by child")
@@ -91,11 +112,12 @@ class Pipe:
 
     async def write(self, data):
         """
+        Write timestamped data to the pipe. Timestamps must be monotonically increasing
+        and should not overlap with existing stream data in the database. This method is a coroutine.
 
         Args:
-            data (numpy.ndarray): either a 1D structured array or 2D unstructured array
-
-        Returns: None
+            data (numpy.ndarray): May be a structured array with ``timestamp`` and ``data`` fields
+            or an unstructured array with timestamps in the first column.
 
         >>> await pipe.write([[1000, 2, 3],[1001, 3, 4]])
 
@@ -105,6 +127,11 @@ class Pipe:
         raise PipeError("abstract method must be implemented by child")
 
     async def close_interval(self):
+        """
+        Signal a break in the data stream. This should be used to indicate missing data.
+        Data returned from :meth:`read` will be chunked by interval boundaries.
+
+        """
         if self.direction == Pipe.DIRECTION.INPUT:
             raise PipeError("cannot write to an input pipe")
         raise PipeError("abstract method must be implemented by child")
@@ -122,6 +149,11 @@ class Pipe:
         return unsubscribe
 
     async def close(self):
+        """
+        Close the pipe. This also closes any subscribers. If ``close_cb`` is defined
+        it will be executed before the subscribers are closed.
+
+        """
         # close the pipe, optionally implemented by the child
         pass  # pragma: no cover
 
