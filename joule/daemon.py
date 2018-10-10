@@ -122,7 +122,6 @@ class Daemon(object):
         inserter_task_grp.cancel()
         await inserter_task_grp
         self.data_store.close()
-        print("all stoppd except web server")
         try:
             await asyncio.wait_for(runner.shutdown(), 5)
             await asyncio.wait_for(runner.cleanup(), 5)
@@ -144,7 +143,6 @@ class Daemon(object):
             except DataError as e:
                 msg = "stream [%s]: %s" % (stream.name, str(e))
                 await self.supervisor.restart_producer(stream, loop, msg=msg)
-            print("restarting inserter")
 
 
 def main(argv=None):

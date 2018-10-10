@@ -79,7 +79,7 @@ class TestSupervisor(AsyncTestCase):
 
     def test_subscribes_to_remote_inputs(self):
         remote_stream = helpers.create_stream('remote', 'float64_2')
-        remote_stream.set_remote('remote:3000', '/path/to/stream')
+        remote_stream.set_remote('http://remote:3000', '/path/to/stream')
         p1 = pipes.LocalPipe(layout='float64_2', name='p1')
         p2 = pipes.LocalPipe(layout='float64_2', name='p2')
         subscription_requests = 0
@@ -94,28 +94,18 @@ class TestSupervisor(AsyncTestCase):
             self.supervisor.subscribe(remote_stream, p1, self.loop)
             self.supervisor.subscribe(remote_stream, p2, self.loop)
 
+            self.supervisor.task = asyncio.sleep(0)
+            self.loop.run_until_complete(self.supervisor.stop(self.loop))
+
         # make sure there is only one connection to the remote
         self.assertEqual(subscription_requests, 1)
         # p2 should be subscribed to p1
         self.assertTrue(p1.subscribers[0] is p2)
 
         # now "stop" the supervisor and the pipes should be closed
-        self.supervisor.task = asyncio.sleep(0)
-        self.loop.run_until_complete(self.supervisor.stop(self.loop))
+
         self.assertTrue(p1.closed)
         self.assertTrue(p2.closed)
-
-        def mock_invalid_input_request(path, stream, url, pipe, loop):
-            raise ConfigurationError
-
-        invalid_stream = helpers.create_stream('invalid', 'float64_2')
-        invalid_stream.set_remote('remote:3000', '/path/to/stream')
-        p3 = pipes.LocalPipe(layout='float64_2', name='p3')
-        with self.assertRaises(SubscriptionError):
-            with mock.patch('joule.models.supervisor.request_network_input',
-                            mock_invalid_input_request):
-                self.supervisor.subscribe(invalid_stream, p3, self.loop)
-
 
     def test_subscribes_to_remote_outputs(self):
         remote_stream = helpers.create_stream('remote', 'float64_2')
@@ -141,21 +131,13 @@ class TestSupervisor(AsyncTestCase):
         with mock.patch('joule.models.supervisor.request_network_output',
                         mock_output_request):
             self.loop.run_until_complete(supervisor.start(self.loop))
+            self.supervisor.task = asyncio.sleep(0)
+            self.loop.run_until_complete(self.supervisor.stop(self.loop))
+
         # pipe should be created
         self.assertTrue(output_requested)
         # worker should be producing data into the pipe
         self.assertEqual(1, len(worker.subscribers[remote_stream]))
         self.loop.run_until_complete(supervisor.stop(self.loop))
-        # pipe should be closed
-        self.assertTrue(supervisor.remote_outputs[remote_stream].closed)
 
-        # does not allow multiple modules to connect to the same output
-        async def mock_invalid_request(path, stream, url, loop):
-            raise ConfigurationError("invalid request")
 
-        with self.assertLogs(level="ERROR"):
-            with mock.patch('joule.models.supervisor.request_network_output',
-                            mock_invalid_request):
-                self.loop.run_until_complete(supervisor.start(self.loop))
-        # worker should have logged the error
-        self.assertGreater(len(worker.logs), 0)

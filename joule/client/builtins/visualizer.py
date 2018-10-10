@@ -58,8 +58,6 @@ class Visualizer(FilterModule):  # pragma: no cover
             for pipe in inputs.values():
                 data = await pipe.read()
                 pipe.consume(len(data))
-                print("got %d rows from %s" % (len(data), pipe.stream.name), flush=True)
-                print("pipe.stream.elements: %d" % len(pipe.stream.elements))
                 if len(data) == 0:
                     continue
                 for i in range(len(pipe.stream.elements)):

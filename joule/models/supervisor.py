@@ -19,7 +19,6 @@ class Supervisor:
         self._workers = workers
         self.task: asyncio.Task = None
         self.remote_tasks: List[asyncio.Task] = []
-        self.remote_outputs: Dict[Stream, pipes.Pipe] = {}
         self.remote_inputs: Dict[Stream, pipes.Pipe] = {}
 
         self.REMOTE_HANDLER_RESTART_INTERVAL = 1
@@ -37,23 +36,19 @@ class Supervisor:
         self.task = asyncio.gather(*tasks, loop=loop)
 
     async def stop(self, loop: Loop):
-        print("trying to stop %d workers" % len(self._workers))
         for worker in self._workers:
             await worker.stop(loop)
         try:
             await self.task
         except Exception as e:
             log.info("Supervisor worker shutdown exception: %s " % str(e))
-        print("all workers stopped, stopping %d remote tasks" % len(self.remote_tasks))
         for task in self.remote_tasks:
             task.cancel()
-            print("cancelled ", id(task))
             try:
                 await task
             except Exception as e:
                 log.info("Supervisor remote i/o shutdown exception: %s " % str(e))
                 raise e
-        print("all remote tasks stopped, supervisor stopped")
 
 
     async def restart_producer(self, stream: Stream, loop: Loop, msg=""):
@@ -91,13 +86,11 @@ class Supervisor:
             continuously try to restore it
         """
         remote_streams = [stream for stream in worker.subscribers if stream.is_remote]
-        print("[%s] has %d remote outputs" % (worker.name, len(remote_streams)))
         for stream in remote_streams:
             src_pipe = pipes.LocalPipe(stream.layout, loop, stream=stream)
             # ignore unsubscribe cb, not used
             worker.subscribe(stream, src_pipe)
             task = loop.create_task(self._handle_remote_output(src_pipe, stream, loop))
-            print("created output task: ", id(task))
             self.remote_tasks.append(task)
 
     async def _handle_remote_output(self, src_pipe: pipes.Pipe, dest_stream: Stream, loop: Loop):
@@ -119,12 +112,10 @@ class Supervisor:
                     log.error("Subscriber::_handle_remote_output: %s" % str(e))
                     await asyncio.sleep(self.REMOTE_HANDLER_RESTART_INTERVAL)
         except asyncio.CancelledError:
-            print("output cancelled")
             pass
         await src_pipe.close()
         if dest_pipe is not None:
             await dest_pipe.close()
-        print("remote_output terminated")
 
     def _connect_remote_input(self, stream: Stream, pipe: pipes.Pipe, loop: Loop):
         """
@@ -136,7 +127,6 @@ class Supervisor:
 
         # this is the first subscriber, spawn an input task to feed the pipe
         task = loop.create_task(self._handle_remote_input(stream, pipe, loop))
-        print("created input task: ", id(task))
 
         self.remote_inputs[stream] = pipe
         self.remote_tasks.append(task)
@@ -149,8 +139,7 @@ class Supervisor:
         try:
             while True:
                 try:
-                    print("requesting input stream!")
-                    src_pipe = pipes.LocalPipe(src_stream.layout, loop, stream=src_stream)
+                    src_pipe = pipes.LocalPipe(src_stream.layout, loop, stream=src_stream, name=dest_pipe.name)
                     request_network_input(src_stream.remote_path, src_stream, src_stream.remote_url,
                                           src_pipe, loop)
                     try:
@@ -162,16 +151,13 @@ class Supervisor:
                                 log.info("destination [%s] is closed, OK if this is during shutdown" % dest_pipe.stream.name)
                             src_pipe.consume(len(data))
                     except pipes.EmptyPipe:
-                        print("src_pipe is empty :(")
                         await dest_pipe.close_interval()
                     log.error("Subscriber:: _handle_remote_input: connection terminated unexepectedly")
                 except (ConfigurationError, ConnectionError) as e:
                     log.error("Subscriber::_handle_remote_input: %s" % str(e))
                 await asyncio.sleep(self.REMOTE_HANDLER_RESTART_INTERVAL)
         except asyncio.CancelledError:
-            print("input cancelled")
             pass
         await dest_pipe.close()
         if src_pipe is not None:
             await src_pipe.close()
-        print("remote_input terminated")
