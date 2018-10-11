@@ -7,7 +7,7 @@ import warnings
 from joule.models import Stream, Element, pipes
 from joule.models.data_store.nilmdb import NilmdbStore, bytes_per_row
 from joule.models.data_store.errors import InsufficientDecimationError, DataError
-from .fake_nilmdb import FakeNilmdb, FakeResolver, FakeStream
+from .fake_nilmdb import FakeNilmdb, FakeStream
 from tests import helpers
 
 STREAM_LIST = os.path.join(os.path.dirname(__file__), 'stream_list.json')
@@ -20,15 +20,10 @@ class TestNilmdbStore(asynctest.TestCase):
 
     async def setUp(self):
         self.fake_nilmdb = FakeNilmdb(loop=self.loop)
-        info = await self.fake_nilmdb.start()
-        resolver = FakeResolver(info, loop=self.loop)
-        connector = aiohttp.TCPConnector(loop=self.loop, resolver=resolver)
-        url = "http://test.nodes.wattsworth.net:%d/nilmdb" % \
-              info['test.nodes.wattsworth.net']
-        # url = "http://localhost/nilmdb"
+        url = await self.fake_nilmdb.start()
+
         # use a 0 insert period for test execution
         self.store = NilmdbStore(url, 0, 60, self.loop)
-        self.store.connector = connector
 
         # make a couple example streams
         # stream1 int8_3

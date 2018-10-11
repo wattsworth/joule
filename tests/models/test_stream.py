@@ -127,3 +127,78 @@ class TestStream(unittest.TestCase):
                     {"extra", "causes error"}
                 ]
             })
+
+    def test_from_nilmdb_metadata(self):
+        metadata = {"name": "sinefit", "name_abbrev": "", "delete_locked": False,
+                    "streams": [{"column": 0, "name": "stream_0",
+                                 "units": None, "scale_factor": 1.0,
+                                 "offset": 0.0, "plottable": False,
+                                 "discrete": None, "default_min": -10,
+                                 "default_max": None},
+                                {"column": 1, "name": "stream_1",
+                                 "units": None, "scale_factor": 2.0,
+                                 "offset": 3.0, "plottable": True,
+                                 "discrete": None, "default_min": None,
+                                 "default_max": None},
+                                {"column": 2, "name": "stream_2",
+                                 "units": None, "scale_factor": 1.0,
+                                 "offset": 10.5, "plottable": True,
+                                 "discrete": None, "default_min": None,
+                                 "default_max": None}]}
+        my_stream = stream.from_nilmdb_metadata(metadata, "float32_3")
+        # make sure the stream is created correctly
+        self.assertEqual(my_stream.name, "sinefit")
+        self.assertEqual(my_stream.layout, "float32_3")
+        self.assertEqual(len(my_stream.elements), 3)
+        my_stream.elements.sort(key=lambda e: e.index)
+        elem0 = my_stream.elements[0]
+        self.assertEqual(elem0.index, 0)
+        self.assertEqual(elem0.name,'stream_0')
+        self.assertEqual(elem0.plottable, False)
+        self.assertEqual(elem0.default_min,-10)
+        self.assertEqual(elem0.default_max, None)
+        elem2 = my_stream.elements[2]
+        self.assertEqual(elem2.index, 2)
+        self.assertEqual(elem2.name, 'stream_2')
+        self.assertEqual(elem2.plottable, True)
+        self.assertEqual(elem2.scale_factor, 1.0)
+        self.assertEqual(elem2.offset, 10.5)
+
+    def test_from_nilmdb_no_metadata(self):
+        my_stream = stream.from_nilmdb_metadata({'name': 'test'}, "float32_3")
+        # make sure the stream is created correctly
+        self.assertEqual(my_stream.name, "test")
+        self.assertEqual(my_stream.layout, "float32_3")
+        self.assertEqual(len(my_stream.elements), 3)
+        my_stream.elements.sort(key=lambda e: e.index)
+        elem0 = my_stream.elements[0]
+        self.assertEqual(elem0.index, 0)
+        self.assertEqual(elem0.name, 'Element1')
+        self.assertEqual(elem0.plottable, True)
+        self.assertEqual(elem0.default_min, None)
+        self.assertEqual(elem0.default_max, None)
+        elem2 = my_stream.elements[2]
+        self.assertEqual(elem2.index, 2)
+        self.assertEqual(elem2.name, 'Element3')
+        self.assertEqual(elem2.plottable, True)
+        self.assertEqual(elem2.scale_factor, 1.0)
+        self.assertEqual(elem2.offset, 0.0)
+
+    def test_to_nilmdb_metadata(self):
+        my_stream = Stream(name="test", datatype=Stream.DATATYPE.INT16)
+        my_stream.elements.append(Element(name="e0", index=0, plottable=True, offset=0.0, default_min=-5, scale_factor=1.0))
+        my_stream.elements.append(Element(name="e1", index=1, plottable=True, units="watts", offset=3.5, scale_factor=1.0))
+        metadata = my_stream.to_nilmdb_metadata()
+        #NOTE: The plottable flag is always True (see TODO in element.py)
+        expected = {"name": "test", "name_abbrev": "", "delete_locked": False,
+                    "streams": [{"column": 0, "name": "e0",
+                                 "units": None, "scale_factor": 1.0,
+                                 "offset": 0.0, "plottable": True,
+                                 "discrete": False, "default_min": -5,
+                                 "default_max": None},
+                                {"column": 1, "name": "e1",
+                                 "units": "watts", "scale_factor": 1.0,
+                                 "offset": 3.5, "plottable": True,
+                                 "discrete": False, "default_min": None,
+                                 "default_max": None}]}
+        self.assertEqual(expected, metadata)

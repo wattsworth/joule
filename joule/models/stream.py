@@ -56,7 +56,6 @@ class Stream(Base):
     KEEP_NONE = 0
     keep_us: int = Column(Integer, default=KEEP_ALL)
 
-
     description: str = Column(String)
     folder_id: int = Column(Integer, ForeignKey('folder.id'))
     folder: "Folder" = relationship("Folder", back_populates="streams")
@@ -195,6 +194,14 @@ class Stream(Base):
             'data_info': data_info
         }
 
+    def to_nilmdb_metadata(self) -> Dict:
+        return {
+            'name': self.name,
+            'name_abbrev': '',
+            'delete_locked': False,
+            'streams': [e.to_nilmdb_metadata() for e in self.elements]
+        }
+
 
 def from_json(data: Dict) -> Stream:
     """
@@ -264,6 +271,24 @@ def from_config(config: configparser.ConfigParser) -> Stream:
     if len(stream.elements) == 0:
         raise ConfigurationError(
             "missing element configurations, must have at least one")
+    return stream
+
+
+def from_nilmdb_metadata(config_data: Dict, layout: str) -> Stream:
+    datatype = validate_datatype(layout.split('_')[0])
+    nelem = int(layout.split('_')[1])
+    if 'streams' in config_data:
+        elements = config_data['streams']
+    else:
+        elements = [{'column': i, 'name': "Element%d" % (i+1), 'units': None,
+                     'scale_factor': 1.0, 'offset': 0.0, 'plottable': True,
+                     'discrete': False, 'default_min': None, 'default_max': None} for
+                    i in range(nelem)]
+    stream = Stream(name=config_data['name'], description='', datatype=datatype,
+                    keep_us=Stream.KEEP_ALL, decimate=True)
+    for metadata in elements:
+        elem = element.from_nilmdb_metadata(metadata)
+        stream.elements.append(elem)
     return stream
 
 

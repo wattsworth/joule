@@ -71,6 +71,19 @@ class Element(Base):
             'default_min': self.default_min
         }
 
+    def to_nilmdb_metadata(self):
+        return {
+            'column': self.index,
+            'name': self.name,
+            'units': self.units,
+            'scale_factor': self.scale_factor,
+            'offset': self.offset,
+            'plottable': True,  #TODO: check why elements have NULL fields here?
+            'discrete': False,
+            'default_min': self.default_min,
+            'default_max': self.default_max
+        }
+
     def update_attributes(self, attrs: Dict):
         if 'name' in attrs:
             self.name = validate_name(attrs['name'])
@@ -115,7 +128,7 @@ def from_json(data: Dict) -> Element:
                    default_min=data["default_min"])
 
 
-def from_config(config: configparser.ConfigParser):
+def from_config(config: configparser.ConfigParser) -> Element:
     name = validate_name(config["name"])
     display_type = validate_type(config.get("display_type", fallback="continuous"))
     units = config.get("units", fallback=None)
@@ -133,6 +146,18 @@ def from_config(config: configparser.ConfigParser):
                    scale_factor=scale_factor,
                    default_max=default_max,
                    default_min=default_min)
+
+
+def from_nilmdb_metadata(config: Dict) -> Element:
+    return Element(name=config['name'],
+                   display_type=Element.DISPLAYTYPE.CONTINUOUS,
+                   units=config['units'],
+                   plottable=config['plottable'],
+                   offset=config['offset'],
+                   scale_factor=config['scale_factor'],
+                   default_max=config['default_max'],
+                   default_min=config['default_min'],
+                   index=config['column'])
 
 
 def validate_name(name: str) -> str:

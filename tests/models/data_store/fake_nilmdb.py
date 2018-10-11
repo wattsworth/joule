@@ -1,35 +1,9 @@
-import socket
 from typing import Dict
-import asyncio
 from aiohttp import web
-from aiohttp.resolver import DefaultResolver
 from aiohttp.test_utils import unused_port
 import numpy as np
+import multiprocessing
 from tests import helpers
-
-
-# from https://github.com/aio-libs/aiohttp/blob/master/examples/fake_server.py
-
-
-class FakeResolver:
-    _LOCAL_HOST = {0: '127.0.0.1',
-                   socket.AF_INET: '127.0.0.1',
-                   socket.AF_INET6: '::1'}
-
-    def __init__(self, fakes, *, loop):
-        """fakes -- dns -> port dict"""
-        self._fakes = fakes
-        self._resolver = DefaultResolver(loop=loop)
-
-    async def resolve(self, host, port=0, family=socket.AF_INET):
-        fake_port = self._fakes.get(host)
-        if fake_port is not None:
-            return [{'hostname': host,
-                     'host': self._LOCAL_HOST[family], 'port': fake_port,
-                     'family': family, 'proto': 0,
-                     'flags': socket.AI_NUMERICHOST}]
-        else:
-            return await self._resolver.resolve(host, port, family)
 
 
 class FakeStream:
@@ -39,6 +13,7 @@ class FakeStream:
         self.end = end
         self.rows = rows
         self.intervals = intervals
+        self.metadata = {}
         if start is not None and end is not None:
             if self.intervals is None:
                 self.intervals = [[start, end]]
@@ -59,18 +34,21 @@ class FakeStream:
 
 class FakeNilmdb:
 
-    def __init__(self, *, loop):
+    def __init__(self, loop):
         self.loop = loop
         self.app = web.Application()
         self.app.router.add_routes(
-            [web.get('/nilmdb/dbinfo', self.dbinfo),
-             web.post('/nilmdb/stream/create', self.stream_create),
-             web.put('/nilmdb/stream/insert', self.stream_insert),
-             web.get('/nilmdb/stream/extract', self.stream_extract),
-             web.get('/nilmdb/stream/intervals', self.stream_intervals),
-             web.post('/nilmdb/stream/remove', self.stream_remove),
-             web.get('/nilmdb/stream/list', self.stream_list),
-             web.post('/nilmdb/stream/destroy', self.stream_destroy)])
+            [web.get('/', self.info),
+             web.get('/dbinfo', self.dbinfo),
+             web.get('/stream/get_metadata', self.stream_get_metadata),
+             web.post('/stream/set_metadata', self.stream_set_metadata),
+             web.post('/stream/create', self.stream_create),
+             web.put('/stream/insert', self.stream_insert),
+             web.get('/stream/extract', self.stream_extract),
+             web.get('/stream/intervals', self.stream_intervals),
+             web.post('/stream/remove', self.stream_remove),
+             web.get('/stream/list', self.stream_list),
+             web.post('/stream/destroy', self.stream_destroy)])
         self.runner = None
         self.error_on_paths = {}  # (msg, status) tuples to return for path
         self.stub_stream_create = False
@@ -86,20 +64,27 @@ class FakeNilmdb:
         self.stream_list_response = None
         # dict path=>layout from stream/create calls
         self.streams: Dict[str, FakeStream] = {}
+        # optional queue of messages
+        self.msgs: multiprocessing.Queue = None
 
-    async def start(self):
-        port = unused_port()
+    async def start(self, port=None, msgs: multiprocessing.Queue=None):
+        if port is None:
+            port = unused_port()
         self.runner = web.AppRunner(self.app)
         await self.runner.setup()
         site = web.TCPSite(self.runner, '127.0.0.1', port)
         await site.start()
-        return {'test.nodes.wattsworth.net': port}
+        self.msgs = msgs
+        return "http://localhost:%d" % port
 
     async def stop(self):
         await self.runner.cleanup()
 
     def generate_error_on_path(self, path, status, msg):
         self.error_on_paths[path] = (msg, status)
+
+    async def info(self, request: web.Request):
+        return web.Response(text="This is NilmDB version 1.11.0, running on host unittest")
 
     async def dbinfo(self, request: web.Request):
         return web.json_response(data={"path": "/opt/data",
@@ -113,6 +98,11 @@ class FakeNilmdb:
         if self.stub_stream_create:
             return web.Response(status=self.http_code, text=self.response)
         content = await request.post()
+
+        if self.msgs is not None:
+            self.msgs.put({'action': 'stream_create',
+                           'params': dict(content)})
+
         if content["path"] in self.streams:
             return web.json_response({
                 "status": "400 Bad Request",
@@ -131,6 +121,7 @@ class FakeNilmdb:
         stream = self.streams[content["path"]]
         start = int(content["start"])
         end = int(content["end"])
+
         # make sure the data bounds are valid
         if stream.rows > 0:
             if ((stream.start < start < stream.end) or
@@ -153,6 +144,9 @@ class FakeNilmdb:
         raw = await request.read()
         data = np.frombuffer(raw, stream.dtype)
         stream.rows += len(data)
+        if self.msgs is not None:
+            self.msgs.put({'action': 'stream_insert',
+                           'params': dict(content), 'data': data})
         return web.json_response(None)
 
     async def stream_extract(self, request: web.Request):
@@ -212,3 +206,22 @@ class FakeNilmdb:
                                    stream.end,
                                    stream.rows,
                                    stream.end - stream.start] for path, stream in self.streams.items()])
+
+    async def stream_get_metadata(self, request: web.Request):
+        try:
+            stream = self.streams[request.query["path"]]
+            return web.json_response(stream.metadata)
+        except KeyError:
+            return web.Response(status=404)
+
+    async def stream_set_metadata(self, request: web.Request):
+        content = await request.post()
+        if self.msgs is not None:
+            self.msgs.put({'action': 'set_metadata',
+                           'params': dict(content)})
+        try:
+            stream = self.streams[content["path"]]
+            stream.metadata = dict(content)
+        except KeyError:
+            return web.Response(status=404)
+        return web.Response(text="ok")

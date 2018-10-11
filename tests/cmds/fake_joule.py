@@ -42,6 +42,7 @@ class FakeJoule:
         self.app = web.Application()
         self.app.router.add_routes(
             [
+                web.get('/', self.info),
                 web.get('/version.json', self.stub_get),
                 web.get('/streams.json', self.stub_get),
                 web.get('/stream.json', self.stream_info),
@@ -110,6 +111,9 @@ class FakeJoule:
         self.msgs.put({"path": request.query['path'],
                        "recursive": 'recursive' in request.query})
         return web.Response(text="ok")
+
+    async def info(self, request: web.Request):
+        return web.Response(text="Joule server")
 
     async def stub_get(self, request: web.Request):
         return web.Response(text=self.response, status=self.http_code)

@@ -314,7 +314,7 @@ class TestWorker(unittest.TestCase):
         loop = asyncio.get_event_loop()
         # create worker connections
         # child runs until stopped
-        self.module.exec_cmd = "python " + MODULE_SIMPLE_FILTER
+        self.module.exec_cmd = "/usr/bin/env python " + MODULE_SIMPLE_FILTER
 
         interval1_data = helpers.create_data('float32_3')
         interval2_data = helpers.create_data('float32_3')
@@ -371,7 +371,7 @@ class TestWorker(unittest.TestCase):
             loop.run_until_complete(asyncio.gather(
                 self.worker.run(self.supervisor.subscribe, loop, restart=False),
                 mock_producers()))
-        log_dump = ' '.join(log.output)
+        log_dump = '\n'.join(log.output)
         self.assertIn("subscriber write error", log_dump)
         self.assertIn("timed out", log_dump)
         # check stream2, should be stream0*2.0 [] stream0*2.0
