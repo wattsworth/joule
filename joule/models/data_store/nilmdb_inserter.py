@@ -122,17 +122,18 @@ class Inserter:
                                   "path": self.path}
                         async with session.post(self.remove_url, params=params) as resp:
                             if resp.status != 200:  # pragma: no cover
-                                raise errors.DataError(await resp.text())
+                                msg = await resp.text()
+                                log.error("NilmDB cleaning error: %s" % msg)
                         # remove decimation data
                         if self.decimator is not None:
                             for path in self.decimator.get_paths():
                                 params["path"] = path
                                 async with session.post(self.remove_url, params=params) as resp:
                                     if resp.status != 200:  # pragma: no cover
-                                        raise errors.DataError(await resp.text())
+                                        msg = await resp.text()
+                                        log.error("NilmDB cleaning error: %s" % msg)
             except aiohttp.ClientError as e:  # pragma: no cover
-                log.warning("NilmDB cleaning error: %r, retrying request" % e)
-                await asyncio.sleep(self.retry_interval)  # retry the request
+                log.warning("NilmDB cleaning error: %r" % e)
             except asyncio.CancelledError:
                 break
 
