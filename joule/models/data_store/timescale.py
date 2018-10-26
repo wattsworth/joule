@@ -1,27 +1,31 @@
 import asyncio
 from typing import List, Optional, Callable, Coroutine, Dict
 import numpy as np
+import asyncpg
 
 from joule.models import Stream, pipes
-
-
 from joule.models.data_store.data_store import DataStore, StreamInfo, DbInfo
 
 Loop = asyncio.AbstractEventLoop
 
+
 class TimescaleStore(DataStore):
 
-    def __init__(self, server: str, insert_period: float,
+    def __init__(self, host: str, port: int, user: str, database: str,
+                 password: str, insert_period: float,
                  cleanup_period: float, loop: Loop):
-        self.server = server
+        self.host = host
+        self.dsn = "postgres://%s:%s@%s:%d/%s" % (user, password, host, port, database)
         self.decimation_factor = 4
         self.insert_period = insert_period
         self.cleanup_period = cleanup_period
         self.loop = loop
+        self.conn = None
 
     async def initialize(self, stream: List[Stream]) -> None:
-        pass
-
+        self.conn = await asyncpg.connect(self.dsn)
+        await self.conn.execute('''
+        CREATE TABLE name(''')
     async def insert(self, stream: 'Stream',
                      data: np.ndarray, start: int, end: int):
         pass

@@ -14,7 +14,7 @@ from typing import List
 from joule.models import (Base, Worker, Supervisor, config,
                           DataStore, Stream, pipes)
 from joule.errors import ConfigurationError, SubscriptionError
-from joule.models import NilmdbStore
+from joule.models import NilmdbStore, TimescaleStore
 from joule.models.data_store.errors import DataError
 from joule.services import (load_modules, load_streams, load_config, load_databases)
 import joule.controllers
@@ -51,6 +51,9 @@ class Daemon(object):
                 NilmdbStore(database.url,
                             self.config.data_store.insert_period,
                             self.config.data_store.cleanup_period, loop)
+        elif database.backend == config.BACKEND.TIMESCALE:
+            self.data_store: DataStore = \
+                TimescaleStore()
         else:
             log.error("Unsupported data store type: " + database.backend.value)
             exit(1)

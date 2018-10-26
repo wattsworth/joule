@@ -19,7 +19,7 @@ class TestModuleController(AioHTTPTestCase):
 
     @unittest_run_loop
     async def test_module_list(self):
-        resp: aiohttp.ClientResponse = await self.client.request("GET", "/modules.json")
+        resp: aiohttp.ClientResponse = await self.client.request("GET", "/modules.json?statistics=1")
         workers = await resp.json()
         # check some fields in the response
         self.assertEqual(len(workers), 2)
