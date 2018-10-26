@@ -88,7 +88,7 @@ class Inserter:
                             if self.decimator is not None:
                                 self.decimator.close_interval()
             except aiohttp.ClientError as e:  # pragma: no cover
-                log.warning("NilmDB raw inserter error: %r, retrying request", e)
+                log.warning("NilmDB raw inserter error: %r, retrying request" % e)
                 await asyncio.sleep(self.retry_interval)  # retry the request
             except (pipes.EmptyPipe, asyncio.CancelledError):
                 break  # terminate the inserter
@@ -106,7 +106,7 @@ class Inserter:
                         await check_for_error(resp, ignore=[ERRORS.STREAM_ALREADY_EXISTS])
                         break
             except aiohttp.ClientError as e:  # pragma: no cover
-                log.warning("NilmDB inserter create_path error: %r, retrying request", e)
+                log.warning("NilmDB inserter create_path error: %r, retrying request" % e)
                 await asyncio.sleep(self.retry_interval)  # retry the request
 
     async def _clean(self):
@@ -131,7 +131,7 @@ class Inserter:
                                     if resp.status != 200:  # pragma: no cover
                                         raise errors.DataError(await resp.text())
             except aiohttp.ClientError as e:  # pragma: no cover
-                log.warning("NilmDB cleaning error: %r, retrying request", e)
+                log.warning("NilmDB cleaning error: %r, retrying request" % e)
                 await asyncio.sleep(self.retry_interval)  # retry the request
             except asyncio.CancelledError:
                 break
@@ -192,13 +192,13 @@ class NilmdbDecimator:
                                            data=decim_data.tostring()) as resp:
                         if resp.status != 200:  # pragma: no cover
                             error = await resp.text()
-                            raise errors.DataError("NilmDB error: %s" % error)
+                            raise errors.DataError("NilmDB(d) error: %s" % error)
                     # feed data to child decimator
                     await self.child.process(decim_data)
                     await asyncio.sleep(self.holdoff)
                     break  # success, leave the loop
             except aiohttp.ClientError as e:  # pragma: no cover
-                log.warning("NilmDB decimation error: %r, retrying request", e)
+                log.warning("NilmDB decimation error: %r, retrying request" % e)
                 await asyncio.sleep(self.retry_interval)  # retry the request
             except asyncio.CancelledError:  # pragma: no cover
                 break
@@ -279,5 +279,5 @@ class NilmdbDecimator:
                         await check_for_error(resp, ignore=[ERRORS.STREAM_ALREADY_EXISTS])
                         break
             except aiohttp.ClientError as e:  # pragma: no cover
-                log.warning("NilmDB decimator create_path error: %r, retrying request", e)
+                log.warning("NilmDB decimator create_path error: %r, retrying request" % e)
                 await asyncio.sleep(self.retry_interval)  # retry the request

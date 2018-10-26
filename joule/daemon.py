@@ -6,6 +6,7 @@ import time
 import argparse
 import signal
 from aiohttp import web
+import faulthandler
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from typing import List
@@ -20,8 +21,9 @@ import joule.controllers
 
 log = logging.getLogger('joule')
 async_log = logging.getLogger('asyncio')
-async_log.setLevel(logging.INFO)
+async_log.setLevel(logging.WARNING)
 Loop = asyncio.AbstractEventLoop
+faulthandler.enable()
 
 
 class Daemon(object):
@@ -134,15 +136,15 @@ class Daemon(object):
 
     async def _spawn_inserter(self, stream: Stream, loop: Loop):
         while True:
-            pipe = pipes.LocalPipe(layout=stream.layout, loop=loop, name=stream.name)
-            # ignore unsubscribe callback, we are never going to use it
-            self.supervisor.subscribe(stream, pipe, loop)
+            pipe = pipes.LocalPipe(layout=stream.layout, loop=loop, name='inserter:%s'%stream.name)
+            unsubscribe = self.supervisor.subscribe(stream, pipe, loop)
             try:
                 await self.data_store.spawn_inserter(stream, pipe, loop)
                 break  # inserter terminated, program is closing
             except DataError as e:
                 msg = "stream [%s]: %s" % (stream.name, str(e))
                 await self.supervisor.restart_producer(stream, loop, msg=msg)
+            unsubscribe()
 
 
 def main(argv=None):
@@ -152,7 +154,7 @@ def main(argv=None):
     log.addFilter(LogDedupFilter())
     logging.basicConfig(
         format='%(asctime)s %(levelname)s:%(message)s',
-        level=logging.DEBUG)
+        level=logging.WARNING)
     if args.config is not None:
         if os.path.isfile(args.config) is False:
             log.error("Invalid configuration: cannot load file [%s]" % args.config)
@@ -173,6 +175,7 @@ def main(argv=None):
     loop.run_until_complete(daemon.run(loop))
     loop.close()
     exit(0)
+
 
 
 class LogDedupFilter:
@@ -205,3 +208,6 @@ class LogDedupFilter:
         self.last_msg = record.msg
         self.first_repeat = True
         return True
+
+if __name__=="__main__":
+    main()

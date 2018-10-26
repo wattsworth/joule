@@ -22,10 +22,12 @@ log = logging.getLogger('joule')
 def build_fd_pipes(pipe_args: str, loop: Loop) -> Tuple[Pipes, Pipes]:
     try:
         pipe_json = json.loads(json.loads(pipe_args))
+        # if debugging, pycharm escapes the outer JSON
+        #pipe_json = json.loads(pipe_args.encode('utf-8').decode('unicode_escape'))
         dest_args = pipe_json['outputs']
         src_args = pipe_json['inputs']
     except (KeyError, json.JSONDecodeError):
-        raise ConfigurationError("invalid pipes argument")
+        raise ConfigurationError("invalid pipes argument: [%s]" % pipe_args)
     pipes_out = {}
     pipes_in = {}
     for name, arg in dest_args.items():
@@ -150,7 +152,7 @@ async def _historic_reader(url: str, my_stream: stream.Stream, pipe_out: pipes.P
         async with session.get(url + "/data", params=params) as response:
             if response.status != 200:  # pragma: no cover
                 msg = await response.text()
-                log.error("Error reading input [%s]: " % my_stream.name, msg)
+                log.error("Error reading input [%s]: %s" % (my_stream.name, msg))
                 await pipe_out.close()
                 return
             pipe_in = pipes.InputPipe(stream=my_stream, reader=response.content)
@@ -252,7 +254,7 @@ async def _output_writer(url, my_stream: stream.Stream, pipe):
                                         data=_data_sender()) as response:
                     if response.status != 200:  # pragma: no cover
                         msg = await response.text()
-                        log.error("Error writing output [%s]" % my_stream.name, msg)
+                        log.error("Error writing output [%s]: %s" % (my_stream.name, msg))
                         return
             except aiohttp.ClientError as e:  # pragma: no cover
                 log.info("Error submitting data to joule [%s], retrying" % str(e))

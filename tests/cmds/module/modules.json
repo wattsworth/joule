@@ -15,7 +15,7 @@
          "pid":null,
          "create_time":null,
          "cpu_percent":null,
-         "memory":null
+         "memory_percent":null
       }
    },
    {
@@ -33,7 +33,7 @@
          "pid":15338,
          "create_time":1532533917.37,
          "cpu_percent":0.0,
-         "memory":49442816
+         "memory_percent":49442816
       }
    },
    {
@@ -51,7 +51,7 @@
          "pid":15339,
          "create_time":1532533917.4,
          "cpu_percent":0.0,
-         "memory":49328128
+         "memory_percent":49328128
       }
    },
    {
@@ -71,7 +71,7 @@
          "pid":15340,
          "create_time":1532533917.42,
          "cpu_percent":0.0,
-         "memory":6045696
+         "memory_percent":6045696
       }
    },
    {
@@ -89,7 +89,7 @@
          "pid":15341,
          "create_time":1532533917.44,
          "cpu_percent":0.0,
-         "memory":54374400
+         "memory_percent":54374400
       }
    },
    {
@@ -107,7 +107,7 @@
          "pid":15342,
          "create_time":1532533917.46,
          "cpu_percent":0.0,
-         "memory":53489664
+         "memory_percent":53489664
       }
    }
 ]

@@ -7,6 +7,7 @@ import json
 import collections
 import datetime
 import psutil
+import numpy as np
 
 from joule.models.module import Module
 from joule.models.stream import Stream
@@ -46,18 +47,18 @@ class DataConnection:
 
 
 class Statistics:
-    def __init__(self, pid, create_time, cpu_percent, memory):
+    def __init__(self, pid, create_time, cpu_percent, memory_percent):
         self.pid = pid
         self.create_time = create_time
         self.cpu_percent = cpu_percent
-        self.memory = memory
+        self.memory_percent = memory_percent
 
     def to_json(self):
         return {
             'pid': self.pid,
             'create_time': self.create_time,
             'cpu_percent': self.cpu_percent,
-            'memory': self.memory
+            'memory_percent': self.memory_percent
         }
 
 
@@ -103,7 +104,7 @@ class Worker:
                     return Statistics(p.pid,
                                       p.create_time(),
                                       p.cpu_percent(),
-                                      p.memory_info().rss)
+                                      p.memory_percent())
             else:
                 # worker is not running, no statistics available
                 return Statistics(None, None, None, None)
@@ -222,8 +223,13 @@ class Worker:
             raise SubscriptionError()
 
         def unsubscribe():
-            i = self.subscribers[stream].index(pipe)
-            del self.subscribers[stream][i]
+            try:
+                i = self.subscribers[stream].index(pipe)
+                del self.subscribers[stream][i]
+            except ValueError:
+                # subscription already cancelled
+                # this can happen if the _output_handler removes the subscriber
+                pass
 
         return unsubscribe
 
@@ -241,18 +247,20 @@ class Worker:
 
         output_task = await self._spawn_outputs(loop)
         cmd = self._compose_cmd()
+        env = {**os.environ, 'PYTHONUNBUFFERED': '1'}
         create = asyncio.create_subprocess_exec(
             *cmd,
             stdin=asyncio.subprocess.DEVNULL,
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT, close_fds=False)
+            stderr=asyncio.subprocess.STDOUT,
+            env=env, close_fds=False)
         try:
             self.process = await create
         except Exception as e:
             self.process = None
             self.log("ERROR: cannot start module: \n\t%s" % e)
             self.module.status = Module.STATUS.FAILED
-            log.error("Cannot start [%s]" % self.module.name)
+            log.error("Cannot start [%s]: %s" % (self.module.name, e))
             self._close_child_fds()
             popen_lock.release()
             await self._close_connections()
@@ -304,21 +312,29 @@ class Worker:
             self.output_connections.append(DataConnection(
                 name, w, stream, pipe))
             tasks.append(loop.create_task(
-                self._output_handler(pipe, self.subscribers[stream])))
+                self._output_handler(pipe, self.subscribers[stream], loop)))
 
         return asyncio.gather(*tasks)
 
     async def _output_handler(self, child_output: pipes.Pipe,
-                              subscribers: List[pipes.Pipe]):
+                              subscribers: List[pipes.Pipe], loop: Loop):
         """given a numpy pipe, get data and put it
            into each queue in [output_queues] """
+        last_ts = None
         try:
             while True:
                 data = await child_output.read()
-                child_output.consume(len(data))
                 if len(data) > 0:
+                    if not self._verify_monotonic_timestamps(data, last_ts, child_output.name):
+                        for pipe in subscribers:
+                            await pipe.close_interval()
+                        await self.restart(loop)
+                        break
+                    last_ts = data['timestamp'][-1]
+
+                    child_output.consume(len(data))
                     for pipe in subscribers[:]:
-                        #if child_output.name=='output2':
+                        # if child_output.name=='output2':
                         #    print("writing to %d subscribers" % len(subscribers))
                         try:
                             await asyncio.wait_for(pipe.write(data),
@@ -384,3 +400,22 @@ class Worker:
             await c.disconnect()
         self.output_connections = []
         self.input_connections = []
+
+    def _verify_monotonic_timestamps(self, data, last_ts: int, name: str):
+        if len(data) == 0:
+            return True
+        # if there are multiple rows, check that all timestamps are increasing
+        if len(data) > 1 and np.min(np.diff(data['timestamp'])) <= 0:
+            min_idx = np.argmin(np.diff(data['timestamp']))
+            self.log("Non-monotonic timestamp in stream [%s] (%d<=%d)" %
+                     (name, data['timestamp'][min_idx + 1], data['timestamp'][min_idx]))
+            log.warning("Non-monotonic timestamp in [%s], restarting module" % self.name)
+            return False
+        # check to make sure the first timestamp is larger than the previous block
+        if last_ts is not None:
+            if last_ts >= data['timestamp'][0]:
+                log.warning("Non-monotonic timestamp in [%s], restarting module" % self.name)
+                self.log("Non-monotonic timestamp in stream [%s] (%d<=%d)" %
+                         (name, data['timestamp'][0], last_ts))
+                return False
+        return True

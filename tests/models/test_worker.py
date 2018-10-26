@@ -154,13 +154,13 @@ class TestWorker(unittest.TestCase):
             await asyncio.sleep(0.1)
             statistics = await self.worker.statistics()
             self.assertIsNotNone(statistics.pid)
-            self.assertGreater(statistics.memory, 0)
+            self.assertGreater(statistics.memory_percent, 0)
             # kill the process and try to get statistics again
             os.kill(statistics.pid, signal.SIGKILL)
             await asyncio.sleep(0.1)
             null_statistics = await self.worker.statistics()
             self.assertIsNone(null_statistics.pid)
-            self.assertIsNone(null_statistics.memory)
+            self.assertIsNone(null_statistics.memory_percent)
 
         # no statistics available before worker starts
         stats = loop.run_until_complete(self.worker.statistics())

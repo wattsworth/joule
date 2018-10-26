@@ -101,7 +101,7 @@ def parse_inline_config(inline_config: str) -> (Stream.DATATYPE, List[str]):
         element_names = [e.strip() for e in config[1].strip()[:-1].split(",")]
         return datatype, element_names
     except ConfigurationError as e:
-        raise ConfigurationError("invalid inline configuration") from e
+        raise ConfigurationError("invalid inline configuration: %s" % inline_config) from e
 
 
 def _validate_config_match(existing_stream: Stream,
