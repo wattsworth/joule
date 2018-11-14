@@ -10,6 +10,7 @@ from joule.models.data_store import errors
 class ERRORS(Enum):
     STREAM_ALREADY_EXISTS = "stream already exists at this path"
     NO_SUCH_STREAM = "No such stream"
+    NO_STREAM_AT_PATH = "No stream at path"
 
 
 def compute_path(stream: Stream, decimation_level: int = 1):

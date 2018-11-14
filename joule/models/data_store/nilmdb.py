@@ -183,7 +183,7 @@ class NilmdbStore(DataStore):
         async with self._get_client() as session:
             for path in [base_path, *decim_paths]:
                 async with session.post(url, data={"path": path}) as resp:
-                    await check_for_error(resp)
+                    await check_for_error(resp, ignore=[ERRORS.NO_STREAM_AT_PATH])
         return web.Response(text="ok")
 
     async def _extract_by_path(self, path: str, start: Optional[int], end: Optional[int],
@@ -245,7 +245,7 @@ class NilmdbStore(DataStore):
             params["end"] = end
         async with self._get_client() as session:
             async with session.post(url, params=params) as resp:
-                await check_for_error(resp)
+                await check_for_error(resp, ignore=[ERRORS.NO_SUCH_STREAM])
                 await resp.text()  # wait for operation to complete
 
     async def _count_by_path(self, path, start: Optional[int], end: Optional[int]) -> int:
