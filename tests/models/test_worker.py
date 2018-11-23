@@ -18,7 +18,7 @@ import warnings
 from joule.models import Module, Stream, Worker, Element, Supervisor
 from joule.models.worker import DataConnection
 from joule.models import pipes
-from .. import helpers
+from tests import helpers
 
 LOG_SIZE = 10  # override module default
 
@@ -316,8 +316,8 @@ class TestWorker(unittest.TestCase):
         # child runs until stopped
         self.module.exec_cmd = "/usr/bin/env python " + MODULE_SIMPLE_FILTER
 
-        interval1_data = helpers.create_data('float32_3')
-        interval2_data = helpers.create_data('float32_3')
+        interval1_data = helpers.create_data('float32_3', start=1000, step=100, length=100)
+        interval2_data = helpers.create_data('float32_3', start=1001+100*100, step=100, length=100)
 
         async def mock_producers():
             # await asyncio.sleep(0.5)
