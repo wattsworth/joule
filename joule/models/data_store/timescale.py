@@ -5,8 +5,11 @@ from io import BytesIO
 import asyncpg
 import datetime
 import pdb
+import shutil
+import os
 
 from joule.errors import DataError, DecimationError
+from joule.models.data_store.data_store import DbInfo
 from joule.models.data_store.timescale_inserter import Inserter
 from joule.models.data_store import psql_helpers
 from joule.models import Stream, pipes
@@ -14,6 +17,7 @@ from joule.models.data_store.data_store import DataStore, StreamInfo, DbInfo
 
 Loop = asyncio.AbstractEventLoop
 
+SQL_FUNCS = os.path.join(os.path.dirname(__file__), 'test.sql')
 
 class TimescaleStore(DataStore):
 
@@ -32,6 +36,10 @@ class TimescaleStore(DataStore):
         conn: asyncpg.Connection = await asyncpg.connect(self.dsn)
         self.pool = await asyncpg.create_pool(self.dsn, command_timeout=60)
         await conn.execute("CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;")
+        # load the stream_info function
+        with open(SQL_FUNCS, 'r') as f:
+            await conn.execute(f.read())
+
         await conn.close()
 
     def close(self):
@@ -126,15 +134,39 @@ class TimescaleStore(DataStore):
                     await cur.execute('DROP %s '%table)
 
     async def info(self, streams: List['Stream']) -> Dict[int, StreamInfo]:
-        "select * FROM hypertable_relation_size_pretty('conditions');"
-        # select order by time desc limit 1
-        # select order by time asc limit 1
-        # count on main table
+        results  = {}
+        async with self.pool.acquire() as conn:
+            for my_stream in streams:
+                record = await conn.fetchrow("select * from stream_info(%d);" % my_stream.id)
+                start = record['min_ts']
+                end = record['max_ts']
+                if start is not None:
+                    start = int(start.replace(tzinfo=datetime.timezone.utc)
+                                .timestamp()*1e6)
+                if end is not None:
+                    end = int(end.replace(tzinfo=datetime.timezone.utc)
+                              .timestamp()*1e6)
+                if start is not None and end is not None:
+                    total_time = end - start
+                else:
+                    total_time = 0
+                results[my_stream.id] = StreamInfo(start, end,
+                                                   record['rows'],
+                                                   total_time, record['size'])
+        return results
 
 
     async def dbinfo(self) -> DbInfo:
 
-        pass
+        async with self.pool.acquire() as conn:
+            dbsize = await conn.fetchval("select pg_database_size(current_database())")
+            path = await conn.fetchval("show data_directory")
+            usage = shutil.disk_usage(path)
+            return DbInfo(path=path,
+                          size=dbsize,
+                          other=max(usage.used - dbsize, 0),
+                          reserved=max(usage.total - usage.used - usage.free, 0),
+                          free=usage.free)
 
     def close(self):
         pass

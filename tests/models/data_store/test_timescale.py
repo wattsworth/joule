@@ -8,6 +8,7 @@ import tempfile
 import shutil
 import os
 import pdb
+import json
 
 from joule.models import Stream, Element, pipes
 from joule.models.data_store.timescale import TimescaleStore
@@ -22,18 +23,18 @@ class TestTimescale(asynctest.TestCase):
 
     async def setUp(self):
         # set up the pscql database
-        self.psql_dir = tempfile.TemporaryDirectory()
-        self.postgresql = testing.postgresql.Postgresql(base_dir=self.psql_dir.name)
-        self.postgresql.stop()
+        #self.psql_dir = tempfile.TemporaryDirectory()
+        #self.postgresql = testing.postgresql.Postgresql(base_dir=self.psql_dir.name)
+        #self.postgresql.stop()
         # now that the directory structure is created, customize the *.conf file
-        src = os.path.join(os.path.dirname(__file__),"postgresql.conf")
-        dest = os.path.join(self.psql_dir.name, "data", "postgresql.conf")
-        shutil.copyfile(src, dest)
+        #src = os.path.join(os.path.dirname(__file__),"postgresql.conf")
+        #dest = os.path.join(self.psql_dir.name, "data", "postgresql.conf")
+        #shutil.copyfile(src, dest)
         # restart the database
-        self.postgresql = testing.postgresql.Postgresql(base_dir=self.psql_dir.name)
+        #self.postgresql = testing.postgresql.Postgresql(base_dir=self.psql_dir.name)
 
-        self.db_url = self.postgresql.url()
-        # self.db_url = "postgresql://jdonnal@127.0.0.1:5432/jdonnal"
+        #self.db_url = self.postgresql.url()
+        self.db_url = "postgresql://jdonnal@127.0.0.1:5432/jdonnal"
         conn: asyncpg.Connection = await asyncpg.connect(self.db_url)
         await conn.execute("CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE ")
         await conn.execute("DROP SCHEMA IF EXISTS joule CASCADE")
@@ -47,7 +48,7 @@ class TestTimescale(asynctest.TestCase):
                                   keep_us=Stream.KEEP_ALL, decimate=True,
                                   elements=[Element(name="e%d" % x) for x in range(3)])
         pipe = pipes.LocalPipe(self.test_stream.layout)
-        self.test_data = helpers.create_data(layout=self.test_stream.layout, length=1000)
+        self.test_data = helpers.create_data(layout=self.test_stream.layout, length=1005)
         task = self.store.spawn_inserter(self.test_stream, pipe, self.loop)
         await pipe.write(self.test_data)
         await pipe.close()
@@ -57,9 +58,9 @@ class TestTimescale(asynctest.TestCase):
         await self.store.initialize([])
 
     async def tearDown(self):
-        self.postgresql.stop()
+        #self.postgresql.stop()
         self.store.close()
-        self.psql_dir.cleanup()
+        #self.psql_dir.cleanup()
 
     async def test_basic_insert_extract(self):
         stream_id = 1
@@ -94,7 +95,7 @@ class TestTimescale(asynctest.TestCase):
 
                 # check the column data types
                 records = await conn.fetch('''SELECT column_name, data_type FROM information_schema.columns 
-                                                            WHERE table_name='stream%d';''' % stream_id)
+                                                            WHERE table_name='stream%d' AND table_schema='joule';''' % stream_id)
                 (names, types) = zip(*records)
                 expected_elements = ['time'] + ['elem%d' % x for x in range(n_elements)]
                 self.assertCountEqual(names, expected_elements)
@@ -278,3 +279,11 @@ class TestTimescale(asynctest.TestCase):
                     [ts[781], ts[-1]]]
         self.assertEqual(expected, intervals)
         await conn.close()
+
+    async def test_db_info(self):
+        db_info = await self.store.dbinfo()
+        print(json.dumps(db_info.to_json(), indent=2))
+
+    async def test_info(self):
+        info = await self.store.info([self.test_stream])
+        print(info)
