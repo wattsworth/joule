@@ -17,7 +17,8 @@ from joule.models.data_store.data_store import DataStore, StreamInfo, DbInfo
 
 Loop = asyncio.AbstractEventLoop
 
-SQL_FUNCS = os.path.join(os.path.dirname(__file__), 'test.sql')
+SQL_FUNCS = os.path.join(os.path.dirname(__file__), 'timescale.sql')
+
 
 class TimescaleStore(DataStore):
 
@@ -36,7 +37,7 @@ class TimescaleStore(DataStore):
         conn: asyncpg.Connection = await asyncpg.connect(self.dsn)
         self.pool = await asyncpg.create_pool(self.dsn, command_timeout=60)
         await conn.execute("CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;")
-        # load the stream_info function
+        # load custom functions
         with open(SQL_FUNCS, 'r') as f:
             await conn.execute(f.read())
 
@@ -71,13 +72,13 @@ class TimescaleStore(DataStore):
                     query = "SELECT time FROM joule.stream%d WHERE time < '%s'" % (stream.id, boundary)
                     query += " ORDER BY time DESC LIMIT 1"
                     prev_ts = await conn.fetchval(query)
-                    utc_start_ts = int(cur_start.replace(tzinfo=datetime.timezone.utc).timestamp()*1e6)
-                    utc_end_ts = int(prev_ts.replace(tzinfo=datetime.timezone.utc).timestamp()*1e6)
+                    utc_start_ts = int(cur_start.replace(tzinfo=datetime.timezone.utc).timestamp() * 1e6)
+                    utc_end_ts = int(prev_ts.replace(tzinfo=datetime.timezone.utc).timestamp() * 1e6)
                     intervals.append([utc_start_ts, utc_end_ts])
                     cur_start = None
                 query = "SELECT time FROM joule.stream%d WHERE time >= '%s'" % (stream.id, boundary)
-                if i < (len(boundaries)-1):
-                    query += " AND time < '%s' " % (boundaries[i+1])
+                if i < (len(boundaries) - 1):
+                    query += " AND time < '%s' " % (boundaries[i + 1])
                 query += " ORDER BY time ASC LIMIT 1"
                 next_ts = await conn.fetchval(query)
                 if next_ts is None:
@@ -86,9 +87,6 @@ class TimescaleStore(DataStore):
                 if cur_start is None:
                     cur_start = next_ts
         return intervals
-
-
-
 
     async def extract(self, stream: 'Stream', start: Optional[int], end: Optional[int],
                       callback: Callable[[np.ndarray, str, int], Coroutine],
@@ -104,7 +102,7 @@ class TimescaleStore(DataStore):
                 if count > 0:
                     desired_decimation = np.ceil(count / max_rows)
                     decimation_level = int(4 ** np.ceil(np.log(desired_decimation) /
-                                                    np.log(self.decimation_factor)))
+                                                        np.log(self.decimation_factor)))
                 else:
                     # create an empty array with the right data type
                     data = np.array([], dtype=pipes.compute_dtype(stream.layout))
@@ -120,7 +118,7 @@ class TimescaleStore(DataStore):
         async with self.pool.acquire() as conn:
             tables = await psql_helpers.get_table_names(conn, stream)
             for table in tables:
-                query = 'DELETE FROM %s '%table+where_clause
+                query = 'DELETE FROM %s ' % table + where_clause
                 await conn.execute(query)
             # create an interval boundary to mark the missing data
             if start is not None:
@@ -128,24 +126,27 @@ class TimescaleStore(DataStore):
 
     async def destroy(self, stream: 'Stream'):
         async with self.pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                tables = await psql_helpers.get_table_names(cur, stream)
-                for table in tables:
-                    await cur.execute('DROP %s '%table)
+            tables = await psql_helpers.get_table_names(conn, stream)
+            for table in tables:
+                await conn.execute('DROP TABLE %s ' % table)
 
     async def info(self, streams: List['Stream']) -> Dict[int, StreamInfo]:
-        results  = {}
+        results = {}
         async with self.pool.acquire() as conn:
             for my_stream in streams:
-                record = await conn.fetchrow("select * from stream_info(%d);" % my_stream.id)
+                try:
+                    record = await conn.fetchrow("select * from stream_info(%d);" % my_stream.id)
+                except asyncpg.UndefinedTableError:
+                    # this stream has no data tables, just make up an empty record
+                    record = {'min_ts': None, 'max_ts': None, 'rows': 0, 'size': 0}
                 start = record['min_ts']
                 end = record['max_ts']
                 if start is not None:
                     start = int(start.replace(tzinfo=datetime.timezone.utc)
-                                .timestamp()*1e6)
+                                .timestamp() * 1e6)
                 if end is not None:
                     end = int(end.replace(tzinfo=datetime.timezone.utc)
-                              .timestamp()*1e6)
+                              .timestamp() * 1e6)
                 if start is not None and end is not None:
                     total_time = end - start
                 else:
@@ -155,13 +156,12 @@ class TimescaleStore(DataStore):
                                                    total_time, record['size'])
         return results
 
-
     async def dbinfo(self) -> DbInfo:
 
         async with self.pool.acquire() as conn:
-            dbsize = await conn.fetchval("select pg_database_size(current_database())")
+            dbsize = await conn.fetchval("select pg_database_size(current_database())") # in bytes
             path = await conn.fetchval("show data_directory")
-            usage = shutil.disk_usage(path)
+            usage = shutil.disk_usage(path)  # usage in bytes
             return DbInfo(path=path,
                           size=dbsize,
                           other=max(usage.used - dbsize, 0),
@@ -174,9 +174,9 @@ class TimescaleStore(DataStore):
 
 async def _extract_data(conn: asyncpg.Connection, stream: Stream, callback,
                         decimation_level: int = 1, start: int = None, end: int = None,
-                        block_size = 50000):
-    table_name = "joule.stream%d"%stream.id
-    if decimation_level>1:
+                        block_size=50000):
+    table_name = "joule.stream%d" % stream.id
+    if decimation_level > 1:
         table_name += "_%d" % decimation_level
     # extract by interval
     query = "SELECT time FROM joule.stream%d_intervals " % stream.id
@@ -206,9 +206,9 @@ async def _extract_data(conn: asyncpg.Connection, stream: Stream, callback,
                 await callback(np_data, stream.layout, 1)
             if len(np_data) < block_size:
                 break
-            start = np_data['timestamp'][-1]+1
+            start = np_data['timestamp'][-1] + 1
         # do not put an interval token at the end of the data
-        if i < len(boundary_records)-1:
+        if i < len(boundary_records) - 1:
             if decimation_level > 1:
                 await callback(pipes.interval_token(stream.decimated_layout),
                                stream.decimated_layout, decimation_level)
