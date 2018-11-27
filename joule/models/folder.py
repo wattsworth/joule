@@ -12,6 +12,8 @@ logger = logging.getLogger('joule')
 
 class Folder(Base):
     __tablename__ = 'folder'
+    __table_args__ = {"schema": "metadata"}
+
     name: str = Column(String, nullable=False)
     description: str = Column(String, nullable=True)
     id: int = Column(Integer, primary_key=True)

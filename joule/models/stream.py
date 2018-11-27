@@ -29,6 +29,8 @@ class Stream(Base):
 
     """
     __tablename__ = 'stream'
+    __table_args__ = {"schema": "metadata"}
+
     id: int = Column(Integer, primary_key=True)
     name: str = Column(String, nullable=False)
 

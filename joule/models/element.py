@@ -25,6 +25,8 @@ class Element(Base):
         display_type (Element.DISPLAYTYPE): visualization type
     """
     __tablename__ = 'element'
+    __table_args__ = {"schema": "metadata"}
+
     id: int = Column(Integer, primary_key=True)
     index: int = Column(Integer, nullable=False)
     name: str = Column(String)

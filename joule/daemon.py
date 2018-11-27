@@ -37,34 +37,17 @@ class Daemon(object):
         self.stop_requested = False
 
     def initialize(self, loop: Loop):
-        # load the database configs
-        databases = load_databases.run(self.config.database_directory)
-
-        # initialize the data store database
-        db_name = self.config.data_store.database_name
-        if db_name not in databases:
-            log.error("Specified database [%s] is not configured" % db_name)
-            exit(1)
-        database = databases[db_name]
-        if database.backend == config.BACKEND.NILMDB:
+        if self.config.nilmdb_url is not None:
             self.data_store: DataStore = \
-                NilmdbStore(database.url,
-                            self.config.data_store.insert_period,
-                            self.config.data_store.cleanup_period, loop)
-        elif database.backend == config.BACKEND.TIMESCALE:
-            self.data_store: DataStore = \
-                TimescaleStore()
+                NilmdbStore(self.config.nilmdb_url,
+                            self.config.insert_period,
+                            self.config.cleanup_period, loop)
         else:
-            log.error("Unsupported data store type: " + database.backend.value)
-            exit(1)
+            self.data_store: DataStore = \
+                TimescaleStore(self.config.database, self.config.insert_period,
+                               self.config.cleanup_period, loop)
 
-        # connect to the metadata database
-        db_name = self.config.database_name
-        if db_name not in databases:
-            log.error("Specified database [%s] is not configured" % db_name)
-            exit(1)
-        database = databases[db_name]
-        engine = create_engine(database.engine_config)
+        engine = create_engine(self.config.database)
         Base.metadata.create_all(engine)
         self.db = Session(bind=engine)
 
