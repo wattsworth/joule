@@ -45,7 +45,7 @@ class Element(Base):
     scale_factor: float = Column(Float, default=1.0, nullable=False)
     default_max: Optional[float] = Column(Float, default=None)
     default_min: Optional[float] = Column(Float, default=None)
-    stream_id: int = Column(Integer, ForeignKey('stream.id'))
+    stream_id: int = Column(Integer, ForeignKey('metadata.stream.id'))
     stream: 'Stream' = relationship("Stream", back_populates="elements")
 
     def __repr__(self):

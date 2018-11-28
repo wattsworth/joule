@@ -5,10 +5,14 @@ import datetime
 import asyncpg
 from typing import List, Optional
 import pdb
+import asyncio
+import re
+import logging
 
 from joule.errors import DataError
 from joule.models.stream import Stream
 
+log = logging.getLogger('joule')
 
 postgres_ts_offset = 946684800000000  # January 1 2000 GMT
 
@@ -156,14 +160,23 @@ def get_psql_type(x: Stream.DATATYPE):
 
 
 async def get_row_count(conn: asyncpg.Connection, stream: Stream,
-                        start=None, end=None, decimated=False):
-    query = "SELECT row_estimate FROM hypertable_approximate_row_count('joule.stream%d')" % stream.id
+                        start=None, end=None):
+    query = "EXPLAIN SELECT COUNT(*) FROM joule.stream%d " % stream.id
+    query += query_time_bounds(start, end)
+    records = await conn.fetch(query)
+    if len(records)>1 and 'QUERY PLAN' in records[1]:
+        plan = records[1]['QUERY PLAN']
+        match = re.search("rows=(\d*)", plan)
+        if match is not None:
+            return int(match.group(1))
+    logging.error("Cannot parse explain query:")
+    for record in records:
+        logging.error("\t %r" % record)
+
+    # fallback to get the exact value
+    query = "SELECT count(*) from joule.stream%d "% stream.id
+    query += query_time_bounds(start, end)
     nrows = await conn.fetchval(query)
-    if nrows < 2000:
-        # for small counts get the exact value
-        query = "SELECT count(*) from joule.stream%d "% stream.id
-        query += query_time_bounds(start, end)
-        nrows = await conn.fetchval(query)
     return nrows
 
 

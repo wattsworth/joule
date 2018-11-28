@@ -21,7 +21,7 @@ class Folder(Base):
                                             backref=backref('parent',
                                                             remote_side=[id]))
     streams: List[Stream] = relationship("Stream", back_populates="folder")
-    parent_id: int = Column(Integer, ForeignKey('folder.id'))
+    parent_id: int = Column(Integer, ForeignKey('metadata.folder.id'))
     if TYPE_CHECKING:  # pragma: no cover
         parent: 'Folder'
 

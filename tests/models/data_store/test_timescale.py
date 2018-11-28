@@ -29,13 +29,13 @@ class TestTimescale(asynctest.TestCase):
         self.postgresql.stop()
         # now that the directory structure is created, customize the *.conf file
         src = os.path.join(os.path.dirname(__file__), "postgresql.conf")
-        dest = os.path.join(self.psql_dir.name, "data", "postgresql.conf")
-        shutil.copyfile(src, dest)
+        #dest = os.path.join(self.psql_dir.name, "data", "postgresql.conf")
+        #shutil.copyfile(src, dest)
         # restart the database
         self.postgresql = testing.postgresql.Postgresql(base_dir=self.psql_dir.name)
 
         self.db_url = self.postgresql.url()
-        # self.db_url = "postgresql://jdonnal@127.0.0.1:5432/jdonnal"
+        self.db_url = "postgresql://jdonnal@127.0.0.1:5432/jdonnal"
         conn: asyncpg.Connection = await asyncpg.connect(self.db_url)
         await conn.execute("CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE ")
         await conn.execute("DROP SCHEMA IF EXISTS joule CASCADE")
@@ -56,13 +56,12 @@ class TestTimescale(asynctest.TestCase):
                  self._test_intervals,
                  self._test_remove,
                  self._test_destroy]
-        #tests = [self._test_destroy]
+        tests = [self._test_extract_decimated_data]
         for test in tests:
             conn: asyncpg.Connection = await asyncpg.connect(self.db_url)
             await conn.execute("DROP SCHEMA IF EXISTS joule CASCADE")
             await conn.execute("CREATE SCHEMA joule")
             await conn.execute("GRANT ALL ON SCHEMA joule TO public")
-            await conn.close()
 
             self.store = TimescaleStore(self.db_url, 0, 60, self.loop)
             # make a sample stream with data
@@ -76,7 +75,8 @@ class TestTimescale(asynctest.TestCase):
             await pipe.close()
             runner = await task
             await runner
-
+            await conn.execute("ANALYZE")
+            await conn.close()
             await self.store.initialize([])
             await test()
             # simulate the nose2 test output
