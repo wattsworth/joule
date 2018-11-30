@@ -4,7 +4,9 @@ import asyncio
 import logging
 import time
 import argparse
+import uvloop
 import signal
+import pdb
 from aiohttp import web
 import faulthandler
 from sqlalchemy import create_engine
@@ -16,7 +18,7 @@ from joule.models import (Base, Worker, Supervisor, config,
 from joule.errors import ConfigurationError, SubscriptionError
 from joule.models import NilmdbStore, TimescaleStore
 from joule.models.data_store.errors import DataError
-from joule.services import (load_modules, load_streams, load_config, load_databases)
+from joule.services import (load_modules, load_streams, load_config)
 import joule.controllers
 
 log = logging.getLogger('joule')
@@ -108,7 +110,10 @@ class Daemon(object):
         # clean everything up
         await self.supervisor.stop(loop)
         inserter_task_grp.cancel()
-        await inserter_task_grp
+        try:
+            await inserter_task_grp
+        except asyncio.CancelledError:
+            pass
         self.data_store.close()
         try:
             await asyncio.wait_for(runner.shutdown(), 5)
@@ -119,18 +124,25 @@ class Daemon(object):
 
     def stop(self):
         self.stop_requested = True
-
+                
     async def _spawn_inserter(self, stream: Stream, loop: Loop):
         while True:
             pipe = pipes.LocalPipe(layout=stream.layout, loop=loop, name='inserter:%s'%stream.name)
             unsubscribe = self.supervisor.subscribe(stream, pipe, loop)
+            task = None
             try:
-                await self.data_store.spawn_inserter(stream, pipe, loop)
+                task = await self.data_store.spawn_inserter(stream, pipe, loop)
+                await task
                 break  # inserter terminated, program is closing
             except DataError as e:
                 msg = "stream [%s]: %s" % (stream.name, str(e))
                 await self.supervisor.restart_producer(stream, loop, msg=msg)
+            except asyncio.CancelledError:
+                if task is not None:
+                    task.cancel()
+                break
             unsubscribe()
+
 
 
 def main(argv=None):
@@ -153,6 +165,7 @@ def main(argv=None):
     except ConfigurationError as e:
         log.error("Invalid configuration: %s" % e)
         exit(1)
+    #asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
     loop = asyncio.get_event_loop()
     loop.set_debug(True)
     daemon = Daemon(my_config)

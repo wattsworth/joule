@@ -16,7 +16,8 @@ log = logging.getLogger('joule')
 
 class Inserter:
 
-    def __init__(self, conn: asyncpg.Connection, stream: Stream, insert_period: float, cleanup_period: float):
+    def __init__(self, conn: asyncpg.Connection, stream: Stream, insert_period: float,
+                 cleanup_period: float, cleanup_fn: asyncio.coroutine):
         self.conn = conn
         self.stream = stream
         # round cleanup_period to a multiple of insert_period
@@ -27,12 +28,17 @@ class Inserter:
         # add offsets to the period to distribute traffic
         self.insert_period = insert_period + insert_period * random.random() * 0.5
         self.decimator: Decimator = None
+        self.cleanup_fn = cleanup_fn
 
     async def run(self, pipe: pipes.Pipe) -> None:
         """insert stream data from the queue until the queue is empty"""
 
         # lazy stream creation
-        await psql_helpers.create_stream_table(self.conn, self.stream)
+        try:
+            await psql_helpers.create_stream_table(self.conn, self.stream)
+        except asyncio.CancelledError:
+            return
+
         # close the beginning of the data insert
         first_insert = True
         # track the last timestamp inserted
@@ -66,21 +72,11 @@ class Inserter:
                     await psql_helpers.close_interval(self.conn, self.stream, last_ts)
                 ticks += 1
                 if ticks % self.cleanup_interval == 0:
-                    await self._clean(self.conn)
+                    await self.cleanup_fn()
 
         except (pipes.EmptyPipe, asyncio.CancelledError):
             pass
         await self.conn.close()
-
-    async def _clean(self, conn: asyncpg.Connection):
-        if self.stream.keep_us == Stream.KEEP_ALL:
-            return
-
-        keep_time = int(time.time() * 1e6) - self.stream.keep_us
-        # iterate through all tables associated with this stream
-        query = "DROP FROM joule.stream%d"%self.stream.id+"WHERE time < %s"
-        ts = datetime.datetime.fromtimestamp(keep_time)
-        await conn.execute(query, ts)
 
 
 class Decimator:

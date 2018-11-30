@@ -35,7 +35,7 @@ class TestTimescale(asynctest.TestCase):
         self.postgresql = testing.postgresql.Postgresql(base_dir=self.psql_dir.name)
 
         self.db_url = self.postgresql.url()
-        self.db_url = "postgresql://jdonnal@127.0.0.1:5432/jdonnal"
+        self.db_url = "postgresql://joule:joule@127.0.0.1:5432/joule"
         conn: asyncpg.Connection = await asyncpg.connect(self.db_url)
         await conn.execute("CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE ")
         await conn.execute("DROP SCHEMA IF EXISTS joule CASCADE")
@@ -56,7 +56,7 @@ class TestTimescale(asynctest.TestCase):
                  self._test_intervals,
                  self._test_remove,
                  self._test_destroy]
-        tests = [self._test_extract_decimated_data]
+        tests = [self._test_db_info]
         for test in tests:
             conn: asyncpg.Connection = await asyncpg.connect(self.db_url)
             await conn.execute("DROP SCHEMA IF EXISTS joule CASCADE")

@@ -161,6 +161,17 @@ def get_psql_type(x: Stream.DATATYPE):
 
 async def get_row_count(conn: asyncpg.Connection, stream: Stream,
                         start=None, end=None):
+    if start is None and end is None:
+        query = "SELECT row_estimate FROM hypertable_appproximate_row_count(joule.stream%d);"
+        nrows = await conn.fetchval(query);
+        if nrows<500:
+            query = "SELECT count(*) from joule.stream%d " % stream.id
+            return await conn.fetchval(query)
+        return nrows
+    # otherwise find the time bounds for the data
+    if start is None:
+        query = "SELECT time FROM joule.stream%d ORDER BY ASC LIMIT 1";
+        start = await conn.fetchval(query)
     query = "EXPLAIN SELECT COUNT(*) FROM joule.stream%d " % stream.id
     query += query_time_bounds(start, end)
     records = await conn.fetch(query)

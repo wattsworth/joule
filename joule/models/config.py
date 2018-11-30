@@ -17,7 +17,7 @@ DEFAULT_CONFIG = {
             "InsertPeriod": 5,
             "CleanupPeriod": 60,
             "MaxLogLines": 100,
-            "NilmdbUrl": None
+            "NilmdbUrl": ''
         }
 }
 

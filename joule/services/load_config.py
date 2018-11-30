@@ -53,8 +53,8 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
         raise ConfigurationError("Port must be between 0 - 65535") from e
 
     # Database
-    if 'Database' in main_config['Database']:
-        database = main_config['Database']
+    if 'Database' in main_config:
+        database = "postgresql://"+main_config['Database']
     elif verify:
         raise ConfigurationError("Missing [Database] configuration")
     else:
@@ -62,10 +62,10 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
     if verify:
         # check to see if this is a valid database DSN
         try:
-            conn = psycopg2.connect("postgresql://"+database)
+            conn = psycopg2.connect(database)
             conn.close()
         except psycopg2.Error:
-            raise ConfigurationError("Cannot connect to database [%s]", database)
+            raise ConfigurationError("Cannot connect to database [%s]" % database)
 
     # InsertPeriod
     try:
@@ -92,7 +92,7 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
         raise ConfigurationError("MaxLogLines must be a postive number")
 
     # Nilmdb URL
-    if 'NilmdbUrl' in main_config:
+    if 'NilmdbUrl' in main_config and main_config['NilmdbUrl'] != '':
         nilmdb_url = main_config['NilmdbUrl']
         if verify:
             resp = requests.get(nilmdb_url)

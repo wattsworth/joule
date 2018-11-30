@@ -43,7 +43,8 @@ BEGIN
 
   -- COMPUTE TOTAL ROWS
   EXECUTE 'SELECT row_estimate from hypertable_approximate_row_count($1)' INTO rows USING _table_name;
-  IF rows = 0 THEN
+  raise notice 'rows=%', rows;
+  IF rows IS NULL or rows = 0 THEN
     EXECUTE format('SELECT COUNT(*) FROM %s',_table_name) INTO rows;
   END IF;
 

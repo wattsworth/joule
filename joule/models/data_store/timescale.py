@@ -4,6 +4,7 @@ import numpy as np
 from io import BytesIO
 import asyncpg
 import datetime
+import joule.utilities
 import pdb
 import shutil
 import os
@@ -17,7 +18,7 @@ from joule.models.data_store.data_store import DataStore, StreamInfo, DbInfo
 
 Loop = asyncio.AbstractEventLoop
 
-SQL_FUNCS = os.path.join(os.path.dirname(__file__), 'timescale.sql')
+SQL_DIR = os.path.join(os.path.dirname(__file__), 'sql')
 
 
 class TimescaleStore(DataStore):
@@ -36,10 +37,13 @@ class TimescaleStore(DataStore):
     async def initialize(self, streams: List[Stream]) -> None:
         conn: asyncpg.Connection = await asyncpg.connect(self.dsn)
         self.pool = await asyncpg.create_pool(self.dsn, command_timeout=60)
-        await conn.execute("CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;")
+        # await conn.execute("CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;")
+        await conn.execute("CREATE SCHEMA IF NOT EXISTS joule")
         # load custom functions
-        with open(SQL_FUNCS, 'r') as f:
-            await conn.execute(f.read())
+        for file in os.listdir(SQL_DIR):
+            file_path = os.path.join(SQL_DIR, file)
+            with open(file_path, 'r') as f:
+                await conn.execute(f.read())
 
         await conn.close()
 
@@ -51,8 +55,15 @@ class TimescaleStore(DataStore):
         if insert_period is None:
             insert_period = self.insert_period
         conn: asyncpg.Connection = await asyncpg.connect(self.dsn)
+
+        async def cleanup():
+            if stream.keep_us == Stream.KEEP_ALL:
+                return
+            end = int(joule.utilities.time_now()) - stream.keep_us
+            await self.remove(stream, start=None, end=end)
+
         inserter = Inserter(conn, stream,
-                            insert_period, self.cleanup_period)
+                            insert_period, self.cleanup_period, cleanup)
         return loop.create_task(inserter.run(pipe))
 
     async def insert(self, stream: 'Stream',
@@ -141,6 +152,7 @@ class TimescaleStore(DataStore):
                     record = {'min_ts': None, 'max_ts': None, 'rows': 0, 'size': 0}
                 start = record['min_ts']
                 end = record['max_ts']
+
                 if start is not None:
                     start = int(start.replace(tzinfo=datetime.timezone.utc)
                                 .timestamp() * 1e6)
