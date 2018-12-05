@@ -13,6 +13,7 @@ import json
 
 from joule.models import Stream, Element, pipes
 from joule.models.data_store.timescale import TimescaleStore
+from joule.models.data_store import psql_helpers
 from joule.errors import DataError
 from tests import helpers
 from tests.models.pipes.reader import QueueReader
@@ -29,18 +30,18 @@ class TestTimescale(asynctest.TestCase):
         self.postgresql.stop()
         # now that the directory structure is created, customize the *.conf file
         src = os.path.join(os.path.dirname(__file__), "postgresql.conf")
-        #dest = os.path.join(self.psql_dir.name, "data", "postgresql.conf")
-        #shutil.copyfile(src, dest)
+        dest = os.path.join(self.psql_dir.name, "data", "postgresql.conf")
+        shutil.copyfile(src, dest)
         # restart the database
         self.postgresql = testing.postgresql.Postgresql(base_dir=self.psql_dir.name)
 
         self.db_url = self.postgresql.url()
-        self.db_url = "postgresql://joule:joule@127.0.0.1:5432/joule"
+        #self.db_url = "postgresql://joule:joule@127.0.0.1:5432/joule"
         conn: asyncpg.Connection = await asyncpg.connect(self.db_url)
         await conn.execute("CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE ")
-        await conn.execute("DROP SCHEMA IF EXISTS joule CASCADE")
-        await conn.execute("CREATE SCHEMA joule")
-        await conn.execute("GRANT ALL ON SCHEMA joule TO public")
+        # await conn.execute("DROP SCHEMA IF EXISTS data CASCADE")
+        # await conn.execute("CREATE SCHEMA data")
+        # await conn.execute("GRANT ALL ON SCHEMA data TO public")
         await conn.close()
 
     async def tearDown(self):
@@ -55,13 +56,15 @@ class TestTimescale(asynctest.TestCase):
                  self._test_info,
                  self._test_intervals,
                  self._test_remove,
-                 self._test_destroy]
-        tests = [self._test_db_info]
+                 self._test_destroy,
+                 self._test_row_count,
+                 self._test_actions_on_empty_streams]
+        # tests = [self._test_actions_on_empty_streams]
         for test in tests:
             conn: asyncpg.Connection = await asyncpg.connect(self.db_url)
-            await conn.execute("DROP SCHEMA IF EXISTS joule CASCADE")
-            await conn.execute("CREATE SCHEMA joule")
-            await conn.execute("GRANT ALL ON SCHEMA joule TO public")
+            await conn.execute("DROP SCHEMA IF EXISTS data CASCADE")
+            await conn.execute("CREATE SCHEMA data")
+            await conn.execute("GRANT ALL ON SCHEMA data TO public")
 
             self.store = TimescaleStore(self.db_url, 0, 60, self.loop)
             # make a sample stream with data
@@ -75,17 +78,16 @@ class TestTimescale(asynctest.TestCase):
             await pipe.close()
             runner = await task
             await runner
-            await conn.execute("ANALYZE")
             await conn.close()
             await self.store.initialize([])
             await test()
             # simulate the nose2 test output
             sys.stdout.write('o')
-            self.store.close()
+            await self.store.close()
             sys.stdout.flush()
 
     async def _test_basic_insert_extract(self):
-        stream_id = 1
+        stream_id = 990
         self.store.extract_block_size = 500
         psql_types = ['double precision', 'real', 'bigint', 'integer', 'smallint']
         datatypes = [Stream.DATATYPE.FLOAT64, Stream.DATATYPE.FLOAT32, Stream.DATATYPE.INT64,
@@ -110,14 +112,14 @@ class TestTimescale(asynctest.TestCase):
 
                 # make sure the correct tables have been created
                 records = await conn.fetch('''SELECT table_name FROM information_schema.tables 
-                                                    WHERE table_schema='joule';''')
+                                                    WHERE table_schema='data';''')
                 tables = list(itertools.chain(*records))
                 for table in ['stream%d' % stream_id, 'stream%d_intervals' % stream_id]:
                     self.assertIn(table, tables)
 
                 # check the column data types
                 records = await conn.fetch('''SELECT column_name, data_type FROM information_schema.columns 
-                                                            WHERE table_name='stream%d' AND table_schema='joule';''' % stream_id)
+                                                            WHERE table_name='stream%d' AND table_schema='data';''' % stream_id)
                 (names, types) = zip(*records)
                 expected_elements = ['time'] + ['elem%d' % x for x in range(n_elements)]
                 self.assertCountEqual(names, expected_elements)
@@ -203,9 +205,62 @@ class TestTimescale(asynctest.TestCase):
         self.assertLessEqual(len(extracted_data), 16)
         self.assertGreater(len(extracted_data), 4)
 
-    async def test_nondecimating_inserter(self):
+    async def _test_nondecimating_inserter(self):
         # TODO
         pass
+
+    async def _test_row_count(self):
+        test_data = helpers.create_data(layout=self.test_stream.layout, length=10000)
+        test_stream = Stream(id=95, name="stream1", datatype=Stream.DATATYPE.FLOAT32, keep_us=Stream.KEEP_ALL,
+                             decimate=True, elements=[Element(name="e%d" % x) for x in range(3)])
+        pipe = pipes.LocalPipe(test_stream.layout)
+        task = await self.store.spawn_inserter(test_stream, pipe, self.loop)
+        await pipe.write(test_data)
+        await pipe.close()
+        x = await task
+        conn: asyncpg.Connection = await asyncpg.connect(self.db_url)
+        # test to make sure nrows is within 10% of actual value
+        # Test: [start, end]
+        nrows = await psql_helpers.get_row_count(conn, test_stream,
+                                                 None,
+                                                 None)
+        self.assertGreater(nrows, len(test_data) * 0.9)
+        # Test: [ts,end]
+        nrows = await psql_helpers.get_row_count(conn, test_stream, test_data[len(test_data) // 2][0], None)
+        self.assertLess(abs(nrows - len(test_data) // 2), 0.1 * len(test_data))
+        # Test: [start, ts]
+        nrows = await psql_helpers.get_row_count(conn, test_stream,
+                                                 None,
+                                                 test_data[len(test_data) // 3][0])
+        self.assertLess(abs(nrows - len(test_data) // 3), 0.1 * len(test_data))
+
+        # Test: [ts, ts]
+        nrows = await psql_helpers.get_row_count(conn, test_stream,
+                                                 test_data[2 * len(test_data) // 6][0],
+                                                 test_data[3 * len(test_data) // 6][0])
+        self.assertLess(abs(nrows - len(test_data) // 6), 0.1 * len(test_data))
+
+        # Test: [ts, ts] (no data)
+        nrows = await psql_helpers.get_row_count(conn, test_stream,
+                                                 test_data['timestamp'][0] - 100,
+                                                 test_data['timestamp'][0] - 50)
+        self.assertEqual(0, nrows)
+
+        # Test row count for stream with no data tables
+        empty_stream = Stream(id=96, name="empty", datatype=Stream.DATATYPE.FLOAT64,
+                              keep_us=100, decimate=True, elements=[Element(name="e%d" % x) for x in range(8)])
+        nrows = await psql_helpers.get_row_count(conn, empty_stream,
+                                                 None,
+                                                 None)
+        self.assertEqual(0, nrows)
+        nrows = await psql_helpers.get_row_count(conn, empty_stream,
+                                                 test_data[len(test_data) // 2][0],
+                                                 None)
+        self.assertEqual(0, nrows)
+        nrows = await psql_helpers.get_row_count(conn, test_stream,
+                                                 test_data['timestamp'][0] - 100,
+                                                 test_data['timestamp'][0] - 50)
+        self.assertEqual(0, nrows)
 
     async def _test_remove(self):
 
@@ -271,7 +326,7 @@ class TestTimescale(asynctest.TestCase):
 
         async def _insert_boundary(_conn, _ts: int):
             dt = datetime.datetime.fromtimestamp(_ts / 1e6, tz=datetime.timezone.utc)
-            query = "INSERT INTO joule.stream100_intervals (time) VALUES ('%s')" % dt
+            query = "INSERT INTO data.stream100_intervals (time) VALUES ('%s')" % dt
             await _conn.execute(query)
 
         conn: asyncpg.Connection = await asyncpg.connect(self.db_url)
@@ -340,7 +395,7 @@ class TestTimescale(asynctest.TestCase):
         info = records[self.test_stream.id]
         self.assertEqual(info.start, self.test_data['timestamp'][0])
         self.assertEqual(info.end, self.test_data['timestamp'][-1])
-        self.assertEqual(info.total_time, info.end-info.start)
+        self.assertEqual(info.total_time, info.end - info.start)
         self.assertEqual(info.rows, len(self.test_data))
         self.assertGreater(info.bytes, 0)
 
@@ -360,3 +415,74 @@ class TestTimescale(asynctest.TestCase):
         self.assertEqual(info.rows, 0)
         self.assertEqual(info.bytes, 0)
 
+    async def _test_actions_on_empty_streams(self):
+        # make sure all actions can be performed on streams with no data
+        empty_stream = Stream(id=103, name="empty stream", datatype=Stream.DATATYPE.INT32,
+                              keep_us=Stream.KEEP_ALL, decimate=True,
+                              elements=[Element(name="e%d" % x) for x in range(8)])
+
+        # ==== extract =====
+        cb_executed = False
+        cb_layout = None
+        cb_factor = None
+
+        async def callback(rx_data, layout, factor):
+            nonlocal cb_executed, cb_layout, cb_factor
+            cb_executed = True
+            self.assertEqual(len(rx_data), 0)
+            cb_layout = layout
+            cb_factor = factor
+
+        # stream with no data tables
+        await self.store.extract(empty_stream, start=None, end=None, callback=callback)
+        self.assertTrue(cb_executed)
+        self.assertEqual(cb_layout, empty_stream.layout)
+        self.assertEqual(cb_factor, 1)
+        cb_executed = False
+        await self.store.extract(empty_stream, start=100, end=None, callback=callback)
+        self.assertTrue(cb_executed)
+        self.assertEqual(cb_layout, empty_stream.layout)
+        self.assertEqual(cb_factor, 1)
+        cb_executed = False
+        await self.store.extract(empty_stream, start=100, end=300, callback=callback)
+        self.assertTrue(cb_executed)
+        self.assertEqual(cb_layout, empty_stream.layout)
+        self.assertEqual(cb_factor, 1)
+        cb_executed = False
+        await self.store.extract(empty_stream, start=None, end=100, callback=callback)
+        self.assertTrue(cb_executed)
+        self.assertEqual(cb_layout, empty_stream.layout)
+        self.assertEqual(cb_factor, 1)
+        cb_executed = False
+        await self.store.extract(empty_stream, start=100, end=300, max_rows=40, callback=callback)
+        self.assertTrue(cb_executed)
+        self.assertEqual(cb_layout, empty_stream.layout)
+        self.assertEqual(cb_factor, 1)
+        cb_executed = False
+        await self.store.extract(empty_stream, start=100, end=300, decimation_level=40, callback=callback)
+        self.assertTrue(cb_executed)
+        self.assertEqual(cb_layout, empty_stream.decimated_layout)
+        self.assertEqual(cb_factor, 40)
+
+        # non-existent decimation level
+        await self.store.extract(self.test_stream, start=None, end=None, decimation_level=97,
+                                 callback=callback)
+
+        #  ==== intervals ====
+        intervals = await self.store.intervals(empty_stream, None, None)
+        self.assertEqual(0, len(intervals))
+        intervals = await self.store.intervals(empty_stream, 100, None)
+        self.assertEqual(0, len(intervals))
+        intervals = await self.store.intervals(empty_stream, None, 100)
+        self.assertEqual(0, len(intervals))
+        intervals = await self.store.intervals(empty_stream, 100, 300)
+        self.assertEqual(0, len(intervals))
+
+        #  ==== remove ====
+        await self.store.remove(empty_stream, None, None)
+        await self.store.remove(empty_stream, 100, None)
+        await self.store.remove(empty_stream, None, 100)
+        await self.store.remove(empty_stream, 100, 300)
+
+        # ==== destroy ====
+        await self.store.destroy(empty_stream)

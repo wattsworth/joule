@@ -114,7 +114,7 @@ class Daemon(object):
             await inserter_task_grp
         except asyncio.CancelledError:
             pass
-        self.data_store.close()
+        await self.data_store.close()
         try:
             await asyncio.wait_for(runner.shutdown(), 5)
             await asyncio.wait_for(runner.cleanup(), 5)
@@ -165,7 +165,7 @@ def main(argv=None):
     except ConfigurationError as e:
         log.error("Invalid configuration: %s" % e)
         exit(1)
-    #asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
     loop = asyncio.get_event_loop()
     loop.set_debug(True)
     daemon = Daemon(my_config)

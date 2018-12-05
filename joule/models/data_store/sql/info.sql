@@ -24,7 +24,7 @@ BEGIN
   -- COMPUTE TOTAL SIZE
   size = 0;
   FOR _table_name IN SELECT format('%s.%s',table_schema, table_name)
-    FROM information_schema.tables WHERE table_schema='joule'
+    FROM information_schema.tables WHERE table_schema='data'
     AND table_type='BASE TABLE' AND table_name LIKE base_name
     AND table_name NOT LIKE '%intervals' LOOP
 
@@ -39,7 +39,7 @@ BEGIN
   END LOOP;
 
   -- ALL STATISTICS COMPUTED FROM BASE TABLE
-  SELECT format('joule.stream%s', stream_id::text) INTO _table_name;
+  SELECT format('data.stream%s', stream_id::text) INTO _table_name;
 
   -- COMPUTE TOTAL ROWS
   EXECUTE 'SELECT row_estimate from hypertable_approximate_row_count($1)' INTO rows USING _table_name;

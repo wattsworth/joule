@@ -10,11 +10,15 @@ from .helpers import create_db, MockStore
 
 class TestFolderController(AioHTTPTestCase):
 
+    async def tearDownAsync(self):
+        self.app["db"].close()
+        self.app["psql"].stop()
+
     async def get_application(self):
         app = web.Application()
         app.add_routes(joule.controllers.routes)
-        app["db"] = create_db(["/top/leaf/stream1:float32[x, y, z]",
-                               "/top/middle/leaf/stream2:int8[val1, val2]"])
+        app["db"], app["psql"] = create_db(["/top/leaf/stream1:float32[x, y, z]",
+                                            "/top/middle/leaf/stream2:int8[val1, val2]"])
         app["data-store"] = MockStore()
         return app
 
@@ -105,4 +109,3 @@ class TestFolderController(AioHTTPTestCase):
         my_folder: Stream = db.query(Folder).get(my_folder.id)
         self.assertEqual("new name", my_folder.name)
         self.assertEqual("new description", my_folder.description)
-

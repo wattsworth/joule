@@ -11,11 +11,15 @@ from .helpers import create_db, MockStore
 
 class TestStreamController(AioHTTPTestCase):
 
+    async def tearDownAsync(self):
+        self.app["db"].close()
+        self.app["psql"].stop()
+
     async def get_application(self):
         app = web.Application()
         app.add_routes(joule.controllers.routes)
-        app["db"] = create_db(["/folder1/stream1:float32[x, y, z]",
-                               "/folder2/deeper/stream2:int8[val1, val2]"])
+        app["db"], app["psql"] = create_db(["/folder1/stream1:float32[x, y, z]",
+                                            "/folder2/deeper/stream2:int8[val1, val2]"])
         app["data-store"] = MockStore()
         return app
 
@@ -125,4 +129,3 @@ class TestStreamController(AioHTTPTestCase):
         self.assertEqual(resp.status, 200)
         my_stream: Stream = db.query(Stream).get(my_stream.id)
         self.assertEqual("new name", my_stream.name)
-

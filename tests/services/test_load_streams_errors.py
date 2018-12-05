@@ -5,18 +5,14 @@ import logging
 import configparser
 from unittest import mock
 
+from tests.helpers import DbTestCase
 from joule.models import Base
 from joule.services import load_streams
 
 logger = logging.getLogger('joule')
 
 
-class TestLoadStreamErrors(unittest.TestCase):
-
-    def setUp(self):
-        engine = create_engine('sqlite://')
-        Base.metadata.create_all(engine)
-        self.db = Session(bind=engine)
+class TestLoadStreamErrors(DbTestCase):
 
     @mock.patch('joule.services.load_streams.load_configs')
     def test_validates_path(self, load_configs: mock.Mock):

@@ -1,20 +1,18 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 import unittest
+
+from tests.helpers import DbTestCase
 from joule.models import (Base, Stream, Folder,
                           Element)
 from joule.errors import ConfigurationError
 from joule.services import parse_pipe_config
 
 
-class TestParsePipeConfig(unittest.TestCase):
+class TestParsePipeConfig(DbTestCase):
 
     def setUp(self):
-        # create a database
-        engine = create_engine('sqlite://')
-        Base.metadata.create_all(engine)
-        self.db = Session(bind=engine)
-
+        super().setUp()
         # /test/stream1:float32[e0,e1,e2]
         folder_test = Folder(name="test")
         stream1 = Stream(name="stream1", keep_us=100,

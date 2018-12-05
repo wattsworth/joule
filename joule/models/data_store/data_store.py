@@ -99,5 +99,5 @@ class DataStore(ABC):  # pragma: no cover
         pass
 
     @abstractmethod
-    def close(self):
+    async def close(self):
         pass

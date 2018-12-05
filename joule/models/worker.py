@@ -20,10 +20,16 @@ from joule.models.pipes.errors import EmptyPipe
 Loop = asyncio.AbstractEventLoop
 Subscribers = Dict[Stream, List[pipes.Pipe]]
 
-popen_lock = asyncio.Lock()
+popen_lock = None
 log = logging.getLogger('joule')
 
 SOCKET_BASE = "wattsworth.joule.%d"
+
+
+def _initialize_popen_lock():
+    global popen_lock
+    if popen_lock is None:
+        popen_lock = asyncio.Lock()
 
 
 class DataConnection:
@@ -235,9 +241,12 @@ class Worker:
 
     async def _spawn_child(self, subscribe: Callable[[Stream, pipes.Pipe, Loop], Callable],
                            loop: Loop) -> None:
+
         # lock so fd's don't pollute other modules
+        _initialize_popen_lock()
         await popen_lock.acquire()
         try:
+
             await self._subscribe_to_inputs(subscribe, loop)
         except SubscriptionError as e:
             self._close_child_fds()

@@ -4,17 +4,11 @@ from sqlalchemy.orm import Session
 
 from tests import helpers
 from joule.services import parse_pipe_config
-from joule.models import Stream, Base, folder, Folder
+from joule.models import Stream, folder, Folder
 from joule.errors import ConfigurationError
 
 
-class TestFolder(unittest.TestCase):
-
-    def setUp(self):
-        # create a database
-        engine = create_engine('sqlite://')
-        Base.metadata.create_all(engine)
-        self.db = Session(bind=engine)
+class TestFolder(helpers.DbTestCase):
 
     def test_get_stream_path(self):
         # create a stream and then find it again

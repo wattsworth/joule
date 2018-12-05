@@ -284,7 +284,7 @@ class NilmdbStore(DataStore):
         return aiohttp.ClientSession(connector=self.connector,
                                      loop=self.loop, connector_owner=False)
 
-    def close(self):
+    async def close(self):
         self.connector.close()
 
 

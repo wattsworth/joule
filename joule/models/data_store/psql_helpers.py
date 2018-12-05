@@ -3,10 +3,8 @@ import io
 from struct import pack
 import datetime
 import asyncpg
-from typing import List, Optional
+from typing import List, Optional, Tuple
 import pdb
-import asyncio
-import re
 import logging
 
 from joule.errors import DataError
@@ -32,9 +30,9 @@ def data_to_bytes(data: np.ndarray) -> io.BytesIO:
         pgcopy_dtype += [("elem%d_length" % i, '>i4'),
                          ("elem%d" % i, elem_dtype)]
     pgcopy = np.empty(data.shape, pgcopy_dtype)
-    pgcopy['num_fields'] = n_elem+1
+    pgcopy['num_fields'] = n_elem + 1
     pgcopy['time_length'] = 8
-    pgcopy['time'] = data['timestamp']-postgres_ts_offset
+    pgcopy['time'] = data['timestamp'] - postgres_ts_offset
     if n_elem == 1:
         pgcopy['elem0_length'] = elem_length
         pgcopy['elem0'] = data['data']
@@ -51,14 +49,14 @@ def data_to_bytes(data: np.ndarray) -> io.BytesIO:
     return cpy
 
 
-def bytes_to_data(buffer: io.BytesIO, dtype:np.dtype) -> np.ndarray:
+def bytes_to_data(buffer: io.BytesIO, dtype: np.dtype) -> np.ndarray:
     pgcopy_dtype = [("num_fields", ">i2"),
                     ("time_length", '>i4'),
                     ("time", '>i8')]
     dtype_tuple = dtype.descr[1]
     elem_dtype = dtype_tuple[1].replace('<', '>')
     elem_length = dtype['data'].alignment
-    if len(dtype_tuple)==3:
+    if len(dtype_tuple) == 3:
         n_elem = dtype_tuple[2][0]
     else:
         n_elem = 1
@@ -81,7 +79,7 @@ def bytes_to_data(buffer: io.BytesIO, dtype:np.dtype) -> np.ndarray:
     rx_data = np.empty(nrows, dtype)
     rx_data['timestamp'] = tuple_data['time'] + postgres_ts_offset
     if n_elem == 1:
-        rx_data['data']=tuple_data['elem0']
+        rx_data['data'] = tuple_data['elem0']
     else:
         for i in range(n_elem):
             rx_data['data'][:, i] = tuple_data['elem%d' % i]
@@ -114,23 +112,23 @@ async def create_stream_table(conn: asyncpg.Connection, stream: Stream):
     n_elems = len(stream.elements)
     # create the main table
     col_type = get_psql_type(stream.datatype)
-    cols = ["elem%d %s NOT NULL"%(x, col_type) for x in range(n_elems)]
-    sql = "CREATE TABLE IF NOT EXISTS joule.stream%d ("%stream.id +\
-          "time TIMESTAMP NOT NULL," +\
+    cols = ["elem%d %s NOT NULL" % (x, col_type) for x in range(n_elems)]
+    sql = "CREATE TABLE IF NOT EXISTS data.stream%d (" % stream.id + \
+          "time TIMESTAMP NOT NULL," + \
           ', '.join(cols) + ");"
     await conn.execute(sql)
-    sql = "SELECT create_hypertable('joule.stream%d', 'time', if_not_exists=>true);" % stream.id
+    sql = "SELECT create_hypertable('data.stream%d', 'time', if_not_exists=>true, chunk_target_size => 'estimate');" % stream.id
     await conn.execute(sql)
 
     # create interval table
-    sql = "CREATE TABLE IF NOT EXISTS joule.stream%d_intervals (" % stream.id + \
+    sql = "CREATE TABLE IF NOT EXISTS data.stream%d_intervals (" % stream.id + \
           "time TIMESTAMP NOT NULL);"
     await conn.execute(sql)
 
 
 async def create_decimation_table(conn: asyncpg.Connection, stream: Stream, level: int):
     n_elems = len(stream.elements)
-    table_name = 'joule.stream%d_%d' % (stream.id, level)
+    table_name = 'data.stream%d_%d' % (stream.id, level)
     # create decimation table (just a template)
     mean_cols = ["elem%d REAL NOT NULL" % x for x in range(n_elems)]
     min_cols = ["elem%d_min REAL NOT NULL" % x for x in range(n_elems)]
@@ -140,65 +138,65 @@ async def create_decimation_table(conn: asyncpg.Connection, stream: Stream, leve
           "time TIMESTAMP NOT NULL," + \
           ', '.join(cols) + ");"
     await conn.execute(sql)
-    sql = "SELECT create_hypertable('%s', 'time', if_not_exists=>true);" % table_name
+    sql = "SELECT create_hypertable('%s', 'time', if_not_exists=>true, chunk_target_size => 'estimate');" % table_name
     await conn.execute(sql)
 
 
 def get_psql_type(x: Stream.DATATYPE):
-    if x==Stream.DATATYPE.FLOAT32:
+    if x == Stream.DATATYPE.FLOAT32:
         return 'real'
-    elif x==Stream.DATATYPE.FLOAT64:
+    elif x == Stream.DATATYPE.FLOAT64:
         return 'double precision'
-    elif x==Stream.DATATYPE.INT16:
+    elif x == Stream.DATATYPE.INT16:
         return 'smallint'
-    elif x==Stream.DATATYPE.INT32:
+    elif x == Stream.DATATYPE.INT32:
         return 'integer'
-    elif x==Stream.DATATYPE.INT64:
+    elif x == Stream.DATATYPE.INT64:
         return 'bigint'
     else:
-        raise DataError("Invalid type [%r] for timescale backend" %x)
+        raise DataError("Invalid type [%r] for timescale backend" % x)
 
 
 async def get_row_count(conn: asyncpg.Connection, stream: Stream,
                         start=None, end=None):
     if start is None and end is None:
-        query = "SELECT row_estimate FROM hypertable_appproximate_row_count(joule.stream%d);"
-        nrows = await conn.fetchval(query);
-        if nrows<500:
-            query = "SELECT count(*) from joule.stream%d " % stream.id
+        query = "SELECT row_estimate FROM hypertable_approximate_row_count('data.stream%d')" % stream.id
+        try:
+            nrows = await conn.fetchval(query)
+        except asyncpg.UndefinedTableError:
+            return 0  # no data tables for this stream
+        if nrows < 500:
+            query = "SELECT count(*) from data.stream%d " % stream.id
             return await conn.fetchval(query)
         return nrows
     # otherwise find the time bounds for the data
-    if start is None:
-        query = "SELECT time FROM joule.stream%d ORDER BY ASC LIMIT 1";
-        start = await conn.fetchval(query)
-    query = "EXPLAIN SELECT COUNT(*) FROM joule.stream%d " % stream.id
-    query += query_time_bounds(start, end)
-    records = await conn.fetch(query)
-    if len(records)>1 and 'QUERY PLAN' in records[1]:
-        plan = records[1]['QUERY PLAN']
-        match = re.search("rows=(\d*)", plan)
-        if match is not None:
-            return int(match.group(1))
-    logging.error("Cannot parse explain query:")
-    for record in records:
-        logging.error("\t %r" % record)
-
-    # fallback to get the exact value
-    query = "SELECT count(*) from joule.stream%d "% stream.id
-    query += query_time_bounds(start, end)
-    nrows = await conn.fetchval(query)
+    try:
+        bounds = await _convert_time_bounds(conn, stream, start, end)
+    except asyncpg.UndefinedTableError:
+        return 0  # no data tables for this stream
+    if bounds is None:
+        return 0  # no data
+    start, end = bounds
+    query = "SELECT stream_row_count(%d, '%s', '%s')" % (stream.id, start, end)
+    try:
+        nrows = await conn.fetchval(query)
+    except asyncpg.UndefinedTableError:
+        return 0  # no data tables for this stream
     return nrows
 
 
 async def close_interval(conn: asyncpg.Connection, stream: Stream, ts: int):
     # place a boundary 1us *after* ts
-    base_table = "joule.stream%d" % stream.id
-    interval_table = "joule.stream%d_intervals" % stream.id
+    base_table = "data.stream%d" % stream.id
+    interval_table = "data.stream%d_intervals" % stream.id
     ts = datetime.datetime.fromtimestamp(ts / 1e6, tz=datetime.timezone.utc)
     # find the most recent data before this boundary (ts)
     query = "SELECT time FROM %s WHERE time <= '%s' ORDER BY time DESC LIMIT 1" % (base_table, ts)
-    last_ts = await conn.fetchval(query)
+    try:
+        last_ts = await conn.fetchval(query)
+    except asyncpg.UndefinedTableError:
+        # no data tables so no need for an interval boundary
+        return
     if last_ts is None:
         # no data exists before ts so no need for an interval boundary
         return
@@ -207,38 +205,73 @@ async def close_interval(conn: asyncpg.Connection, stream: Stream, ts: int):
     last_interval = await conn.fetchval(query)
     if last_interval is None or last_ts > last_interval:
         query = "INSERT INTO %s(time) VALUES ($1)" % interval_table
-        await conn.execute(query, last_ts+datetime.timedelta(microseconds=1))
+        await conn.execute(query, last_ts + datetime.timedelta(microseconds=1))
 
 
-async def get_table_names(conn: asyncpg.Connection, stream: Stream) -> List[str]:
-
+async def get_table_names(conn: asyncpg.Connection, stream: Stream, with_schema=True) -> List[str]:
     query = '''select table_name from information_schema.tables 
-               where table_schema='joule' 
+               where table_schema='data' 
                and table_type='BASE TABLE' 
                and table_name like 'stream%d%%';''' % stream.id
     records = await conn.fetch(query)
-    return ['joule.'+r['table_name'] for r in records]
+    if with_schema:
+        return ['data.' + r['table_name'] for r in records]
+    else:
+        return [r['table_name'] for r in records]
 
 
 async def get_boundaries(conn: asyncpg.Connection, stream: Stream,
-                        start: Optional[int], end: Optional[int]) -> List[datetime.datetime]:
-    if start is None:
-        query = "SELECT time FROM joule.stream%d ORDER BY time ASC LIMIT 1"% stream.id
-        start = await conn.fetchval(query)
-        if start is None:
-            # remove intervals?
-            return [] # no data so no need for intervals
-    else:
-        start = datetime.datetime.fromtimestamp(start / 1e6, tz=datetime.timezone.utc)
-    if end is None:
-        query = "SELECT time FROM joule.stream%d ORDER BY time DESC LIMIT 1"% stream.id
-        end = await conn.fetchval(query) + datetime.timedelta(microseconds=1)
-    else:
-        end = datetime.datetime.fromtimestamp(start / 1e6, tz=datetime.timezone.utc)
-    query = "SELECT time FROM joule.stream%d_intervals " % stream.id
+                         start: Optional[int], end: Optional[int]) -> List[datetime.datetime]:
+    """
+    Return a list of data boundaries including the start and end of the data
+    """
+    bounds = await _convert_time_bounds(conn, stream, start, end)
+    if bounds is None:
+        return []  # no data so no boundaries
+    start, end = bounds
+    query = "SELECT time FROM data.stream%d_intervals " % stream.id
     query += query_time_bounds(start, end)
     query += " ORDER BY time ASC"
-    records = await conn.fetch(query)
+    try:
+        records = await conn.fetch(query)
+    except asyncpg.UndefinedTableError:
+        return []  # no data tables so no boundaries
     ts = [start] + [r['time'] for r in records] + [end]
     return [x.replace(tzinfo=datetime.timezone.utc) for x in ts]
 
+
+async def _convert_time_bounds(conn: asyncpg.Connection,
+                               stream: Stream,
+                               start: int, end: int) -> Optional[Tuple[datetime.datetime, datetime.datetime]]:
+    """
+    Convert Unix us timestamps to datetime objects and populate [None] values with the
+    start or end of the data respectively
+    """
+    x = start
+    y = end
+    if start is None:
+        query = "SELECT time FROM data.stream%d ORDER BY time ASC LIMIT 1" % stream.id
+        try:
+            start = await conn.fetchval(query)
+        except asyncpg.UndefinedTableError:
+            return None  # no data tables so no valid time bounds
+        start = start.replace(tzinfo=datetime.timezone.utc)
+
+        if start is None:
+            # remove intervals?
+            return None  # no data so no valid time bounds
+    else:
+        start = datetime.datetime.fromtimestamp(start / 1e6, tz=datetime.timezone.utc)
+    if end is None:
+        query = "SELECT time FROM data.stream%d ORDER BY time DESC LIMIT 1" % stream.id
+        try:
+            end = await conn.fetchval(query) + datetime.timedelta(microseconds=1)
+        except asyncpg.UndefinedTableError:
+            return None  # no data tables so no valid time bounds
+        if end is None:
+            # remove intervals?
+            return None  # no data so no valid time bounds
+        end = end.replace(tzinfo=datetime.timezone.utc)
+    else:
+        end = datetime.datetime.fromtimestamp(end / 1e6, tz=datetime.timezone.utc)
+    return start, end

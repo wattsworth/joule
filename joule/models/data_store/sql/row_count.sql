@@ -14,15 +14,15 @@ DECLARE
   level_count BIGINT;
 BEGIN
 
-  SELECT format('stream%s_%%',stream_id::text) INTO base_name;
-  SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='joule'
+  SELECT format('stream%s~%%',stream_id::text) INTO base_name;
+  SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='data'
     AND table_type='BASE TABLE' AND table_name LIKE base_name
     AND table_name NOT LIKE '%intervals' INTO max_decim_level;
 
   base_count = -1;
   FOR decim_level IN REVERSE max_decim_level..1 LOOP
     RAISE notice 'level %', 4^decim_level;
-    SELECT format('joule.stream%s_%s',stream_id,(4^decim_level)::text) INTO level_name;
+    SELECT format('data.stream%s_%s',stream_id,(4^decim_level)::text) INTO level_name;
     EXECUTE format('SELECT COUNT(*) FROM %s WHERE time >= $1 AND time < $2', level_name)
       USING start_ts, end_ts
       INTO level_count;
@@ -34,7 +34,7 @@ BEGIN
 
   IF base_count = -1 THEN
     RAISE notice 'counting from base stream';
-    EXECUTE format('SELECT COUNT(*) FROM joule.stream%s WHERE time >= $1 AND time < $2', stream_id::text)
+    EXECUTE format('SELECT COUNT(*) FROM data.stream%s WHERE time >= $1 AND time < $2', stream_id::text)
       USING start_ts, end_ts
       INTO base_count;
   END IF;

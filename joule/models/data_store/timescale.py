@@ -9,8 +9,6 @@ import pdb
 import shutil
 import os
 
-from joule.errors import DataError, DecimationError
-from joule.models.data_store.data_store import DbInfo
 from joule.models.data_store.timescale_inserter import Inserter
 from joule.models.data_store import psql_helpers
 from joule.models import Stream, pipes
@@ -38,7 +36,7 @@ class TimescaleStore(DataStore):
         conn: asyncpg.Connection = await asyncpg.connect(self.dsn)
         self.pool = await asyncpg.create_pool(self.dsn, command_timeout=60)
         # await conn.execute("CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;")
-        await conn.execute("CREATE SCHEMA IF NOT EXISTS joule")
+        await conn.execute("CREATE SCHEMA IF NOT EXISTS data")
         # load custom functions
         for file in os.listdir(SQL_DIR):
             file_path = os.path.join(SQL_DIR, file)
@@ -47,8 +45,8 @@ class TimescaleStore(DataStore):
 
         await conn.close()
 
-    def close(self):
-        self.pool.terminate()
+    async def close(self):
+        await self.pool.close()
 
     async def spawn_inserter(self, stream: 'Stream', pipe: pipes.Pipe,
                              loop: Loop, insert_period=None) -> asyncio.Task:
@@ -56,14 +54,8 @@ class TimescaleStore(DataStore):
             insert_period = self.insert_period
         conn: asyncpg.Connection = await asyncpg.connect(self.dsn)
 
-        async def cleanup():
-            if stream.keep_us == Stream.KEEP_ALL:
-                return
-            end = int(joule.utilities.time_now()) - stream.keep_us
-            await self.remove(stream, start=None, end=end)
-
         inserter = Inserter(conn, stream,
-                            insert_period, self.cleanup_period, cleanup)
+                            insert_period, self.cleanup_period)
         return loop.create_task(inserter.run(pipe))
 
     async def insert(self, stream: 'Stream',
@@ -80,14 +72,14 @@ class TimescaleStore(DataStore):
             for i in range(len(boundaries)):
                 boundary = boundaries[i]
                 if cur_start is not None:
-                    query = "SELECT time FROM joule.stream%d WHERE time < '%s'" % (stream.id, boundary)
+                    query = "SELECT time FROM data.stream%d WHERE time < '%s'" % (stream.id, boundary)
                     query += " ORDER BY time DESC LIMIT 1"
                     prev_ts = await conn.fetchval(query)
                     utc_start_ts = int(cur_start.replace(tzinfo=datetime.timezone.utc).timestamp() * 1e6)
                     utc_end_ts = int(prev_ts.replace(tzinfo=datetime.timezone.utc).timestamp() * 1e6)
                     intervals.append([utc_start_ts, utc_end_ts])
                     cur_start = None
-                query = "SELECT time FROM joule.stream%d WHERE time >= '%s'" % (stream.id, boundary)
+                query = "SELECT time FROM data.stream%d WHERE time >= '%s'" % (stream.id, boundary)
                 if i < (len(boundaries) - 1):
                     query += " AND time < '%s' " % (boundaries[i + 1])
                 query += " ORDER BY time ASC LIMIT 1"
@@ -180,20 +172,30 @@ class TimescaleStore(DataStore):
                           reserved=max(usage.total - usage.used - usage.free, 0),
                           free=usage.free)
 
-    def close(self):
-        pass
-
 
 async def _extract_data(conn: asyncpg.Connection, stream: Stream, callback,
                         decimation_level: int = 1, start: int = None, end: int = None,
                         block_size=50000):
-    table_name = "joule.stream%d" % stream.id
+
+    if decimation_level > 1:
+        layout = stream.decimated_layout
+    else:
+        layout = stream.layout
+
+    table_name = "data.stream%d" % stream.id
     if decimation_level > 1:
         table_name += "_%d" % decimation_level
     # extract by interval
-    query = "SELECT time FROM joule.stream%d_intervals " % stream.id
+    query = "SELECT time FROM data.stream%d_intervals " % stream.id
     query += psql_helpers.query_time_bounds(start, end)
-    boundary_records = await conn.fetch(query)
+    try:
+        boundary_records = await conn.fetch(query)
+    except asyncpg.UndefinedTableError:
+        # no data tables
+        data = np.array([], dtype=pipes.compute_dtype(layout))
+        await callback(data, layout, decimation_level)
+        return
+
     boundary_records += [{'time': end}]
     for i in range(len(boundary_records)):
         record = boundary_records[i]
@@ -205,26 +207,22 @@ async def _extract_data(conn: asyncpg.Connection, stream: Stream, callback,
             query += psql_helpers.query_time_bounds(start, end)
             query += " ORDER BY time ASC LIMIT %d" % block_size
             psql_bytes = BytesIO()
-            await conn.copy_from_query(query, format='binary', output=psql_bytes)
+            try:
+                await conn.copy_from_query(query, format='binary', output=psql_bytes)
+            except asyncpg.UndefinedTableError:
+                # interval table exists but not the data table
+                data = np.array([], dtype=pipes.compute_dtype(layout))
+                await callback(data, layout, decimation_level)
+                return
             psql_bytes.seek(0)
-            if decimation_level > 1:
-                dtype = pipes.compute_dtype(stream.decimated_layout)
-            else:
-                dtype = pipes.compute_dtype(stream.layout)
+            dtype = pipes.compute_dtype(layout)
             np_data = psql_helpers.bytes_to_data(psql_bytes, dtype)
-            if decimation_level > 1:
-                await callback(np_data, stream.decimated_layout, decimation_level)
-            else:
-                await callback(np_data, stream.layout, 1)
+            await callback(np_data, layout, decimation_level)
+
             if len(np_data) < block_size:
                 break
             start = np_data['timestamp'][-1] + 1
         # do not put an interval token at the end of the data
         if i < len(boundary_records) - 1:
-            if decimation_level > 1:
-                await callback(pipes.interval_token(stream.decimated_layout),
-                               stream.decimated_layout, decimation_level)
-            else:
-                await callback(pipes.interval_token(stream.layout),
-                               stream.layout, 1)
+            await callback(pipes.interval_token(layout), layout, decimation_level)
         start = end
