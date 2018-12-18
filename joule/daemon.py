@@ -124,10 +124,10 @@ class Daemon(object):
 
     def stop(self):
         self.stop_requested = True
-                
+
     async def _spawn_inserter(self, stream: Stream, loop: Loop):
         while True:
-            pipe = pipes.LocalPipe(layout=stream.layout, loop=loop, name='inserter:%s'%stream.name)
+            pipe = pipes.LocalPipe(layout=stream.layout, loop=loop, name='inserter:%s' % stream.name)
             unsubscribe = self.supervisor.subscribe(stream, pipe, loop)
             task = None
             try:
@@ -142,7 +142,6 @@ class Daemon(object):
                     task.cancel()
                 break
             unsubscribe()
-
 
 
 def main(argv=None):
@@ -165,7 +164,13 @@ def main(argv=None):
     except ConfigurationError as e:
         log.error("Invalid configuration: %s" % e)
         exit(1)
-    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+
+    # uvloop uses libuv which does not support
+    # connections to abstract namespace sockets
+    # https://github.com/joyent/libuv/issues/1486
+
+    # asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+
     loop = asyncio.get_event_loop()
     loop.set_debug(True)
     daemon = Daemon(my_config)
@@ -174,7 +179,6 @@ def main(argv=None):
     loop.run_until_complete(daemon.run(loop))
     loop.close()
     exit(0)
-
 
 
 class LogDedupFilter:
@@ -208,5 +212,6 @@ class LogDedupFilter:
         self.first_repeat = True
         return True
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     main()

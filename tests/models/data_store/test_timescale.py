@@ -59,7 +59,6 @@ class TestTimescale(asynctest.TestCase):
                  self._test_destroy,
                  self._test_row_count,
                  self._test_actions_on_empty_streams]
-        # tests = [self._test_actions_on_empty_streams]
         for test in tests:
             conn: asyncpg.Connection = await asyncpg.connect(self.db_url)
             await conn.execute("DROP SCHEMA IF EXISTS data CASCADE")
@@ -396,7 +395,8 @@ class TestTimescale(asynctest.TestCase):
         self.assertEqual(info.start, self.test_data['timestamp'][0])
         self.assertEqual(info.end, self.test_data['timestamp'][-1])
         self.assertEqual(info.total_time, info.end - info.start)
-        self.assertEqual(info.rows, len(self.test_data))
+        # rows are approximate
+        self.assertLess(abs(len(self.test_data)-info.rows), len(self.test_data)*0.1)
         self.assertGreater(info.bytes, 0)
 
         # check stream2
@@ -404,7 +404,7 @@ class TestTimescale(asynctest.TestCase):
         self.assertEqual(info.start, test_data['timestamp'][0])
         self.assertEqual(info.end, test_data['timestamp'][-1])
         self.assertEqual(info.total_time, info.end - info.start)
-        self.assertEqual(info.rows, len(test_data))
+        self.assertLess(abs(len(test_data)-info.rows), len(test_data)*0.1)
         self.assertGreater(info.bytes, 0)
 
         # check the empty stream

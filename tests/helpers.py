@@ -102,7 +102,7 @@ class AsyncTestCase(unittest.TestCase):
 
 Postgresql = testing.postgresql.PostgresqlFactory(cache_initialized_db=True)
 
-#Postgresql.clear_cache()
+
 class DbTestCase(unittest.TestCase):
 
     def setUp(self):

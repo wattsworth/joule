@@ -136,6 +136,14 @@ class Pipe:
             raise PipeError("cannot write to an input pipe")
         raise PipeError("abstract method must be implemented by child")
 
+    def close_interval_nowait(self):
+        """
+        Signal a break in the data stream. This will dumped cached data and should generally
+        not be used. Instead use the coroutine :meth:`close_interval`.
+
+        """
+        pass # pragma: no cover
+
     def subscribe(self, pipe):
         if self.direction == Pipe.DIRECTION.INPUT:
             raise PipeError("cannot subscribe to an input pipe")

@@ -38,7 +38,9 @@ class SimpleFilter(FilterModule):
                 break
         # delay so worker output handler has time to process
         # the results
-        await asyncio.sleep(2)
+        await output1.close()
+        await output2.close()
+        await asyncio.sleep(0.5)
 
 
 if __name__ == "__main__":

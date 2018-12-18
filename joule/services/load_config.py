@@ -13,7 +13,7 @@ from joule.errors import ConfigurationError
   StreamDirectory = /etc/joule/stream_configs
   IPAddress = 127.0.0.1
   Port = 8088
-  Database = joule@localhost:5438/joule
+  Database = joule:joule@localhost:5432/joule
   InsertPeriod = 5
   CleanupPeriod = 60
   MaxLogLines = 100

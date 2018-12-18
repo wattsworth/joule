@@ -78,8 +78,7 @@ class Visualizer(FilterModule):  # pragma: no cover
                         global_max = self.elements[i + offset]['max']
                         self.elements[i + offset]['max'] = max((data_max, global_max))
                 offset += len(pipe.stream.elements)
-            for e in self.elements:
-                print(e)
+
             await asyncio.sleep(1)
 
     def routes(self):

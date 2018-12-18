@@ -19,7 +19,8 @@ def info(config):
 
 
 @click.command(name="initialize")
-def initialize():  # pragma: no cover
+@click.option("--dsn", help="PostgreSQL DSN", required=True)
+def initialize(dsn):  # pragma: no cover
     click.echo("1. creating joule user ", nl=False)
     proc = subprocess.run("useradd -r -G dialout joule".split(" "), stderr=subprocess.PIPE)
     if proc.returncode == 0:
@@ -47,9 +48,18 @@ def initialize():  # pragma: no cover
     _make_joule_directory("/etc/joule")
     # check if main.conf exists
     if not os.path.isfile("/etc/joule/main.conf"):
-        conf_file = pkg_resources.resource_filename(
+        conf_template = pkg_resources.resource_filename(
             "joule", "resources/templates/main.conf")
-        shutil.copy(conf_file, "/etc/joule")
+        with open(conf_template, 'r') as template:
+            with open("/etc/joule/main.conf", 'w') as conf:
+                line = template.readline()
+                while line:
+                    if "REPLACE_WITH_DSN" in line:
+                        conf.write("Database = %s\n" % dsn)
+                    else:
+                        conf.write(line)
+                    line = template.readline()
+
     # set ownership to joule user
     shutil.chown("/etc/joule/main.conf", user="joule", group="joule")
 

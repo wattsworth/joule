@@ -353,7 +353,7 @@ class TestWorker(unittest.TestCase):
             async def close_interval(self):
                 pass
 
-        slow_pipe = SlowPipe(stream=helpers.create_stream('slow stream', self.streams[2].layout))
+        slow_pipe = SlowPipe(stream=helpers.create_stream('slow stream', self.streams[2].layout), name='slow pipe')
         self.worker.subscribe(self.streams[2], slow_pipe)
         self.worker.SUBSCRIBER_TIMEOUT = 0.1
 
@@ -362,7 +362,7 @@ class TestWorker(unittest.TestCase):
             async def write(self, data):
                 raise BrokenPipeError()
 
-        error_pipe = ErrorPipe(stream=helpers.create_stream('error stream', self.streams[2].layout))
+        error_pipe = ErrorPipe(stream=helpers.create_stream('error stream', self.streams[2].layout), name='error pipe')
         self.worker.subscribe(self.streams[3], error_pipe)
         self.worker.subscribe(self.streams[3], output2)
 

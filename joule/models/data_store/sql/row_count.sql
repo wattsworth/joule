@@ -14,7 +14,7 @@ DECLARE
   level_count BIGINT;
 BEGIN
 
-  SELECT format('stream%s~%%',stream_id::text) INTO base_name;
+  SELECT format('stream%s\_%%',stream_id::text) INTO base_name;
   SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='data'
     AND table_type='BASE TABLE' AND table_name LIKE base_name
     AND table_name NOT LIKE '%intervals' INTO max_decim_level;
@@ -38,6 +38,11 @@ BEGIN
       USING start_ts, end_ts
       INTO base_count;
   END IF;
+
+  IF base_count IS NULL THEN
+    base_count = 0;
+  END IF;
+
   RETURN base_count;
 END;
 $BODY$;

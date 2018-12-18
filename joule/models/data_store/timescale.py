@@ -3,6 +3,7 @@ from typing import List, Optional, Callable, Coroutine, Dict
 import numpy as np
 from io import BytesIO
 import asyncpg
+import asyncpg.exceptions
 import datetime
 import joule.utilities
 import pdb
@@ -121,8 +122,26 @@ class TimescaleStore(DataStore):
         async with self.pool.acquire() as conn:
             tables = await psql_helpers.get_table_names(conn, stream)
             for table in tables:
+                # TODO: use drop chunks with newer and older clauses when timescale is updated
+                if start is None:  # use the much faster drop chunks utility
+                    if end is None:
+                        bounds = await psql_helpers.convert_time_bounds(conn, stream, start, end)
+                        if bounds is None:
+                            return  # no data to remove
+                        query = "SELECT drop_chunks(table_name=>'%s', schema_name=>'data', older_than=>'%s'::timestamp)" % \
+                                (table.split(".")[1], bounds[1])
+                        print(table)
+                        try:
+                            await conn.execute(query)
+                        except asyncpg.exceptions.RaiseError as err:
+                            print("psql: ",err)
+                            pass
+
                 query = 'DELETE FROM %s ' % table + where_clause
-                await conn.execute(query)
+                try:
+                    await conn.execute(query)
+                except asyncpg.UndefinedTableError:
+                    return # no data to remove
             # create an interval boundary to mark the missing data
             if start is not None:
                 await psql_helpers.close_interval(conn, stream, start)
@@ -131,7 +150,10 @@ class TimescaleStore(DataStore):
         async with self.pool.acquire() as conn:
             tables = await psql_helpers.get_table_names(conn, stream)
             for table in tables:
-                await conn.execute('DROP TABLE %s ' % table)
+                try:
+                    await conn.execute('DROP TABLE %s ' % table)
+                except asyncpg.UndefinedTableError:
+                    pass
 
     async def info(self, streams: List['Stream']) -> Dict[int, StreamInfo]:
         results = {}
@@ -163,7 +185,7 @@ class TimescaleStore(DataStore):
     async def dbinfo(self) -> DbInfo:
 
         async with self.pool.acquire() as conn:
-            dbsize = await conn.fetchval("select pg_database_size(current_database())") # in bytes
+            dbsize = await conn.fetchval("select pg_database_size(current_database())")  # in bytes
             path = await conn.fetchval("show data_directory")
             usage = shutil.disk_usage(path)  # usage in bytes
             return DbInfo(path=path,
@@ -176,7 +198,6 @@ class TimescaleStore(DataStore):
 async def _extract_data(conn: asyncpg.Connection, stream: Stream, callback,
                         decimation_level: int = 1, start: int = None, end: int = None,
                         block_size=50000):
-
     if decimation_level > 1:
         layout = stream.decimated_layout
     else:

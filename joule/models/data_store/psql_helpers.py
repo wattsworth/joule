@@ -159,19 +159,10 @@ def get_psql_type(x: Stream.DATATYPE):
 
 async def get_row_count(conn: asyncpg.Connection, stream: Stream,
                         start=None, end=None):
-    if start is None and end is None:
-        query = "SELECT row_estimate FROM hypertable_approximate_row_count('data.stream%d')" % stream.id
-        try:
-            nrows = await conn.fetchval(query)
-        except asyncpg.UndefinedTableError:
-            return 0  # no data tables for this stream
-        if nrows < 500:
-            query = "SELECT count(*) from data.stream%d " % stream.id
-            return await conn.fetchval(query)
-        return nrows
-    # otherwise find the time bounds for the data
+    # hyper table approximate row count is not sensitive to data removal
+    # always use the custom function
     try:
-        bounds = await _convert_time_bounds(conn, stream, start, end)
+        bounds = await convert_time_bounds(conn, stream, start, end)
     except asyncpg.UndefinedTableError:
         return 0  # no data tables for this stream
     if bounds is None:
@@ -209,15 +200,15 @@ async def close_interval(conn: asyncpg.Connection, stream: Stream, ts: int):
 
 
 async def get_table_names(conn: asyncpg.Connection, stream: Stream, with_schema=True) -> List[str]:
-    query = '''select table_name from information_schema.tables 
+    query = r'''select table_name from information_schema.tables 
                where table_schema='data' 
                and table_type='BASE TABLE' 
-               and table_name like 'stream%d%%';''' % stream.id
+               and table_name like 'stream%d\_%%';''' % stream.id
     records = await conn.fetch(query)
     if with_schema:
-        return ['data.' + r['table_name'] for r in records]
+        return ['data.' + r['table_name'] for r in records] + ['data.stream%d' % stream.id]
     else:
-        return [r['table_name'] for r in records]
+        return [r['table_name'] for r in records] + ['stream%d' % stream.id]
 
 
 async def get_boundaries(conn: asyncpg.Connection, stream: Stream,
@@ -225,7 +216,7 @@ async def get_boundaries(conn: asyncpg.Connection, stream: Stream,
     """
     Return a list of data boundaries including the start and end of the data
     """
-    bounds = await _convert_time_bounds(conn, stream, start, end)
+    bounds = await convert_time_bounds(conn, stream, start, end)
     if bounds is None:
         return []  # no data so no boundaries
     start, end = bounds
@@ -240,9 +231,10 @@ async def get_boundaries(conn: asyncpg.Connection, stream: Stream,
     return [x.replace(tzinfo=datetime.timezone.utc) for x in ts]
 
 
-async def _convert_time_bounds(conn: asyncpg.Connection,
-                               stream: Stream,
-                               start: int, end: int) -> Optional[Tuple[datetime.datetime, datetime.datetime]]:
+async def convert_time_bounds(conn: asyncpg.Connection,
+                              stream: Stream,
+                              start: Optional[int], end: Optional[int]) -> Optional[
+    Tuple[datetime.datetime, datetime.datetime]]:
     """
     Convert Unix us timestamps to datetime objects and populate [None] values with the
     start or end of the data respectively

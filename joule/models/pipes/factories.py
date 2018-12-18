@@ -8,8 +8,13 @@ def reader_factory(fd, loop: asyncio.AbstractEventLoop):
         reader_protocol = asyncio.StreamReaderProtocol(reader, loop=loop)
         src = open(fd, 'rb', 0)
         (transport, _) = await loop.connect_read_pipe(
-            lambda: reader_protocol, src)
-        return reader
+            lambda
+            : reader_protocol, src)
+
+        def close_cb():
+            transport.close()
+
+        return reader, close_cb
 
     return f
 

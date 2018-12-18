@@ -20,7 +20,7 @@ DECLARE
   _max_ts TIMESTAMP;*/
 BEGIN
 
-  select format('stream%s%%', stream_id::text) into base_name;
+  select format('stream%s\_%%', stream_id::text) into base_name;
   -- COMPUTE TOTAL SIZE
   size = 0;
   FOR _table_name IN SELECT format('%s.%s',table_schema, table_name)
@@ -41,17 +41,15 @@ BEGIN
   -- ALL STATISTICS COMPUTED FROM BASE TABLE
   SELECT format('data.stream%s', stream_id::text) INTO _table_name;
 
-  -- COMPUTE TOTAL ROWS
-  EXECUTE 'SELECT row_estimate from hypertable_approximate_row_count($1)' INTO rows USING _table_name;
-  raise notice 'rows=%', rows;
-  IF rows IS NULL or rows = 0 THEN
-    EXECUTE format('SELECT COUNT(*) FROM %s',_table_name) INTO rows;
-  END IF;
+
 
   -- COMPUTE TIME BOUNDS
   EXECUTE format(' SELECT time FROM %s ORDER BY time ASC LIMIT 1 ',_table_name) INTO min_ts;
   EXECUTE format(' SELECT time FROM %s ORDER BY time DESC LIMIT 1 ',_table_name) INTO max_ts;
 
+-- COMPUTE TOTAL ROWS
+  EXECUTE 'SELECT stream_row_count($1, $2, $3)' INTO rows USING stream_id, min_ts, max_ts;
+  raise notice 'rows=%', rows;
 
 END;
 $BODY$;

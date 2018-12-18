@@ -16,6 +16,7 @@ class InputPipe(Pipe):
         self.reader_factory = reader_factory
         self.reader = reader
         self.close_cb = close_cb
+        self._reader_close = None
         self.byte_buffer = b''
         self.unprocessed_np_buffer = b''
         self.interval_break = False
@@ -29,7 +30,7 @@ class InputPipe(Pipe):
 
     async def read(self, flatten=False):
         if self.reader is None:
-            self.reader = await self.reader_factory()
+            self.reader, self._reader_close = await self.reader_factory()
         rowbytes = self.dtype.itemsize
         max_rows = self.BUFFER_SIZE - self.last_index
         if max_rows == 0:
@@ -104,6 +105,8 @@ class InputPipe(Pipe):
         return self.interval_break
 
     async def close(self):
+        if self._reader_close is not None:
+            self._reader_close()
         self.closed = True
         if self.close_cb is not None:
             # used to close socket pipes

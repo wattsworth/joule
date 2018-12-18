@@ -41,15 +41,14 @@ class Supervisor:
         try:
             await self.task
         except Exception as e:
-            log.info("Supervisor worker shutdown exception: %s " % str(e))
+            log.warning("Supervisor worker shutdown exception: %s " % str(e))
         for task in self.remote_tasks:
             task.cancel()
             try:
                 await task
             except Exception as e:
-                log.info("Supervisor remote i/o shutdown exception: %s " % str(e))
+                log.warning("Supervisor remote i/o shutdown exception: %s " % str(e))
                 raise e
-
 
     async def restart_producer(self, stream: Stream, loop: Loop, msg=""):
         # find the worker who produces this stream
