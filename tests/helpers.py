@@ -1,49 +1,27 @@
-import configparser
-from joule.daemon import module, stream, element
 import numpy as np
+import configparser
+import asyncio
+import unittest
+import testing.postgresql
+import psycopg2
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 
+from joule.models import Stream, Element, Base
 
-def build_stream(name,
-                 description="test_description",
-                 path="/some/path/to/data",
-                 datatype="float32",
-                 keep_us=0,
-                 decimate=True,
-                 id=None,
-                 num_elements=0):
-    my_stream = stream.Stream(name, description, path,
-                              datatype, keep_us, decimate, id)
-    for n in range(num_elements):
-        my_stream.add_element(element.build_element("e%d" % n))
-    return my_stream
-
-
-def build_module(name,
-                 description="test_description",
-                 exec_cmd="/bin/true",
-                 input_paths={"path1": "/some/path/1"},
-                 output_paths={"path1": "/some/path/2"},
-                 status=module.STATUS_UNKNOWN,
-                 pid=-1,
-                 id=None):
-    # pass empty args array
-    return module.Module(name, description, exec_cmd, [], input_paths, output_paths,
-                         status=status, pid=pid, id=id)
-
-
-def create_data(layout,
+def create_data(layout:str,
                 length=100,
                 step=1000,  # in us
-                start=1476152086000):  # 10 Oct 2016 10:15PM
+                start=1476152086000000):  # 10 Oct 2016 10:15PM
     """Create a random block of NilmDB data with [layout] structure"""
     ts = np.arange(start, start + step * length, step, dtype=np.uint64)
 
     # Convert to structured array
     (ltype, lcount, dtype) = parse_layout(layout)
     sarray = np.zeros(len(ts), dtype=dtype)
-    if("float" in ltype):
+    if "float" in ltype:
         data = np.random.rand(length, lcount)
-    elif("uint" in ltype):
+    elif "uint" in ltype:
         data = np.random.randint(0, high=100, size=(
             length, lcount), dtype=dtype[1].base)
     else:
@@ -54,6 +32,15 @@ def create_data(layout,
     # Need the squeeze in case sarray['data'] is 1 dimensional
     sarray['data'] = np.squeeze(data)
     return sarray
+
+
+def create_stream(name, layout, id=0) -> Stream:
+    (ltype, lcount, dtype) = parse_layout(layout)
+    datatype = Stream.DATATYPE[ltype.upper()]
+
+    return Stream(name=name, datatype=datatype, id=id,
+                  elements=[Element(name="e%d" % j, index=j,
+                            display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(lcount)])
 
 
 def to_chunks(data, chunk_size):
@@ -74,26 +61,13 @@ def parse_layout(layout):
     else:
         raise ValueError("bad layout")
     dtype = np.dtype([('timestamp', '<i8'), ('data', atype, lcount)])
-    return (ltype, lcount, dtype)
+    return ltype, lcount, dtype
 
 
 def parse_configs(config_str):
     config = configparser.ConfigParser()
     config.read_string(config_str)
     return config
-
-default_config = parse_configs(
-    """
-        [NilmDB]:
-          URL = http://localhost/nilmdb
-          InsertionPeriod = 5
-        [ProcDB]:
-          DbPath = /tmp/joule-proc-db.sqlite
-          MaxLogLines = 100
-        [Jouled]:
-          ModuleDirectory = /etc/joule/module_configs
-          StreamDirectory = /etc/joule/stream_configs
-    """)
 
 
 def mock_stream_info(streams):
@@ -104,7 +78,45 @@ def mock_stream_info(streams):
 
     def stream_info(path):
         for stream in streams:
-            if(stream[0] == path):
+            if stream[0] == path:
                 return [stream]
         return []
     return stream_info
+
+
+class AsyncTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.loop = asyncio.new_event_loop()
+        self.loop.set_debug(True)
+        asyncio.set_event_loop(self.loop)
+
+    def tearDown(self):
+        closed = self.loop.is_closed()
+        if not closed:
+            self.loop.call_soon(self.loop.stop)
+            self.loop.run_forever()
+            self.loop.close()
+        asyncio.set_event_loop(None)
+
+
+Postgresql = testing.postgresql.PostgresqlFactory(cache_initialized_db=True)
+
+
+class DbTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.postgresql = Postgresql() #testing.postgresql.Postgresql()
+        db_url = self.postgresql.url()
+        conn = psycopg2.connect(db_url)
+        cur = conn.cursor()
+        cur.execute("CREATE SCHEMA metadata")
+        conn.commit()
+        conn.close()
+        engine = create_engine(db_url)
+        Base.metadata.create_all(engine)
+        self.db = Session(bind=engine)
+
+    def tearDown(self):
+        self.db.close()
+        self.postgresql.stop()

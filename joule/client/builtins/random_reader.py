@@ -1,12 +1,9 @@
-from joule.utils.time import now as time_now
 
-from joule import ReaderModule
+from ..reader_module import ReaderModule
+from joule import utilities
 import asyncio
 import numpy as np
 import textwrap
-import argparse
-
-OUTPUT_RATE = 1  # run in 1 second blocks
 
 ARGS_DESC = """
 ---
@@ -69,11 +66,13 @@ ARGS_DESC = """
 ---
 """
 
+OUTPUT_RATE = 1  # run in 1 second blocks
+
 
 class RandomReader(ReaderModule):
-    "Generate a random stream of data"
-    
-    def custom_args(self, parser):
+    """Generate a random stream of data"""
+
+    def custom_args(self, parser):  # pragma: no cover
         grp = parser.add_argument_group("module",
                                         "module specific arguments")
         grp.add_argument("--width", type=int,
@@ -82,25 +81,27 @@ class RandomReader(ReaderModule):
         grp.add_argument("--rate", type=float,
                          required=True,
                          help="rate in Hz")
-        parser.description = ARGS_DESC
+        parser.description = textwrap.dedent(ARGS_DESC)
 
     async def run(self, parsed_args, output):
         # produce output four times per second
         # figure out how much output will be in each block
         rate = parsed_args.rate
         width = parsed_args.width
-        data_ts = time_now()
+        data_ts = utilities.time_now()
         data_ts_inc = 1/rate*1e6
         wait_time = 1/OUTPUT_RATE
         BLOCK_SIZE = rate/OUTPUT_RATE
         fraction_remaining = 0
         i = 0
         # print("Starting random stream: %d elements @ %0.1fHz" % (width, rate))
-        while(not self.stop_requested):
+        while not self.stop_requested:
             float_block_size = BLOCK_SIZE+fraction_remaining
             int_block_size = int(np.floor(float_block_size))
             fraction_remaining = float_block_size - int_block_size
             data = np.random.rand(int_block_size, width)
+            self.avg = np.average(data)
+            self.stddev = np.std(data)
             top_ts = data_ts + int_block_size*data_ts_inc
             ts = np.array(np.linspace(data_ts, top_ts,
                                       int_block_size, endpoint=False),
@@ -110,11 +111,11 @@ class RandomReader(ReaderModule):
             await asyncio.sleep(wait_time)
             i += 1
 
-            
-def main():
+
+def main():  # pragma: no cover
     r = RandomReader()
     r.start()
 
-    
+
 if __name__ == "__main__":
     main()

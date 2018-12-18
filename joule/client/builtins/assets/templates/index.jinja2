@@ -1,0 +1,88 @@
+{% extends 'base.jinja2' %}
+
+{% block head %}
+    <script src="assets/js/index.js"></script>
+    <link rel="stylesheet" type="text/css" href="assets/css/index.css">
+
+{% endblock %}
+
+{% block body %}
+
+    <div class="row page-header">
+        <div class="col-12">
+            <h1>{{ title }}</h1>
+        </div>
+    </div>
+    <div class="row">
+        {% for element in elements %}
+            <div class="col-md-3 col-sm-6 p-2">
+                <div class="card text-center">
+                    <div class="card-body" id="{{ element['id'] }}">
+                        <span class="max-val"> &mdash; </span>
+                        <span class="val-box">
+              <span class="val"> &mdash; </span>
+            </span>
+                        <span class="min-val"> &mdash; </span>
+                    </div>
+                    <div class="card-footer">
+            <span class="stream lead">
+              {{ element['stream'] }}:
+            </span>
+                        <span class="lead">
+              {{ element['element'] }}
+            </span>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    <div class="row page-footer">
+        <div class="offset-md-3 col-md-3 col-sm-6 p-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <span class="max-val static">
+                      maximum
+                    </span>
+                            <span class="val-box">
+                      <span class="val static">
+                        average
+                      </span>
+                    </span>
+                            <span class="min-val static">
+                      minimum
+                    </span>
+                </div>
+                <div class="card-footer">
+                    <span class="stream lead">
+                      Stream:
+                    </span>
+                            <span class="lead">
+                      Element
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 p-2 pt-3">
+            <div class="card">
+                <div class="card-body">
+                    <form>
+                        <div class="form-group">
+                            <label for="update-interval">Update Interval (seconds):</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="update-interval" value="10">
+                                <div class="input-group-append">
+                                    <button type="button" class="btn btn-outline-secondary" id="btn-set-update">Apply</button>
+                                </div>
+                            </div>
+                            <small id="update-success" class="text-success">new interval applied</small>
+                            <small id="update-failure" class="text-danger">invalid interval</small>
+
+                        </div>
+                    </form>
+                    <button type="button" id="reset" class="btn btn-outline-secondary btn-block btn-lg">Reset Max / Min</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}

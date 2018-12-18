@@ -16,3 +16,7 @@ test/e2e/nilmdb
 docs/_build
 .DS_Store
 .vscode
+.idea
+.pytest_cache
+joule/scratch.py
+.eggs

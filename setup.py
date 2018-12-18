@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-from setuptools import setup, find_packages
+from setuptools import setup
+import versioneer
 
 PROJECT = 'Joule'
 
@@ -13,8 +14,8 @@ except IOError:
 
 setup(
     name=PROJECT,
-    version='0.3.0',  # versioneer.get_version(),
-    #cmdclass=versioneer.get_cmdclass(),
+    version = versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     description='Process manager for embedded systems',
     long_description=long_description,
 
@@ -30,7 +31,8 @@ setup(
     platforms=['Any'],
     scripts=[],
     provides=[],
-    install_requires=['cliff',
+    install_requires=['click',
+                      'treelib',
                       'numpy',
                       'scipy',
                       'psutil',
@@ -38,26 +40,31 @@ setup(
                       'aiohttp',
                       'markdown',
                       'BeautifulSoup4',
-                      'dateparser'],
+                      'dateparser',
+                      'tabulate',
+                      'sqlalchemy',
+                      'aiohttp-jinja2',
+                      'jinja2',
+                      'asyncpg',
+                      'psycopg2-binary'],
+    tests_require=['asynctest',
+                   'nose2',
+                   'testing.postgresql'],
+    test_suite='nose2.collector.collector',
     namespace_packages=[],
-    packages=find_packages(),
+    packages=['joule'],
     include_package_data=True,
 
     entry_points={
         'console_scripts': [
-            'joule = joule.main:main',
-            'jouled = joule.daemon.daemon:main',
+            'joule = joule.cli:main',
+            'jouled = joule.daemon:main',
             'joule-random-reader = joule.client.builtins.random_reader:main',
             'joule-file-reader = joule.client.builtins.file_reader:main',
             'joule-mean-filter = joule.client.builtins.mean_filter:main',
-            'joule-median-filter = joule.client.builtins.median_filter:main'
-        ],
-        'joule.commands': [
-            'modules = joule.cmds.modules:ModulesCmd',
-            'logs = joule.cmds.logs:LogsCmd',
-            'initialize = joule.cmds.initialize:InitializeCmd',
-            'docs = joule.cmds.docs:DocsCmd'
-        ],
+            'joule-median-filter = joule.client.builtins.median_filter:main',
+            'joule-visualizer-filter = joule.client.builtins.visualizer:main'
+        ]
     },
     #options={
     #    'build_scripts': {

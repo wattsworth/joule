@@ -14,77 +14,139 @@ across multiple nodes in a network without adjusting any module code.
 
    Joule **pipelines** are composed of **modules** and **streams**
 
-Joule constructs the pipeline based on module and stream configuration files.
-Files must end with the **.conf** suffix and by default should be placed in
-**/etc/joule/module_configs** and **/etc/joule/stream_configs** respectively.
-The pipeline must form a directed acyclic graph (DAG). Circular paths are
-not allowed.
-
-.. _sec-modules:
-
-Modules
--------
-
-Modules are executable programs. Joule runs each module as a separate
-process. This enfores isolation and improves resiliency.
-Malfunctioning modules do not affect other parts of the pipeline
-and can be restarted without interrupting the data flow. The client
-API provides three basic module types: Reader Modules, Filter Modules,
-and Composite Modules.
-
-The module configuration format is shown below:
+Joule is a system service. Use the ``joule`` command to interact with the service.
 
 .. raw:: html
 
-  <div class="header ini">
-  Module Configuration File
-  </div>
-  <div class="code ini"><span>[Main]</span>
-  <i>#required settings (examples)</i>
-  <b>exec_cmd =</b> /path/to/module.py --args
-  <b>name =</b> Processing Module
-  <i>#optional settings (defaults)</i>
-  <b>description =</b>
+    <div class="bash-code">
 
-  <span>[Inputs]</span>
-  <b>in1 =</b> /stream/path/input1
-  <b>in2 =</b> /stream/path/input2
-  <i>#additional inputs ... </i>
+    # joule is a systemd service
+    $> sudo service joule restart
 
-  <span>[Outputs]</span>
-  <b>out1 =</b> /stream/path/output1
-  <b>out2 =</b> /stream/path/output2
-  <i>#additional outputs ... </i>
+    # use journalctl to view joule logs
+    $> sudo journalctl -u joule.service
+    ... journalctl output
 
-  </div>
+    # use the joule CLI to interact with the service
+    $> joule info
+    whatever is produced by joule info
+
+    </div>
+
+Joule constructs the pipeline based on configuration files in **/etc/joule**. Details on these
+configuration files is provided in the sections below.
+
+.. _sec-modules:
+
+Module Configuration
+--------------------
+
+:ref:`modules` are executable programs managed by Joule. The module configuration format is shown below:
+
+.. raw:: html
+
+    <div class="config-file">
+
+    : Module Configuration File
+
+    [Main]
+    #required settings (examples)
+    exec_cmd = /path/to/module.py
+    name = Processing Module
+
+    #optional settings (defaults)
+    description =
+    has_interface = no
+
+    [Arguments]
+    arg = value
+    #additional keyword arguments ...
+
+    [Inputs]
+    in1 = /stream/path/input1
+    in2 = /stream/path/input2
+    #additional inputs ...
+
+    [Outputs]</span>
+    out1 = /stream/path/output1
+    out2 = /stream/path/output2
+    #additional outputs ...
+
+    </div>
 
 
-See the list below for information on each setting.
+Module configuration files must end with the **.conf** suffix and should be placed in
+**/etc/joule/module_configs**. See the list below for information on each setting.
+Only the **[Main]** section is required, other sections should be included as necessary.
 
 **[Main]**
-  * ``exec_cmd`` -- path to module executable. This can include command line arguments
-  * ``name`` -- identifies the module in Joule CLI output
-  * ``description`` -- optional description used in Joule CLI output
+  * ``exec_cmd`` -- path to module executable, may include command line arguments
+  * ``name`` -- module name
+  * ``description`` -- optional module description
+  * ``has_interface`` -- whether the module has a web interface
+
+**[Arguments]**
+  * ``key = value`` -- keyword arguments (these may also be specified in the ``exec_cmd``)
 
 **[Inputs]**
-  * ``name = /stream/path`` -- association between module input and data stream
+  * ``name = /stream/path`` -- input :ref:`sec-pipes`
 
 **[Outputs]**
-  * ``name = /stream/path`` -- association between module output and data stream
+  * ``name = /stream/path`` -- output pipe configuration
 
-The input and output **names** should be provided by the module author.
-Inputs may be reused between modules, but
-outputs must be unique. All input and output
-**streams** must have corresponding configuration files.
+Note: Reader Modules may only have a single output and no inputs. Filter modules have no restrictions on the number
+of inputs and outputs.
+
+.. _sec-pipes:
+
+Pipe Configuration
+------------------
+
+:ref:`pipes` connect modules to streams and are configured in the **[Inputs]** and **[Outputs]** section of the :ref:`sec-modules`
+file. At a minimum the configuration specifies a pipe name and a stream path shown in Example 1 below.
+
+.. raw:: html
+
+    <div class="config-file">
+
+    : Pipe Configuration Format
+
+    #1. basic configuration [pipe name] = [stream path]
+    simple = /stream/path/simple
+
+    #2. with inline stream configuration
+    inline = /stream/path/inline:float32[x,y,z]
+
+    #3. remote connection, must include inline stream config
+    remote = node2.net:8088 /stream/path/remote:float32[x,y,z]
+
+    </div>
+
+The pipe configuration can also include an inline stream configuration. This can be used in place of a :ref:`sec-streams`
+file or in addition to it. Using both enables static type checking for the pipeline. The inline configuration is
+separated from the stream path by a colon ``:``. The stream datatype is followed by a list of comma separated element names
+enclosed with brackets ``[ ]``. If
+the stream is not explicitly configured or does not already exist in the database it is created with default
+attributes. In Example 2 above the ``inline`` pipe is connected to ``/stream/path/inline``
+which has three ``float32`` elements named ``x``, ``y``, and ``z``. If this stream already exists
+with a different datatype or number of elements, Joule will not start the module.
+
+Pipes can also connect to remote streams. To specify a remote source or destination add the URL and optional port
+number before the stream path. The URL is separated from the stream path by a single space. Remote pipes must include an inline stream configuration.
+In example 3 above the ``remote`` pipe is connected to ``/stream/path/remote`` on ``node2.net``. If this stream does not
+exist on **node2**, it will be created with default attributes. If it does exist with a different datatype, or number of
+elements, Joule will not start the module.
+
+Streams can be connected to multiple input pipes but may only be connected to a single output pipe. If a module
+attempts to connect an output pipe to a stream that already has a producer, Joule will not start the module.
 
 .. _sec-streams:
 
-Streams
--------
-Streams are timestamped data flows that connect modules.
-Modules read and write to streams through Joule Pipes. Streams can be visualized as a tabular data
-structure. Timestamps are in Unix microseconds (elapsed time since
-January 1, 1970).
+Stream Configuration
+--------------------
+
+Streams are timestamped data flows. They are composed of one or more elements as shown
+below. Timestamps are in Unix microseconds (elapsed time since January 1, 1970).
 
  ========= ======== ======== === ========
  Timestamp Element1 Element2 ... ElementN
@@ -96,36 +158,43 @@ January 1, 1970).
  ...       ...      ...      ... ...
  ========= ======== ======== === ========
 
-The stream configuration format is shown below:
+The configuration format is shown below:
 
 .. raw:: html
 
-  <div class="header ini">
-  Stream Configuration File
+  <div class="config-file">
+
+  : Stream Configuration File
+
+  [Main]
+  #required settings (examples)
+  name = stream name
+  path = /stream/path
+  datatype = float32
+  keep = 1w
+
+  #optional settings (defaults)
+  decimate = yes
+
+  [Element1]
+  #required settings (examples)
+  name         = stream name
+
+  #optional settings (defaults)
+  plottable    = yes
+  discrete     = no
+  offset       = 0.0
+  scale_factor = 1.0
+  default_max  =
+  default_min  =
+
+  #additional elements...
+
   </div>
-  <div class="code ini"><span>[Main]</span>
-  <i>#required settings (examples)</i>
-  <b>name</b> = stream name
-  <b>path</b> = /stream/path
-  <b>datatype</b> = float32
-  <b>keep</b> = 1w
-  <i>#optional settings (defaults)</i>
-  <b>decimate</b> = yes
 
-  <span>[Element1]</span>
-  <i>#required settings (examples)</i>
-  <b>name</b>         = stream name
-  <i>#optional settings (defaults)</i>
-  <b>plottable</b>    = yes
-  <b>discrete</b>     = no
-  <b>offset</b>       = 0.0
-  <b>scale_factor</b> = 1.0
-  <b>default_max</b>  =
-  <b>default_min</b>  =
-
-  <i>#additional elements...</i>
-  </div>
-
+Stream configuration files must end with the **.conf** suffix and should be placed in
+**/etc/joule/stream_configs**. Both **[Main]** and **[Element1]** are required.
+For streams with more than one element include additional sections **[Element2]**, **[Element3]**, etc.
 See the list below for information on each setting.
 
 **[Main]**
@@ -142,110 +211,26 @@ See the list below for information on each setting.
       ,        int32, uint32
       ,        int64, uint64
 
+
   * ``keep`` -- how long to store stream data. Format is a value and unit.
-      Units are **h**: hours, **d**: days, **w**: weeks, **m**: months, **y**: years.
-      For example ``6d`` will keep the last six days of data. A value of ``false``
-      means no data will be stored for this stream.
+    Units are **h**: hours, **d**: days, **w**: weeks, **m**: months, **y**: years.
+    For example ``6d`` will keep the last six days of data. Specify ``none``
+    to keep no data or ``all`` to keep all data.
 
   * ``decimate`` -- whether decimated data will be stored for this stream. Decimation
     roughly doubles the required storage but enables web UI visualization.
 
 **[Element#]**
   * ``name`` -- element identifier, may contain whitespace
-      *NOTE:* the following settings apply to visualizations in the web UI
+*NOTE:* the following settings apply only to visualizations in the web UI
   * ``plottable`` -- **[yes|no]** whether the element can be plotted
   * ``type`` -- **[continuous|discrete|event]** controls the plot type
-  * ``offset``-- apply linear scaling to data visualization **y=scale_factor\*(x-offset)**
-  * ``scale_factor``-- apply linear scaling to data visualization **y=scale_factor\*(x-offset)**
+  * ``offset``-- apply linear scaling **y=scale_factor\*(x-offset)**
+  * ``scale_factor``-- apply linear scaling **y=scale_factor\*(x-offset)**
   * ``default_max``-- control axis scaling, leave blank to auto scale
   * ``default_min``-- control axis scaling, leave blank to auto scale
 
-
-
-Command Line Interface
-----------------------
-
-``jouled`` -- controls pipeline execution, runs as a system daemon
-
-  .. raw:: html
-
-    <div class="header bash">
-    Command Line:
-    </div>
-    <div class="code bash"><i># use service to control jouled:</i>
-    <i># NOTE: restart the service to apply configuration file changes</i>
-    <b>$>sudo service jouled</b> [start|stop|restart|status]
-
-    <i># by default jouled starts at boot, this can be enabled or disabled:</i>
-    <b>$>sudo systemctl</b> [enable|disable] <b>jouled.service</b>
-
-    <i># jouled may be run in the foreground if the service is stopped</i>
-    <b>$> sudo jouled</b>
-    <i># exit with Ctrl-C</i>
-    </div>
-
-``joule modules`` -- view currently executing modules
-
-  .. raw:: html
-
-      <div class="header bash">
-      Command Line:
-      </div>
-      <div class="code bash"><b>$>joule modules</b>
-      +-------------+--------------+----------------+---------+-----+
-      | Module      | Inputs      | Outputs   | Status  | CPU |
-      +-------------+--------------+----------------+---------+-----+
-      | Demo Reader |              | /demo/random   | running | 0%  |
-      | Demo Filter | /demo/random | /demo/smoothed | running | 0%  |
-      +-------------+--------------+----------------+---------+-----+
-      </div>
-
-
-``joule logs`` -- view stdout and stderr from a module
-
-  Joule keeps a rolling log of module output. By default the last 100 lines
-  are stored, see :ref:`sec-system-configuration` to customize
-  this value.
-
-  .. raw:: html
-
-      <div class="header bash">
-      Command Line:
-      </div>
-      <div class="code bash"><b>$>joule logs "Demo Filter"</b>
-      [27 Jan 2017 18:22:48] ---starting module---
-      [27 Jan 2017 18:22:48] Starting moving average filter with window size 9
-      #... additional output
-      </div>
-
-``joule docs`` -- manage module documentation
-
-  Manage the contents of the `Module Documentation`_. See
-  :ref:`sec-module-documentation` for details on writing module
-  documentation.
-
-  .. raw:: html
-
-      <div class="header bash">
-      Command Line:
-      </div>
-      <div class="code bash"><b>$>joule docs add joule-random-reader</b>
-      added documentation for [Random Reader]
-      
-      <b>$>joule docs update joule-random-reader</b>
-      updated documentation for [Random Reader]
-      
-      <b>$>joule docs list</b>
-      Documented modules:
-	Random Reader
-	...other modules
-	
-      <b>$>joule docs remove "Random Reader"</b>
-      removed documentation for [Random Reader]
-      </div>
-
-.. _Module Documentation: /modules
-  
+Streams may also be configured using an abbreviated inline syntax in a module's :ref:`sec-pipes`.
   
 .. _sec-system-configuration:
 
@@ -260,25 +245,22 @@ full set of options and their default settings:
 
 .. raw:: html
 
-  <div class="header ini">
-  /etc/joule/main.conf
-  </div>
-  <div class="code ini"><i>#default settings shown</i>
-  <span>[NilmDB]</span>
-  <b>url =</b> http://localhost/nilmdb
-  <b>InsertionPeriod =</b> 5
-  <b>CleanupPeriod =</b> 600
+  <div class="config-file">
 
-  <span>[ProcDB]</span>
-  <b>DbPath =</b> /tmp/joule-proc-db.sqlite
-  <b>MaxLogLines =</b> 100
+  : /etc/joule/main.conf
 
-  <span>[Jouled]</span>
-  <b>ModuleDirectory =</b> /etc/joule/module_configs
-  <b>StreamDirectory =</b> /etc/joule/stream_configs
-  <b>ModuleDocs =</b> /etc/joule/module_docs.json
-  <b>IPAddress =</b> 127.0.0.1
-  <b>Port =</b> 1234
+  #default settings shown
+  [Main]
+  IPAddress = 0.0.0.0
+  Port = 8088
+  NilmdbURL = http://localhost/nilmdb
+  Database = joule@localhost:5438/joule
+  InsertPeriod = 5
+  CleanupPeriod = 60
+  MaxLogLines = 100
+  ModuleDirectory = /etc/joule/module_configs
+  StreamDirectory = /etc/joule/stream_configs
+
   </div>
 
 See the list below for information on each setting.

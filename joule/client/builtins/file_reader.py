@@ -1,5 +1,7 @@
+from joule.client import ReaderModule
+from joule import utilities
+import textwrap
 import numpy as np
-import joule
 
 ARGS_DESC = """
 ---
@@ -68,39 +70,38 @@ ARGS_DESC = """
 """
 
 
-class FileReader(joule.ReaderModule):
-    "Read data from a file"
+class FileReader(ReaderModule):
+    """Read data from a file"""
 
-    def custom_args(self, parser):
+    def custom_args(self, parser):  # pragma: no cover
         grp = parser.add_argument_group("module",
                                         "module specific arguments")
 
-        grp.add_argument("--file",
-                         required=True,
-                         help="file name")
-        grp.add_argument("--delimiter", default=",",
+        grp.add_argument("file", help="file name")
+        grp.add_argument("-d", "--delimiter", default=",",
                          choices=[" ", ","],
                          help="character between values")
-        grp.add_argument("--timestamp", type=joule.yesno,
+        grp.add_argument("-t", "--timestamp", type=utilities.yesno,
                          help="apply timestamps to data")
-        parser.description = ARGS_DESC
-        
+        parser.description = textwrap.dedent(ARGS_DESC)
+
     async def run(self, parsed_args, output):
         with open(parsed_args.file, 'r') as f:
             for line in f:
                 data = np.fromstring(line, dtype=float,
                                      sep=parsed_args.delimiter)
-                if(parsed_args.timestamp):
-                    data = np.insert(data, 0, joule.time_now())
-                await output.write([data])
-                if(self.stop_requested):
+
+                if parsed_args.timestamp:
+                    data = np.insert(data, 0, utilities.time_now())
+                await output.write(np.array([data]))
+                if self.stop_requested:
                     break
 
-                
-def main():
+
+def main():  # pragma: no cover
     r = FileReader()
     r.start()
 
-    
+
 if __name__ == "__main__":
     main()

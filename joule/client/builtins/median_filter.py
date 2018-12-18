@@ -1,6 +1,6 @@
 import scipy.signal
 import asyncio
-import argparse
+import textwrap
 import numpy as np
 
 import joule
@@ -83,23 +83,31 @@ ARGS_DESC = """
 
 
 class MedianFilter(joule.FilterModule):
-    "Compute the median of the input"
+    """Compute the median of the input"""
 
-    def custom_args(self, parser):
+    def custom_args(self, parser):  # pragma: no cover
         grp = parser.add_argument_group("module",
                                         "module specific arguments")
         grp.add_argument("--window", type=int, required=True,
                          help="window length")
-        parser.description = ARGS_DESC
+        parser.description = textwrap.dedent(ARGS_DESC)
 
     async def run(self, parsed_args, inputs, outputs):
         N = parsed_args.window
         stream_in = inputs["input"]
         stream_out = outputs["output"]
-        while(not self.stop_requested):
+        while not self.stop_requested:
             sarray_in = await stream_in.read()
             # not enough data, wait for more
-            if(len(sarray_in) < (N * 2)):
+            if len(sarray_in) < (N * 2):
+                # check if the pipe is closed
+                if stream_in.closed:  # pragma: no cover
+                    return
+                # check if this is the end of an interval
+                # if so we can't use this data so discard it
+                if stream_in.end_of_interval:
+                    stream_in.consume(len(sarray_in))
+                    await stream_out.close_interval()
                 await asyncio.sleep(0.1)
                 continue
             # allocate output array
@@ -111,9 +119,12 @@ class MedianFilter(joule.FilterModule):
             sarray_out['timestamp'] = sarray_in['timestamp'][bound:-bound]
             await stream_out.write(sarray_out)
             stream_in.consume(len(sarray_out))
+            # hard to isolate in test, usually hits line 109
+            if stream_in.end_of_interval:  # pragma: no cover
+                await stream_out.close_interval()
 
 
-def main():
+def main():  # pragma: no cover
     r = MedianFilter()
     r.start()
 

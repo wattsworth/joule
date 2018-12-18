@@ -1,6 +1,6 @@
 import numpy as np
-import argparse
-import joule
+import textwrap
+from ..fir_filter_module import FIRFilterModule
 
 ARGS_DESC = """
 ---
@@ -81,23 +81,24 @@ ARGS_DESC = """
 """
 
 
-class MeanFilter(joule.FIRFilterModule):
-    "Compute the moving average of the input"
+class MeanFilter(FIRFilterModule):
+    """Compute the moving average of the input"""
     
-    def custom_args(self, parser):
+    def custom_args(self, parser):  # pragma: no cover
         grp = parser.add_argument_group("module",
                                         "module specific arguments")
         
         grp.add_argument("--window", type=int, required=True,
                          help="window length (odd)")
-        parser.description = ARGS_DESC
+
+        parser.description = textwrap.dedent(ARGS_DESC)
 
     def make_filter(self, parsed_args):
-        N = parsed_args.window
-        return np.ones((N,))/N
+        window = parsed_args.window
+        return np.ones((window,))/window
 
                 
-def main():
+def main():  # pragma: no cover
     r = MeanFilter()
     r.start()
 
