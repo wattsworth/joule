@@ -4,7 +4,9 @@ import asyncio
 import logging
 import time
 import argparse
+import uvloop
 import signal
+import pdb
 from aiohttp import web
 import faulthandler
 from sqlalchemy import create_engine
@@ -14,9 +16,9 @@ from typing import List
 from joule.models import (Base, Worker, Supervisor, config,
                           DataStore, Stream, pipes)
 from joule.errors import ConfigurationError, SubscriptionError
-from joule.models import NilmdbStore
+from joule.models import NilmdbStore, TimescaleStore
 from joule.models.data_store.errors import DataError
-from joule.services import (load_modules, load_streams, load_config, load_databases)
+from joule.services import (load_modules, load_streams, load_config)
 import joule.controllers
 
 log = logging.getLogger('joule')
@@ -37,31 +39,17 @@ class Daemon(object):
         self.stop_requested = False
 
     def initialize(self, loop: Loop):
-        # load the database configs
-        databases = load_databases.run(self.config.database_directory)
-
-        # initialize the data store database
-        db_name = self.config.data_store.database_name
-        if db_name not in databases:
-            log.error("Specified database [%s] is not configured" % db_name)
-            exit(1)
-        database = databases[db_name]
-        if database.backend == config.BACKEND.NILMDB:
+        if self.config.nilmdb_url is not None:
             self.data_store: DataStore = \
-                NilmdbStore(database.url,
-                            self.config.data_store.insert_period,
-                            self.config.data_store.cleanup_period, loop)
+                NilmdbStore(self.config.nilmdb_url,
+                            self.config.insert_period,
+                            self.config.cleanup_period, loop)
         else:
-            log.error("Unsupported data store type: " + database.backend.value)
-            exit(1)
+            self.data_store: DataStore = \
+                TimescaleStore(self.config.database, self.config.insert_period,
+                               self.config.cleanup_period, loop)
 
-        # connect to the metadata database
-        db_name = self.config.database_name
-        if db_name not in databases:
-            log.error("Specified database [%s] is not configured" % db_name)
-            exit(1)
-        database = databases[db_name]
-        engine = create_engine(database.engine_config)
+        engine = create_engine(self.config.database)
         Base.metadata.create_all(engine)
         self.db = Session(bind=engine)
 
@@ -122,8 +110,11 @@ class Daemon(object):
         # clean everything up
         await self.supervisor.stop(loop)
         inserter_task_grp.cancel()
-        await inserter_task_grp
-        self.data_store.close()
+        try:
+            await inserter_task_grp
+        except asyncio.CancelledError:
+            pass
+        await self.data_store.close()
         try:
             await asyncio.wait_for(runner.shutdown(), 5)
             await asyncio.wait_for(runner.cleanup(), 5)
@@ -136,14 +127,20 @@ class Daemon(object):
 
     async def _spawn_inserter(self, stream: Stream, loop: Loop):
         while True:
-            pipe = pipes.LocalPipe(layout=stream.layout, loop=loop, name='inserter:%s'%stream.name)
+            pipe = pipes.LocalPipe(layout=stream.layout, loop=loop, name='inserter:%s' % stream.name)
             unsubscribe = self.supervisor.subscribe(stream, pipe, loop)
+            task = None
             try:
-                await self.data_store.spawn_inserter(stream, pipe, loop)
+                task = await self.data_store.spawn_inserter(stream, pipe, loop)
+                await task
                 break  # inserter terminated, program is closing
             except DataError as e:
                 msg = "stream [%s]: %s" % (stream.name, str(e))
                 await self.supervisor.restart_producer(stream, loop, msg=msg)
+            except asyncio.CancelledError:
+                if task is not None:
+                    task.cancel()
+                break
             unsubscribe()
 
 
@@ -167,6 +164,13 @@ def main(argv=None):
     except ConfigurationError as e:
         log.error("Invalid configuration: %s" % e)
         exit(1)
+
+    # uvloop uses libuv which does not support
+    # connections to abstract namespace sockets
+    # https://github.com/joyent/libuv/issues/1486
+
+    # asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+
     loop = asyncio.get_event_loop()
     loop.set_debug(True)
     daemon = Daemon(my_config)
@@ -175,7 +179,6 @@ def main(argv=None):
     loop.run_until_complete(daemon.run(loop))
     loop.close()
     exit(0)
-
 
 
 class LogDedupFilter:
@@ -209,5 +212,6 @@ class LogDedupFilter:
         self.first_repeat = True
         return True
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     main()

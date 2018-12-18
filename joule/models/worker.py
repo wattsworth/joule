@@ -20,10 +20,16 @@ from joule.models.pipes.errors import EmptyPipe
 Loop = asyncio.AbstractEventLoop
 Subscribers = Dict[Stream, List[pipes.Pipe]]
 
-popen_lock = asyncio.Lock()
+popen_lock = None
 log = logging.getLogger('joule')
 
 SOCKET_BASE = "wattsworth.joule.%d"
+
+
+def _initialize_popen_lock():
+    global popen_lock
+    if popen_lock is None:
+        popen_lock = asyncio.Lock()
 
 
 class DataConnection:
@@ -86,7 +92,7 @@ class Worker:
         # how long to wait for proc to stop nicely
         self.SIGTERM_TIMEOUT = 2
         # how long to wait to restart a failed process
-        self.RESTART_INTERVAL = 1
+        self.RESTART_INTERVAL = 3
         # how to wait for a subscriber to accept data
         self.SUBSCRIBER_TIMEOUT = 1
         # how long to try restarting if worker is currently missing inputs
@@ -175,7 +181,7 @@ class Worker:
                 # interval
                 for subscriber in self.subscribers.values():
                     for pipe in subscriber:
-                        await pipe.close_interval()
+                        pipe.close_interval_nowait()
 
             else:
                 break
@@ -235,9 +241,12 @@ class Worker:
 
     async def _spawn_child(self, subscribe: Callable[[Stream, pipes.Pipe, Loop], Callable],
                            loop: Loop) -> None:
+
         # lock so fd's don't pollute other modules
+        _initialize_popen_lock()
         await popen_lock.acquire()
         try:
+
             await self._subscribe_to_inputs(subscribe, loop)
         except SubscriptionError as e:
             self._close_child_fds()
@@ -325,6 +334,7 @@ class Worker:
             while True:
                 data = await child_output.read()
                 if len(data) > 0:
+
                     if not self._verify_monotonic_timestamps(data, last_ts, child_output.name):
                         for pipe in subscribers:
                             await pipe.close_interval()
@@ -337,6 +347,7 @@ class Worker:
                         # if child_output.name=='output2':
                         #    print("writing to %d subscribers" % len(subscribers))
                         try:
+
                             await asyncio.wait_for(pipe.write(data),
                                                    self.SUBSCRIBER_TIMEOUT)
                         except (ConnectionResetError, BrokenPipeError):
@@ -344,10 +355,10 @@ class Worker:
                             subscribers.remove(pipe)
                         except asyncio.TimeoutError:
                             log.warning("subscriber [%s] timed out" % pipe.stream)
-                            await pipe.close_interval()
+                            pipe.close_interval_nowait()
                 if child_output.end_of_interval:
                     for pipe in subscribers:
-                        await pipe.close_interval()
+                        pipe.close_interval_nowait()
 
         except (EmptyPipe, asyncio.CancelledError):
             pass
@@ -407,6 +418,7 @@ class Worker:
         # if there are multiple rows, check that all timestamps are increasing
         if len(data) > 1 and np.min(np.diff(data['timestamp'])) <= 0:
             min_idx = np.argmin(np.diff(data['timestamp']))
+            log.warning("Non-monotonic timestamp in [%s], restarting module" % self.name)
             self.log("Non-monotonic timestamp in stream [%s] (%d<=%d)" %
                      (name, data['timestamp'][min_idx + 1], data['timestamp'][min_idx]))
             log.warning("Non-monotonic timestamp in [%s], restarting module" % self.name)

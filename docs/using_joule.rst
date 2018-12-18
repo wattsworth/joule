@@ -250,21 +250,16 @@ full set of options and their default settings:
   : /etc/joule/main.conf
 
   #default settings shown
-  [NilmDB]
-  url = http://localhost/nilmdb
-  InsertionPeriod = 5
-  CleanupPeriod = 600
-
-  [ProcDB]
-  DbPath = /tmp/joule-proc-db.sqlite
+  [Main]
+  IPAddress = 0.0.0.0
+  Port = 8088
+  NilmdbURL = http://localhost/nilmdb
+  Database = joule@localhost:5438/joule
+  InsertPeriod = 5
+  CleanupPeriod = 60
   MaxLogLines = 100
-
-  [Jouled]
   ModuleDirectory = /etc/joule/module_configs
   StreamDirectory = /etc/joule/stream_configs
-  ModuleDocs = /etc/joule/module_docs.json
-  IPAddress = 127.0.0.1
-  Port = 1234
 
   </div>
 

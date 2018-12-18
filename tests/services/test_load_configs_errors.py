@@ -14,14 +14,12 @@ class TestLoadConfigErrors(unittest.TestCase):
                 bad_dir = "/does/not/exist"
                 bad_module_dir = (bad_dir, good_dir1, good_dir2)
                 bad_stream_dir = (good_dir1, bad_dir, good_dir2)
-                bad_database_dir = (good_dir1, good_dir2, bad_dir)
-                for setup in [bad_module_dir, bad_stream_dir, bad_database_dir]:
+                for setup in zip(bad_module_dir, bad_stream_dir):
                     parser = configparser.ConfigParser()
                     parser.read_string("""
                                 [Main]
                                 ModuleDirectory=%s
                                 StreamDirectory=%s
-                                DatabaseDirectory=%s
                             """ % setup)
                     with self.assertRaises(ConfigurationError):
                         load_config.run(custom_values=parser)
@@ -53,7 +51,7 @@ class TestLoadConfigErrors(unittest.TestCase):
         for period in bad_periods:
             parser = configparser.ConfigParser()
             parser.read_string("""
-                        [DataStore]
+                        [Main]
                         InsertPeriod = %s
                         """ % period)
             with self.assertRaisesRegex(ConfigurationError, "InsertPeriod"):
@@ -64,7 +62,7 @@ class TestLoadConfigErrors(unittest.TestCase):
         for period in bad_periods:
             parser = configparser.ConfigParser()
             parser.read_string("""
-                        [DataStore]
+                        [Main]
                         InsertPeriod = 50
                         CleanupPeriod = %s
                         """ % period)

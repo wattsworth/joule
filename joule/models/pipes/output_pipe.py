@@ -1,7 +1,10 @@
 import asyncio
 import numpy as np
+import logging
 
 from joule.models.pipes import Pipe, interval_token
+
+log = logging.getLogger('joule')
 
 
 class OutputPipe(Pipe):
@@ -61,6 +64,13 @@ class OutputPipe(Pipe):
             await self.flush_cache()
         self.writer.write(interval_token(self.layout).tostring())
         await self.writer.drain()
+
+    def close_interval_nowait(self):
+        if self._cache_index > 0:
+            log.warning("dumping %d rows of cached data due on %s" % (self._cache_index, self.name))
+            self._cache = np.empty(len(self._cache), self.dtype)
+            self._cache_index = 0
+        self.writer.write(interval_token(self.layout).tostring())
 
     async def close(self):
         self.closed = True

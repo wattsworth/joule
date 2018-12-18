@@ -11,6 +11,7 @@ from aiohttp.test_utils import unused_port
 import threading
 import time
 import requests
+import unittest
 
 from joule.client import ReaderModule
 from joule.models import Stream, Element, pipes
@@ -67,6 +68,8 @@ class TestReaderModule(helpers.AsyncTestCase):
         # check the output
         received_data = self.loop.run_until_complete(pipe.read())
         np.testing.assert_array_equal(data, received_data)
+        self.loop.run_until_complete(pipe.close())
+        self.loop.close()
 
     def test_writes_to_stdout(self):
         module = SimpleReader()

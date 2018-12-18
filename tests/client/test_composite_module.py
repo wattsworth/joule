@@ -57,6 +57,8 @@ class TestCompositeModule(helpers.AsyncTestCase):
         received_data = self.loop.run_until_complete(pipe.read())
         np.testing.assert_array_equal(data['timestamp'], received_data['timestamp'])
         np.testing.assert_array_almost_equal(data['data']*2, received_data['data'])
+        self.loop.run_until_complete(pipe.close())
+        self.loop.close()
 
     def test_handles_bad_pipe_configs(self):
         args = argparse.Namespace(pipes="invalid config", socket="unset")

@@ -39,6 +39,7 @@ async def _read(request: web.Request, json):
     # parse optional parameters
     params = {'start': None, 'end': None, 'max-rows': None, 'decimation-level': None}
     param = ""  # to appease type checker
+
     try:
         for param in params:
             if param in request.query:
@@ -83,6 +84,7 @@ async def _read(request: web.Request, json):
                 data_segment = None
         else:
             data = np.c_[data['timestamp'][:, None], data['data']]
+
             if data_segment is None:
                 data_segment = data
             else:

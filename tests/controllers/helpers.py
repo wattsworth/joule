@@ -1,9 +1,12 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-from typing import List, Dict
+from typing import List, Dict, Tuple
 import numpy as np
 import asyncio
 import argparse
+import psycopg2
+import testing.postgresql
+
 from unittest import mock
 from typing import Optional, Callable, Coroutine
 
@@ -18,17 +21,22 @@ from tests import helpers
 Loop = asyncio.AbstractEventLoop
 
 
-def create_db(pipe_configs: List[str]) -> Session:
-    # create a database
-    engine = create_engine('sqlite://')
+def create_db(pipe_configs: List[str]) -> Tuple[Session, testing.postgresql.Postgresql]:
+    postgresql = testing.postgresql.Postgresql()
+    db_url = postgresql.url()
+    conn = psycopg2.connect(db_url)
+    cur = conn.cursor()
+    cur.execute("CREATE SCHEMA metadata")
+    conn.commit()
+    conn.close()
+    engine = create_engine(db_url)
     Base.metadata.create_all(engine)
     db = Session(bind=engine)
-
     for pipe_config in pipe_configs:
         parse_pipe_config.run(pipe_config, db)
 
     db.commit()
-    return db
+    return db, postgresql
 
 
 class MockStore(DataStore):

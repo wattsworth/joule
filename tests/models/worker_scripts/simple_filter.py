@@ -1,3 +1,7 @@
+import sys
+import os
+JOULE_PATH = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir)
+sys.path.append(JOULE_PATH)
 from joule import FilterModule, EmptyPipe
 import asyncio
 
@@ -34,7 +38,9 @@ class SimpleFilter(FilterModule):
                 break
         # delay so worker output handler has time to process
         # the results
-        await asyncio.sleep(2)
+        await output1.close()
+        await output2.close()
+        await asyncio.sleep(0.5)
 
 
 if __name__ == "__main__":

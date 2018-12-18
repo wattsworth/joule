@@ -1,6 +1,7 @@
 from sqlalchemy.orm import relationship
 from sqlalchemy import (Column, Integer, String,
                         Boolean, Enum, ForeignKey)
+from sqlalchemy.dialects.postgresql import BIGINT
 from typing import List, Dict, TYPE_CHECKING
 import configparser
 import enum
@@ -29,6 +30,8 @@ class Stream(Base):
 
     """
     __tablename__ = 'stream'
+    __table_args__ = {"schema": "metadata"}
+
     id: int = Column(Integer, primary_key=True)
     name: str = Column(String, nullable=False)
 
@@ -54,10 +57,10 @@ class Stream(Base):
 
     KEEP_ALL = -1
     KEEP_NONE = 0
-    keep_us: int = Column(Integer, default=KEEP_ALL)
+    keep_us: int = Column(BIGINT, default=KEEP_ALL)
 
     description: str = Column(String)
-    folder_id: int = Column(Integer, ForeignKey('folder.id'))
+    folder_id: int = Column(Integer, ForeignKey('metadata.folder.id'))
     folder: "Folder" = relationship("Folder", back_populates="streams")
     elements: List[element.Element] = relationship("Element",
                                                    cascade="all, delete-orphan",

@@ -1,18 +1,11 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
-import unittest
-from joule.models import Base
+
+
+from tests.helpers import DbTestCase
 from joule.errors import ConfigurationError
 from joule.services import parse_pipe_config
 
 
-class TestParsePipeConfigErrors(unittest.TestCase):
-
-    def setUp(self):
-        # create a database
-        engine = create_engine('sqlite://')
-        Base.metadata.create_all(engine)
-        self.db = Session(bind=engine)
+class TestParsePipeConfigErrors(DbTestCase):
 
     def test_ensures_valid_path_and_name(self):
         bad_configs = [

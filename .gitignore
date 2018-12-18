@@ -19,3 +19,4 @@ docs/_build
 .idea
 .pytest_cache
 joule/scratch.py
+.eggs

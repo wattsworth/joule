@@ -4,21 +4,19 @@ import unittest
 import logging
 import tempfile
 import os
-from joule.models import (Base, Stream, Folder,
+
+from tests.helpers import DbTestCase
+from joule.models import (Stream, Folder,
                           Element, Module)
 from joule.services import load_modules
 
 logger = logging.getLogger('joule')
 
 
-class TestConfigureModules(unittest.TestCase):
+class TestConfigureModules(DbTestCase):
 
     def test_parses_configs(self):
         """e2e module configuration service test"""
-        # create a database
-        engine = create_engine('sqlite://')
-        Base.metadata.create_all(engine)
-        session = Session(bind=engine)
 
         # /test/stream1:float32_3
         folder_test = Folder(name="test")
@@ -36,9 +34,9 @@ class TestConfigureModules(unittest.TestCase):
 
         root = Folder(name="root")
         root.children = [folder_test]
-        session.add(root)
+        self.db.add(root)
 
-        session.commit()
+        self.db.commit()
         configs = [
             # writes to /test/stream1
             """
@@ -89,14 +87,14 @@ class TestConfigureModules(unittest.TestCase):
                     f.write(conf)
                 i += 1
             with self.assertLogs(logger=logger, level=logging.ERROR) as logs:
-                modules = load_modules.run(conf_dir, session)
+                modules = load_modules.run(conf_dir, self.db)
                 # log the missing stream configuration
                 self.assertRegex(logs.output[0], '/missing/stream')
                 # log the incompatible stream configuration
                 self.assertRegex(logs.output[1], 'different elements')
         # now check the database:
         # should have three streams
-        self.assertEqual(session.query(Stream).count(), 3)
+        self.assertEqual(self.db.query(Stream).count(), 3)
         # and two modules
         self.assertEqual(len(modules), 2)
         # module1 should have no inputs and one output
@@ -111,6 +109,6 @@ class TestConfigureModules(unittest.TestCase):
         self.assertEqual(m2.inputs["source"], stream1)
         self.assertEqual(m2.outputs['sink1'], stream2)
         # sink2 goes to a new stream
-        stream3 = session.query(Stream).filter_by(name="stream3").one()
+        stream3 = self.db.query(Stream).filter_by(name="stream3").one()
         self.assertEqual(m2.outputs['sink2'], stream3)
 

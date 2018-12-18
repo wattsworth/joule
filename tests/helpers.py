@@ -2,8 +2,12 @@ import numpy as np
 import configparser
 import asyncio
 import unittest
+import testing.postgresql
+import psycopg2
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 
-from joule.models import Stream, Element
+from joule.models import Stream, Element, Base
 
 def create_data(layout:str,
                 length=100,
@@ -94,3 +98,25 @@ class AsyncTestCase(unittest.TestCase):
             self.loop.run_forever()
             self.loop.close()
         asyncio.set_event_loop(None)
+
+
+Postgresql = testing.postgresql.PostgresqlFactory(cache_initialized_db=True)
+
+
+class DbTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.postgresql = Postgresql() #testing.postgresql.Postgresql()
+        db_url = self.postgresql.url()
+        conn = psycopg2.connect(db_url)
+        cur = conn.cursor()
+        cur.execute("CREATE SCHEMA metadata")
+        conn.commit()
+        conn.close()
+        engine = create_engine(db_url)
+        Base.metadata.create_all(engine)
+        self.db = Session(bind=engine)
+
+    def tearDown(self):
+        self.db.close()
+        self.postgresql.stop()

@@ -29,7 +29,7 @@ class TestNilmdbInserter(asynctest.TestCase):
 
     async def tearDown(self):
         await self.fake_nilmdb.stop()
-        self.store.close()
+        await self.store.close()
 
     async def test_decimating_inserter(self):
         self.stream1.decimate = True

@@ -6,18 +6,13 @@ import logging
 import tempfile
 import os
 
-from joule.models import Base
+from tests.helpers import DbTestCase
 from joule.services import load_modules
 
 logger = logging.getLogger('joule')
 
 
-class TestLoadModulesErrors(unittest.TestCase):
-    def setUp(self):
-        # create a database
-        engine = create_engine('sqlite://')
-        Base.metadata.create_all(engine)
-        self.db = Session(bind=engine)
+class TestLoadModulesErrors(DbTestCase):
 
     def test_module_must_have_exec_cmd(self):
         conf_str = """

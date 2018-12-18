@@ -6,6 +6,7 @@ from typing import List, Tuple, Dict, Optional
 from aiohttp import web
 import socket
 import logging
+import uvloop
 
 from joule.client import helpers
 from joule.errors import ConfigurationError
@@ -95,6 +96,7 @@ class BaseModule:
             module_args = helpers.module_args()
             parsed_args = parser.parse_args(module_args)
 
+        # asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
         loop = asyncio.get_event_loop()
         self.stop_requested = False
 
@@ -128,6 +130,7 @@ class BaseModule:
             loop.run_until_complete(self.runner.cleanup())
         for pipe in self.pipes:
             loop.run_until_complete(pipe.close())
+        loop.run_until_complete(asyncio.sleep(0))
         loop.close()
 
     def _build_args(self, parser):  # pragma: no cover

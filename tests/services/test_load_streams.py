@@ -6,6 +6,7 @@ import logging
 import os
 import warnings
 
+from tests.helpers import DbTestCase
 from joule.models import (Base, Stream, Folder, Element)
 from joule.services import load_streams
 
@@ -14,14 +15,10 @@ logger = logging.getLogger('joule')
 warnings.simplefilter('always')
 
 
-class TestConfigureStreams(unittest.TestCase):
+class TestConfigureStreams(DbTestCase):
 
     def test_merges_config_and_db_streams(self):
         """e2e stream configuration service test"""
-        # create a database
-        engine = create_engine('sqlite://')
-        Base.metadata.create_all(engine)
-        session = Session(bind=engine)
 
         # /test/stream1:float32_3
         folder_test = Folder(name="test")
@@ -44,9 +41,9 @@ class TestConfigureStreams(unittest.TestCase):
 
         root = Folder(name="root")
         root.children = [folder_test]
-        session.add(root)
+        self.db.add(root)
 
-        session.commit()
+        self.db.commit()
         configs = [
             # /test/stream1:float32_3 <different element configs and keep>
             """
@@ -113,7 +110,7 @@ class TestConfigureStreams(unittest.TestCase):
                     f.write(conf)
                 i += 1
             with self.assertLogs(logger=logger, level=logging.ERROR) as logs:
-                load_streams.run(conf_dir, session)
+                load_streams.run(conf_dir, self.db)
                 # log the bad path error
                 self.assertRegex(logs.output[0], 'path')
                 # log the incompatible layout error
@@ -121,12 +118,12 @@ class TestConfigureStreams(unittest.TestCase):
 
         # now check the database:
         # should have 3 streams
-        self.assertEqual(session.query(Stream).count(), 5)
+        self.assertEqual(self.db.query(Stream).count(), 5)
         # and 7 elements (orphans eliminated)
-        self.assertEqual(session.query(Element).count(), 10)
+        self.assertEqual(self.db.query(Element).count(), 10)
         # Check stream merging
         #   stream1 should have a new keep value
-        stream1: Stream = session.query(Stream).filter_by(name="stream1").one()
+        stream1: Stream = self.db.query(Stream).filter_by(name="stream1").one()
         self.assertEqual(stream1.keep_us, Stream.KEEP_ALL)
         #   its elements should have new attributes
         self.assertEqual(stream1.elements[0].name, 'new_e1')
@@ -139,13 +136,13 @@ class TestConfigureStreams(unittest.TestCase):
         self.assertEqual(stream1.elements[2].default_min, -10)
         # Check unconfigured streams are unchanged
         #   /test/deeper/stream2 should be the same
-        stream2: Stream = session.query(Stream).filter_by(name="stream2").one()
+        stream2: Stream = self.db.query(Stream).filter_by(name="stream2").one()
         self.assertEqual(stream2.layout, 'int8_2')
         #   /test/deeper/stream3 should be the same
-        stream3: Stream = session.query(Stream).filter_by(name="stream3").one()
+        stream3: Stream = self.db.query(Stream).filter_by(name="stream3").one()
         self.assertEqual(stream3.layout, 'int16_2')
         # Check new streams are added
-        stream4: Stream = session.query(Stream).filter_by(name="stream4").one()
+        stream4: Stream = self.db.query(Stream).filter_by(name="stream4").one()
         self.assertEqual(stream4.layout, 'uint8_2')
 
         # Check the folder structure
