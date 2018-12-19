@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from setuptools import setup
+from setuptools import setup, find_packages
 import versioneer
 
 PROJECT = 'Joule'
@@ -52,7 +52,7 @@ setup(
                    'testing.postgresql'],
     test_suite='nose2.collector.collector',
     namespace_packages=[],
-    packages=['joule'],
+    packages=find_packages(exclude=["tests.*"]),
     include_package_data=True,
 
     entry_points={
