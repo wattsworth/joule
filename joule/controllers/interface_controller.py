@@ -18,6 +18,8 @@ async def proxy(request: web.Request):
     path = '/'.join(request.url.parts[3:])
     if path == "":
         path = "/"
+    if not path.startswith('/'):
+        path = '/'+path
     # rebuild the URL for the module
     url = URL.build(
         scheme=request.scheme,

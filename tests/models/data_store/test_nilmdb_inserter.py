@@ -37,7 +37,7 @@ class TestNilmdbInserter(asynctest.TestCase):
         pipe = pipes.InputPipe(stream=self.stream1, reader=source)
         nrows = 955
         data = helpers.create_data(layout="int8_3", length=nrows)
-        task = self.store.spawn_inserter(self.stream1, pipe, self.loop)
+        task = await self.store.spawn_inserter(self.stream1, pipe, self.loop)
         for chunk in helpers.to_chunks(data, 300):
             await source.put(chunk.tostring())
         await task
@@ -59,7 +59,7 @@ class TestNilmdbInserter(asynctest.TestCase):
         pipe = pipes.InputPipe(stream=self.stream1, reader=source)
         nrows = 896
         data = helpers.create_data(layout="uint16_3", length=nrows)
-        task = self.store.spawn_inserter(self.stream1, pipe, self.loop, insert_period=0)
+        task = await self.store.spawn_inserter(self.stream1, pipe, self.loop, insert_period=0)
         for chunk in helpers.to_chunks(data, 300):
             await source.put(chunk.tostring())
         await task
@@ -82,7 +82,7 @@ class TestNilmdbInserter(asynctest.TestCase):
             await source.put(data.tostring())
             if i > 6:  # breaks in the 2nd half
                 await source.put(pipes.interval_token("int8_3").tostring())
-        task = self.store.spawn_inserter(self.stream1, pipe, self.loop, insert_period=0)
+        task = await  self.store.spawn_inserter(self.stream1, pipe, self.loop, insert_period=0)
         await task
         # should have raw, x4, x16, x64, x256
         self.assertEqual(len(self.fake_nilmdb.streams), 5)
@@ -101,7 +101,7 @@ class TestNilmdbInserter(asynctest.TestCase):
         self.stream1.datatype = Stream.DATATYPE.UINT16
         source = QueueReader()
         pipe = pipes.InputPipe(stream=self.stream1, reader=source)
-        task = self.store.spawn_inserter(self.stream1, pipe, self.loop, insert_period=0)
+        task = await self.store.spawn_inserter(self.stream1, pipe, self.loop, insert_period=0)
         await source.put(helpers.create_data(layout="uint16_3").tostring())
         # when nilmdb server generates an error
         self.fake_nilmdb.generate_error_on_path("/joule/1", 400, "bad data")
@@ -116,7 +116,7 @@ class TestNilmdbInserter(asynctest.TestCase):
         await source.put(helpers.create_data(layout="uint16_3").tostring())
         pipe = pipes.InputPipe(stream=self.stream1, reader=source)
         with self.assertLogs(level="WARNING") as logs:
-            task = self.store.spawn_inserter(self.stream1, pipe, self.loop, retry_interval=0.05)
+            task = await self.store.spawn_inserter(self.stream1, pipe, self.loop, retry_interval=0.05)
             await asyncio.sleep(0.1)
             task.cancel()
             await task
@@ -131,7 +131,7 @@ class TestNilmdbInserter(asynctest.TestCase):
         await source.put(helpers.create_data(layout="uint16_3").tostring())
         pipe = pipes.InputPipe(stream=self.stream1, reader=source)
         self.store.cleanup_period = 0
-        task = self.store.spawn_inserter(self.stream1, pipe, self.loop, insert_period=0)
+        task = await self.store.spawn_inserter(self.stream1, pipe, self.loop, insert_period=0)
         await task
 
         self.assertTrue(len(self.fake_nilmdb.remove_calls) > 0)

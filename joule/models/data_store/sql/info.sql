@@ -47,9 +47,12 @@ BEGIN
   EXECUTE format(' SELECT time FROM %s ORDER BY time ASC LIMIT 1 ',_table_name) INTO min_ts;
   EXECUTE format(' SELECT time FROM %s ORDER BY time DESC LIMIT 1 ',_table_name) INTO max_ts;
 
--- COMPUTE TOTAL ROWS
-  EXECUTE 'SELECT stream_row_count($1, $2, $3)' INTO rows USING stream_id, min_ts, max_ts;
-  raise notice 'rows=%', rows;
+  -- COMPUTE TOTAL ROWS
+  IF min_ts is NULL THEN
+    rows = 0;
+  ELSE
+    EXECUTE 'SELECT stream_row_count($1, $2, $3)' INTO rows USING stream_id, min_ts, max_ts;
+  END IF;
 
 END;
 $BODY$;

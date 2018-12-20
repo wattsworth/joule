@@ -59,8 +59,8 @@ class NilmdbStore(DataStore):
                         raise errors.DataError(error["message"])
                     raise errors.DataError(await resp.text())  # pragma: no cover
 
-    def spawn_inserter(self, stream: Stream,
-                       pipe: pipes.Pipe, loop: Loop, insert_period=None, retry_interval=0.5) -> asyncio.Task:
+    async def spawn_inserter(self, stream: Stream,
+                             pipe: pipes.Pipe, loop: Loop, insert_period=None, retry_interval=0.5) -> asyncio.Task:
         if insert_period is None:
             insert_period = self.insert_period
         inserter = Inserter(self.server, stream,

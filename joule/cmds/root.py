@@ -96,20 +96,6 @@ def initialize(dsn):  # pragma: no cover
     shutil.chown("/etc/joule/module_configs/module.example",
                  user="joule", group="joule")
 
-    # setup database config directory
-    _make_joule_directory("/etc/joule/database_configs")
-    # add the metadata config
-    metadata_conf = pkg_resources.resource_filename(
-        "joule", "resources/templates/metadata.conf")
-    shutil.copy(metadata_conf, "/etc/joule/database_configs/metadata.conf")
-    # create the directory for the sqlite db
-    _make_joule_directory("/opt/data/joule")
-    # add the nilmdb config
-    nilmdb_conf = pkg_resources.resource_filename(
-        "joule", "resources/templates/datastore.conf")
-    shutil.copy(nilmdb_conf, "/etc/joule/database_configs/datastore.conf")
-    click.echo("[" + click.style("OK", fg='green') + "]")
-
 
 def _make_joule_directory(path):  # pragma: no cover
     try:

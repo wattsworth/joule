@@ -61,7 +61,7 @@ class MockStore(DataStore):
                      data: np.ndarray, start: int, end: int):
         pass
 
-    def spawn_inserter(self, stream: Stream, pipe: pipes.InputPipe,
+    async def spawn_inserter(self, stream: Stream, pipe: pipes.InputPipe,
                        loop: Loop, insert_period=None) -> asyncio.Task:
         async def task():
             if self.raise_data_error:

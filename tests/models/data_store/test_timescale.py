@@ -103,11 +103,10 @@ class TestTimescale(asynctest.TestCase):
                 pipe = pipes.InputPipe(stream=test_stream, reader=source)
                 nrows = 955
                 data = helpers.create_data(layout=test_stream.layout, length=nrows)
-                task = self.store.spawn_inserter(test_stream, pipe, self.loop)
+                task = await self.store.spawn_inserter(test_stream, pipe, self.loop)
                 for chunk in helpers.to_chunks(data, 300):
                     await source.put(chunk.tostring())
-                runner = await task
-                await runner
+                await task
 
                 # make sure the correct tables have been created
                 records = await conn.fetch('''SELECT table_name FROM information_schema.tables 
@@ -164,13 +163,12 @@ class TestTimescale(asynctest.TestCase):
         pipe = pipes.LocalPipe(test_stream.layout)
         nrows = 955
         data = helpers.create_data(layout=test_stream.layout, length=nrows)
-        task = self.store.spawn_inserter(test_stream, pipe, self.loop)
+        task = await self.store.spawn_inserter(test_stream, pipe, self.loop)
         for chunk in helpers.to_chunks(data, 300):
             await pipe.write(chunk)
             await pipe.close_interval()
         await pipe.close()
-        runner = await task
-        await runner
+        await task
 
         # extract data
         extracted_data = []
@@ -216,7 +214,7 @@ class TestTimescale(asynctest.TestCase):
         task = await self.store.spawn_inserter(test_stream, pipe, self.loop)
         await pipe.write(test_data)
         await pipe.close()
-        x = await task
+        await task
         conn: asyncpg.Connection = await asyncpg.connect(self.db_url)
         # test to make sure nrows is within 10% of actual value
         # Test: [start, end]
@@ -384,11 +382,10 @@ class TestTimescale(asynctest.TestCase):
                          elements=[Element(name="e%d" % x) for x in range(8)])
         pipe = pipes.LocalPipe(stream2.layout)
         test_data = helpers.create_data(layout=stream2.layout, length=800)
-        task = self.store.spawn_inserter(stream2, pipe, self.loop)
+        task = await self.store.spawn_inserter(stream2, pipe, self.loop)
         await pipe.write(test_data)
         await pipe.close()
-        runner = await task
-        await runner
+        await task
         records = await self.store.info([self.test_stream, stream2, empty_stream])
         # check stream1
         info = records[self.test_stream.id]

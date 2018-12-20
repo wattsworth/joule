@@ -247,11 +247,11 @@ async def convert_time_bounds(conn: asyncpg.Connection,
             start = await conn.fetchval(query)
         except asyncpg.UndefinedTableError:
             return None  # no data tables so no valid time bounds
-        start = start.replace(tzinfo=datetime.timezone.utc)
-
         if start is None:
             # remove intervals?
             return None  # no data so no valid time bounds
+        start = start.replace(tzinfo=datetime.timezone.utc)
+
     else:
         start = datetime.datetime.fromtimestamp(start / 1e6, tz=datetime.timezone.utc)
     if end is None:
