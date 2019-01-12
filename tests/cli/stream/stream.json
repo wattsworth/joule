@@ -1,0 +1,71 @@
+{
+   "id": 7,
+   "name": "random",
+   "description": null,
+   "datatype": "FLOAT32",
+   "layout": "float32_3",
+   "keep_us": -1,
+   "decimate": true,
+   "is_configured": true,
+   "is_source": false,
+   "is_destination": true,
+   "locked": true,
+   "active": false,
+  "data_info":{
+      "start":1531335044038226,
+      "end":1532533976823217,
+      "rows":73820,
+      "bytes": 5,
+      "total_time": 200
+   },
+   "elements": [
+     {
+       "id": 18,
+       "index": 0,
+       "name": "x",
+       "units": null,
+       "plottable": null,
+       "display_type": "CONTINUOUS",
+       "offset": 0.0,
+       "scale_factor": 1.0,
+       "default_max": 3,
+       "default_min": null
+     },
+     {
+       "id": 19,
+       "index": 1,
+       "name": "y",
+       "units": null,
+       "plottable": null,
+       "display_type": "CONTINUOUS",
+       "offset": 0.0,
+       "scale_factor": 1.0,
+       "default_max": null,
+       "default_min": -4
+     },
+     {
+       "id": 20,
+       "index": 2,
+       "name": "z",
+       "units": null,
+       "plottable": null,
+       "display_type": "CONTINUOUS",
+       "offset": 0.0,
+       "scale_factor": 1.0,
+       "default_max": 20,
+       "default_min": 0
+     },
+     {
+       "id": 21,
+       "index": 2,
+       "name": "gamma",
+       "units": "Watts",
+       "plottable": null,
+       "display_type": "CONTINUOUS",
+       "offset": 0.0,
+       "scale_factor": 1.0,
+       "default_max": null,
+       "default_min": null
+     }
+   ]
+ }

@@ -148,7 +148,7 @@ class TestWorker(unittest.TestCase):
         # child should listen for stop_requested flag
 
         loop = asyncio.get_event_loop()
-        self.module.exec_cmd = "python " + MODULE_STOP_ON_SIGTERM
+        self.module.exec_cmd = "python3 " + MODULE_STOP_ON_SIGTERM
 
         async def get_statistics():
             await asyncio.sleep(0.1)
@@ -177,7 +177,7 @@ class TestWorker(unittest.TestCase):
         # child should listen for stop_requested flag
         loop = asyncio.get_event_loop()
         self.worker.RESTART_INTERVAL = 0.01
-        self.module.exec_cmd = "python " + MODULE_STOP_ON_SIGTERM
+        self.module.exec_cmd = "python3 " + MODULE_STOP_ON_SIGTERM
 
         # calling stop before run doesn't matter
         loop.run_until_complete(self.worker.stop(loop))
@@ -207,7 +207,7 @@ class TestWorker(unittest.TestCase):
         # send SIGKILL to terminate bad children
 
         loop = asyncio.get_event_loop()
-        self.module.exec_cmd = "python " + MODULE_IGNORE_SIGTERM
+        self.module.exec_cmd = "python3 " + MODULE_IGNORE_SIGTERM
         # speed up the test
         self.worker.SIGTERM_TIMEOUT = 0.5
         with self.assertLogs(level="WARNING"):
@@ -222,7 +222,7 @@ class TestWorker(unittest.TestCase):
 
     def test_builds_child_arguments(self):
         loop = asyncio.get_event_loop()
-        self.module.exec_cmd = "python " + MODULE_ECHO_ARGS
+        self.module.exec_cmd = "python3 " + MODULE_ECHO_ARGS
         self.module.arguments = {'arg1': "value1",
                                  'arg2': "value2"}
         self.module.has_interface = True
@@ -257,7 +257,7 @@ class TestWorker(unittest.TestCase):
     def test_logs_child_output(self):
         loop = asyncio.get_event_loop()
         self.module.description = "test"
-        self.module.exec_cmd = "python " + MODULE_LOG_AND_EXIT
+        self.module.exec_cmd = "python3 " + MODULE_LOG_AND_EXIT
         loop.run_until_complete(self.worker.run(self.supervisor.subscribe,
                                                 loop, restart=False))
         self.assertEqual(self.worker.process.returncode, 0)
@@ -314,7 +314,7 @@ class TestWorker(unittest.TestCase):
         loop = asyncio.get_event_loop()
         # create worker connections
         # child runs until stopped
-        self.module.exec_cmd = "/usr/bin/env python " + MODULE_SIMPLE_FILTER
+        self.module.exec_cmd = "/usr/bin/env python3 " + MODULE_SIMPLE_FILTER
 
         interval1_data = helpers.create_data('float32_3', start=1000, step=100, length=100)
         interval2_data = helpers.create_data('float32_3', start=1001+100*100, step=100, length=100)

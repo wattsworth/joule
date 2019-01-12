@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from joule.models import Stream, DataStore, stream
 import json
 
-from joule.models import folder
+from joule.models import folder, Folder
 from joule.errors import ConfigurationError
 
 
@@ -34,25 +34,28 @@ async def info(request: web.Request):
 
 async def move(request: web.Request):
     db: Session = request.app["db"]
-    body = await request.post()
+    body = await request.json()
     # find the stream
-    if 'path' in body:
-        my_stream = folder.find_stream_by_path(body['path'], db)
-    elif 'id' in body:
-        my_stream = db.query(Stream).get(body["id"])
+    if 'src_path' in body:
+        my_stream = folder.find_stream_by_path(body['src_path'], db)
+    elif 'src_id' in body:
+        my_stream = db.query(Stream).get(body["src_id"])
     else:
-        return web.Response(text="specify an id or a path", status=400)
+        return web.Response(text="specify a source id or a path", status=400)
     if my_stream is None:
         return web.Response(text="stream does not exist", status=404)
     if my_stream.locked:
         return web.Response(text="locked streams cannot be moved", status=400)
     # find or create the destination folder
-    if 'destination' not in body:
+    if 'dest_path' in body:
+        try:
+            destination = folder.find(body['dest_path'], db, create=True)
+        except ConfigurationError as e:
+            return web.Response(text="Destination error: %s" % str(e), status=400)
+    elif 'dest_id' in body:
+        destination = db.query(Folder).get(body["dest_id"])
+    else:
         return web.Response(text="specify a destination", status=400)
-    try:
-        destination = folder.find(body['destination'], db, create=True)
-    except ConfigurationError as e:
-        return web.Response(text="Destination error: %s" % str(e), status=400)
     # make sure there are no other streams with the same name here
     for peer in destination.streams:
         if peer.name == my_stream.name:

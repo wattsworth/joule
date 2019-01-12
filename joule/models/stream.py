@@ -186,6 +186,7 @@ class Stream(Base):
             'name': self.name,
             'description': self.description,
             'datatype': self.datatype.name,
+            'layout': self.layout,
             'keep_us': self.keep_us,
             'is_configured': self.is_configured,
             'is_source': self.is_source,
