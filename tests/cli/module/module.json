@@ -1,0 +1,18 @@
+{
+   "name":"ModuleName",
+   "description":"the module description",
+   "has_interface": true,
+   "id": 1,
+   "inputs":{
+      "my_input":"/folder_1/random"
+   },
+   "outputs":{
+      "my_output":"/folder_1/filtered"
+   },
+   "statistics":{
+      "pid":15341,
+      "create_time":1532533917.44,
+      "cpu_percent":0.0,
+      "memory_percent":54472704
+   }
+}

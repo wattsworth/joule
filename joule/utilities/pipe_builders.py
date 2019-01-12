@@ -7,8 +7,9 @@ import logging
 from typing import Dict, Tuple, Optional
 
 from joule.models import stream, Element, pipes
-from joule.errors import ConfigurationError
-from joule.cmds.helpers import get_json, get
+from joule import errors
+from joule.api import node
+# from joule.cmds.helpers import get_json, get
 from joule.services.parse_pipe_config import parse_pipe_config, parse_inline_config
 from joule.utilities import timestamp_to_human
 
@@ -27,7 +28,7 @@ def build_fd_pipes(pipe_args: str, loop: Loop) -> Tuple[Pipes, Pipes]:
         dest_args = pipe_json['outputs']
         src_args = pipe_json['inputs']
     except (KeyError, json.JSONDecodeError):
-        raise ConfigurationError("invalid pipes argument: [%s]" % pipe_args)
+        raise errors.ConfigurationError("invalid pipes argument: [%s]" % pipe_args)
     pipes_out = {}
     pipes_in = {}
     for name, arg in dest_args.items():
@@ -53,7 +54,7 @@ async def build_network_pipes(inputs: Dict[str, str], outputs: Dict[str, str],
     for name in inputs:
         path, my_stream = _parse_stream(inputs[name])
         pipe = pipes.LocalPipe(my_stream.layout, name=path)
-        pipes_in[name] = request_network_input(path, my_stream, url, pipe,
+        pipes_in[name] = await request_network_input(path, my_stream, url, pipe,
                                                loop, start_time, end_time)
 
     pipes_out = {}
@@ -82,20 +83,20 @@ def _display_warning(paths, start_time, end_time):
             exit(1)
 
 
-def request_network_input(path: str, my_stream: stream.Stream, url: str,
+async def request_network_input(path: str, my_stream: stream.Stream, url: str,
                           pipe: pipes.Pipe, loop: Loop,
                           start_time: Optional[int] = None,
                           end_time: Optional[int] = None):
     # make sure the input is compatible
-    resp = get_json(url + "/stream.json", params={"path": path})
-    src_stream = stream.from_json(resp)
+    my_node = node.Node(url)
+    src_stream = await my_node.stream_get(path)
     if src_stream.layout != my_stream.layout:
-        raise ConfigurationError("Input [%s] configured for [%s] but source is [%s]" % (
+        raise errors.ConfigurationError("Input [%s] configured for [%s] but source is [%s]" % (
             path, my_stream.layout, src_stream.layout))
 
     # if the input is *live* make sure the stream is being produced
     if not src_stream.is_destination and (start_time is None and end_time is None):
-        raise ConfigurationError("Input [%s] is not being produced, specify time bounds for historic execution" % path)
+        raise errors.ConfigurationError("Input [%s] is not being produced, specify time bounds for historic execution" % path)
     # replace the stub stream (from config file) with actual stream
     pipe.stream = src_stream
     # all checks passed, subscribe to the input
@@ -171,16 +172,17 @@ async def _historic_reader(url: str, my_stream: stream.Stream, pipe_out: pipes.P
 async def request_network_output(path: str, my_stream: stream.Stream, url: str, loop: Loop,
                                  start_time=None, end_time=None):
     # check if the output exists, create it if not
-    resp = get(url + "/stream.json", params={"path": path})
-    if resp.status_code == 404:
-        dest_stream = await _create_stream(url, path, my_stream)
-    else:
-        dest_stream = stream.from_json(resp.json())
+    my_node = node.Node(url)
+    try:
+        dest_stream = await my_node.stream_get(path)
         if start_time is not None or end_time is not None:
-            await _remove_data(url, dest_stream, start_time, end_time)
+            await my_node.data_delete(dest_stream, start_time, end_time)
+
+    except errors.StreamNotFound:
+        dest_stream = await my_node.stream_create(my_stream, path)
 
     if dest_stream.layout != my_stream.layout:
-        raise ConfigurationError("Output [%s] configured for [%s] but destination is [%s]" % (
+        raise errors.ConfigurationError("Output [%s] configured for [%s] but destination is [%s]" % (
             path, my_stream.layout, dest_stream.layout))
     # raise a warning if the element names do not match
     actual_names = [e.name for e in dest_stream.elements]
@@ -190,80 +192,21 @@ async def request_network_output(path: str, my_stream: stream.Stream, url: str, 
 
     # make sure the stream is not currently produced
     if dest_stream.is_destination:
-        raise ConfigurationError("Output [%s] is already being produced" % path)
+        raise errors.ConfigurationError("Output [%s] is already being produced" % path)
 
     # all checks passed, subscribe to the output
     async def close():
         await task
 
     pipe = pipes.LocalPipe(dest_stream.layout, name=path, stream=dest_stream, close_cb=close)
-    task = loop.create_task(_output_writer(url, dest_stream, pipe))
+    task = loop.create_task(my_node.data_write(dest_stream, pipe))
     return pipe
-
-
-async def _create_stream(url, path, my_stream: stream.Stream):
-    log.info("creating destination stream [%s]" % path)
-    folder_path = '/'.join(path.split('/')[:-1])
-    body = {
-        "path": folder_path,
-        "stream": json.dumps(my_stream.to_json())
-    }
-    resp = requests.post(url + "/stream.json", data=body)
-    if resp.status_code != 200:  # pragma: no cover
-        raise ConfigurationError(("Error creating output [%s]:" % path), resp.content.decode())
-    else:
-        return stream.from_json(resp.json())
-
-
-async def _remove_data(url, my_stream: stream.Stream, start_time, end_time):
-    params = {"id": my_stream.id}
-    if start_time is not None:
-        params['start'] = int(start_time)
-    if end_time is not None:
-        params['end'] = int(end_time)
-    resp = requests.delete(url + "/data", params=params)
-    if resp.status_code != 200:  # pragma: no cover
-        raise ConfigurationError(("Error removing output data [%s]:" % my_stream.name),
-                                 resp.content.decode())
-
-
-async def _output_writer(url, my_stream: stream.Stream, pipe):
-    output_complete = False
-
-    async def _data_sender():
-        log.info("starting data sender")
-        nonlocal output_complete
-        try:
-            while True:
-                data = await pipe.read()
-                if len(data) > 0:
-                    yield data.tostring()
-                if pipe.end_of_interval:
-                    yield pipes.interval_token(my_stream.layout).tostring()
-                pipe.consume(len(data))
-        except pipes.EmptyPipe:
-            pass
-        output_complete = True
-
-    while not output_complete:
-        # disable total timeout, this is going to be a long session :)
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=None)) as session:
-            try:
-                async with session.post(url + "/data",
-                                        params={"id": my_stream.id},
-                                        data=_data_sender()) as response:
-                    if response.status != 200:  # pragma: no cover
-                        msg = await response.text()
-                        log.error("Error writing output [%s]: %s" % (my_stream.name, msg))
-                        return
-            except aiohttp.ClientError as e:  # pragma: no cover
-                log.info("Error submitting data to joule [%s], retrying" % str(e))
 
 
 def _parse_stream(pipe_config) -> Tuple[str, stream.Stream]:
     (path, name, inline_config) = parse_pipe_config(pipe_config)
     if inline_config == "":
-        raise ConfigurationError(
+        raise errors.ConfigurationError(
             "[%s] is invalid: must specify an inline configuration for standalone execution" % pipe_config)
     (datatype, element_names) = parse_inline_config(inline_config)
     elements = []

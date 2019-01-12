@@ -10,11 +10,11 @@ from joule.errors import ConfigurationError
 
 async def move(request):
     db: Session = request.app["db"]
-    body = await request.post()
+    body = await request.json()
     # find the folder
-    if 'path' in body:
+    if 'src_path' in body:
         my_folder = folder.find(body['path'], db)
-    elif 'id' in body:
+    elif 'src_id' in body:
         my_folder = db.query(folder.Folder).get(body["id"])
     else:
         return web.Response(text="specify an id or a path", status=400)
@@ -23,13 +23,16 @@ async def move(request):
     if my_folder.locked:
         return web.Response(text="folder is locked", status=400)
     # find or create the destination folder
-    if 'destination' not in body:
+    if 'dest_path' in body:
+        try:
+            destination = folder.find(body['destination'], db, create=True)
+        except ConfigurationError as e:
+            return web.Response(text="Destination error: %s" % str(e), status=400)
+    elif 'dest_id' in body:
+        destination = db.query(Folder).get(body["dest_id"])
+    else:
         return web.Response(text="specify a destination", status=400)
-    try:
-        destination = folder.find(body['destination'], db, create=True)
-    except ConfigurationError as e:
-        return web.Response(text="Destination error: %s" % str(e), status=400)
-    # make sure there are no other streams with the same name here
+    # make sure there are no other folders with the same name here
     for peer in destination.children:
         if peer.name == my_folder.name:
             return web.Response(text="a folder with this name is in the destination folder",
@@ -81,7 +84,7 @@ async def delete(request):
         return web.Response(text="specify an id or a path", status=400)
     if my_folder is None:
         return web.Response(text="folder does not exist", status=404)
-    if 'recursive' in request.query:
+    if 'recursive' in request.query and request.query["recursive"]:
         recursive = True
     else:
         recursive = False
