@@ -240,10 +240,10 @@ def _create_joule_stream(server: str, path: str, template: Stream) -> Stream:
     dest_stream.keep_us = Stream.KEEP_ALL
     dest_stream.name = path.split("/")[-1]
     body = {
-        "path": "/".join(path.split("/")[:-1]),
-        "stream": json.dumps(dest_stream.to_json())
+        "dest_path": "/".join(path.split("/")[:-1]),
+        "stream": dest_stream.to_json()
     }
-    resp = requests.post(server + "/stream.json", data=body)
+    resp = requests.post(server + "/stream.json", json=body)
     if not resp.ok:
         raise click.ClickException("cannot create [%s] on [%s]" % (path, server))
     return stream.from_json(resp.json())

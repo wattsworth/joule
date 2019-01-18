@@ -1,16 +1,17 @@
 from click.testing import CliRunner
 import os
-import signal
-import multiprocessing
+import logging
+
 from aiohttp.test_utils import unused_port
 import warnings
-import time
 from ..fake_joule import FakeJoule, FakeJouleTestCase
 from joule.cli import main
-from tests import helpers
+
 
 STREAM_LIST = os.path.join(os.path.dirname(__file__), 'streams.json')
 warnings.simplefilter('always')
+aio_log = logging.getLogger('aiohttp.access')
+aio_log.setLevel(logging.WARNING)
 
 
 class TestStreamList(FakeJouleTestCase):

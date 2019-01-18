@@ -44,56 +44,56 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         db: Session = self.app["db"]
 
         # must specify an id or a path
-        resp = await self.client.put("/stream/move.json", data={"destination": "/new/folder3"})
+        resp = await self.client.put("/stream/move.json", json={"dest_path": "/new/folder3"})
         self.assertEqual(resp.status, 400)
         # must specify a destination
-        resp = await self.client.put("/stream/move.json", data={"path": "/folder1/stream1"})
+        resp = await self.client.put("/stream/move.json", json={"src_path": "/folder1/stream1"})
         self.assertEqual(resp.status, 400)
         # return "not found" on bad id
-        resp = await self.client.put("/stream/move.json", data={"id": 2348,
-                                                                "destination": "/x/y"})
+        resp = await self.client.put("/stream/move.json", json={"src_id": 2348,
+                                                                "dest_path": "/x/y"})
         self.assertEqual(resp.status, 404)
         # return "not found" on bad path
-        resp = await self.client.put("/stream/move.json", data={"path": "/folder2/deeper",
-                                                                "destination": "/x/y"})
+        resp = await self.client.put("/stream/move.json", json={"src_path": "/folder2/deeper",
+                                                                "dest_path": "/x/y"})
         self.assertEqual(resp.status, 404)
         # error on bad destination
-        resp = await self.client.put("/stream/move.json", data={"path": "/folder2/deeper",
-                                                                "destination": "malformed"})
+        resp = await self.client.put("/stream/move.json", json={"src_path": "/folder2/deeper",
+                                                                "dest_path": "malformed"})
         self.assertEqual(resp.status, 404)
-        resp = await self.client.put("/stream/move.json", data={"path": "/folder1/stream1",
-                                                                "destination": "invalid"})
+        resp = await self.client.put("/stream/move.json", json={"src_path": "/folder1/stream1",
+                                                                "dest_path": "invalid"})
         self.assertEqual(resp.status, 400)
 
         # cannot conflict with an existing stream in the destination
-        resp = await self.client.put("/stream/move.json", data={"path": "/folder_x1/same_name",
-                                                                "destination": "/folder_x2"})
+        resp = await self.client.put("/stream/move.json", json={"src_path": "/folder_x1/same_name",
+                                                                "dest_path": "/folder_x2"})
         self.assertEqual(resp.status, 400)
         # cannot move streams with a fixed configuration
         my_stream: Stream = db.query(Stream).filter_by(name="stream1").one()
         my_stream.is_configured = True
-        resp = await self.client.put("/stream/move.json", data={"path": "/folder1/stream1",
-                                                                "destination": "/folder8"})
+        resp = await self.client.put("/stream/move.json", json={"src_path": "/folder1/stream1",
+                                                                "dest_path": "/folder8"})
         self.assertEqual(resp.status, 400)
         self.assertTrue('locked' in await resp.text())
 
     @unittest_run_loop
     async def test_stream_create(self):
         # must specify a stream
-        resp = await self.client.post("/stream.json", data={"path": "/folder2/deeper"})
+        resp = await self.client.post("/stream.json", json={"path": "/folder2/deeper"})
         self.assertEqual(resp.status, 400)
         # must specify a path
         new_stream = Stream(name="test", datatype=Stream.DATATYPE.FLOAT32)
         new_stream.elements = [Element(name="e%d" % j, index=j,
                                        display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(3)]
-        resp = await self.client.post("/stream.json", data={"stream": new_stream.to_json()})
+        resp = await self.client.post("/stream.json", json={"stream": new_stream.to_json()})
         self.assertEqual(resp.status, 400)
         # invalid stream json
-        resp = await self.client.post("/stream.json", data={"path": "/path/to",
+        resp = await self.client.post("/stream.json", json={"path": "/path/to",
                                                             "stream": 'notjson'})
         self.assertEqual(resp.status, 400)
         # incorrect stream format
-        resp = await self.client.post("/stream.json", data={"path": "/path/to",
+        resp = await self.client.post("/stream.json", json={"path": "/path/to",
                                                             "stream": '{"invalid": 2}'})
         self.assertEqual(resp.status, 400)
 

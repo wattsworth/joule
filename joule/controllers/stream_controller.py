@@ -34,6 +34,8 @@ async def info(request: web.Request):
 
 async def move(request: web.Request):
     db: Session = request.app["db"]
+    if request.content_type != 'application/json':
+        return web.Response(text='content-type must be application/json', status=400)
     body = await request.json()
     # find the stream
     if 'src_path' in body:
@@ -68,12 +70,24 @@ async def move(request: web.Request):
 
 async def create(request):
     db: Session = request.app["db"]
-    body = await request.post()
-    if 'path' not in body:
-        return web.Response(text="specify a path", status=400)
-    path = body['path']
+    if request.content_type != 'application/json':
+        return web.Response(text='content-type must be application/json', status=400)
+    body = await request.json()
+
     if 'stream' not in body:
         return web.Response(text="provide a stream", status=400)
+
+    # find or create the destination folder
+    if 'dest_path' in body:
+        try:
+            destination = folder.find(body['dest_path'], db, create=True)
+        except ConfigurationError as e:
+            return web.Response(text="Destination error: %s" % str(e), status=400)
+    elif 'dest_id' in body:
+        destination = db.query(Folder).get(body["dest_id"])
+    else:
+        return web.Response(text="specify a destination", status=400)
+
     try:
         new_stream = stream.from_json(json.loads(body['stream']))
         # clear out the status flags
@@ -84,7 +98,6 @@ async def create(request):
         new_stream.id = None
         for elem in new_stream.elements:
             elem.id = None
-        destination = folder.find(path, db, create=True)
         destination.streams.append(new_stream)
         db.commit()
     except ValueError as e:

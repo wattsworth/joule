@@ -58,7 +58,9 @@ class TestReaderModule(helpers.AsyncTestCase):
         pipe_arg = json.dumps(json.dumps({"outputs": {'output': {'fd': w, 'stream': self.stream.to_json()}},
                                           "inputs": {}}))
         data = helpers.create_data(self.stream.layout)
-        args = argparse.Namespace(pipes=pipe_arg, socket="unset", mock_data=data)
+        args = argparse.Namespace(pipes=pipe_arg, socket="unset",
+                                  url='http://localhost:8080',
+                                  mock_data=data)
         # run the reader module
         loop = asyncio.new_event_loop()
         loop.set_debug(True)
@@ -74,7 +76,10 @@ class TestReaderModule(helpers.AsyncTestCase):
     def test_writes_to_stdout(self):
         module = SimpleReader()
         data = helpers.create_data(self.stream.layout, length=10)
-        args = argparse.Namespace(pipes="unset", module_config="unset", socket="unset", mock_data=data)
+        args = argparse.Namespace(pipes="unset",
+                                  module_config="unset",
+                                  url='http://localhost:8080',
+                                  socket="unset", mock_data=data)
         # run the reader module
         f = io.StringIO()
         with redirect_stdout(f):
@@ -92,7 +97,11 @@ class TestReaderModule(helpers.AsyncTestCase):
         data = helpers.create_data(self.stream.layout, length=10)
         pipe_arg = json.dumps(json.dumps({"outputs": {'badname': {'fd': 0, 'stream': self.stream.to_json()}},
                                           "inputs": {}}))
-        args = argparse.Namespace(pipes=pipe_arg, module_config="unset", socket="unset", mock_data=data)
+        args = argparse.Namespace(pipes=pipe_arg,
+                                  module_config="unset",
+                                  socket="unset",
+                                  url='http://localhost:8080',
+                                  mock_data=data)
         # run the reader module
         with self.assertLogs(level="ERROR") as logs:
             module.start(args)
@@ -105,6 +114,7 @@ class TestReaderModule(helpers.AsyncTestCase):
         port = unused_port()
         args = argparse.Namespace(pipes="unset", module_config="unset",
                                   socket="unset", port=port, host="127.0.0.1",
+                                  url='http://localhost:8080',
                                   mock_data=data)
 
         def get_page():
@@ -123,6 +133,7 @@ class TestReaderModule(helpers.AsyncTestCase):
         module = InterfaceReader()
         data = helpers.create_data(self.stream.layout, length=10)
         args = argparse.Namespace(pipes="unset", module_config="unset",
+                                  url='http://localhost:8080',
                                   socket="joule.test",
                                   mock_data=data)
 

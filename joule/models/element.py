@@ -123,7 +123,7 @@ def from_json(data: Dict) -> Element:
                    name=data["name"],
                    units=data["units"],
                    plottable=data["plottable"],
-                   display_type=Element.DISPLAYTYPE[data["display_type"]],
+                   display_type=Element.DISPLAYTYPE[data["display_type"].upper()],
                    offset=data["offset"],
                    scale_factor=data["scale_factor"],
                    default_max=data["default_max"],

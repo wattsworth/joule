@@ -24,7 +24,6 @@ def cli_list(config, layout, status):
     finally:
         loop.run_until_complete(
             session.close())
-        print("closing event loop in list")
         loop.close()
 
 

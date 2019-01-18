@@ -212,7 +212,8 @@ async def write(request: web.Request):
     stream.is_destination = True
     db.commit()
     pipe = pipes.InputPipe(name="inbound", stream=stream, reader=request.content)
-    task = await data_store.spawn_inserter(stream, pipe, request.loop, insert_period=0)
+    loop = asyncio.get_event_loop()
+    task = await data_store.spawn_inserter(stream, pipe, loop, insert_period=0)
     try:
         await task
     except DataError as e:

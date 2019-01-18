@@ -26,32 +26,32 @@ class TestFolderControllerErrors(AioHTTPTestCase):
     async def test_folder_move(self):
         db: Session = self.app["db"]
         # must specify an id or a path
-        resp = await self.client.put("/folder/move.json", data={"destination": "/new/location"})
+        resp = await self.client.put("/folder/move.json", json={"dest_path": "/new/location"})
         self.assertEqual(resp.status, 400)
         # must specify a destination
-        resp = await self.client.put("/folder/move.json", data={"path": "/top/leaf"})
+        resp = await self.client.put("/folder/move.json", json={"src_path": "/top/leaf"})
         self.assertEqual(resp.status, 400)
         # return "not found" on bad id
-        resp = await self.client.put("/folder/move.json", data={"id": 2348,
-                                                                "destination": "/x/y"})
+        resp = await self.client.put("/folder/move.json", json={"src_id": 2348,
+                                                                "dest_path": "/x/y"})
         self.assertEqual(resp.status, 404)
         # return "not found" on bad path
-        resp = await self.client.put("/folder/move.json", data={"path": "/missing/folder",
-                                                                "destination": "/x/y"})
+        resp = await self.client.put("/folder/move.json", json={"src_path": "/missing/folder",
+                                                                "dest_patbh": "/x/y"})
         self.assertEqual(resp.status, 404)
         # error on bad destination
-        resp = await self.client.put("/folder/move.json", data={"path": "/top/leaf",
-                                                                "destination": "malformed"})
+        resp = await self.client.put("/folder/move.json", json={"src_path": "/top/leaf",
+                                                                "dest_path": "malformed"})
         self.assertEqual(resp.status, 400)
 
         # cannot conflict with an existing folder in the destination
-        resp = await self.client.put("/folder/move.json", data={"path": "/top/leaf",
-                                                                "destination": "/top/middle"})
+        resp = await self.client.put("/folder/move.json", json={"src_path": "/top/leaf",
+                                                                "dest_path": "/top/middle"})
         self.assertEqual(resp.status, 400)
 
         # cannot move a folder into its children
-        resp = await self.client.put("/folder/move.json", data={"path": "/top",
-                                                                "destination": "/top/leaf"})
+        resp = await self.client.put("/folder/move.json", json={"src_path": "/top",
+                                                                "dest_path": "/top/leaf"})
         self.assertEqual(resp.status, 400)
         self.assertTrue('parent' in await resp.text())
         self.assertIsNotNone(folder.find('/top/middle/leaf', db))
@@ -59,8 +59,8 @@ class TestFolderControllerErrors(AioHTTPTestCase):
         # cannot move folders with locked streams
         my_stream: Stream = db.query(Stream).filter_by(name="stream1").one()
         my_stream.is_configured = True
-        resp = await self.client.put("/folder/move.json", data={"path": "/top/leaf",
-                                                                "destination": "/top/middle"})
+        resp = await self.client.put("/folder/move.json", json={"src_path": "/top/leaf",
+                                                                "dest_path": "/top/middle"})
         self.assertEqual(resp.status, 400)
         self.assertTrue('locked' in await resp.text())
 
@@ -99,7 +99,7 @@ class TestFolderControllerErrors(AioHTTPTestCase):
                 {"name": "",
                  "description": "new description"})
         }
-        resp = await self.client.put("/folder.json", data=payload)
+        resp = await self.client.put("/folder.json", json=payload)
         self.assertEqual(resp.status, 400)
         self.assertTrue('name' in await resp.text())
         my_folder = folder.find("/top/middle", db)
@@ -109,7 +109,7 @@ class TestFolderControllerErrors(AioHTTPTestCase):
         payload = {
             "folder": json.dumps({"name": "new name"})
         }
-        resp = await self.client.put("/folder.json", data=payload)
+        resp = await self.client.put("/folder.json", json=payload)
         self.assertEqual(resp.status, 400)
         self.assertTrue('id' in await resp.text())
 
@@ -117,7 +117,7 @@ class TestFolderControllerErrors(AioHTTPTestCase):
         payload = {
             "id": my_folder.id
         }
-        resp = await self.client.put("/folder.json", data=payload)
+        resp = await self.client.put("/folder.json", json=payload)
         self.assertEqual(resp.status, 400)
         self.assertTrue('folder' in await resp.text())
 
@@ -126,7 +126,7 @@ class TestFolderControllerErrors(AioHTTPTestCase):
             "id": my_folder.id,
             "folder": "notjson"
         }
-        resp = await self.client.put("/folder.json", data=payload)
+        resp = await self.client.put("/folder.json", json=payload)
         self.assertEqual(resp.status, 400)
         self.assertTrue('JSON' in await resp.text())
 
@@ -136,7 +136,7 @@ class TestFolderControllerErrors(AioHTTPTestCase):
             "id": my_folder.id,
             "folder": json.dumps({"name": "new name"})
         }
-        resp = await self.client.put("/folder.json", data=payload)
+        resp = await self.client.put("/folder.json", json=payload)
         self.assertEqual(resp.status, 400)
         self.assertTrue('locked' in await resp.text())
 
@@ -145,7 +145,7 @@ class TestFolderControllerErrors(AioHTTPTestCase):
             "id": 4898,
             "stream": json.dumps({"name": "new name"})
         }
-        resp = await self.client.put("/folder.json", data=payload)
+        resp = await self.client.put("/folder.json", json=payload)
         self.assertEqual(resp.status, 404)
         self.assertTrue('exist' in await resp.text())
 

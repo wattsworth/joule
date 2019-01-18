@@ -60,10 +60,10 @@ class TestStreamController(AioHTTPTestCase):
         db: Session = self.app["db"]
         # move stream1 into folder3
         payload = {
-            "path": "/folder1/stream1",
-            "destination": "/new/folder3"
+            "src_path": "/folder1/stream1",
+            "dest_path": "/new/folder3"
         }
-        resp = await self.client.put("/stream/move.json", data=payload)
+        resp = await self.client.put("/stream/move.json", json=payload)
         self.assertEqual(resp.status, 200)
         folder3 = db.query(Folder).filter_by(name="folder3").one()
         folder1 = db.query(Folder).filter_by(name="folder1").one()
@@ -80,10 +80,11 @@ class TestStreamController(AioHTTPTestCase):
         new_stream.elements = [Element(name="e%d" % j, index=j,
                                        display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(3)]
         payload = {
-            "path": "/deep/new folder",
+            "dest_path": "/deep/new folder",
             "stream": json.dumps(new_stream.to_json())
         }
-        resp = await self.client.post("/stream.json", data=payload)
+        resp = await self.client.post("/stream.json", json=payload)
+
         self.assertEqual(resp.status, 200)
         # check the stream was created correctly
         created_stream: Stream = db.query(Stream).filter_by(name="test").one()

@@ -58,7 +58,7 @@ class ReaderModule(BaseModule):
                 parsed_args.module_config == "unset"):
             output = StdoutPipe()
         else:
-            coro = self._build_pipes(parsed_args, loop)
+            coro = self._build_pipes(parsed_args)
             (pipes_in, pipes_out) = loop.run_until_complete(coro)
             if 'output' not in pipes_out:
                 logging.error("Reader Module must a have a single output called 'output'")

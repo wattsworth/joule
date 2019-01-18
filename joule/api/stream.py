@@ -7,12 +7,11 @@ from joule import errors
 
 class Stream:
     def __init__(self):
-        self.id = None
+        self._id = None
         self.name = ""
         self.description = ""
         self.datatype = ""
-        self.layout = ""
-        self.keep_us = 0
+        self.keep_us = -1  # KEEP ALL
         self.is_configured = False
         self.is_source = False
         self.is_destination = False
@@ -22,12 +21,29 @@ class Stream:
 
         self.elements = []
 
+    @property
+    def id(self) -> int:
+        if self._id is None:
+            raise errors.ApiError("this is a local model with no ID. See API docs")
+        return self._id
+
+    @id.setter
+    def id(self, value: int):
+        self._id = value
+
+    @property
+    def layout(self):
+        return self.datatype.lower()+'_'+str(len(self.elements))
+
     def to_json(self) -> Dict:
-        # only return write-able attributes
         return {
-            "id": self.id,
+            "id": self._id,
             "name": self.name,
             "description": self.description,
+            "is_configured": self.is_configured,
+            "is_source": self.is_source,
+            "is_destination": self.is_destination,
+            "datatype": self.datatype,
             "keep_us": self.keep_us,
             "decimate": self.decimate,
             "elements": [e.to_json() for e in self.elements]
@@ -40,7 +56,6 @@ def from_json(json) -> Stream:
     my_stream.name = json['name']
     my_stream.description = json['description']
     my_stream.datatype = json['datatype']
-    my_stream.layout = json['layout']
     my_stream.keep_us = json['keep_us']
     my_stream.is_configured = json['is_configured']
     my_stream.is_source = json['is_source']
@@ -57,7 +72,7 @@ class Element:
         self.name = ""
         self.units = ""
         self.plottable = False
-        self.display_type = ""
+        self.display_type = 'continuous'
         self.offset = 0
         self.scale_factor = 1.0
         self.default_max = None

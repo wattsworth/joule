@@ -86,16 +86,15 @@ class FakeJoule:
     async def create_stream(self, request: web.Request):
         if self.stub_stream_create:
             return web.Response(text=self.response, status=self.http_code)
-        body = await request.post()
-        path = body['path']
+        body = await request.json()
+        path = body['dest_path']
         if path == '':  # check for invalid value (eg)
             return web.Response(text='invalid request', status=400)
-        new_stream = stream.from_json(json.loads(body['stream']))
+        new_stream = stream.from_json(body['stream'])
         if new_stream.id is None:
             new_stream.id = 150
         else:
             new_stream.id += 100  # give the stream  a unique id
-
         self.streams[path + '/' + new_stream.name] = MockDbEntry(new_stream, StreamInfo(None, None, None))
         return web.json_response(data=new_stream.to_json())
 
@@ -120,12 +119,14 @@ class FakeJoule:
                             content_type='application/json')
 
     async def stream_info(self, request: web.Request):
-        if self.stub_stream_info or request.query['path'] == '/stub/response':
+        if self.stub_stream_info or \
+                ('path' in request.query and request.query['path'] == '/stub/response'):
             return web.Response(text=self.response, status=self.http_code,
                                 content_type='application/json')
-        if request.query['path'] not in self.streams:
+        try:
+            mock_entry = self._find_entry(request.query)
+        except ValueError:
             return web.Response(text="stream does not exist", status=404)
-        mock_entry = self.streams[request.query['path']]
         stream_json = mock_entry.stream.to_json()
         stream_json['data_info'] = mock_entry.info.to_json()
         return web.json_response(stream_json)
@@ -223,7 +224,11 @@ class FakeJoule:
                     return entry
             else:
                 raise ValueError
-        return self.streams[params['path']]
+        else:
+            path = params['path']
+            if path not in self.streams:
+                raise ValueError
+            return self.streams[params['path']]
 
 
 class FakeJouleTestCase(helpers.AsyncTestCase):

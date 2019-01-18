@@ -8,7 +8,9 @@ import socket
 import logging
 import uvloop
 
+from joule.api import node
 from joule.client import helpers
+# import directly so it can be mocked easily in unit tests
 from joule.errors import ConfigurationError
 from joule.models import pipes
 
@@ -27,6 +29,7 @@ class BaseModule:
         self.pipes: List[pipes.Pipe] = []
         self.STOP_TIMEOUT = 2
         self.runner = None
+        self.node = None
 
     def run_as_task(self, parsed_args, app: web.Application, loop):
         assert False, "implement in child class"  # pragma: no cover
@@ -99,7 +102,7 @@ class BaseModule:
         # asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
         loop = asyncio.get_event_loop()
         self.stop_requested = False
-
+        self.node = node.Node(parsed_args.url, loop)
         self.runner: web.AppRunner = loop.run_until_complete(self._start_interface(parsed_args))
         app = None
         if self.runner is not None:
@@ -126,6 +129,8 @@ class BaseModule:
         self._cleanup(loop)
         
     def _cleanup(self, loop: Loop):
+        if self.node is not None:
+            loop.run_until_complete(self.node.close())
         if self.runner is not None:
             loop.run_until_complete(self.runner.cleanup())
         for pipe in self.pipes:
@@ -174,8 +179,9 @@ class BaseModule:
         parser.formatter_class = argparse.RawDescriptionHelpFormatter
         self.custom_args(parser)
 
-    async def _build_pipes(self, parsed_args, loop: Loop) -> Tuple[Pipes, Pipes]:
-        from joule.utilities.pipe_builders import build_fd_pipes, build_network_pipes
+    async def _build_pipes(self, parsed_args) -> Tuple[Pipes, Pipes]:
+        # for unit testing mocks
+        from joule.client.helpers.pipes import build_network_pipes
 
         pipe_args = parsed_args.pipes
 
@@ -194,11 +200,12 @@ class BaseModule:
             if 'Outputs' in module_config:
                 for name, path in module_config['Outputs'].items():
                     outputs[name] = path
+
             pipes_in, pipes_out = await build_network_pipes(
-                inputs, outputs, parsed_args.url, start, end, loop, parsed_args.force)
+                inputs, outputs, self.node, start, end, parsed_args.force)
         else:
             # run the module within joule
-            (pipes_in, pipes_out) = build_fd_pipes(pipe_args, loop)
+            (pipes_in, pipes_out) = helpers.build_fd_pipes(pipe_args, self.node.loop)
         # keep track of the pipes so they can be closed
         self.pipes = list(pipes_in.values()) + list(pipes_out.values())
         return pipes_in, pipes_out

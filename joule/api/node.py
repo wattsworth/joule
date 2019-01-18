@@ -1,5 +1,6 @@
 from typing import Union, List, Optional
 import numpy as np
+import asyncio
 from .session import Session
 
 from joule.api.folder import (Folder,
@@ -23,14 +24,17 @@ from joule.api.stream import (Stream,
                               stream_create,
                               stream_info)
 
-from joule.api.data import (data_write)
+from joule.api.data import (data_write,
+                            data_read,
+                            data_delete)
 
 from joule.models.pipes import Pipe
 
 
 class Node:
-    def __init__(self, url: str):
+    def __init__(self, url: str, loop: asyncio.AbstractEventLoop):
         self.session = Session(url)
+        self.loop = loop
 
     async def close(self):
         await self.session.close()
@@ -89,21 +93,23 @@ class Node:
 
     # Data actions
 
-    async def data_read(self, stream: Union[Stream, str, int],
+    async def data_read(self,
+                        stream: Union[Stream, str, int],
                         start: Optional[int] = None,
                         end: Optional[int] = None,
-                        max_rows: Optional[int] = None,
-                        decimation_level: Optional[int] = None) -> Pipe:
-        pass
+                        max_rows: Optional[int] = None) -> Pipe:
+        return await data_read(self.session, stream, start, end,
+                               max_rows)
 
     async def data_write(self, stream: Union[Stream, str, int],
-                         pipe: Pipe):
-        await data_write(self.session, stream, pipe)
+                         start: Optional[int] = None,
+                         end: Optional[int] = None) -> Pipe:
+        return await data_write(self.session, stream, start, end)
 
     async def data_delete(self, stream: Union[Stream, str, int],
                           start: Optional[int] = None,
                           end: Optional[int] = None) -> List[np.ndarray]:
-        pass
+        return await data_delete(self.session, stream, start, end)
 
     # Module actions
 

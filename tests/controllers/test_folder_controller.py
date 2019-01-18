@@ -27,10 +27,10 @@ class TestFolderController(AioHTTPTestCase):
         db: Session = self.app["db"]
         # move stream1 into folder3
         payload = {
-            "path": "/top/leaf",
-            "destination": "/top/other"
+            "src_path": "/top/leaf",
+            "dest_path": "/top/other"
         }
-        resp = await self.client.put("/folder/move.json", data=payload)
+        resp = await self.client.put("/folder/move.json", json=payload)
         self.assertEqual(resp.status, 200)
         f = folder.find("/top/other/leaf", db)
         self.assertEqual(f.streams[0].name, "stream1")
@@ -41,10 +41,10 @@ class TestFolderController(AioHTTPTestCase):
         db: Session = self.app["db"]
         # move stream1 into folder3
         payload = {
-            "id": folder.find("/top/leaf", db).id,
-            "destination": "/top/other"
+            "src_id": folder.find("/top/leaf", db).id,
+            "dest_path": "/top/other"
         }
-        resp = await self.client.put("/folder/move.json", data=payload)
+        resp = await self.client.put("/folder/move.json", json=payload)
         self.assertEqual(resp.status, 200)
         f = folder.find("/top/other/leaf", db)
         self.assertEqual(f.streams[0].name, "stream1")
@@ -104,7 +104,7 @@ class TestFolderController(AioHTTPTestCase):
             "id": my_folder.id,
             "folder": json.dumps({"name": "new name", "description": "new description"})
         }
-        resp = await self.client.put("/folder.json", data=payload)
+        resp = await self.client.put("/folder.json", json=payload)
         self.assertEqual(200, resp.status)
         my_folder: Stream = db.query(Folder).get(my_folder.id)
         self.assertEqual("new name", my_folder.name)

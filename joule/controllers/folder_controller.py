@@ -10,12 +10,14 @@ from joule.errors import ConfigurationError
 
 async def move(request):
     db: Session = request.app["db"]
+    if request.content_type != 'application/json':
+        return web.Response(text='content-type must be application/json', status=400)
     body = await request.json()
     # find the folder
     if 'src_path' in body:
-        my_folder = folder.find(body['path'], db)
+        my_folder = folder.find(body['src_path'], db)
     elif 'src_id' in body:
-        my_folder = db.query(folder.Folder).get(body["id"])
+        my_folder = db.query(folder.Folder).get(body["src_id"])
     else:
         return web.Response(text="specify an id or a path", status=400)
     if my_folder is None:
@@ -25,7 +27,7 @@ async def move(request):
     # find or create the destination folder
     if 'dest_path' in body:
         try:
-            destination = folder.find(body['destination'], db, create=True)
+            destination = folder.find(body['dest_path'], db, create=True)
         except ConfigurationError as e:
             return web.Response(text="Destination error: %s" % str(e), status=400)
     elif 'dest_id' in body:
@@ -49,7 +51,9 @@ async def move(request):
 
 async def update(request):
     db: Session = request.app["db"]
-    body = await request.post()
+    if request.content_type != 'application/json':
+        return web.Response(text='content-type must be application/json', status=400)
+    body = await request.json()
     if 'id' not in body:
         return web.Response(text="Invalid request: specify id", status=400)
 

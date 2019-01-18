@@ -40,7 +40,7 @@ class SimpleModule(BaseModule):
 
 class NetworkedModule(BaseModule):
     def run_as_task(self, parsed_args, app, loop):
-        return asyncio.ensure_future(self._build_pipes(parsed_args, loop))
+        return asyncio.ensure_future(self._build_pipes(parsed_args))
 
 
 class TestBaseModule(helpers.AsyncTestCase):
@@ -55,7 +55,9 @@ class TestBaseModule(helpers.AsyncTestCase):
     def test_stops_on_sigint(self):
         module = SimpleModule()
         # generate a warning for the socket
-        args = argparse.Namespace(socket='none', pipes='unset', stop_on_request=True)
+        args = argparse.Namespace(socket='none', pipes='unset',
+                                  url="http://localhost:8088",
+                                  stop_on_request=True)
         # fire sigint
         t = threading.Thread(target=self.sigint)
         # run the module
@@ -77,7 +79,10 @@ class TestBaseModule(helpers.AsyncTestCase):
     def test_cancels_execution_if_necessary(self):
         module = SimpleModule()
         module.STOP_TIMEOUT = 0.1
-        args = argparse.Namespace(socket='none', pipes='unset', stop_on_request=False)
+        args = argparse.Namespace(socket='none',
+                                  pipes='unset',
+                                  url="http://localhost:8088",
+                                  stop_on_request=False)
         # fire sigint
         t = threading.Thread(target=self.sigint)
         # run the module
@@ -95,10 +100,9 @@ class TestBaseModule(helpers.AsyncTestCase):
 
     # builds network pipes if pipe arg is 'unset'
     def test_builds_network_pipes(self):
-        module = NetworkedModule()
         built_pipes = False
 
-        async def mock_builder(inputs, outputs, url, start_time, end_time, loop, force):
+        async def mock_builder(inputs, outputs, node, start_time, end_time, force):
             nonlocal built_pipes
             built_pipes = True
             self.assertEqual(len(inputs), 2)
@@ -109,9 +113,11 @@ class TestBaseModule(helpers.AsyncTestCase):
 
         module_mock = mock.Mock()
         module_mock.build_network_pipes = mock_builder
+        #joule.utilities.pipe_builders
         with mock.patch.dict(sys.modules,
-                             {'joule.utilities.pipe_builders': module_mock}):
+                             {'joule.client.helpers.pipes': module_mock}):
             with tempfile.NamedTemporaryFile() as f:
+                module = NetworkedModule()
                 f.write(str.encode(
                     """
                     [Main]

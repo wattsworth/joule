@@ -46,7 +46,9 @@ class TestCompositeModule(helpers.AsyncTestCase):
         pipe_arg = json.dumps(json.dumps({"outputs": {'output': {'fd': w, 'stream': self.stream.to_json()}},
                                           "inputs": {}}))
         data = helpers.create_data(self.stream.layout)
-        args = argparse.Namespace(pipes=pipe_arg, socket="unset", mock_data=data)
+        args = argparse.Namespace(pipes=pipe_arg, socket="unset",
+                                  url='http://localhost:8080',
+                                  mock_data=data)
         # run the composite module
         loop = asyncio.new_event_loop()
         loop.set_debug(True)
@@ -61,7 +63,8 @@ class TestCompositeModule(helpers.AsyncTestCase):
         self.loop.close()
 
     def test_handles_bad_pipe_configs(self):
-        args = argparse.Namespace(pipes="invalid config", socket="unset")
+        args = argparse.Namespace(pipes="invalid config", socket="unset",
+                                  url='http://localhost:8080')
         loop = asyncio.new_event_loop()
         loop.set_debug(True)
         asyncio.set_event_loop(loop)

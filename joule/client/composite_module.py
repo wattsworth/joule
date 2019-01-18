@@ -29,7 +29,7 @@ class CompositeModule(base_module.BaseModule):
         assert False, "implement in child class"  # pragma: no cover
 
     def run_as_task(self, parsed_args, app, loop):
-        coro = self._build_pipes(parsed_args, loop)
+        coro = self._build_pipes(parsed_args)
         (pipes_in, pipes_out) = loop.run_until_complete(coro)
         coro = self.setup(parsed_args,
                           pipes_in,

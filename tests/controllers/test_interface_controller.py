@@ -66,6 +66,7 @@ class TestInterfaceController(AioHTTPTestCase):
         # start up the module
         module = InterfaceModule()
         args = argparse.Namespace(socket='interface.test',
+                                  url='http://localhost:8088',
                                   pipes=json.dumps(json.dumps(
                                       {'inputs': {}, 'outputs': {}})))
         old_loop = asyncio.get_event_loop()
@@ -94,6 +95,7 @@ class TestInterfaceController(AioHTTPTestCase):
         # start up the module
         module = InterfaceModule()
         args = argparse.Namespace(socket='interface.test',
+                                  url='http://localhost:8088',
                                   pipes=json.dumps(json.dumps(
                                       {'inputs': {}, 'outputs': {}})))
         old_loop = asyncio.get_event_loop()

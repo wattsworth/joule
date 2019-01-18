@@ -55,7 +55,8 @@ class TestFilterModule(helpers.AsyncTestCase):
         data = helpers.create_data(self.input.layout)
         self.loop.run_until_complete(to_filter.write(data))
         self.loop.run_until_complete(to_filter.close())
-        args = argparse.Namespace(pipes=pipe_arg, socket="unset")
+        args = argparse.Namespace(pipes=pipe_arg, socket="unset",
+                                  url='http://localhost:8080')
         # run the reader module
         loop = asyncio.new_event_loop()
         loop.set_debug(True)
@@ -73,6 +74,7 @@ class TestFilterModule(helpers.AsyncTestCase):
         # if pipes is not set, must specify a module_config
         module = SimpleFilter()
         args = argparse.Namespace(socket='none', pipes='unset',
+                                  url='http://localhost:8080',
                                   module_config='unset',
                                   start_time=None, end_time=None)
         # run the module

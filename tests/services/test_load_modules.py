@@ -1,6 +1,3 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
-import unittest
 import logging
 import tempfile
 import os
@@ -88,10 +85,11 @@ class TestConfigureModules(DbTestCase):
                 i += 1
             with self.assertLogs(logger=logger, level=logging.ERROR) as logs:
                 modules = load_modules.run(conf_dir, self.db)
+                output = ' '.join(logs.output)
                 # log the missing stream configuration
-                self.assertRegex(logs.output[0], '/missing/stream')
+                self.assertIn('/missing/stream', output)
                 # log the incompatible stream configuration
-                self.assertRegex(logs.output[1], 'different elements')
+                self.assertIn('different elements', output)
         # now check the database:
         # should have three streams
         self.assertEqual(self.db.query(Stream).count(), 3)
