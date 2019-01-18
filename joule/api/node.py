@@ -98,13 +98,13 @@ class Node:
                         start: Optional[int] = None,
                         end: Optional[int] = None,
                         max_rows: Optional[int] = None) -> Pipe:
-        return await data_read(self.session, stream, start, end,
+        return await data_read(self.session, self.loop, stream, start, end,
                                max_rows)
 
     async def data_write(self, stream: Union[Stream, str, int],
                          start: Optional[int] = None,
                          end: Optional[int] = None) -> Pipe:
-        return await data_write(self.session, stream, start, end)
+        return await data_write(self.session, self.loop, stream, start, end)
 
     async def data_delete(self, stream: Union[Stream, str, int],
                           start: Optional[int] = None,
@@ -125,4 +125,3 @@ class Node:
     async def module_logs(self,
                           module: Union[Module, str, int]) -> List[str]:
         return await module_logs(self.session, module)
-

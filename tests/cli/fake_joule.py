@@ -149,6 +149,9 @@ class FakeJoule:
         if 'decimation-level' in request.query:
             layout = mock_entry.stream.decimated_layout
             decimation_level = request.query['decimation-level']
+        elif 'max-rows' in request.query:
+            layout = mock_entry.stream.decimated_layout
+            decimation_level = 16 # just made up
         else:
             layout = mock_entry.stream.layout
             decimation_level = 1

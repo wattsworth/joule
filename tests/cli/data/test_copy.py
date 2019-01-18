@@ -2,6 +2,7 @@ from click.testing import CliRunner
 from aiohttp.test_utils import unused_port
 import warnings
 import numpy as np
+import logging
 
 from ..fake_joule import FakeJoule, FakeJouleTestCase
 from joule.cli import main
@@ -9,6 +10,8 @@ from joule.models import Stream, Element, StreamInfo, pipes
 from tests import helpers
 
 warnings.simplefilter('always')
+log = logging.getLogger('aiohttp.access')
+log.setLevel(logging.WARNING)
 
 
 class TestDataCopy(FakeJouleTestCase):

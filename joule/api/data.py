@@ -90,10 +90,11 @@ async def data_read(session: Session,
     # if the input is *live* make sure the stream is being produced
     if not src_stream.is_destination and (start is None and end is None):
         raise errors.ApiError(
-            "Stream [%s] is not being produced, specify time bounds for historic execution" % stream.name)
+            "Stream [%s] is not being produced, specify time bounds for historic execution" % src_stream.name)
     # replace the stub stream (from config file) with actual stream
     pipe = pipes.LocalPipe(src_stream.layout, loop=loop, stream=src_stream)
     pipe.stream = src_stream
+
     # all checks passed, subscribe to the input
     if start is None and end is None:
         if max_rows is not None:
@@ -125,13 +126,15 @@ async def _live_reader(session: Session, my_stream: Stream,
     params = {'id': my_stream.id, 'subscribe': '1'}
     async with session._session.get(session.url+"/data",
                                     params=params) as response:
-
         if response.status != 200:  # pragma: no cover
             msg = await response.text()
             log.error("Error reading input [%s]: " % my_stream.name, msg)
             await pipe_out.close()
             return
-        pipe_in = pipes.InputPipe(stream=my_stream, reader=response.content)
+        pipe_out.change_layout(response.headers['joule-layout'])
+        pipe_out.decimation_level = int(response.headers['joule-decimation'])
+        pipe_in = pipes.InputPipe(layout=pipe_out.layout,
+                                  stream=my_stream, reader=response.content)
         try:
             while True:
                 data = await pipe_in.read()
@@ -164,7 +167,11 @@ async def _historic_reader(session: Session,
             log.error("Error reading input [%s]: %s" % (my_stream.name, msg))
             await pipe_out.close()
             return
-        pipe_in = pipes.InputPipe(stream=my_stream, reader=response.content)
+        pipe_out.change_layout(response.headers['joule-layout'])
+        pipe_out.decimation_level = int(response.headers['joule-decimation'])
+
+        pipe_in = pipes.InputPipe(layout=pipe_out.layout,
+                                  stream=my_stream, reader=response.content)
         try:
             while True:
                 data = await pipe_in.read()

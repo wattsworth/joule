@@ -200,6 +200,16 @@ class LocalPipe(Pipe):
             print("[%s:write] closing interval" % self.name)
         self.queue.put_nowait(None)
 
+    def change_layout(self, layout: str):
+        self._layout = layout
+        self.read_buffer = np.empty((0,), dtype=self.dtype)
+        self.queued_rows = 0
+        self.last_index = 0
+        # caching
+        if self._caching:
+            self._cache = np.empty(len(self._cache), self.dtype)
+            self._cache_index = 0
+
     async def close(self):
         self.closed = True
         if self.close_cb is not None:

@@ -42,6 +42,7 @@ class Pipe:
         self.stream: 'Stream' = stream
         self._layout = layout
         self.closed = False
+        self.decimation_level = 1
         self.subscribers: List['Pipe'] = []
 
     def enable_cache(self, lines: int):
@@ -165,15 +166,28 @@ class Pipe:
         # close the pipe, optionally implemented by the child
         pass  # pragma: no cover
 
+    def change_layout(self, layout: str):
+        raise PipeError("layout cannot be changed")
+
     @property
-    def layout(self):
-        if self.stream is not None:
+    def layout(self) -> str:
+        if self._layout is not None:
+            return self._layout
+        elif self.stream is not None:
             return self.stream.layout
-        return self._layout
+        else:
+            raise ValueError("pipe has no layout")
 
     @property
     def dtype(self) -> np.dtype:
         return compute_dtype(self.layout)
+
+    @property
+    def decimated(self) -> bool:
+        if self.decimation_level > 1:
+            return True
+        else:
+            return False
 
     def _apply_dtype(self, data: np.ndarray) -> np.ndarray:
         """convert [data] to the pipe's [dtype]"""
