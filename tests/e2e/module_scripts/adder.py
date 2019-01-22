@@ -5,7 +5,7 @@ import asyncio
 
 
 class Adder(joule.FilterModule):
-    " Add DC offset to input "
+    """ Add DC offset to input """
     
     def custom_args(self, parser):
         parser.add_argument("offset", type=int, default=0,
@@ -14,7 +14,7 @@ class Adder(joule.FilterModule):
     async def run(self, parsed_args, inputs, outputs):
         stream_in = inputs["input"]
         stream_out = outputs["output"]
-        while(not self.stop_requested):
+        while not self.stop_requested:
             try:
                 sarray = await stream_in.read()
                 sarray["data"] += parsed_args.offset

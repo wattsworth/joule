@@ -89,7 +89,7 @@ async def create(request):
         return web.Response(text="specify a destination", status=400)
 
     try:
-        new_stream = stream.from_json(json.loads(body['stream']))
+        new_stream = stream.from_json(body['stream'])
         # clear out the status flags
         new_stream.is_configured = False
         new_stream.is_destination = False

@@ -45,7 +45,7 @@ class Session:
 
         except aiohttp.ClientError as e:
             raise errors.ApiError("Cannot contact Joule server at [%s]" %
-                                  self.url) from e
+                                  (self.url+path)) from e
 
     async def close(self):
         if self._session is not None:

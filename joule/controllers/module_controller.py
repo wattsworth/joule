@@ -35,8 +35,10 @@ async def info(request):
     supervisor: Supervisor = request.app["supervisor"]
     if 'name' in request.query:
         worker = [w for w in supervisor.workers if w.name == request.query['name']]
+    elif 'id' in request.query:
+        worker = [w for w in supervisor.workers if w.uuid == int(request.query['id'])]
     else:
-        return web.Response(text="specify a name", status=400)
+        return web.Response(text="specify a name or id", status=400)
     if len(worker) == 0:
         return web.Response(text="module does not exist", status=404)
     worker = worker[0]
@@ -59,6 +61,8 @@ async def logs(request):
     supervisor: Supervisor = request.app["supervisor"]
     if 'name' in request.query:
         worker = [w for w in supervisor.workers if w.name == request.query['name']]
+    elif 'id' in request.query:
+        worker = [w for w in supervisor.workers if w.uuid == int(request.query['id'])]
     else:
         return web.Response(text="specify a name", status=400)
     if len(worker) == 0:

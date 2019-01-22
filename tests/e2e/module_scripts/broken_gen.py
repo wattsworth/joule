@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from joule.utils.time import now as time_now
+from joule.utilities import time_now
 import joule
 import numpy as np
 import asyncio
@@ -16,7 +16,7 @@ class NormalGen(joule.ReaderModule):
             data.shape = (rows, 1)
             ts_inc = 1 / rows * (1 / freq) * 1e6  # microseconds
             data_ts = time_now()
-            while(not self.stop_requested):
+            while not self.stop_requested:
                 top_ts = data_ts + 100 * ts_inc
                 ts = np.array(np.linspace(data_ts, top_ts, rows,
                                           endpoint=False), dtype=np.uint64)

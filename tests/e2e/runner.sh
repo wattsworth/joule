@@ -13,7 +13,7 @@ docker-compose up --build --abort-on-container-exit
 
 echo "POST: removing images and tmp files"
 #docker rmi jdonnal/joule:testing >> /dev/null
-#docker rm `docker ps -a -q` 
+docker rm `docker ps -a -q`
 docker-compose rm -f
 
 exit $EXIT_CODE

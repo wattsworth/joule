@@ -4,8 +4,6 @@ from typing import Dict
 from joule.models.pipes.pipe import Pipe as Pipe
 
 from . import base_module
-from joule.errors import ConfigurationError
-#from joule.models import ConfigurationError
 
 
 class CompositeModule(base_module.BaseModule):

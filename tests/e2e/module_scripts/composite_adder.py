@@ -6,9 +6,10 @@ InStream2 ==> x3 ==> OutStream2
 
 
 import joule
-import adder
 import argparse
 import json
+
+import adder
 
 """
 run 1 or more adders
@@ -32,7 +33,7 @@ class CompositeAdder(joule.CompositeModule):
                             required=True,
                             help="JSON array, length must equal npaths")
         
-    async def setup(self, parsed_args, inputs, outputs):
+    async def setup(self, parsed_args, inputs, outputs, loop):
         npaths = parsed_args.npaths
         offsets = json.loads(parsed_args.offsets)
         tasks = []

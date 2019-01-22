@@ -50,6 +50,10 @@ class Daemon(object):
                                self.config.cleanup_period, loop)
 
         engine = create_engine(self.config.database)
+        with engine.connect() as conn:
+            conn.execute('CREATE SCHEMA IF NOT EXISTS data')
+            conn.execute('CREATE SCHEMA IF NOT EXISTS metadata')
+
         Base.metadata.create_all(engine)
         self.db = Session(bind=engine)
 

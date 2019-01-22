@@ -1,8 +1,12 @@
-version: '2'
+version: '2.1'
 services:
   joule:
     build: ../../.
     links:
+      - nilmdb
+      - timescale
+    depends_on:
+      - timescale
       - nilmdb
     entrypoint: /joule/tests/e2e/bootstrap_inner.py
   nilmdb:
@@ -10,4 +14,9 @@ services:
     logging:
       driver: none
     stop_signal: SIGKILL
-    
+  timescale:
+    image: timescale/timescaledb:latest-pg10
+    environment:
+      POSTGRES_PASSWORD: password
+    logging:
+      driver: none
