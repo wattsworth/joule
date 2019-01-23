@@ -3,10 +3,13 @@ from aiohttp import web
 import numpy as np
 import asyncio
 import logging
+import aiohttp
 
 from joule.models import (folder, DataStore, Stream,
                           InsufficientDecimationError, DataError,
-                          pipes, Supervisor)
+                          pipes)
+from joule.models.supervisor import Supervisor
+
 from joule.errors import SubscriptionError
 
 log = logging.getLogger('joule')
@@ -162,6 +165,8 @@ async def _subscribe(request: web.Request, json: bool):
         unsubscribe()
         # propogate the CancelledError up
         raise e
+    except ConnectionResetError:
+        log.warning("unexpected client disconnect")
 
 
 async def intervals(request: web.Request):

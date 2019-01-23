@@ -91,8 +91,8 @@ async def check_data(node: Node):
     # read historic data to check if is correct
 
     # verify the filter module executed correctly
-    # check the first 2000 rows, the filter won't
-    # have all the input data because the process was stopped
+    # use the filter time bounds because to extract
+    # the data to compare
     stream_info = await node.stream_info(filter1_path)
     p = await node.data_read(normal1_path,
                              start=stream_info.start,

@@ -1,4 +1,4 @@
-from joule.models import Supervisor
+from joule.models.supervisor import Supervisor
 from aiohttp import web
 import aiohttp
 from yarl import URL

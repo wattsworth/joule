@@ -4,7 +4,6 @@ from struct import pack
 import datetime
 import asyncpg
 from typing import List, Optional, Tuple
-import pdb
 import logging
 
 from joule.errors import DataError

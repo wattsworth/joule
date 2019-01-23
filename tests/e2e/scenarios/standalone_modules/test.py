@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 import time
 import re
 import subprocess
@@ -6,38 +6,39 @@ import numpy as np
 import asyncio
 
 from joule.api.node import Node
+from joule.api.stream import Stream, Element
 from joule.testing.e2eutils import joule
 from joule.testing.e2eutils import nilmtool
+from joule.models.pipes import EmptyPipe
 
+import sys
 
 NILMDB_URL = "http://nilmdb"
 
 
 def main():
-    time.sleep(8)  # wait for jouled to boot
-
+    time.sleep(1)  # wait for jouled to boot
     loop = asyncio.get_event_loop()
     loop.run_until_complete(_run(loop))
 
 
 async def _run(loop: asyncio.AbstractEventLoop):
     node = Node('http://localhost:8088', loop)
-
     procs = start_standalone_procs1()
+
     time.sleep(4)  # let procs run
     stop_standalone_procs(procs)
-    await node.close()
-    return
 
-    time.sleep(8) # close sockets
-    procs = start_standalone_procs2()
-    time.sleep(1) # let procs run
+    time.sleep(8)  # close sockets
+    procs = await start_standalone_procs2(node)
+    time.sleep(4)  # let procs run
     stop_standalone_procs(procs)
     time.sleep(4)  # close sockets
-    check_modules()
-    check_data()
-    check_logs()
+    await check_modules(node)
+    await check_data(node)
+    await check_logs(node)
 
+    await node.close()
     return
 
     
@@ -53,48 +54,48 @@ def start_standalone_procs1():
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE,
                          universal_newlines=True)
-    print("-------P1A STDERR------")
-    print(p1a.stderr)
-    print("-------P1A STDOUT------")
-    print(p1a.stdout)
 
-    #assert p1a.stderr.find("/counting/plus3") != -1
+    assert p1a.stderr.find("plus3") != -1
 
     # proc2 tries to read from /bad/path but fails
     p2 = subprocess.run(build_standalone_args("proc2"),
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,
                         universal_newlines=True)
-    print("-------P2 STDERR------")
-    print(p2.stderr)
-    print("-------P2 STDOUT------")
-    print(p2.stdout)
-    #assert p2.stderr.find("/bad/path") != -1
+    assert p2.stderr.find("not being produced") != -1
 
     return [p1]
 
 
-def start_standalone_procs2():
+async def start_standalone_procs2(node: Node):
     # proc3 tries to write to /counting/plus3 with wrong dtype
+
     p3 = subprocess.run(build_standalone_args("proc3"),
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,
-                        universal_newlines=True)
-    assert p3.stderr.find("datatype") != -1
+                        universal_newlines=True,
+                        timeout=3)
+    assert p3.stderr.find("layout") != -1
 
-    # proc4 reads /counting/base and writes to /counting/plus3
+    #  proc4 reads /counting/base and writes to /counting/plus3
     p1 = subprocess.Popen(build_standalone_args("proc1"))
 
-    try:
-        nilmtool.create_stream("/exists/int8", "int8_4", url=NILMDB_URL)
-    except:
-        pass
+    stream = Stream()
+    stream.name="int8"
+    stream.datatype="int8"
+    for x in range(3):
+        e = Element()
+        e.name = 'item%d' % x
+        e.index = x
+        stream.elements.append(e)
+    await node.stream_create(stream, "/exists")
+
     # proc5 tries to write to /exists/int8 with wrong element count
     p4 = subprocess.run(build_standalone_args("proc4"),
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,
                         universal_newlines=True)
-    assert p4.stderr.find("/exists/int8") != -1
+    assert p4.stderr.find("layout") != -1
 
     return [p1]
 
@@ -112,23 +113,18 @@ def stop_standalone_procs(procs):
         proc.kill()
 
         
-def check_modules():
+async def check_modules(node: Node):
     """
     Test: check module status
     Goal:
       counter: running some nonzero memory
       plus1: running some nonzero memory
     """
-    modules = joule.modules()
+    modules = await node.module_list()
     assert(len(modules) == 2)
-    for module in modules:
-        title = module[joule.MODULES_TITLE_FIELD]
-        status = module[joule.MODULES_STATUS_FIELD]
-        assert status == joule.MODULES_STATUS_RUNNING,\
-            "%s status=%s" % (title['name'], status)
         
 
-def check_data():
+async def check_data(node: Node):
     """
     Test: check data inserted into nilmdb
     Goal:
@@ -142,56 +138,55 @@ def check_data():
     plus1_path = "/counting/plus1"
     plus3_path = "/counting/plus3"
     for path in [base_path, plus1_path]:
-        # 1.) check streams have one continuous interval
-        base_intervals = nilmtool.intervals(path, url=NILMDB_URL)
-        decim_intervals = nilmtool.intervals(
-            path + "~decim-16", url=NILMDB_URL)  # check level 2 decimation
-        assert len(base_intervals) == 1,\
-            "%s has %d intervals" % (path, len(base_intervals))
-        assert len(decim_intervals) == 1,\
-            "%s has %d intervals" % (path+"~decim-16", len(decim_intervals))
-        # 2.) make sure this interval has data in it
-        num_samples = nilmtool.data_count(path, url=NILMDB_URL)
-        assert(num_samples > 300)
-        # 3.) make sure decimations have data
-        assert(nilmtool.is_decimated(path, url=NILMDB_URL))
+        # read 50 *live* samples from each stream
+        pipe = await node.data_read(path)
+        assert pipe.layout == "int32_1"
+        num_intervals = 1
+        len_data = 0
+        while True:
+            try:
+                data = await pipe.read()
+                len_data += len(data)
+                if len_data > 50:
+                    break
+            except EmptyPipe:
+                break
+            if pipe.end_of_interval:
+                num_intervals += 1
+            pipe.consume(len(data))
 
-    for path in [plus3_path]:
-        # 1.) check stream has two intervals
-        base_intervals = nilmtool.intervals(path, url=NILMDB_URL)
-        decim_intervals = nilmtool.intervals(
-            path + "~decim-16", url=NILMDB_URL)  # check level 2 decimation
-        assert len(base_intervals) == 2,\
-            "%s has %d intervals" % (path, len(base_intervals))
-        assert len(decim_intervals) == 2,\
-            "%s has %d intervals" % (path+"~decim-16", len(decim_intervals))
-        # 2.) make sure this interval has data in it
-        num_samples = nilmtool.data_count(path, url=NILMDB_URL)
-        assert(num_samples > 300)
-        # 3.) make sure decimations have data
-        assert(nilmtool.is_decimated(path, url=NILMDB_URL))
+        # streams should have single continuous interval
+        assert num_intervals == 1, "%s has %d intervals" % (path, num_intervals)
+        assert len_data > 50
+        await pipe.close()
 
-    # verify stream layouts
-    assert nilmtool.layout(base_path, url=NILMDB_URL) == "int32_1"
-    assert nilmtool.layout(plus1_path, url=NILMDB_URL) == "int32_1"
-    assert nilmtool.layout(plus3_path, url=NILMDB_URL) == "int32_1"
+    # verify plus3_path has 2 intervals
+    intervals = await node.data_intervals(plus3_path)
+    assert len(intervals) == 2, intervals
 
     # verify the filter module executed correctly
-    # check the first 2000 rows, the filter won't
-    # have all the input data because the process was stopped
-    expected_data = nilmtool.data_extract(base_path, url=NILMDB_URL)
-    expected_data[:, 1:] += 1.0
-    actual_data = nilmtool.data_extract(plus1_path, url=NILMDB_URL)
-    np.testing.assert_almost_equal(
-        actual_data[:500, :], expected_data[:500, :])
-    actual_data = nilmtool.data_extract(plus3_path, url=NILMDB_URL)
-    # expect all data is a multiple of 13 and monotonic
-    for val in actual_data[:, 1]:
-        assert (val % 10) == 3, "%d is not good" % val
-    assert min(np.diff(actual_data[:, 1])) == 10, "%d is bad" % min(np.diff(actual_data[:, 1]))
-    
+    # use the filter time bounds because to extract
+    # the data to compare
+    stream_info = await node.stream_info(plus1_path)
+    p = await node.data_read(base_path,
+                             start=stream_info.start,
+                             end=stream_info.end,
+                             max_rows=50)
+    expected_data = await p.read(True)
+    assert 0 < len(expected_data) <= 50
+    expected_data[:, 1:] += 1
+    await p.close()
+    p = await node.data_read(plus1_path,
+                             start=stream_info.start,
+                             end=stream_info.end,
+                             max_rows=50)
+    actual_data = await p.read(True)
+    verify_len = min(len(actual_data), len(expected_data))
+    np.testing.assert_almost_equal(actual_data[:verify_len, :],
+                                   expected_data[:verify_len, :])
 
-def check_logs():
+
+async def check_logs(node: Node):
     """
     Test: logs should contain info and stderr from modules
     Goal: 
@@ -199,8 +194,8 @@ def check_logs():
       plus1: says "starting" somewhere once
     """
     for module_name in ["counter", "plus1"]:
-        logs = joule.logs(module_name)
-        num_starts = len(re.findall(joule.LOG_STARTING_STRING, logs))
+        logs = await node.module_logs(module_name)
+        num_starts = len(re.findall("---starting module---", ' '.join(logs)))
         assert(num_starts == 1)
 
     

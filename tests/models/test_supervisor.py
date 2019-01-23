@@ -1,4 +1,5 @@
-from joule.models import Module, Worker, Supervisor, pipes
+from joule.models import Module, Worker, pipes
+from joule.models.supervisor import Supervisor
 from joule.errors import ConfigurationError, SubscriptionError
 from typing import List
 import functools
@@ -84,13 +85,21 @@ class TestSupervisor(AsyncTestCase):
         p2 = pipes.LocalPipe(layout='float64_2', name='p2')
         subscription_requests = 0
 
-        def mock_input_request(path, stream, url, pipe, loop):
-            nonlocal subscription_requests
-            self.assertEqual(pipe.name, 'p1')
-            subscription_requests += 1
+        class MockNode:
+            def __init__(self, url,loop):
+                pass
 
-        with mock.patch('joule.models.supervisor.request_network_input',
-                        mock_input_request):
+            async def data_read(self, stream):
+                nonlocal subscription_requests
+                pipe = pipes.LocalPipe(layout='float64_2')
+                subscription_requests += 1
+                return pipe
+
+            async def close(self):
+                pass
+
+        with mock.patch('joule.models.supervisor.Node',
+                        MockNode):
             self.supervisor.subscribe(remote_stream, p1, self.loop)
             self.supervisor.subscribe(remote_stream, p2, self.loop)
 
@@ -122,14 +131,21 @@ class TestSupervisor(AsyncTestCase):
 
         output_requested = False
 
-        async def mock_output_request(path, stream, url, loop):
-            nonlocal output_requested
-            self.assertEqual(stream.name, 'remote')
-            output_requested = True
-            return pipes.LocalPipe(layout='float64_2', name=stream.name)
+        class MockNode:
+            def __init__(self, url,loop):
+                pass
 
-        with mock.patch('joule.models.supervisor.request_network_output',
-                        mock_output_request):
+            async def data_write(self, stream):
+                nonlocal output_requested
+                output_requested = True
+                pipe = pipes.LocalPipe(layout='float64_2')
+                return pipe
+
+            async def close(self):
+                pass
+
+        with mock.patch('joule.models.supervisor.Node',
+                        MockNode):
             self.loop.run_until_complete(supervisor.start(self.loop))
             self.supervisor.task = asyncio.sleep(0)
             self.loop.run_until_complete(self.supervisor.stop(self.loop))

@@ -15,7 +15,8 @@ from unittest.mock import Mock
 from contextlib import contextmanager
 import warnings
 
-from joule.models import Module, Stream, Worker, Element, Supervisor
+from joule.models import Module, Stream, Worker, Element
+from joule.models.supervisor import Supervisor
 from joule.models.worker import DataConnection
 from joule.models import pipes
 from tests import helpers

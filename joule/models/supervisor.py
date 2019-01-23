@@ -4,8 +4,7 @@ import logging
 
 from joule.models import Worker, Stream, pipes
 from joule.errors import SubscriptionError, ConfigurationError, ConnectionError
-from joule.utilities.pipe_builders import request_network_input
-from joule.utilities.pipe_builders import request_network_output
+from joule.api.node import Node
 
 Tasks = List[asyncio.Task]
 Loop = asyncio.AbstractEventLoop
@@ -97,11 +96,11 @@ class Supervisor:
         Continuously tries to make a connection to dest_stream and write src_pipe's data to it
         """
         dest_pipe = None
+        node = Node(dest_stream.remote_url, loop)
         try:
             while True:
                 try:
-                    dest_pipe = await request_network_output(dest_stream.remote_path, dest_stream,
-                                                             dest_stream.remote_url, loop)
+                    dest_pipe = await node.data_write(dest_stream.remote_path)
                     while True:
                         data = await src_pipe.read()
                         await dest_pipe.write(data)
@@ -112,9 +111,11 @@ class Supervisor:
                     await asyncio.sleep(self.REMOTE_HANDLER_RESTART_INTERVAL)
         except asyncio.CancelledError:
             pass
-        await src_pipe.close()
-        if dest_pipe is not None:
-            await dest_pipe.close()
+        finally:
+            await src_pipe.close()
+            if dest_pipe is not None:
+                await dest_pipe.close()
+            await node.close()
 
     def _connect_remote_input(self, stream: Stream, pipe: pipes.Pipe, loop: Loop):
         """
@@ -135,12 +136,11 @@ class Supervisor:
         Continuously tries to make a connection to src_stream and write its data to dest_pipe
         """
         src_pipe = None
+        node = Node(src_stream.remote_url, loop)
         try:
             while True:
                 try:
-                    src_pipe = pipes.LocalPipe(src_stream.layout, loop, stream=src_stream, name=dest_pipe.name)
-                    request_network_input(src_stream.remote_path, src_stream, src_stream.remote_url,
-                                          src_pipe, loop)
+                    src_pipe = await node.data_read(src_stream.remote_path)
                     try:
                         while True:
                             data = await src_pipe.read()
@@ -157,6 +157,10 @@ class Supervisor:
                 await asyncio.sleep(self.REMOTE_HANDLER_RESTART_INTERVAL)
         except asyncio.CancelledError:
             pass
-        await dest_pipe.close()
-        if src_pipe is not None:
-            await src_pipe.close()
+        finally:
+            if src_pipe is not None:
+                await src_pipe.close()
+            await dest_pipe.close()
+            await node.close()
+
+

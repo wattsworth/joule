@@ -1,6 +1,6 @@
 from aiohttp import web
 
-from joule.models import Supervisor
+from joule.models.supervisor import Supervisor
 
 
 async def index(request):

@@ -9,6 +9,7 @@ import subprocess
 import shlex
 import shutil
 import signal
+import time
 
 SOURCE_DIR = "/joule"
 SCENARIO_DIR = "/joule/tests/e2e/scenarios"
@@ -46,13 +47,14 @@ def main():
             sys.stdout.flush()
             test = subprocess.run(os.path.join(entry.path, "test.py"))
             jouled.send_signal(signal.SIGINT)
-            if(test.returncode != 0 or FORCE_DUMP):
+            if test.returncode != 0 or FORCE_DUMP:
                 print("----dump from jouled----")
                 stdout, _ = jouled.communicate()
                 for line in stdout.rstrip().split('\n'):
                     print("> %s" % line)
-                return test.returncode
-
+                if test.returncode !=0:
+                    return test.returncode
+            time.sleep(6)
     return 0  # success
 
 

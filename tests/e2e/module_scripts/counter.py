@@ -1,6 +1,6 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
-from joule.utils.time import now as time_now
+from joule.utilities import time_now
 import joule
 import asyncio
 import numpy as np
@@ -16,7 +16,7 @@ class Counter(joule.ReaderModule):
     async def run(self, parsed_args, output):
 
         count = 0
-        while(not self.stop_requested):
+        while not self.stop_requested:
             await output.write(np.array([[time_now(), count]]))
             await asyncio.sleep(0.01)
             count += parsed_args.step

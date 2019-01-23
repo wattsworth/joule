@@ -2,7 +2,7 @@ from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 from aiohttp import web
 import aiohttp
 
-from joule.models import Supervisor
+from joule.models.supervisor import Supervisor
 import joule.controllers
 from .helpers import MockWorker
 

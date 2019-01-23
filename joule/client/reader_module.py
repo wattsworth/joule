@@ -6,6 +6,7 @@ import sys
 
 from joule.client.base_module import BaseModule
 from joule.models.pipes import Pipe
+from joule import errors
 
 
 class ReaderModule(BaseModule):
@@ -58,8 +59,12 @@ class ReaderModule(BaseModule):
                 parsed_args.module_config == "unset"):
             output = StdoutPipe()
         else:
-            coro = self._build_pipes(parsed_args)
-            (pipes_in, pipes_out) = loop.run_until_complete(coro)
+            try:
+                coro = self._build_pipes(parsed_args)
+                (pipes_in, pipes_out) = loop.run_until_complete(coro)
+            except errors.ApiError as e:
+                logging.error(str(e))
+                return loop.create_task(asyncio.sleep(0))
             if 'output' not in pipes_out:
                 logging.error("Reader Module must a have a single output called 'output'")
                 return loop.create_task(asyncio.sleep(0))

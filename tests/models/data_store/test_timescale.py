@@ -8,7 +8,6 @@ import tempfile
 import shutil
 import os
 import sys
-import pdb
 import json
 
 from joule.models import Stream, Element, pipes

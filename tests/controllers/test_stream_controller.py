@@ -81,7 +81,7 @@ class TestStreamController(AioHTTPTestCase):
                                        display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(3)]
         payload = {
             "dest_path": "/deep/new folder",
-            "stream": json.dumps(new_stream.to_json())
+            "stream": new_stream.to_json()
         }
         resp = await self.client.post("/stream.json", json=payload)
 

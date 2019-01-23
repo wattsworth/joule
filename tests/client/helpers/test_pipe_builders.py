@@ -2,9 +2,11 @@ import asyncio
 import numpy as np
 import requests
 import logging
-from unittest import mock, skip
+from unittest import mock
 
-from joule.models import pipes, StreamInfo, Stream, Element
+from joule.models.pipes import interval_token, EmptyPipe
+from joule.models.stream import StreamInfo, Stream
+from joule.models.element import Element
 from joule.api import node
 from joule.errors import ConfigurationError, ApiError
 from joule.client.helpers import build_network_pipes
@@ -37,10 +39,10 @@ class TestPipeHelpers(FakeJouleTestCase):
             blk2 = await pipes_in['input'].read()
             pipes_in['input'].consume(len(blk2))
             rx_data = np.hstack((blk1,
-                                 pipes.interval_token(pipes_in['input'].layout),
+                                 interval_token(pipes_in['input'].layout),
                                  blk2))
             np.testing.assert_array_equal(rx_data, src_data)
-            with self.assertRaises(pipes.EmptyPipe):
+            with self.assertRaises(EmptyPipe):
                 await pipes_in['input'].read()
             await my_node.close()
 
@@ -70,10 +72,10 @@ class TestPipeHelpers(FakeJouleTestCase):
             blk2 = await pipes_in['input'].read()
             pipes_in['input'].consume(len(blk2))
             rx_data = np.hstack((blk1,
-                                 pipes.interval_token(pipes_in['input'].layout),
+                                 interval_token(pipes_in['input'].layout),
                                  blk2))
             np.testing.assert_array_equal(rx_data, src_data)
-            with self.assertRaises(pipes.EmptyPipe):
+            with self.assertRaises(EmptyPipe):
                 await pipes_in['input'].read()
             await my_node.close()
 
@@ -265,7 +267,7 @@ class TestPipeHelpers(FakeJouleTestCase):
         self.assertIn('uint8_3', str(e.exception))
 
         # errors if the stream is already being produced
-        with self.assertRaises(ConfigurationError) as e:
+        with self.assertRaises(ApiError) as e:
             loop.run_until_complete(build_network_pipes({},
                                                         {'output': '/test/source:uint8[e0,e1,e2]'},
                                                         my_node, None, None))
@@ -292,7 +294,7 @@ def create_source_data(server, is_destination=False):
 
     # source has 100 rows of data
     src_data = np.hstack((helpers.create_data(src.layout),
-                          pipes.interval_token(src.layout),
+                          interval_token(src.layout),
                           helpers.create_data(src.layout)))
     src_info = StreamInfo(int(src_data['timestamp'][0]), int(src_data['timestamp'][-1]), len(src_data))
     server.add_stream('/test/source', src, src_info, src_data, [src_info.start, src_info.end])

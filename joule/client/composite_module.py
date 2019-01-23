@@ -1,8 +1,10 @@
 import asyncio
 import argparse
+import logging
 from typing import Dict
-from joule.models.pipes.pipe import Pipe as Pipe
 
+from joule.models.pipes.pipe import Pipe as Pipe
+from joule import errors
 from . import base_module
 
 
@@ -27,8 +29,12 @@ class CompositeModule(base_module.BaseModule):
         assert False, "implement in child class"  # pragma: no cover
 
     def run_as_task(self, parsed_args, app, loop):
-        coro = self._build_pipes(parsed_args)
-        (pipes_in, pipes_out) = loop.run_until_complete(coro)
+        try:
+            coro = self._build_pipes(parsed_args)
+            (pipes_in, pipes_out) = loop.run_until_complete(coro)
+        except errors.ApiError as e:
+            logging.error(str(e))
+            return loop.create_task(asyncio.sleep(0))
         coro = self.setup(parsed_args,
                           pipes_in,
                           pipes_out,

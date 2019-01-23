@@ -8,7 +8,11 @@ from .stream import (Stream,
                      stream_get,
                      stream_create)
 
-from joule.models import pipes
+from joule.models.pipes import (Pipe,
+                                InputPipe,
+                                EmptyPipe,
+                                LocalPipe,
+                                interval_token)
 from joule import errors
 
 import logging
@@ -42,7 +46,7 @@ async def data_write(session:Session,
                      stream: Union[Stream, str, int],
                      start_time: Optional[int]=None,
                      end_time: Optional[int]=None,
-                     ) -> pipes.Pipe:
+                     ) -> Pipe:
     # stream must exist, does not automatically create a stream
     # retrieve the destination stream object
     dest_stream = await stream_get(session, stream)
@@ -61,16 +65,37 @@ async def data_write(session:Session,
 
     # make sure the stream is not currently produced
     if dest_stream.is_destination:
-        raise errors.ConfigurationError("Output [%s] is already being produced" % stream.name)
+        raise errors.ApiError("Output [%s] is already being produced" % stream.name)
 
     # all checks passed, subscribe to the output
     async def close():
         await task
 
-    pipe = pipes.LocalPipe(dest_stream.layout, name=dest_stream.name,
-                           stream=dest_stream, close_cb=close)
+    pipe = LocalPipe(dest_stream.layout, name=dest_stream.name,
+                     stream=dest_stream, close_cb=close)
     task = loop.create_task(_send_data(session, dest_stream, pipe))
     return pipe
+
+
+async def data_intervals(session: Session,
+                         stream: Union[Stream, str, int],
+                         start_time: Optional[int] = None,
+                         end_time: Optional[int] = None,
+                         ) -> List:
+    data = {}
+    if type(stream) is Stream:
+        data["id"] = stream.id
+    elif type(stream) is int:
+        data["id"] = stream
+    elif type(stream) is str:
+        data["path"] = stream
+    else:
+        raise errors.ApiError("Invalid stream datatype. Must be Stream, Path, or ID")
+    if start_time is not None:
+        data['start'] = start_time
+    if end_time is not None:
+        data['end'] = end_time
+    return await session.get("/data/intervals.json", params=data)
 
 
 async def data_read(session: Session,
@@ -78,7 +103,7 @@ async def data_read(session: Session,
                     stream: Union[Stream, str, int],
                     start: Optional[int] = None,
                     end: Optional[int] = None,
-                    max_rows: Optional[int] = None) -> pipes.Pipe:
+                    max_rows: Optional[int] = None) -> Pipe:
 
     # make sure the input is compatible
     src_stream = await stream_get(session, stream)
@@ -92,7 +117,7 @@ async def data_read(session: Session,
         raise errors.ApiError(
             "Stream [%s] is not being produced, specify time bounds for historic execution" % src_stream.name)
     # replace the stub stream (from config file) with actual stream
-    pipe = pipes.LocalPipe(src_stream.layout, loop=loop, stream=src_stream)
+    pipe = LocalPipe(src_stream.layout, loop=loop, stream=src_stream)
     pipe.stream = src_stream
 
     # all checks passed, subscribe to the input
@@ -121,7 +146,7 @@ async def data_read(session: Session,
 
 
 async def _live_reader(session: Session, my_stream: Stream,
-                       pipe_out: pipes.Pipe):
+                       pipe_out: Pipe):
     log.info("requesting live connection to [%s]" % my_stream.name)
     params = {'id': my_stream.id, 'subscribe': '1'}
     async with session._session.get(session.url+"/data",
@@ -133,7 +158,7 @@ async def _live_reader(session: Session, my_stream: Stream,
             return
         pipe_out.change_layout(response.headers['joule-layout'])
         pipe_out.decimation_level = int(response.headers['joule-decimation'])
-        pipe_in = pipes.InputPipe(layout=pipe_out.layout,
+        pipe_in = InputPipe(layout=pipe_out.layout,
                                   stream=my_stream, reader=response.content)
         try:
             while True:
@@ -142,14 +167,14 @@ async def _live_reader(session: Session, my_stream: Stream,
                 await pipe_out.write(data)
                 if pipe_in.end_of_interval:
                     await pipe_out.close_interval()
-        except (asyncio.CancelledError, pipes.EmptyPipe):
+        except (asyncio.CancelledError, EmptyPipe):
             pass
     await pipe_out.close()
 
 
 async def _historic_reader(session: Session,
                            my_stream: Stream,
-                           pipe_out: pipes.Pipe,
+                           pipe_out: Pipe,
                            start_time: int, end_time: int,
                            max_rows: Optional[int]):
     log.info("requesting historic connection to [%s]" % my_stream.name)
@@ -170,7 +195,7 @@ async def _historic_reader(session: Session,
         pipe_out.change_layout(response.headers['joule-layout'])
         pipe_out.decimation_level = int(response.headers['joule-decimation'])
 
-        pipe_in = pipes.InputPipe(layout=pipe_out.layout,
+        pipe_in = InputPipe(layout=pipe_out.layout,
                                   stream=my_stream, reader=response.content)
         try:
             while True:
@@ -179,14 +204,14 @@ async def _historic_reader(session: Session,
                 await pipe_out.write(data)
                 if pipe_in.end_of_interval:
                     await pipe_out.close_interval()
-        except (asyncio.CancelledError, pipes.EmptyPipe):
+        except (asyncio.CancelledError, EmptyPipe):
             pass
         await pipe_out.close()
 
 
 async def _send_data(session: Session,
                      stream: Stream,
-                     pipe: pipes.Pipe):
+                     pipe: Pipe):
     output_complete = False
 
     async def _data_sender():
@@ -197,9 +222,9 @@ async def _send_data(session: Session,
                 if len(data) > 0:
                     yield data.tostring()
                 if pipe.end_of_interval:
-                    yield pipes.interval_token(stream.layout).tostring()
+                    yield interval_token(stream.layout).tostring()
                 pipe.consume(len(data))
-        except pipes.EmptyPipe:
+        except EmptyPipe:
             pass
         output_complete = True
 

@@ -11,7 +11,7 @@ import uvloop
 from joule.api import node
 from joule.client import helpers
 # import directly so it can be mocked easily in unit tests
-from joule.errors import ConfigurationError
+from joule.errors import ConfigurationError, ApiError
 from joule.models import pipes
 
 Pipes = Dict[str, 'pipes.Pipe']
@@ -129,12 +129,13 @@ class BaseModule:
         self._cleanup(loop)
         
     def _cleanup(self, loop: Loop):
-        if self.node is not None:
-            loop.run_until_complete(self.node.close())
+
         if self.runner is not None:
             loop.run_until_complete(self.runner.cleanup())
         for pipe in self.pipes:
             loop.run_until_complete(pipe.close())
+        if self.node is not None:
+            loop.run_until_complete(self.node.close())
         loop.run_until_complete(asyncio.sleep(0))
         loop.close()
 

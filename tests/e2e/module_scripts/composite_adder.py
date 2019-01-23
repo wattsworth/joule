@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 """
 InStream1 ==> x2 ==> InStream2
 InStream2 ==> x3 ==> OutStream2

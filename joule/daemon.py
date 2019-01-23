@@ -6,15 +6,15 @@ import time
 import argparse
 import uvloop
 import signal
-import pdb
 from aiohttp import web
 import faulthandler
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from typing import List
 
-from joule.models import (Base, Worker, Supervisor, config,
+from joule.models import (Base, Worker, config,
                           DataStore, Stream, pipes)
+from joule.models.supervisor import Supervisor
 from joule.errors import ConfigurationError, SubscriptionError
 from joule.models import NilmdbStore, TimescaleStore
 from joule.models.data_store.errors import DataError

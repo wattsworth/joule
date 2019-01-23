@@ -15,6 +15,7 @@ Pipes = Dict[str, pipes.Pipe]
 Loop = asyncio.AbstractEventLoop
 log = logging.getLogger('joule')
 
+
 def build_fd_pipes(pipe_args: str, loop: Loop) -> Tuple[Pipes, Pipes]:
     try:
         pipe_json = json.loads(json.loads(pipe_args))
@@ -47,20 +48,30 @@ async def build_network_pipes(inputs: Dict[str, str], outputs: Dict[str, str],
         _display_warning(outputs.values(), start_time, end_time)
 
     pipes_in = {}
-    for name in inputs:
-        my_stream = await _parse_stream(session, inputs[name])
-        pipes_in[name] = await data.data_read(session, my_node.loop,
-                                              my_stream,
-                                              start_time,
-                                              end_time)
-
     pipes_out = {}
-    for name in outputs:
-        my_stream = await _parse_stream(session, outputs[name])
-        pipes_out[name] = await data.data_write(session, my_node.loop,
-                                                my_stream,
-                                                start_time,
-                                                end_time)
+    try:
+        for name in inputs:
+            my_stream = await _parse_stream(session, inputs[name])
+            pipes_in[name] = await data.data_read(session, my_node.loop,
+                                                  my_stream,
+                                                  start_time,
+                                                  end_time)
+
+        for name in outputs:
+            my_stream = await _parse_stream(session, outputs[name])
+            pipes_out[name] = await data.data_write(session, my_node.loop,
+                                                    my_stream,
+                                                    start_time,
+                                                    end_time)
+    except (errors.ApiError, errors.ConfigurationError) as e:
+        # close any pipes that were created
+        for name in pipes_in:
+            await pipes_in[name].close()
+        for name in pipes_out:
+            await pipes_out[name].close()
+        # re-raise the exception to be handled elsewhere
+        raise e
+
     return pipes_in, pipes_out
 
 
@@ -101,6 +112,7 @@ async def _parse_stream(session: Session, pipe_config) -> stream.Stream:
             # create the stream
             new_stream = stream.Stream()
             new_stream.name = name
+            new_stream.decimate = True
             new_stream.datatype = datatype
             for i in range(len(element_names)):
                 e = stream.Element()

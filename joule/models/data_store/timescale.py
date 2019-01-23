@@ -5,8 +5,6 @@ from io import BytesIO
 import asyncpg
 import asyncpg.exceptions
 import datetime
-import joule.utilities
-import pdb
 import shutil
 import os
 
@@ -105,8 +103,11 @@ class TimescaleStore(DataStore):
                 count = await psql_helpers.get_row_count(conn, stream, start, end)
                 if count > 0:
                     desired_decimation = np.ceil(count / max_rows)
+
                     decimation_level = int(4 ** np.ceil(np.log(desired_decimation) /
                                                         np.log(self.decimation_factor)))
+                    #print("count=%d, max_rows=%d,desired_decim=%d,decim_level=%d" % (
+                    #    count, max_rows, desired_decimation, decimation_level))
                 else:
                     # create an empty array with the right data type
                     data = np.array([], dtype=pipes.compute_dtype(stream.layout))
@@ -130,7 +131,6 @@ class TimescaleStore(DataStore):
                             return  # no data to remove
                         query = "SELECT drop_chunks(table_name=>'%s', schema_name=>'data', older_than=>'%s'::timestamp)" % \
                                 (table.split(".")[1], bounds[1])
-                        print(table)
                         try:
                             await conn.execute(query)
                         except asyncpg.exceptions.RaiseError as err:

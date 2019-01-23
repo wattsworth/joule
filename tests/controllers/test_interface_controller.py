@@ -11,7 +11,7 @@ import io
 
 import joule.controllers
 from joule.client import FilterModule
-from joule.models import Supervisor
+from joule.models.supervisor import Supervisor
 from .helpers import MockWorker
 
 

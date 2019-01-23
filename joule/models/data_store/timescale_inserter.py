@@ -5,7 +5,6 @@ import time
 import datetime
 import logging
 import asyncpg
-import pdb
 
 from joule.models import Stream, pipes, stream
 import joule.utilities
@@ -93,7 +92,7 @@ class Inserter:
 
 class Decimator:
 
-    def __init__(self, stream: Stream, from_level: int, factor: int):
+    def __init__(self, stream: Stream, from_level: int, factor: int, debug=False):
         self.stream = stream
         self.level = from_level * factor
         self.table_name = "stream%d_%d" % (stream.id, self.level)
@@ -108,6 +107,9 @@ class Decimator:
         self.last_ts = None
         self.path_created = False
         self.child: Decimator = None
+        self.debug = debug
+        if(self.debug):
+            print("creating decim level %d" % self.level)
         # hold off to rate limit traffic
         self.holdoff = 0  # random.random()
 
@@ -118,6 +120,8 @@ class Decimator:
             self.path_created = True
 
         decim_data = self._process(data)
+        if self.debug:
+            print("\t level %d: %d rows" % (self.level, len(decim_data)))
         if len(decim_data) == 0:
             return
 

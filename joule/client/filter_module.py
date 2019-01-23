@@ -1,6 +1,8 @@
 import asyncio
-#from joule.models import ConfigurationError
+import logging
+
 from . import base_module
+from joule import errors
 
 
 class FilterModule(base_module.BaseModule):
@@ -47,9 +49,12 @@ class FilterModule(base_module.BaseModule):
         assert False, "implement in child class"  # pragma: no cover
 
     def run_as_task(self, parsed_args, app, loop):
-        coro = self._build_pipes(parsed_args)
-        (pipes_in, pipes_out) = loop.run_until_complete(coro)
-
+        try:
+            coro = self._build_pipes(parsed_args)
+            (pipes_in, pipes_out) = loop.run_until_complete(coro)
+        except errors.ApiError as e:
+            logging.error(str(e))
+            return loop.create_task(asyncio.sleep(0))
         loop.run_until_complete(self.setup(parsed_args, app, pipes_in, pipes_out))
         return asyncio.ensure_future(
             self.run(parsed_args, pipes_in, pipes_out))

@@ -1,14 +1,8 @@
 from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 from aiohttp import web
-import argparse
-import multiprocessing
-import json
-import asyncio
-from contextlib import redirect_stdout
-import io
 
 import joule.controllers
-from joule.models import Supervisor
+from joule.models.supervisor import Supervisor
 from .helpers import MockWorker
 
 

@@ -17,7 +17,7 @@ class Stream:
         self.is_destination = False
         self.locked = False
         self.active = False
-        self.decimate = False
+        self.decimate = True
 
         self.elements = []
 
@@ -56,11 +56,13 @@ def from_json(json) -> Stream:
     my_stream.name = json['name']
     my_stream.description = json['description']
     my_stream.datatype = json['datatype']
+    my_stream.decimate = json['decimate']
     my_stream.keep_us = json['keep_us']
     my_stream.is_configured = json['is_configured']
     my_stream.is_source = json['is_source']
     my_stream.is_destination = json['is_destination']
     my_stream.locked = json['locked']
+    my_stream.active = json['active']
     my_stream.elements = [elem_from_json(item) for item in json['elements']]
     return my_stream
 
@@ -137,6 +139,7 @@ def info_from_json(json) -> StreamInfo:
                           0,
                           0,
                           0)
+
 
 async def stream_delete(session: Session,
                         stream: Union[Stream, str, int]):

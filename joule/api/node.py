@@ -26,7 +26,8 @@ from joule.api.stream import (Stream,
 
 from joule.api.data import (data_write,
                             data_read,
-                            data_delete)
+                            data_delete,
+                            data_intervals)
 
 from joule.models.pipes import Pipe
 
@@ -100,6 +101,12 @@ class Node:
                         max_rows: Optional[int] = None) -> Pipe:
         return await data_read(self.session, self.loop, stream, start, end,
                                max_rows)
+
+    async def data_intervals(self,
+                             stream: Union[Stream, str, int],
+                             start: Optional[int] = None,
+                             end: Optional[int] = None) -> List:
+        return await data_intervals(self.session, stream, start, end)
 
     async def data_write(self, stream: Union[Stream, str, int],
                          start: Optional[int] = None,
