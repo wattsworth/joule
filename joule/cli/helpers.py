@@ -3,6 +3,7 @@ import requests
 
 from joule.errors import ConnectionError
 
+# NOTE: These are only used by the copy command!
 
 def get(url: str, params=None) -> requests.Response:
     try:
@@ -27,18 +28,5 @@ def get_json(url: str, params=None) -> Dict:
     try:
         data = resp.json()
         return data
-    except ValueError as e:
-        raise ConnectionError("Invalid server response, check the URL") from e
-
-
-def post_json(url: str, data) -> Dict:
-    try:
-        resp = requests.put(url, data=data)
-    except requests.ConnectionError as e:
-        raise ConnectionError("Cannot contact Joule server at [%s]" % url) from e
-    if not resp.ok:
-        raise ConnectionError("%s [%d]" % (resp.text, resp.status_code))
-    try:
-        return resp.json()
     except ValueError as e:
         raise ConnectionError("Invalid server response, check the URL") from e

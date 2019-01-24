@@ -65,7 +65,6 @@ async def check_data(node: Node):
             assert pipe.layout == "int32_1"
         else:
             assert pipe.layout == "float64_1"
-        num_intervals = 1
         len_data = 0
         while True:
             try:
@@ -75,18 +74,18 @@ async def check_data(node: Node):
                     break
             except EmptyPipe:
                 break
-            if pipe.end_of_interval:
-                num_intervals += 1
             pipe.consume(len(data))
-
-        if path == broken_path:
-            # broken module should have multiple intervals
-            assert num_intervals > 1
-        else:
-            # other modules should have single continuous interval
-            assert num_intervals == 1, "%s has %d intervals" % (path, num_intervals)
-            assert len_data > 50
         await pipe.close()
+
+    # check intervals
+    for path in [normal1_path, normal2_path,
+                 filter1_path, filter2_path]:
+        intervals = await node.data_intervals(path)
+        assert len(intervals) == 1, 'path [%s] intervals %r' % (
+            path, intervals)
+    intervals = await node.data_intervals(broken_path)
+    assert len(intervals) > 1, 'path [%s] intervals %r' % (
+        path, intervals)
 
     # read historic data to check if is correct
 

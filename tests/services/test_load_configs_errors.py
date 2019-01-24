@@ -24,6 +24,18 @@ class TestLoadConfigErrors(unittest.TestCase):
                     with self.assertRaises(ConfigurationError):
                         load_config.run(custom_values=parser)
 
+    def test_error_if_missing_database_configuration(self):
+        with tempfile.TemporaryDirectory() as module_dir:
+            with tempfile.TemporaryDirectory() as stream_dir:
+                parser = configparser.ConfigParser()
+                parser.read_string("""
+                            [Main]
+                            ModuleDirectory=%s
+                            StreamDirectory=%s
+                        """ % (module_dir, stream_dir))
+                with self.assertRaisesRegex(ConfigurationError, "database"):
+                    load_config.run(custom_values=parser)
+
     def test_error_on_bad_ip_address(self):
         parser = configparser.ConfigParser()
         bad_ips = ["8.8.x.8", "bad", "", "900.8.4.100"]
@@ -68,3 +80,26 @@ class TestLoadConfigErrors(unittest.TestCase):
                         """ % period)
             with self.assertRaisesRegex(ConfigurationError, "CleanupPeriod"):
                 load_config.run(custom_values=parser, verify=False)
+
+    def test_errors_on_invalid_max_log_lines(self):
+        parser = configparser.ConfigParser()
+        for bad_val in [-1, 'abc']:
+            parser.read_string("""
+                                    [Main]
+                                    MaxLogLines = %s
+                                    """ % bad_val)
+            with self.assertRaisesRegex(ConfigurationError, "MaxLogLines"):
+                load_config.run(custom_values=parser, verify=False)
+
+    def test_errors_if_nilmdb_not_available(self):
+        with tempfile.TemporaryDirectory() as module_dir:
+            with tempfile.TemporaryDirectory() as stream_dir:
+                parser = configparser.ConfigParser()
+                parser.read_string("""
+                                   [Main]
+                                   ModuleDirectory=%s
+                                   StreamDirectory=%s
+                                   NilmdbUrl=http://127.0.0.1:234/bad_nilmdb
+                               """ % (module_dir, stream_dir))
+                with self.assertRaisesRegex(ConfigurationError, "NilmDB"):
+                    load_config.run(custom_values=parser)

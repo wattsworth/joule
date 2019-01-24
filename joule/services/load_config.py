@@ -52,13 +52,32 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
     except ValueError as e:
         raise ConfigurationError("Port must be between 0 - 65535") from e
 
+    # Nilmdb URL
+    if 'NilmdbUrl' in main_config and main_config['NilmdbUrl'] != '':
+        nilmdb_url = main_config['NilmdbUrl']
+        if verify:
+            try:
+                resp = requests.get(nilmdb_url)
+                if not resp.ok:
+                    raise requests.exceptions.ConnectionError
+            except requests.exceptions.ConnectionError:
+                raise ConfigurationError(
+                    "Cannot contact NilmDB server at [%s]" % nilmdb_url
+                )
+            if 'NilmDB' not in resp.text:
+                raise ConfigurationError(
+                    "Host at [%s] is not a NilmDB server" % nilmdb_url
+                )
+    else:
+        nilmdb_url = None
+
     # Database
     if 'Database' in main_config:
         database = "postgresql://"+main_config['Database']
     elif verify:
         raise ConfigurationError("Missing [Database] configuration")
-    else:
-        database = ''  # this is invalid of course
+    else:  # pragma: no cover
+        database = ''  # this is invalid of course, just used in unit testing
     if verify:
         # check to see if this is a valid database DSN
         try:
@@ -90,22 +109,6 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
             raise ValueError()
     except ValueError:
         raise ConfigurationError("MaxLogLines must be a postive number")
-
-    # Nilmdb URL
-    if 'NilmdbUrl' in main_config and main_config['NilmdbUrl'] != '':
-        nilmdb_url = main_config['NilmdbUrl']
-        if verify:
-            resp = requests.get(nilmdb_url)
-            if not resp.ok:
-                raise ConfigurationError(
-                    "Cannot contact NilmDB server at [%s]" % nilmdb_url
-                )
-            if 'NilmDB' not in resp.text:
-                raise ConfigurationError(
-                    "Host at [%s] is not a NilmDB server" % nilmdb_url
-                )
-    else:
-        nilmdb_url = None
 
     return config.JouleConfig(module_directory=module_directory,
                               stream_directory=stream_directory,

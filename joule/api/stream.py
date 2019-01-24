@@ -45,6 +45,8 @@ class Stream:
             "is_destination": self.is_destination,
             "datatype": self.datatype,
             "keep_us": self.keep_us,
+            "locked": self.locked,
+            "active": self.active,
             "decimate": self.decimate,
             "elements": [e.to_json() for e in self.elements]
         }
@@ -153,7 +155,7 @@ async def stream_delete(session: Session,
     else:
         raise errors.ApiError("Invalid stream datatype. Must be Stream, Path, or ID")
 
-    await session.delete("/stream.json", params=data)
+    await session.delete("/stream.json", data)
 
 
 async def stream_create(session: Session,

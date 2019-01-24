@@ -7,11 +7,8 @@ import asyncio
 
 from joule.api.node import Node
 from joule.api.stream import Stream, Element
-from joule.testing.e2eutils import joule
-from joule.testing.e2eutils import nilmtool
 from joule.models.pipes import EmptyPipe
 
-import sys
 
 NILMDB_URL = "http://nilmdb"
 
@@ -41,9 +38,8 @@ async def _run(loop: asyncio.AbstractEventLoop):
     await node.close()
     return
 
-    
+
 def start_standalone_procs1():
-    
     # proc1 reads /counting/base and writes to /counting/plus3
     p1 = subprocess.Popen(build_standalone_args("proc1"))
     time.sleep(1)
@@ -81,8 +77,8 @@ async def start_standalone_procs2(node: Node):
     p1 = subprocess.Popen(build_standalone_args("proc1"))
 
     stream = Stream()
-    stream.name="int8"
-    stream.datatype="int8"
+    stream.name = "int8"
+    stream.datatype = "int8"
     for x in range(3):
         e = Element()
         e.name = 'item%d' % x
@@ -102,7 +98,7 @@ async def start_standalone_procs2(node: Node):
 
 def build_standalone_args(proc_dir):
     scenario_dir = "/joule/tests/e2e/scenarios/standalone_modules/"
-    base_dir = scenario_dir+"standalone_modules/"+proc_dir+"/"
+    base_dir = scenario_dir + "standalone_modules/" + proc_dir + "/"
     return ["/joule/tests/e2e/module_scripts/adder.py",
             "3",
             "--module_config", base_dir + "module.conf"]
@@ -112,7 +108,7 @@ def stop_standalone_procs(procs):
     for proc in procs:
         proc.kill()
 
-        
+
 async def check_modules(node: Node):
     """
     Test: check module status
@@ -121,8 +117,8 @@ async def check_modules(node: Node):
       plus1: running some nonzero memory
     """
     modules = await node.module_list()
-    assert(len(modules) == 2)
-        
+    assert (len(modules) == 2)
+
 
 async def check_data(node: Node):
     """
@@ -196,9 +192,9 @@ async def check_logs(node: Node):
     for module_name in ["counter", "plus1"]:
         logs = await node.module_logs(module_name)
         num_starts = len(re.findall("---starting module---", ' '.join(logs)))
-        assert(num_starts == 1)
+        assert (num_starts == 1)
 
-    
+
 if __name__ == "__main__":
     main()
     print("OK")

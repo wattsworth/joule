@@ -124,13 +124,13 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         # invalid element display_type, nothing should be saved
         payload = {
             "id": my_stream.id,
-            "stream": json.dumps(
+            "stream":
                 {"name": "new name",
                  "elements": [{"display_type": "invalid", "name": "new"},
                               {"name": "new1"},
-                              {"name": "new3"}]})
+                              {"name": "new3"}]}
         }
-        resp = await self.client.put("/stream.json", data=payload)
+        resp = await self.client.put("/stream.json", json=payload)
         self.assertEqual(resp.status, 400)
         self.assertTrue('display_type' in await resp.text())
 
@@ -142,9 +142,9 @@ class TestStreamControllerErrors(AioHTTPTestCase):
 
         # request must specify an id
         payload = {
-            "stream": json.dumps({"name": "new name"})
+            "stream": {"name": "new name"}
         }
-        resp = await self.client.put("/stream.json", data=payload)
+        resp = await self.client.put("/stream.json", json=payload)
         self.assertEqual(resp.status, 400)
         self.assertTrue('id' in await resp.text())
 
@@ -152,7 +152,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         payload = {
             "id": my_stream.id
         }
-        resp = await self.client.put("/stream.json", data=payload)
+        resp = await self.client.put("/stream.json", json=payload)
         self.assertEqual(resp.status, 400)
         self.assertTrue('stream' in await resp.text())
 
@@ -161,7 +161,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
             "id": my_stream.id,
             "stream": "notjson"
         }
-        resp = await self.client.put("/stream.json", data=payload)
+        resp = await self.client.put("/stream.json", json=payload)
         self.assertEqual(resp.status, 400)
         self.assertTrue('JSON' in await resp.text())
 
@@ -169,17 +169,17 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         my_stream.is_configured = True
         payload = {
             "id": my_stream.id,
-            "stream": json.dumps({"name": "new name"})
+            "stream": {"name": "new name"}
         }
-        resp = await self.client.put("/stream.json", data=payload)
+        resp = await self.client.put("/stream.json", json=payload)
         self.assertEqual(resp.status, 400)
         self.assertTrue('locked' in await resp.text())
 
         # stream must exist
         payload = {
             "id": 4898,
-            "stream": json.dumps({"name": "new name"})
+            "stream": {"name": "new name"}
         }
-        resp = await self.client.put("/stream.json", data=payload)
+        resp = await self.client.put("/stream.json", json=payload)
         self.assertEqual(resp.status, 404)
         self.assertTrue('exist' in await resp.text())

@@ -124,9 +124,9 @@ class TestStreamController(AioHTTPTestCase):
         # change the stream name
         payload = {
             "id": my_stream.id,
-            "stream": json.dumps({"name": "new name"})
+            "stream": {"name": "new name"}
         }
-        resp = await self.client.put("/stream.json", data=payload)
+        resp = await self.client.put("/stream.json", json=payload)
         self.assertEqual(resp.status, 200)
         my_stream: Stream = db.query(Stream).get(my_stream.id)
         self.assertEqual("new name", my_stream.name)

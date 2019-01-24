@@ -111,7 +111,10 @@ async def create(request):
 
 async def update(request: web.Request):
     db: Session = request.app["db"]
-    body = await request.post()  # request.json?
+    if request.content_type != 'application/json':
+        return web.Response(text='content-type must be application/json', status=400)
+
+    body = await request.json()
     if 'id' not in body:
         return web.Response(text="Invalid request: specify id", status=400)
 
@@ -123,7 +126,7 @@ async def update(request: web.Request):
     if 'stream' not in body:
         return web.Response(text="Invalid request: specify stream as JSON", status=400)
     try:
-        attrs = json.loads(body['stream'])
+        attrs = dict(body['stream'])
     except ValueError:
         return web.Response(text="error: [stream] attribute must be JSON", status=400)
     try:
