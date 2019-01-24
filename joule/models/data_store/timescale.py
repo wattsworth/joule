@@ -155,6 +155,15 @@ class TimescaleStore(DataStore):
                 except asyncpg.UndefinedTableError:
                     pass
 
+    async def destroy_all(self):
+        async with self.pool.acquire() as conn:
+            tables = await psql_helpers.get_all_table_names(conn)
+            for table in tables:
+                try:
+                    await conn.execute('DROP TABLE %s ' % table)
+                except asyncpg.UndefinedTableError:
+                    pass
+
     async def info(self, streams: List['Stream']) -> Dict[int, StreamInfo]:
         results = {}
         async with self.pool.acquire() as conn:

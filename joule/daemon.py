@@ -11,9 +11,12 @@ import faulthandler
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from typing import List
+import psutil
+import sys
+import click
 
-from joule.models import (Base, Worker, config,
-                          DataStore, Stream, pipes)
+from joule.models import (Base, Worker, Folder, config,
+                          DataStore, Element, Stream, pipes)
 from joule.models.supervisor import Supervisor
 from joule.errors import ConfigurationError, SubscriptionError
 from joule.models import NilmdbStore, TimescaleStore
@@ -27,18 +30,41 @@ async_log.setLevel(logging.WARNING)
 Loop = asyncio.AbstractEventLoop
 faulthandler.enable()
 
+WORKING_DIRECTORY = '/tmp/joule'
+
 
 class Daemon(object):
 
     def __init__(self, my_config: config.JouleConfig):
         self.config: config.JouleConfig = my_config
         self.db: Session = None
+        self.engine = None
         self.supervisor: Supervisor = None
         self.data_store: DataStore = None
         self.tasks: List[asyncio.Task] = []
         self.stop_requested = False
 
     def initialize(self, loop: Loop):
+
+        # check the working directory, create if necessary
+        if not os.path.isdir(WORKING_DIRECTORY):
+            os.mkdir(WORKING_DIRECTORY)
+        # make sure this is the only copy of jouled running
+        pid_file = os.path.join(WORKING_DIRECTORY,'pid')
+        if os.path.exists(pid_file):
+            with open(pid_file,'r') as f:
+                pid = int(f.readline())
+                if psutil.pid_exists(pid):
+                    log.error("jouled is already running with pid %d" % pid)
+                    sys.exit(1)
+        # clear out the working directory
+        for file_name in os.listdir(WORKING_DIRECTORY):
+            path = os.path.join(WORKING_DIRECTORY,file_name)
+            os.unlink(path)
+        # write our pid
+        with open(pid_file, 'w') as f:
+            f.write('%d\n' % os.getpid())
+
         if self.config.nilmdb_url is not None:
             self.data_store: DataStore = \
                 NilmdbStore(self.config.nilmdb_url,
@@ -50,6 +76,7 @@ class Daemon(object):
                                self.config.cleanup_period, loop)
 
         engine = create_engine(self.config.database)
+        self.engine = engine  # keep for erasing database if needed
         with engine.connect() as conn:
             conn.execute('CREATE SCHEMA IF NOT EXISTS data')
             conn.execute('CREATE SCHEMA IF NOT EXISTS metadata')
@@ -72,6 +99,22 @@ class Daemon(object):
         self.supervisor = Supervisor(workers)
 
         # save the metadata
+        self.db.commit()
+
+    async def erase_all(self):
+        # --- DANGEROUS: COMPLETELY WIPE THE NODE ---
+        try:
+            await self.data_store.initialize([])
+        except DataError as e:
+            log.error("Database error: %s" % e)
+            print("aborted")
+            exit(1)
+        # erase data
+        await self.data_store.destroy_all()
+        # erase metadata
+        self.db.query(Element).delete()
+        self.db.query(Stream).delete()
+        self.db.query(Folder).delete()
         self.db.commit()
 
     async def run(self, loop: Loop):
@@ -151,6 +194,7 @@ class Daemon(object):
 def main(argv=None):
     parser = argparse.ArgumentParser("Joule Daemon")
     parser.add_argument("--config", default="/etc/joule/main.conf")
+    parser.add_argument("--erase-all", action='store_true', dest='erase')
     args = parser.parse_args(argv)
     log.addFilter(LogDedupFilter())
     logging.basicConfig(
@@ -173,15 +217,27 @@ def main(argv=None):
     # connections to abstract namespace sockets
     # https://github.com/joyent/libuv/issues/1486
 
-    # asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
     loop = asyncio.get_event_loop()
     loop.set_debug(True)
     daemon = Daemon(my_config)
     daemon.initialize(loop)
-    loop.add_signal_handler(signal.SIGINT, daemon.stop)
-    loop.run_until_complete(daemon.run(loop))
+    if args.erase:
+        if click.confirm('Completely erase data on this node?'):
+            loop.run_until_complete(daemon.erase_all())
+        else:
+            print("cancelled")
+    else:
+        loop.add_signal_handler(signal.SIGINT, daemon.stop)
+        loop.run_until_complete(daemon.run(loop))
     loop.close()
+
+    # clear out the working directory
+    for file_name in os.listdir(WORKING_DIRECTORY):
+        path = os.path.join(WORKING_DIRECTORY, file_name)
+        os.unlink(path)
+
     exit(0)
 
 

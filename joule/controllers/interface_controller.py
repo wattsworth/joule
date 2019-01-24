@@ -28,14 +28,18 @@ async def proxy(request: web.Request):
         query=request.url.query,
         fragment=request.url.fragment)
     conn = aiohttp.UnixConnector(path=socket)
-    async with aiohttp.ClientSession(connector=conn,
-                                     auto_decompress=False) as session:
-        # proxy the request to the module
-        data = await request.text()
-        resp = await session.request(request.method, str(url),
-                                     data=data, headers=request.headers)
-        async with resp:
-            data = await resp.content.read()
-            return web.Response(body=data,
-                                status=resp.status,
-                                headers=resp.headers)
+    try:
+        async with aiohttp.ClientSession(connector=conn,
+                                         auto_decompress=False) as session:
+            # proxy the request to the module
+            data = await request.text()
+            resp = await session.request(request.method, str(url),
+                                         data=data, headers=request.headers)
+            async with resp:
+                data = await resp.content.read()
+                return web.Response(body=data,
+                                    status=resp.status,
+                                    headers=resp.headers)
+    except aiohttp.ClientError:
+        return web.Response(text='Error, module interface is not available',
+                            status=502)

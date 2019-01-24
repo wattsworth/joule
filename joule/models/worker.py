@@ -23,7 +23,7 @@ Subscribers = Dict[Stream, List[pipes.Pipe]]
 popen_lock = None
 log = logging.getLogger('joule')
 
-SOCKET_BASE = "wattsworth.joule.%d"
+SOCKET_BASE = "/tmp/joule/module%d"
 
 
 def _initialize_popen_lock():
@@ -138,7 +138,7 @@ class Worker:
     @property
     def interface_socket(self):
         if self.module.has_interface:
-            return b'\x00' + (SOCKET_BASE % self.module.uuid).encode('ascii')
+            return SOCKET_BASE % self.module.uuid
         return None
 
     @property

@@ -91,6 +91,10 @@ class DataStore(ABC):  # pragma: no cover
         pass
 
     @abstractmethod
+    async def destroy_all(self):
+        pass
+
+    @abstractmethod
     async def info(self, streams: List['Stream']) -> Dict[int, StreamInfo]:
         pass
 

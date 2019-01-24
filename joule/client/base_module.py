@@ -6,6 +6,7 @@ from typing import List, Tuple, Dict, Optional
 from aiohttp import web
 import socket
 import logging
+import os
 import uvloop
 
 from joule.api import node
@@ -99,7 +100,7 @@ class BaseModule:
             module_args = helpers.module_args()
             parsed_args = parser.parse_args(module_args)
 
-        # asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
         loop = asyncio.get_event_loop()
         self.stop_requested = False
         self.node = node.Node(parsed_args.url, loop)
@@ -255,12 +256,15 @@ class BaseModule:
                 logging.error("No socket available for the interface, check module configuration")
             return None
         # otherwise start a UNIX runner on the socket
+        if os.path.exists(args.socket):
+            log.error("Socket address [%s] is already in use, cannot start interface" % socket)
+            return None
         app = web.Application()
         app.add_routes(routes)
         runner = web.AppRunner(app)
         await runner.setup()
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        sock.bind(b'\0' + args.socket.encode('ascii'))
+        sock.bind(args.socket)
         site = web.SockSite(runner, sock)
         await site.start()
         print("starting web server at [%s]" % args.socket)

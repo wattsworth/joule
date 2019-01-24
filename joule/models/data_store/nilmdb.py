@@ -186,6 +186,9 @@ class NilmdbStore(DataStore):
                     await check_for_error(resp, ignore=[ERRORS.NO_STREAM_AT_PATH])
         return web.Response(text="ok")
 
+    async def destroy_all(self):
+        raise Exception("NilmDB backend does not implement erase_all")
+
     async def _extract_by_path(self, path: str, start: Optional[int], end: Optional[int],
                                layout: str, callback):
         url = "{server}/stream/extract".format(server=self.server)

@@ -209,6 +209,18 @@ async def get_table_names(conn: asyncpg.Connection, stream: Stream, with_schema=
     else:
         return [r['table_name'] for r in records] + ['stream%d' % stream.id]
 
+async def get_all_table_names(conn: asyncpg.Connection, with_schema=True) -> List[str]:
+    query = r'''select table_name from information_schema.tables 
+               where table_schema='data' 
+               and table_type='BASE TABLE' 
+               and table_name like 'stream%';'''
+    records = await conn.fetch(query)
+    if with_schema:
+        return ['data.' + r['table_name'] for r in records]
+    else:
+        return [r['table_name'] for r in records]
+
+
 
 async def get_boundaries(conn: asyncpg.Connection, stream: Stream,
                          start: Optional[int], end: Optional[int]) -> List[datetime.datetime]:
