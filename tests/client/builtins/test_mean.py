@@ -42,6 +42,7 @@ class TestMeanFilter(helpers.AsyncTestCase):
             # all 1's (even timestamps)
             await pipe_in.write(np.ones((100, WIDTH + 1)))
             await asyncio.sleep(0.2)
+            await pipe_in.close()
             my_filter.stop()
 
         # run reader in an event loop

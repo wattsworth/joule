@@ -107,8 +107,8 @@ class TestWorker(unittest.TestCase):
         self.module.has_interface = True
         socket = self.worker.interface_socket
         name = self.worker.interface_name
-        self.assertTrue(("%d" % self.module.uuid).encode('ascii') in socket)
-        self.assertTrue("%d" % self.module.uuid in name)
+        self.assertIn(str(self.module.uuid), socket)
+        self.assertIn(str(self.module.uuid), name)
 
     def test_produces_returns_true_if_worker_makes_output(self):
 

@@ -72,6 +72,12 @@ Testing
 
 .. include:: reader_module/testing.rst
 
+Reference
+'''''''''
+
+.. autoclass:: joule.ReaderModule
+    :members:
+    :inherited-members:
 
 .. _sec-filter:
 
@@ -103,6 +109,13 @@ Testing
 
 .. include:: filter_module/testing.rst
 
+Reference
+'''''''''
+
+.. autoclass:: joule.FilterModule
+    :members:
+    :inherited-members:
+
 .. _sec-composite:
 
 Composite Modules
@@ -130,6 +143,13 @@ Testing
 '''''''
 
 .. include:: composite_module/testing.rst
+
+Reference
+'''''''''
+
+.. autoclass:: joule.CompositeModule
+    :members:
+    :inherited-members:
 
 User Interfaces
 +++++++++++++++

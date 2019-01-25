@@ -119,6 +119,9 @@ class MockStore(DataStore):
     async def destroy(self, stream: Stream):
         self.destroyed_stream_id = stream.id
 
+    async def destroy_all(self):
+        raise Exception("not implemented!")
+
     async def info(self, streams: List[Stream]) -> Dict[int, StreamInfo]:
         info_dict = {}
         for s in streams:

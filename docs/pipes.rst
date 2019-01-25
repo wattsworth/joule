@@ -142,3 +142,18 @@ subscribed to either an OutputPipe or the output end of another LocalPipe.
     p1.read() # 4,5,6
     p2.read() # 3,4,5,6
 
+
+Reference
++++++++++
+
+.. autoclass:: joule.Pipe
+    :members:
+
+.. autoclass:: joule.InputPipe
+    :members:
+
+.. autoclass:: joule.OutputPipe
+    :members:
+
+.. autoclass:: joule.LocalPipe
+    :members:

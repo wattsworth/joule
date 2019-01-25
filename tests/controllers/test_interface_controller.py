@@ -8,12 +8,14 @@ import json
 import asyncio
 from contextlib import redirect_stdout
 import io
+import os
 
 import joule.controllers
 from joule.client import FilterModule
 from joule.models.supervisor import Supervisor
 from .helpers import MockWorker
 
+SOCKET_PATH = '/tmp/interface.test'
 
 class InterfaceModule(FilterModule):
 
@@ -55,7 +57,9 @@ class TestInterfaceController(AioHTTPTestCase):
     async def get_application(self):
         app = web.Application()
         app.add_routes(joule.controllers.routes)
-        socket_name= b'\x00' + 'interface.test'.encode('ascii')
+        socket_name= '/tmp/interface.test'
+        if os.path.exists(socket_name):
+            os.unlink(socket_name)
         winterface = MockWorker("reader", {}, {'output': '/reader/path'},
                                 uuid=101, socket=socket_name)
         app["supervisor"] = Supervisor([winterface])  # type: ignore
@@ -63,9 +67,10 @@ class TestInterfaceController(AioHTTPTestCase):
 
     @unittest_run_loop
     async def test_proxies_get_requests(self):
+
         # start up the module
         module = InterfaceModule()
-        args = argparse.Namespace(socket='interface.test',
+        args = argparse.Namespace(socket='/tmp/interface.test',
                                   url='http://localhost:8088',
                                   pipes=json.dumps(json.dumps(
                                       {'inputs': {}, 'outputs': {}})))
@@ -89,12 +94,14 @@ class TestInterfaceController(AioHTTPTestCase):
         proc.join()
         self.assertEqual(resp.status, 200)
         self.assertEqual(payload, json.loads(msg))
+        if os.path.exists(SOCKET_PATH):
+            os.unlink(SOCKET_PATH)
 
     @unittest_run_loop
     async def test_proxies_post_requests(self):
         # start up the module
         module = InterfaceModule()
-        args = argparse.Namespace(socket='interface.test',
+        args = argparse.Namespace(socket='/tmp/interface.test',
                                   url='http://localhost:8088',
                                   pipes=json.dumps(json.dumps(
                                       {'inputs': {}, 'outputs': {}})))
@@ -123,3 +130,5 @@ class TestInterfaceController(AioHTTPTestCase):
         proc.join()
         self.assertEqual(resp.status, 200)
         self.assertEqual(payload, json.loads(msg))
+        if os.path.exists(SOCKET_PATH):
+            os.unlink(SOCKET_PATH)

@@ -130,11 +130,15 @@ class TestReaderModule(helpers.AsyncTestCase):
         getter.join()
 
     def test_opens_socket(self):
+        socket_path = '/tmp/interface.test'
+        if os.path.exists(socket_path):
+            os.unlink(socket_path)
+
         module = InterfaceReader()
         data = helpers.create_data(self.stream.layout, length=10)
         args = argparse.Namespace(pipes="unset", module_config="unset",
                                   url='http://localhost:8080',
-                                  socket="joule.test",
+                                  socket=socket_path,
                                   mock_data=data)
 
         def get_page():
@@ -145,7 +149,7 @@ class TestReaderModule(helpers.AsyncTestCase):
             loop.close()
 
         async def get_page_task():
-            conn = aiohttp.UnixConnector(path=b'\x00'+'joule.test'.encode('ascii'))
+            conn = aiohttp.UnixConnector(socket_path)
             async with aiohttp.ClientSession(connector=conn,
                                              auto_decompress=False) as session:
                 # proxy the request to the module
@@ -158,3 +162,6 @@ class TestReaderModule(helpers.AsyncTestCase):
         with redirect_stdout(f):
             module.start(args)
         getter.join()
+        if os.path.exists(socket_path):
+            os.unlink(socket_path)
+
