@@ -16,15 +16,15 @@ setup(
     name=PROJECT,
     version = versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
-    description='Process manager for embedded systems',
+    description='Decentralized data processing for IoT platforms',
     long_description=long_description,
 
     author='John Donnal',
     author_email='donnal@usna.edu',
 
-    url='https://git.wattsworth.net/wattsworth/joule.git',
-    download_url='[none]',
-
+    url='http://wattsworth.net/joule',
+    download_url='https://github.com/wattsworth/joule',
+    license='open source (see LICENSE)',
     classifiers=['Programming Language :: Python',
                  'Environment :: Console',
                  ],

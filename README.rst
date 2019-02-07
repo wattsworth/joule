@@ -13,6 +13,7 @@ boot and are restarted if they fail. Joule also collects runtime
 statistics and logs for each module making it easy to detect
 bugs and find bottlenecks in processing pipelines.
 
+See http://wattsworth.net/joule for full documentation
 
 Streams
 -------
@@ -65,29 +66,10 @@ Features
 Installation
 ------------
 
-Joule requires Python 3.5 or later. Install Joule by running:
+Joule requires Python 3.6 or later. Install Joule by running:
 
-  python setup.py install
+  $> python3 setup.py install
 
-See Installing Joule for more information.  
 
-Contribute
-----------
-
-- Issue Tracker: https://git.wattsworth.net/wattsworth/joule/issues
-- Source Code: https://git.wattsworth.net/wattsworth/joule.git
-
-Support
--------
-
-If you are having issues, please let us know.
-E-mail donnal@usna.edu
-
-License
--------
-
-Full copyright is retained by the project creators.If you are
-interested in using this code contact donnal@usna.edu for licensing
-options.
 
 
