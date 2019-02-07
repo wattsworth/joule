@@ -44,7 +44,7 @@ class TestStreamErrors(unittest.TestCase):
         self.evaluate_bad_values("datatype", bad_datatypes)
 
     def test_errors_on_missing_elements_sections(self):
-        """Must have at least one eunittest.lement"""
+        """Must have at least one element"""
         self.base_config.remove_section("Element1")
         with self.assertRaises(ConfigurationError):
             stream.from_config(self.base_config)

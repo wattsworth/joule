@@ -14,7 +14,7 @@ from joule.models.stream import Stream
 from joule.models.folder import get_stream_path
 from joule.errors import SubscriptionError
 from joule.models import pipes
-from joule.models.pipes.errors import EmptyPipe
+from joule.models.pipes.errors import EmptyPipe, PipeError
 
 # custom types
 Loop = asyncio.AbstractEventLoop
@@ -270,6 +270,7 @@ class Worker:
             self.log("ERROR: cannot start module: \n\t%s" % e)
             self.module.status = Module.STATUS.FAILED
             log.error("Cannot start [%s]: %s" % (self.module.name, e))
+
             self._close_child_fds()
             popen_lock.release()
             await self._close_connections()
@@ -362,6 +363,14 @@ class Worker:
 
         except (EmptyPipe, asyncio.CancelledError):
             pass
+        except PipeError as e:
+            if 'closed pipe' in str(e):
+                # during shutdown the pipe may be closed but
+                # another read might be attempted by the output_handler
+                pass
+            else:
+                log.warning("Worker %s, pipe %s: %s" % (
+                    self.name, child_output.name, str(e)))
 
     async def _subscribe_to_inputs(self,
                                    subscribe: Callable[[Stream, pipes.Pipe, Loop], Callable],
@@ -418,16 +427,17 @@ class Worker:
         # if there are multiple rows, check that all timestamps are increasing
         if len(data) > 1 and np.min(np.diff(data['timestamp'])) <= 0:
             min_idx = np.argmin(np.diff(data['timestamp']))
-            log.warning("Non-monotonic timestamp in [%s], restarting module" % self.name)
-            self.log("Non-monotonic timestamp in stream [%s] (%d<=%d)" %
-                     (name, data['timestamp'][min_idx + 1], data['timestamp'][min_idx]))
-            log.warning("Non-monotonic timestamp in [%s], restarting module" % self.name)
+            msg = ("Non-monotonic timestamp in new data to stream [%s] (%d<=%d)" %
+                   (name, data['timestamp'][min_idx + 1], data['timestamp'][min_idx]))
+            log.warning(msg)
+            self.log(msg)
             return False
         # check to make sure the first timestamp is larger than the previous block
         if last_ts is not None:
             if last_ts >= data['timestamp'][0]:
-                log.warning("Non-monotonic timestamp in [%s], restarting module" % self.name)
-                self.log("Non-monotonic timestamp in stream [%s] (%d<=%d)" %
-                         (name, data['timestamp'][0], last_ts))
+                msg = ("Non-monotonic timestamp between writes to stream [%s] (%d<=%d)" %
+                       (name, data['timestamp'][0], last_ts))
+                log.warning(msg)
+                self.log(msg)
                 return False
         return True

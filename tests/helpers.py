@@ -1,10 +1,12 @@
 import numpy as np
+import os
+import stat
 import configparser
 import asyncio
 import unittest
 import testing.postgresql
 import psycopg2
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, pool
 from sqlalchemy.orm import Session
 
 from joule.models import Stream, Element, Base
@@ -100,6 +102,22 @@ class AsyncTestCase(unittest.TestCase):
         asyncio.set_event_loop(None)
 
 
+        # close any remaining pipes, uvloop tends to leave
+        # pipes after the loop is closed
+        for str_fd in set(os.listdir('/proc/self/fd/')):
+            fd = int(str_fd)
+            try:
+                fstat = os.fstat(fd)
+                #if stat.S_ISFIFO(fstat.st_mode):
+                #    os.close(fd)
+            except OSError:
+                pass
+
+        import psutil
+        proc = psutil.Process()
+        #print("[%d] fds" % proc.num_fds())
+
+
 Postgresql = testing.postgresql.PostgresqlFactory(cache_initialized_db=True)
 
 
@@ -113,10 +131,11 @@ class DbTestCase(unittest.TestCase):
         cur.execute("CREATE SCHEMA metadata")
         conn.commit()
         conn.close()
-        engine = create_engine(db_url)
+        engine = create_engine(db_url, poolclass=pool.NullPool)
         Base.metadata.create_all(engine)
         self.db = Session(bind=engine)
 
     def tearDown(self):
         self.db.close()
         self.postgresql.stop()
+

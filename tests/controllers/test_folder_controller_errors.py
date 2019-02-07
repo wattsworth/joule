@@ -5,7 +5,7 @@ import json
 
 from joule.models import folder, Stream, Folder
 import joule.controllers
-from .helpers import create_db, MockStore
+from tests.controllers.helpers import create_db, MockStore
 
 
 class TestFolderControllerErrors(AioHTTPTestCase):

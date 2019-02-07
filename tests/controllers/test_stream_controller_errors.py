@@ -6,7 +6,7 @@ import json
 
 from joule.models import Stream, Element
 import joule.controllers
-from .helpers import create_db, MockStore
+from tests.controllers.helpers import create_db, MockStore
 
 
 class TestStreamControllerErrors(AioHTTPTestCase):

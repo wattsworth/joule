@@ -4,7 +4,7 @@ import logging
 
 from aiohttp.test_utils import unused_port
 import warnings
-from ..fake_joule import FakeJoule, FakeJouleTestCase
+from tests.cli.fake_joule import FakeJoule, FakeJouleTestCase
 from joule.cli import main
 
 

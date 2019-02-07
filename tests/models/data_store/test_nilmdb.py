@@ -7,7 +7,7 @@ import warnings
 from joule.models import Stream, Element, pipes
 from joule.models.data_store.nilmdb import NilmdbStore, bytes_per_row
 from joule.models.data_store.errors import InsufficientDecimationError, DataError
-from .fake_nilmdb import FakeNilmdb, FakeStream
+from tests.models.data_store.fake_nilmdb import FakeNilmdb, FakeStream
 from tests import helpers
 
 STREAM_LIST = os.path.join(os.path.dirname(__file__), 'stream_list.json')

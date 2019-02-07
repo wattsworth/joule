@@ -118,10 +118,14 @@ class MedianFilter(joule.FilterModule):
             sarray_out['data'] = filtered[bound:-bound]
             sarray_out['timestamp'] = sarray_in['timestamp'][bound:-bound]
             await stream_out.write(sarray_out)
-            stream_in.consume(len(sarray_out))
             # hard to isolate in test, usually hits line 109
             if stream_in.end_of_interval:  # pragma: no cover
                 await stream_out.close_interval()
+                # dump all of the data because we don't
+                # want to mix median across intervals
+                stream_in.consume(len(sarray_in))
+            else:
+                stream_in.consume(len(sarray_out))
 
 
 def main():  # pragma: no cover

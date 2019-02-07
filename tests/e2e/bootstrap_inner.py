@@ -16,7 +16,7 @@ SCENARIO_DIR = "/joule/tests/e2e/scenarios"
 MODULE_SCRIPT_DIR = "/joule/tests/e2e/module_scripts"
 JOULE_CONF_DIR = "/etc/joule"
 
-FORCE_DUMP = False
+FORCE_DUMP = True
 
 
 def prep_system():

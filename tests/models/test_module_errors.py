@@ -31,3 +31,4 @@ class TestModuleErrors(unittest.TestCase):
         self.base_config.set('Main', 'name', '')
         with self.assertRaisesRegex(ConfigurationError, 'name'):
             module.from_config(self.base_config)
+

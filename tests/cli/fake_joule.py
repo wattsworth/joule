@@ -8,6 +8,7 @@ from typing import Dict, Optional, List
 from aiohttp.test_utils import unused_port
 import time
 import signal
+import asyncio
 import json
 
 from tests import helpers
@@ -73,11 +74,30 @@ class FakeJoule:
         self.streams: Dict[str, MockDbEntry] = {}
         self.msgs = None
 
-    def start(self, port, msgs: multiprocessing.Queue):
+    def start(self, port, msgs: multiprocessing.Queue, inbound_msgs):
         self.msgs = msgs
-        f = io.StringIO()
-        with redirect_stdout(f):
-            web.run_app(self.app, host='127.0.0.1', port=port)
+        #f = io.StringIO()
+        #with redirect_stdout(f):
+        #web.run_app(self.app, host='127.0.0.1', port=port,
+        #                handle_signals=True)
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self._run_server(port, inbound_msgs))
+        msgs.close()
+        inbound_msgs.close()
+        msgs.join_thread()
+        inbound_msgs.join_thread()
+
+    async def _run_server(self, port, msgs):
+        runner = web.AppRunner(self.app)
+        await runner.setup()
+        site = web.TCPSite(runner, 'localhost', port)
+        await site.start()
+
+        while 1:
+            await asyncio.sleep(0.01)
+            if not msgs.empty():
+                msgs.get()
+                break
 
     def add_stream(self, path, my_stream: Stream, info: StreamInfo, data: Optional[np.ndarray],
                    intervals: Optional[List] = None):
@@ -233,12 +253,19 @@ class FakeJoule:
                 raise ValueError
             return self.streams[params['path']]
 
+import psutil, pdb
+
 
 class FakeJouleTestCase(helpers.AsyncTestCase):
     def start_server(self, server):
+        self.proc = psutil.Process()
         port = unused_port()
         self.msgs = multiprocessing.Queue()
-        self.server_proc = multiprocessing.Process(target=server.start, args=(port, self.msgs))
+        self.outbound_msgs = multiprocessing.Queue()
+        self.server_proc = multiprocessing.Process(target=server.start,
+                                                   args=(port,
+                                                         self.msgs,
+                                                         self.outbound_msgs))
         self.server_proc.start()
         time.sleep(0.10)
         return "http://localhost:%d" % port
@@ -246,8 +273,21 @@ class FakeJouleTestCase(helpers.AsyncTestCase):
     def stop_server(self):
         if self.server_proc is None:
             return
-        # aiohttp doesn't always quit with SIGTERM
-        os.kill(self.server_proc.pid, signal.SIGKILL)
+
+        self.msgs.close()
+        self.msgs.join_thread()
+
+        self.outbound_msgs.put("stop")
+
+        while self.server_proc.is_alive():
+            time.sleep(0.01)
+        self.outbound_msgs.close()
+        self.outbound_msgs.join_thread()
         # join any zombies
-        multiprocessing.active_children()
         self.server_proc.join()
+        # force delete to close underlying pipes
+        del self.outbound_msgs
+        del self.msgs
+        del self.server_proc
+
+

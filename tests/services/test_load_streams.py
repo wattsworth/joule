@@ -14,7 +14,6 @@ logger = logging.getLogger('joule')
 
 warnings.simplefilter('always')
 
-
 class TestConfigureStreams(DbTestCase):
 
     def test_merges_config_and_db_streams(self):

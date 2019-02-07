@@ -11,7 +11,6 @@ from joule.services import load_modules
 
 logger = logging.getLogger('joule')
 
-
 class TestLoadModulesErrors(DbTestCase):
 
     def test_module_must_have_exec_cmd(self):

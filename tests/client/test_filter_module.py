@@ -68,7 +68,8 @@ class TestFilterModule(helpers.AsyncTestCase):
         np.testing.assert_array_equal(data['timestamp'], received_data['timestamp'])
         np.testing.assert_array_almost_equal(data['data']*2, received_data['data'])
         self.loop.run_until_complete(from_filter.close())
-        self.loop.close()
+        if not loop.is_closed():
+            loop.close()
 
     def test_error_on_invalid_params(self):
         # if pipes is not set, must specify a module_config

@@ -1,6 +1,3 @@
-import unittest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
 
 from tests import helpers
 from joule.services import parse_pipe_config
@@ -41,6 +38,7 @@ class TestFolder(helpers.DbTestCase):
         for name in ["invalid/name", "", None]:
             with self.assertRaises(ConfigurationError):
                 my_folder.update_attributes({"name": name})
+
 
     def test_contains_streams(self):
         my_folder = folder.find("/new/folder/path", self.db, create=True)

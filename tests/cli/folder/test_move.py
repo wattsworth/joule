@@ -11,7 +11,9 @@ class TestFolderMove(FakeJouleTestCase):
 
     def test_folder_move(self):
         server = FakeJoule()
+
         url = self.start_server(server)
+
         runner = CliRunner()
         result = runner.invoke(main, ['--url', url, 'folder', 'move', '/folder/src', '/folder/dest'])
         self.assertEqual(result.exit_code, 0)

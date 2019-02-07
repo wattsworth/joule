@@ -3,7 +3,7 @@ from aiohttp import web
 import aiohttp
 
 import joule.controllers
-from .helpers import MockStore
+from tests.controllers.helpers import MockStore
 
 
 class TestStreamController(AioHTTPTestCase):
@@ -43,5 +43,6 @@ class TestStreamController(AioHTTPTestCase):
         self.assertEqual(resp.status, 200)
         # check one of the keys to make sure this is a dbinfo object
         self.assertTrue('path' in dbinfo)
+
 
 

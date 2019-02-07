@@ -8,7 +8,6 @@ from joule.models import (Base, Stream, Folder,
 from joule.errors import ConfigurationError
 from joule.services import parse_pipe_config
 
-
 class TestParsePipeConfig(DbTestCase):
 
     def setUp(self):

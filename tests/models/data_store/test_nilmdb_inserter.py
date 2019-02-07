@@ -7,9 +7,9 @@ import asyncio
 from joule.models import Stream, Element, pipes
 from joule.models.data_store.nilmdb import NilmdbStore
 from joule.models.data_store.errors import DataError
-from .fake_nilmdb import FakeNilmdb
+from tests.models.data_store.fake_nilmdb import FakeNilmdb
 from tests import helpers
-from ..pipes.reader import QueueReader
+from tests.models.pipes.reader import QueueReader
 
 
 class TestNilmdbInserter(asynctest.TestCase):

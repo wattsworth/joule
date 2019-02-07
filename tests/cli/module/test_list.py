@@ -2,7 +2,7 @@ from click.testing import CliRunner
 import os
 from aiohttp.test_utils import unused_port
 import warnings
-from ..fake_joule import FakeJoule, FakeJouleTestCase
+from tests.cli.fake_joule import FakeJoule, FakeJouleTestCase
 from joule.cli import main
 
 MODULE_LIST = os.path.join(os.path.dirname(__file__), 'modules.json')

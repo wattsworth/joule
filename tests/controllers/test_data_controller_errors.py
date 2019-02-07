@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from joule.models import Stream
 import joule.controllers
-from .helpers import create_db, MockStore, MockSupervisor
+from tests.controllers.helpers import create_db, MockStore, MockSupervisor
 from tests import helpers
 
 

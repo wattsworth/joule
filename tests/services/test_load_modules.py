@@ -1,6 +1,7 @@
 import logging
 import tempfile
 import os
+import unittest
 
 from tests.helpers import DbTestCase
 from joule.models import (Stream, Folder,
@@ -8,7 +9,6 @@ from joule.models import (Stream, Folder,
 from joule.services import load_modules
 
 logger = logging.getLogger('joule')
-
 
 class TestConfigureModules(DbTestCase):
 

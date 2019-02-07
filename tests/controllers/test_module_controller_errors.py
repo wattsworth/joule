@@ -4,7 +4,7 @@ import aiohttp
 
 import joule.controllers
 from joule.models.supervisor import Supervisor
-from .helpers import MockWorker
+from tests.controllers.helpers import MockWorker
 
 class TestModuleControllerErrors(AioHTTPTestCase):
 

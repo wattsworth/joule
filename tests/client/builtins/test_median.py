@@ -36,22 +36,20 @@ class TestMedianFilter(helpers.AsyncTestCase):
                 ts = np.arange(prev_ts, prev_ts + len(data))
                 input_block = np.hstack((ts[:, None], data))
                 pipe_in.write_nowait(input_block)
-                await asyncio.sleep(0.1)
+                #await asyncio.sleep(0.1)
                 prev_ts = ts[-1] + 1
             # now put in an extra block after an interval break
             await pipe_in.close_interval()
             # all 1's (even timestamps)
             await pipe_in.write(np.ones((100, WIDTH + 1)))
-            await asyncio.sleep(0.2)
+            #await asyncio.sleep(0.2)
             await pipe_in.close()
-            my_filter.stop()
 
-        tasks = [asyncio.ensure_future(writer()),
-                 my_filter.run(args, {"input": pipe_in},
-                               {"output": pipe_out})]
-        loop.run_until_complete(asyncio.gather(*tasks))
+        loop.run_until_complete(asyncio.ensure_future(writer()))
 
-        loop.close()
+        loop.run_until_complete(my_filter.run(args, {"input": pipe_in},
+                               {"output": pipe_out}))
+
 
         result = pipe_out.read_nowait()
         # expect the output to be a constant (WINDOW-1)/2

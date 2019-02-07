@@ -22,3 +22,4 @@ class TestInfo(FakeJouleTestCase):
         # make sure the version is displayed
         self.assertIn("0.8.2", output)
         self.stop_server()
+

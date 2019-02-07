@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from joule.models import folder, Stream, Folder, StreamInfo, pipes
 import joule.controllers
-from .helpers import create_db, MockStore, MockSupervisor
+from tests.controllers.helpers import create_db, MockStore, MockSupervisor
 from tests import helpers
 
 
@@ -36,8 +36,9 @@ class TestDataController(AioHTTPTestCase):
         resp: aiohttp.ClientResponse = await \
             self.client.get("/data", params={"path": "/folder1/stream1"})
         rx_chunks = 0
-        async for _ in resp.content.iter_chunks():
-            rx_chunks += 1
+        async for data, _ in resp.content.iter_chunks():
+            if len(data) > 0:
+                rx_chunks += 1
         self.assertEqual(nchunks, rx_chunks)
 
         # can retrieve stream by id and as decimated data
@@ -45,8 +46,9 @@ class TestDataController(AioHTTPTestCase):
         resp: aiohttp.ClientResponse = await \
             self.client.get("/data", params={"id": stream.id, 'decimation-level': 16})
         rx_chunks = 0
-        async for _ in resp.content.iter_chunks():
-            rx_chunks += 1
+        async for data, _ in resp.content.iter_chunks():
+            if len(data) > 0:
+                rx_chunks += 1
         self.assertEqual(nchunks, rx_chunks)
         self.assertEqual(resp.headers['joule-decimation'], '16')
         self.assertEqual(resp.headers['joule-layout'], stream.decimated_layout)

@@ -13,7 +13,7 @@ import os
 import joule.controllers
 from joule.client import FilterModule
 from joule.models.supervisor import Supervisor
-from .helpers import MockWorker
+from tests.controllers.helpers import MockWorker
 
 SOCKET_PATH = '/tmp/interface.test'
 
@@ -92,6 +92,8 @@ class TestInterfaceController(AioHTTPTestCase):
         resp = await self.client.request("GET", "/interface/101/test?param1=1&param2=2")
         msg = await resp.text()
         proc.join()
+        # trigger pipe removal
+        del proc
         self.assertEqual(resp.status, 200)
         self.assertEqual(payload, json.loads(msg))
         if os.path.exists(SOCKET_PATH):
@@ -128,6 +130,8 @@ class TestInterfaceController(AioHTTPTestCase):
         msg = await resp.text()
         self.assertEqual(payload, json.loads(msg))
         proc.join()
+        # trigger pipe removal
+        del proc
         self.assertEqual(resp.status, 200)
         self.assertEqual(payload, json.loads(msg))
         if os.path.exists(SOCKET_PATH):

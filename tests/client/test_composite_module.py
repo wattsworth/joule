@@ -60,7 +60,8 @@ class TestCompositeModule(helpers.AsyncTestCase):
         np.testing.assert_array_equal(data['timestamp'], received_data['timestamp'])
         np.testing.assert_array_almost_equal(data['data']*2, received_data['data'])
         self.loop.run_until_complete(pipe.close())
-        self.loop.close()
+        if not loop.is_closed():
+            loop.close()
 
     def test_handles_bad_pipe_configs(self):
         args = argparse.Namespace(pipes="invalid config", socket="unset",
@@ -72,3 +73,5 @@ class TestCompositeModule(helpers.AsyncTestCase):
         with self.assertLogs(level="ERROR"):
             module.start(args)
         asyncio.set_event_loop(self.loop)
+        if not loop.is_closed():
+            loop.close()

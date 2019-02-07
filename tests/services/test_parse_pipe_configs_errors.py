@@ -1,5 +1,4 @@
 
-
 from tests.helpers import DbTestCase
 from joule.errors import ConfigurationError
 from joule.services import parse_pipe_config

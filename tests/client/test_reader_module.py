@@ -71,7 +71,8 @@ class TestReaderModule(helpers.AsyncTestCase):
         received_data = self.loop.run_until_complete(pipe.read())
         np.testing.assert_array_equal(data, received_data)
         self.loop.run_until_complete(pipe.close())
-        self.loop.close()
+        if not loop.is_closed():
+            loop.close()
 
     def test_writes_to_stdout(self):
         module = SimpleReader()

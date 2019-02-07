@@ -34,6 +34,7 @@ class TestDataCopyWithNilmDb(FakeJouleTestCase):
         os.kill(self.nilmdb_proc.pid, signal.SIGKILL)
         # join any zombies
         self.nilmdb_proc.join()
+        del self.nilmdb_proc
 
     def _run_nilmdb(self, port, msgs):
         loop = asyncio.get_event_loop()
@@ -74,6 +75,7 @@ class TestDataCopyWithNilmDb(FakeJouleTestCase):
         self.assertEqual(0, result.exit_code)
         self._stop_nilmdb()
         self.stop_server()
+        del nilmdb_msgs
 
     def test_creates_nilmdb_stream_if_necessary(self):
         source_server = FakeJoule()
@@ -109,6 +111,7 @@ class TestDataCopyWithNilmDb(FakeJouleTestCase):
         self.assertEqual(0, result.exit_code)
         self._stop_nilmdb()
         self.stop_server()
+        del nilmdb_msgs
 
     def test_copies_data_from_nilmdb(self):
         dest_server = FakeJoule()
@@ -127,6 +130,7 @@ class TestDataCopyWithNilmDb(FakeJouleTestCase):
         self.assertEqual(len(mock_entry.data), 1000)
         self._stop_nilmdb()
         self.stop_server()
+        del nilmdb_msgs
 
 
 def _print_result_on_error(result):

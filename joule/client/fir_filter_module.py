@@ -49,4 +49,8 @@ class FIRFilterModule(filter_module.FilterModule):
             # hard to isolate in test, usually hits line 30
             if stream_in.end_of_interval:  # pragma: no cover
                 await stream_out.close_interval()
-            stream_in.consume(output_len)
+                # dump all of the data because we don't
+                # want to mix averages across intervals
+                stream_in.consume(len(sarray_in))
+            else:
+                stream_in.consume(output_len)

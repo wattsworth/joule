@@ -3,6 +3,7 @@ import unittest
 from unittest import mock
 import logging
 import signal
+import stat
 import psutil
 import numpy as np
 import shlex
@@ -35,7 +36,6 @@ MODULE_SIMPLE_FILTER = os.path.join(os.path.dirname(__file__),
                                     'worker_scripts', 'simple_filter.py')
 warnings.simplefilter('always')
 
-warnings.simplefilter('error')
 
 
 class TestWorker(unittest.TestCase):
@@ -43,7 +43,7 @@ class TestWorker(unittest.TestCase):
     def setUp(self):
         self.loop = asyncio.new_event_loop()
         self.loop.set_debug(True)
-        #        logging.getLogger('asyncio').setLevel(logging.DEBUG)
+        logging.getLogger('asyncio').setLevel(logging.DEBUG)
         asyncio.set_event_loop(self.loop)
         # generic float32_4 streams
         streams = [Stream(name="str%d" % n, datatype=Stream.DATATYPE.FLOAT32,
@@ -286,8 +286,9 @@ class TestWorker(unittest.TestCase):
         self.module.exec_cmd = "bad-cmd"
         loop = asyncio.get_event_loop()
         with self.assertLogs(level="ERROR"):
-            loop.run_until_complete(self.worker.run(self.supervisor.subscribe,
-                                                    loop, restart=False))
+            with self.check_fd_leakage():
+                loop.run_until_complete(self.worker.run(self.supervisor.subscribe,
+                                                        loop, restart=False))
         for entry in self.worker.logs:
             if "cannot start module" in entry:
                 break
@@ -409,10 +410,30 @@ class TestWorker(unittest.TestCase):
 
     @contextmanager
     def check_fd_leakage(self):
-        self.proc = psutil.Process()
-        self.orig_fds = self.proc.num_fds()
+        existing_pipes = 0
+        # find out how many pipes are currently open
+        for str_fd in set(os.listdir('/proc/self/fd/')):
+            fd = int(str_fd)
+            try:
+                fstat = os.fstat(fd)
+                if stat.S_ISFIFO(fstat.st_mode):
+                    existing_pipes+=1
+            except OSError:
+                pass
+
         yield
-        self.assertEqual(self.proc.num_fds(), self.orig_fds)
+        # make sure the same number of pipes are open
+        new_pipes=0
+        for str_fd in set(os.listdir('/proc/self/fd/')):
+            fd = int(str_fd)
+            try:
+                fstat = os.fstat(fd)
+                if stat.S_ISFIFO(fstat.st_mode):
+                    new_pipes += 1
+            except OSError:
+                pass
+
+        self.assertEqual(existing_pipes, new_pipes)
 
 
 """ from git gist """
