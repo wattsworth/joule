@@ -6,8 +6,8 @@ from joule.models.supervisor import Supervisor
 async def index(request):
     supervisor: Supervisor = request.app["supervisor"]
     resp = []
-    if 'statistics' in request.query:
-        get_stats=True
+    if 'statistics' in request.query and request.query['statistics'] != '0':
+        get_stats = True
     else:
         get_stats = False
 
@@ -42,6 +42,7 @@ async def info(request):
     if len(worker) == 0:
         return web.Response(text="module does not exist", status=404)
     worker = worker[0]
+
     data = {
         "id": worker.uuid,
         "name": worker.name,

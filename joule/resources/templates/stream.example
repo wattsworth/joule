@@ -1,18 +1,55 @@
 [Main]
 #required settings (examples)
-path = /nilmdb/path/name
+name = DataStream
+path = /folder/name
+
+# TimeScale backend:
+#   int[16,32,64]
+#   float[32,64]
+# NilmDB backend:
+#   int[8,16,32,64]
+#   uint[8,16,32,64]
+#   float[32,64]
 datatype = float32
+
+# How much data to keep:
+# h = hour
+# d = day
+# w = week
+# m = month
+# y = year
+# none: keep no data
+# all: keep all data
 keep = 1w
-#optional settings (defaults)
+
+# Decimate data (yes|no)
+# required for visualization
 decimate = yes
 
+# Element settings
+# Must have at least 1 element
 [Element1...ElementN]
 #required settings (examples)
 name         = Element Name
 #optional settings (defaults)
-plottable    = yes
-discrete     = no
+
+# Show in Lumen interface (yes,no)
+plottable = yes
+
+# How to display data:
+# continuous: line graph
+# discrete:   points
+# event:      popsicle sticks
+display_type = continuous
+
+# Apply linear scaling to
+# data visualization
+# *does not affect the data*
+# y = (x-offset)*scale_factor
 offset       = 0.0
 scale_factor = 1.0
-default_max  = null
-default_min  = null
+
+# Fix auto-scale y limits
+# None: auto scale fits the data
+default_max  = None
+default_min  = None

@@ -219,12 +219,22 @@ def from_json(data: Dict) -> Stream:
 
     """
     elements = []
+    index = 0
     for item in data["elements"]:
+        item["index"] = index
         elements.append(element.from_json(item))
+        index += 1
+
+    datatype_name = data["datatype"].upper()
+    try:
+        datatype = Stream.DATATYPE[datatype_name]
+    except KeyError:
+        raise KeyError("invalid datatype")
+
     return Stream(id=data["id"],
                   name=data["name"],
                   description=data["description"],
-                  datatype=Stream.DATATYPE[data["datatype"].upper()],
+                  datatype=datatype,
                   keep_us=data["keep_us"],
                   decimate=data["decimate"],
                   is_configured=data["is_configured"],

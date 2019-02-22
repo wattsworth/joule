@@ -7,8 +7,13 @@ class Folder:
         self._id = None
         self.name = ""
         self.description = ""
+        self.locked = False
         self.streams = []
         self.children = []
+
+    def __repr__(self):
+        return "<joule.api.Folder id=%r name=%r description=%r locked=%r>" % (
+                self._id, self.name, self.description, self.locked)
 
     @property
     def id(self) -> int:

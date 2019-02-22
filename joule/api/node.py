@@ -33,9 +33,16 @@ from joule.models.pipes import Pipe
 
 
 class Node:
-    def __init__(self, url: str, loop: asyncio.AbstractEventLoop):
+    def __init__(self, url: str = "http://localhost:8088",
+                 loop: Optional[asyncio.AbstractEventLoop] = None):
         self.session = Session(url)
+        self._url = url
+        if loop is None:
+            loop = asyncio.get_event_loop()
         self.loop = loop
+
+    def __repr__(self):
+        return "<joule.api.Node url=\"%s\">" % self._url
 
     async def close(self):
         await self.session.close()

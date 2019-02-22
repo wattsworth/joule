@@ -58,11 +58,12 @@ async def move(request: web.Request):
         destination = db.query(Folder).get(body["dest_id"])
     else:
         return web.Response(text="specify a destination", status=400)
-    # make sure there are no other streams with the same name here
-    for peer in destination.streams:
-        if peer.name == my_stream.name:
-            return web.Response(text="a stream with this name is in the destination folder",
-                                status=400)
+    # make sure name is unique in this destination
+    existing_names = [s.name for s in destination.streams]
+    if my_stream.name in existing_names:
+        db.rollback()
+        return web.Response(text="stream with the same name exists in the destination folder",
+                            status=400)
     destination.streams.append(my_stream)
     db.commit()
     return web.json_response({"stream": my_stream.to_json()})
@@ -90,6 +91,10 @@ async def create(request):
 
     try:
         new_stream = stream.from_json(body['stream'])
+        # make sure stream has at least 1 element
+        if len(new_stream.elements) == 0:
+            raise ConfigurationError("stream must have at least one element")
+
         # clear out the status flags
         new_stream.is_configured = False
         new_stream.is_destination = False
@@ -98,14 +103,24 @@ async def create(request):
         new_stream.id = None
         for elem in new_stream.elements:
             elem.id = None
+        # make sure name is not empty
+        if len(new_stream.name) == 0:
+            raise KeyError("name")
+        # make sure name is unique in this destination
+        existing_names = [s.name for s in destination.streams]
+        if new_stream.name in existing_names:
+            raise ConfigurationError("stream with the same name exists in the folder")
         destination.streams.append(new_stream)
         db.commit()
     except ValueError as e:
         db.rollback()
         return web.Response(text="Invalid stream JSON: %r" % e, status=400)
-    except (KeyError, ConfigurationError) as e:
+    except ConfigurationError as e:
         db.rollback()
-        return web.Response(text="Invalid stream specification: %r" % e, status=400)
+        return web.Response(text="Invalid stream specification: %s" % e, status=400)
+    except KeyError as e:
+        db.rollback()
+        return web.Response(text="Invalid or missing stream attribute: %s" % e, status=400)
     return web.json_response(data=new_stream.to_json())
 
 
@@ -131,10 +146,14 @@ async def update(request: web.Request):
         return web.Response(text="error: [stream] attribute must be JSON", status=400)
     try:
         my_stream.update_attributes(attrs)
+        # make sure name is unique in this destination
+        existing_names = [s.name for s in my_stream.folder.streams if s.id != my_stream.id]
+        if my_stream.name in existing_names:
+            raise ConfigurationError("stream with the same name exists in the folder")
         db.commit()
     except (ValueError, ConfigurationError) as e:
         db.rollback()
-        return web.Response(text="error: %s" % e, status=400)
+        return web.Response(text="Invalid stream specification: %s" % e, status=400)
     return web.json_response(data=my_stream.to_json())
 
 

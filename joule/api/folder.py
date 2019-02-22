@@ -15,6 +15,7 @@ def from_json(json) -> Folder:
     my_folder.description = json['description']
     my_folder.children = children
     my_folder.streams = streams
+    my_folder.locked = json['locked']
     return my_folder
 
 
@@ -71,7 +72,8 @@ async def folder_delete(session: Session,
 
 async def folder_update(session: Session,
                         folder: Folder) -> None:
-    return await session.post("/folder.json", folder.to_json())
+    return await session.put("/folder.json", {"id": folder.id,
+                                              "folder": folder.to_json()})
 
 
 async def folder_get(session: Session,

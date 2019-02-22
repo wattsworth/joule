@@ -1,5 +1,6 @@
 import click
 import asyncio
+import datetime
 
 from joule import errors
 from joule.api import node
@@ -29,7 +30,8 @@ async def _run(session: node.Session, name: str):
     # display module information
     click.echo()
     click.echo("Name:\n\t%s" % module.name)
-    click.echo("Description:\n\t%s" % module.description)
+    if len(module.description) > 0:
+        click.echo("Description:\n\t%s" % module.description)
     if module.has_interface:
         click.echo("Interface URL:\n\t%s/interface/%d/" % (session.url, module.id))
     click.echo("Inputs:")
@@ -44,5 +46,12 @@ async def _run(session: node.Session, name: str):
     else:
         for (name, loc) in module.outputs.items():
             click.echo("\t%s:\t%s" % (name, loc))
+    click.echo("CPU Usage:\n\t%0.2f%%" % module.statistics.cpu_percent)
+    click.echo("Memory Usage:\n\t%0.2f%%" % module.statistics.memory_percent)
+    now = datetime.datetime.now().timestamp()
+    delta = datetime.timedelta(seconds=now - module.statistics.create_time)
+
+    click.echo("Uptime:\n\t%s" % delta)
+    click.echo("")
 
 

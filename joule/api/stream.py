@@ -1,4 +1,4 @@
-from typing import Optional, Union, Dict
+from typing import Optional, Union, Dict, List
 
 from .session import Session
 from .folder_type import Folder
@@ -6,12 +6,15 @@ from joule import errors
 
 
 class Stream:
-    def __init__(self):
+    def __init__(self,
+                 name: str = "", description: str = "",
+                 datatype: str = "float32", keep_us: int = -1,
+                 elements: List['Element'] = None):
         self._id = None
-        self.name = ""
-        self.description = ""
-        self.datatype = ""
-        self.keep_us = -1  # KEEP ALL
+        self.name = name
+        self.description = description
+        self.datatype = datatype
+        self.keep_us = keep_us  # -1 = KEEP ALL
         self.is_configured = False
         self.is_source = False
         self.is_destination = False
@@ -19,7 +22,16 @@ class Stream:
         self.active = False
         self.decimate = True
 
-        self.elements = []
+        if elements is None:
+            elements = []
+        self.elements = elements
+
+    def __repr__(self):
+        return "<joule.api.Stream id=%r name=%r description=%r datatype=%r is_configured=%r is_source=%r is_destination=%r locked=%r decimate=%r>" % (
+            self._id, self.name, self.description,
+            self.datatype, self.is_configured,
+            self.is_source, self.is_destination,
+            self.locked, self.decimate)
 
     @property
     def id(self) -> int:
@@ -33,7 +45,7 @@ class Stream:
 
     @property
     def layout(self):
-        return self.datatype.lower()+'_'+str(len(self.elements))
+        return self.datatype.lower() + '_' + str(len(self.elements))
 
     def to_json(self) -> Dict:
         return {
@@ -70,19 +82,25 @@ def from_json(json) -> Stream:
 
 
 class Element:
-    def __init__(self):
+    def __init__(self, name: str = "", units: str = "",
+                 plottable: bool = True,
+                 display_type: str = 'continuous'):
         self.id = None
         self.index = None
-        self.name = ""
-        self.units = ""
-        self.plottable = False
-        self.display_type = 'continuous'
+        self.name = name
+        self.units = units
+        self.plottable = plottable
+        self.display_type = display_type
         self.offset = 0
         self.scale_factor = 1.0
         self.default_max = None
         self.default_min = None
 
-        pass
+    def __repr__(self):
+        return "<joule.api.Element id=%r index=%r, name=%r units=%r plottable=%r display_type=%r>" % (
+            self.id, self.index, self.name,
+            self.units, self.plottable,
+            self.display_type)
 
     def to_json(self) -> Dict:
         return {
@@ -98,12 +116,13 @@ class Element:
             'default_min': self.default_min
         }
 
+
 def elem_from_json(json) -> Element:
     my_elem = Element()
     my_elem.id = json['id']
     my_elem.index = json['index']
     my_elem.name = json['name']
-    my_elem.units =json['units']
+    my_elem.units = json['units']
     my_elem.plottable = json['plottable']
     my_elem.display_type = json['display_type']
     my_elem.offset = json['offset']
@@ -211,7 +230,8 @@ async def stream_get(session: Session,
 
 async def stream_update(session: Session,
                         stream: Stream) -> None:
-    return await session.put("/stream.json", stream.to_json())
+    return await session.put("/stream.json", {"id": stream.id,
+                                              "stream": stream.to_json()})
 
 
 async def stream_move(session: Session,

@@ -50,27 +50,29 @@ Module Configuration
     : Module Configuration File
 
     [Main]
-    #required settings (examples)
-    exec_cmd = /path/to/module.py
-    name = Processing Module
-
-    #optional settings (defaults)
-    description =
+    #required
+    name = module name
+    exec_cmd = /path/to/executable
+    #optional
     has_interface = no
+    description = a short description
 
+    # Specify command line arguments
+    # (may also include in the exec_cmd)
     [Arguments]
-    arg = value
-    #additional keyword arguments ...
+    arg1 = val1
+    arg2 = val2
+    # additional arguments...
 
     [Inputs]
-    in1 = /stream/path/input1
-    in2 = /stream/path/input2
-    #additional inputs ...
+    path1 = /data/input/stream1
+    path2 = /data/input/stream2
+    # additional inputs...
 
-    [Outputs]</span>
-    out1 = /stream/path/output1
-    out2 = /stream/path/output2
-    #additional outputs ...
+    [Outputs]
+    path1 = /data/output/stream1
+    path2 = /data/output/stream2
+    # additional outputs...
 
     </div>
 
@@ -82,8 +84,8 @@ Only the **[Main]** section is required, other sections should be included as ne
 **[Main]**
   * ``exec_cmd`` -- path to module executable, may include command line arguments
   * ``name`` -- module name
+  * ``has_interface`` -- **[yes|no]** whether the module provides a web interface
   * ``description`` -- optional module description
-  * ``has_interface`` -- whether the module has a web interface
 
 **[Arguments]**
   * ``key = value`` -- keyword arguments (these may also be specified in the ``exec_cmd``)
@@ -182,11 +184,11 @@ The configuration format is shown below:
 
   #optional settings (defaults)
   plottable    = yes
-  discrete     = no
+  display_type = continuous
   offset       = 0.0
   scale_factor = 1.0
-  default_max  =
-  default_min  =
+  default_max  = None
+  default_min  = None
 
   #additional elements...
 
@@ -201,10 +203,17 @@ See the list below for information on each setting.
   * ``name`` -- stream identifier, white space is permitted
   * ``path`` -- unique identifier which follows the Unix file naming convention. The web UI
     visualizes the path as a folder hierarchy.
-  * ``datatype`` -- element datatype, must be one of the following values:
+  * ``datatype`` -- element datatype. Valid types for TimeScale backend (default):
 
     .. csv-table::
-      :align: center
+
+      float32, int16
+      float64, int32
+      ,        int64
+
+    Valid types for NilmDB backend:
+
+    .. csv-table::
 
       float32, int8, uint8
       float64, int16, uint16
@@ -214,21 +223,20 @@ See the list below for information on each setting.
 
   * ``keep`` -- how long to store stream data. Format is a value and unit.
     Units are **h**: hours, **d**: days, **w**: weeks, **m**: months, **y**: years.
-    For example ``6d`` will keep the last six days of data. Specify ``none``
-    to keep no data or ``all`` to keep all data.
+    For example **6d** will keep the last six days of data. Specify **None**
+    to keep no data or **all** to keep all data.
 
-  * ``decimate`` -- whether decimated data will be stored for this stream. Decimation
+  * ``decimate`` -- **[yes|no]** whether decimated data will be stored for this stream. Decimation
     roughly doubles the required storage but enables web UI visualization.
 
 **[Element#]**
   * ``name`` -- element identifier, may contain whitespace
-*NOTE:* the following settings apply only to visualizations in the web UI
   * ``plottable`` -- **[yes|no]** whether the element can be plotted
-  * ``type`` -- **[continuous|discrete|event]** controls the plot type
-  * ``offset``-- apply linear scaling **y=scale_factor\*(x-offset)**
-  * ``scale_factor``-- apply linear scaling **y=scale_factor\*(x-offset)**
-  * ``default_max``-- control axis scaling, leave blank to auto scale
-  * ``default_min``-- control axis scaling, leave blank to auto scale
+  * ``display_type`` -- **[continuous|discrete|event]** controls the plot type
+  * ``offset``-- apply linear scaling to data visualization **y=(x-offset)*scale_factor**
+  * ``scale_factor``-- apply linear scaling to data visualization **y=(x-offset)*scale_factor**
+  * ``default_max``-- control axis scaling, set to None for auto scale
+  * ``default_min``-- control axis scaling, set to None for auto scale
 
 Streams may also be configured using an abbreviated inline syntax in a module's :ref:`sec-pipes`.
   
@@ -249,32 +257,45 @@ full set of options and their default settings:
 
   : /etc/joule/main.conf
 
-  #default settings shown
-  [Main]
-  IPAddress = 0.0.0.0
-  Port = 8088
-  NilmdbURL = http://localhost/nilmdb
-  Database = joule@localhost:5438/joule
-  InsertPeriod = 5
-  CleanupPeriod = 60
-  MaxLogLines = 100
-  ModuleDirectory = /etc/joule/module_configs
-  StreamDirectory = /etc/joule/stream_configs
+    #default settings shown
+    [Main]
+    # Module configuration files
+    ModuleDirectory = /etc/joule/module_configs
+
+    # Stream configuration files
+    StreamDirectory = /etc/joule/stream_configs
+
+    # Listen on address
+    IPAddress = 127.0.0.1
+
+    # Listen on port
+    Port = 8088
+
+    # PostgreSQL database connection
+    Database = DSN FORMAT (see below)
+
+    # How often to flush stream data to database
+    InsertPeriod = 5
+
+    # How often to remove old data (from Stream keep settings)
+    CleanupPeriod = 60
+
+    # Keep the most recent N lines in each module log
+    MaxLogLines = 100
 
   </div>
 
 See the list below for information on each setting.
 
-``NilmDB``
-  * ``url`` -- address of NilmDB server
+  * ``ModuleDirectory`` -- Absolute path to module configuration files.
+    Only files ending with **.conf** will be loaded
+  * ``StreamDirectory`` -- Absolute path to stream configuration files.
+    Only files ending with **.conf** will be loaded
+  * ``IPAddress`` -- IP address of interface to listen on. Use **0.0.0.0** to listen on all interfaces.
+  * ``Port`` -- TCP port to listen on
+  * ``Database`` -- PostgreSQL connection information as DSN string.
+    Format is **username:password@[domain|ip_address]:port/database**. Database must have TimescaleDB extension
+    loaded and initialized.
   * ``InsertionPeriod`` -- how often to send stream data to NilmDB (in seconds)
-  * ``CleanupPeriod`` -- how often to remove old data as specified by stream **keep** parameters
-``ProcDB``
-  * ``DbPath`` -- path to sqlite database used internally by joule
+  * ``CleanupPeriod`` -- how often to remove old data (in seconds) as specified by stream **keep** parameters
   * ``MaxLogLines`` -- max number of lines to keep in a module log file (automatically rolls)
-``Jouled``
-  * ``ModuleDirectory`` -- folder with module configuration files (absolute path)
-  * ``StreamDirectory`` -- folder with stream configuration files (absolute path)
-  * ``ModulesDocs`` -- JSON data file for module documentation
-  * ``IPAddress`` -- address to listen for standalone modules
-  * ``Port`` -- port to listen for standalone modules

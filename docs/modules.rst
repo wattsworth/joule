@@ -10,7 +10,7 @@ Malfunctioning modules do not affect other parts of the pipeline
 and can be restarted without interrupting the data flow. There are three basic types:
 :ref:`sec-reader`, :ref:`sec-filter`, and :ref:`sec-composite`.
 
-Examples in the documentation below are available at http://git.wattsworth.net/wattsworth/example_modules.
+Examples in the documentation below are available at https://github.com/wattsworth/example-modules.git
 This repository provides serveral examples of each module types and can be used as a template
 to design your own installable Joule modules.
 
@@ -19,7 +19,7 @@ to design your own installable Joule modules.
   <div class="header bash">
   Command Line:
   </div>
-  <div class="code bash"><b>$> git clone https://git.wattsworth.net/wattsworth/example_modules.git</b>
+  <div class="code bash"><b>$> git clone https://github.com/wattsworth/example-modules.git</b>
   <i># To install modules system-wide: </i>
   <b>$> python3 setup.py install </b>
   <i># To run unittests: </i>

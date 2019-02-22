@@ -32,9 +32,6 @@ def move(config: Config, source: str, destination: str):
 @click.argument("folder")
 @pass_config
 def delete(config, folder, recursive):
-    if recursive:
-        click.confirm("Delete folder and all subfolders and streams [%s]?" % folder,
-                      abort=True)
 
     session = node.Session(config.url)
     loop = asyncio.get_event_loop()

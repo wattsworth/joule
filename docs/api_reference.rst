@@ -9,30 +9,63 @@ Stuff about the Node class
 Folder Actions
 ''''''''''''''
 
-folder_root
-```````````
+.. function:: Node.folder_root() -> joule.Folder
 
-.. autofunction:: joule.api.Node.folder_root
+    Retrieve the node's root folder.
 
-folder_get
-``````````
+    Example:
+        >>> root = await node.folder_root()
+        >>> root.parent == None # this is the root
 
-.. autofunction:: joule.api.Node.folder_get
+.. function:: Node.folder_get(folder: Union[joule.Folder, str, int]) -> joule.Folder
 
-folder_move
-```````````
+    Retrieve the specified folder. Folder may be specified by a Folder object,
+    a path, or numeric ID. Raises errors.ApiError if folder specification is invalid.
 
-.. autofunction:: joule.api.Node.folder_move
+    Example:
+        >>> datasets = node.folder_get("/example/datasets")
+        >>> other_folder = node.folder_get(25)
 
-folder_update
-`````````````
+.. function:: Node.folder_move(source: Union[Folder, str, int], destination: Union[Folder, str, int]) -> None
 
-.. autofunction:: joule.api.Node.folder_update
+    Move the *source* folder into the *destination* folder. The source and destination may be
+    specified by joule.Folder objects, paths, or numeric ID's. Raises
+    errors.ApiError if folder specifications are invalid or the requested
+    move cannot be performed.
 
-folder_delete
-`````````````
+    Example:
+        >>> folder1 = await node.folder_get("/folder1")
+        >>> await node.folder_move(folder1,"/parent")
+        >>> parent = await node.folder_get("/parent")
+        >>> parent.children
+        >>> [folder1]
 
-.. autofunction:: joule.api.Node.folder_delete
+.. function:: Node.folder_update(folder: joule.Folder) -> None
+
+    Update writable attributes for the folder. The name and
+    description are the only writable attributes for the Folder model.
+
+    Example:
+        >>> folder = await node.folder_get("/folder")
+        >>> folder.description = "new description"
+        >>> await node.folder_update(folder)
+        >>> refreshed_folder = await node.folder_get(folder)
+        >>> refreshed_folder.description
+        >>> the description
+
+
+.. function:: Node.folder_delete(folder: Union[Folder, str, int], recursive: bool) -> None:
+
+    Delete the specified folder. If recursive is True delete any
+    child folders as well. Raises errors.apiError if the folder specification
+    is invalid or if the folder has children and recursive is False
+
+    Example:
+        >>> folder = await node.folder_get("/parent")
+        >>> await node.folder_delete(folder, False)
+        >>> # raises error
+        >>> await node.folder_delete(folder, True)
+        >>> # all children folders are removed
 
 Stream Actions
 ''''''''''''''

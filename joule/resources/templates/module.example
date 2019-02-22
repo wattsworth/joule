@@ -1,16 +1,33 @@
 [Main]
-#required
 name = module name
-exec_cmd = /path/to/executable --args
-#optional
+exec_cmd = /path/to/executable
+
+# whether the module provides a web interface (yes|no)
+has_interface = no
+
+# optional
 description = a short description
 
-[Input]
-path1 = /nilmdb/input/stream1
-path2 = /nilmdb/input/stream2
+# Specify command line arguments
+# (may also include in the exec_cmd)
+[Arguments]
+arg1 = val1
+arg2 = val2
+# additional arguments...
+
+
+# ReaderModule must have only one output
+# and no inputs. FilterModules have no
+# constraints on inputs and outputs
+
+[Inputs]
+# stream configuration may be specified inline
+path1 = /data/input/stream1:float32[x,y]
+# ...or omitted in which case a stream configuration file is required
+path2 = /data/input/stream2
 # additional inputs...
 
 [Outputs]
-path1 = /nilmdb/output/stream1
-path2 = /nilmdb/output/stream2
+path1 = /data/output/stream1
+path2 = /data/output/stream2
 # additional outputs...

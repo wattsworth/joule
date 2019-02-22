@@ -55,7 +55,9 @@ class Folder(Base):
 
     @property
     def locked(self):
-        """does this folder or any of its children have locked streams?"""
+        """is this the root folder or does this folder or any of its children have locked streams?"""
+        if self.parent is None:
+            return True
         for f in self.children:
             if f.locked:
                 return True
@@ -75,6 +77,7 @@ class Folder(Base):
             'id': self.id,
             'name': self.name,
             'description': self.description,
+            'locked': self.locked,
             'children': [c.to_json(info) for c in self.children],
             'streams': [s.to_json(info) for s in self.streams]
         }

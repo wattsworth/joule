@@ -1,5 +1,5 @@
 [Unit]
-Description = "Joule Management Daemon"
+Description = "Joule Daemon"
 After = syslog.target apache2.service
 
 [Service]
