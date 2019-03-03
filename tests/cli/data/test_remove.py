@@ -18,8 +18,8 @@ class TestRemove(FakeJouleTestCase):
         end_str = "1 hour ago"
         result = runner.invoke(main, ['--url', url, 'data', 'remove',
                                       '/folder/src',
-                                      '--from', start_str,
-                                      '--to', end_str])
+                                      '--start', start_str,
+                                      '--end', end_str])
         self.assertEqual(result.exit_code, 0)
         (path, start, end) = self.msgs.get()
         self.assertEqual(path, '/folder/src')

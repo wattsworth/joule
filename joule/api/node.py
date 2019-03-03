@@ -26,6 +26,7 @@ from joule.api.stream import (Stream,
 
 from joule.api.data import (data_write,
                             data_read,
+                            data_subscribe,
                             data_delete,
                             data_intervals)
 
@@ -67,7 +68,7 @@ class Node:
 
     async def folder_delete(self,
                             folder: Union[Folder, str, int],
-                            recursive: bool) -> None:
+                            recursive: bool = False) -> None:
         await folder_delete(self.session, folder, recursive)
 
     # Stream actions
@@ -108,6 +109,10 @@ class Node:
                         max_rows: Optional[int] = None) -> Pipe:
         return await data_read(self.session, self.loop, stream, start, end,
                                max_rows)
+
+    async def data_subscribe(self,
+                             stream: Union[Stream, str, int]) -> Pipe:
+        return await data_subscribe(self.session, self.loop, stream)
 
     async def data_intervals(self,
                              stream: Union[Stream, str, int],

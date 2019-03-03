@@ -3,11 +3,11 @@ import datetime
 # --------- Utility functions from Jim Paris ------------
 
 
-def time_now():
+def time_now() -> int:
     """
     :return:     current time in UNIX microseconds
     """
-    return datetime.datetime.now().timestamp() * 1e6
+    return int(datetime.datetime.now().timestamp() * 1e6)
 
 
 # Range

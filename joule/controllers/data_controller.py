@@ -20,7 +20,7 @@ async def read_json(request: web.Request):
 
 
 async def read(request: web.Request, json=False):
-    if 'subscribe' in request.query:
+    if 'subscribe' in request.query and request.query['subscribe'] == '1':
         return await _subscribe(request, json)
     else:
         return await _read(request, json)
@@ -64,6 +64,7 @@ async def _read(request: web.Request, json):
 
     async def stream_data(data: np.ndarray, layout, factor):
         nonlocal resp
+
         if resp is None:
             resp = web.StreamResponse(status=200,
                                       headers={'joule-layout': layout,
@@ -148,7 +149,13 @@ async def _subscribe(request: web.Request, json: bool):
                               headers={'joule-layout': stream.layout,
                                        'joule-decimation': '1'})
     resp.enable_chunked_encoding()
-    await resp.prepare(request)
+
+    try:
+        await resp.prepare(request)
+    except ConnectionResetError:
+        unsubscribe()
+        return
+
     try:
         while True:
             try:
@@ -166,7 +173,7 @@ async def _subscribe(request: web.Request, json: bool):
         # propogate the CancelledError up
         raise e
     except ConnectionResetError:
-        log.warning("unexpected client disconnect")
+        unsubscribe()
 
 
 async def intervals(request: web.Request):
@@ -216,15 +223,20 @@ async def write(request: web.Request):
     # spawn in inserter task
     stream.is_destination = True
     db.commit()
+
     pipe = pipes.InputPipe(name="inbound", stream=stream, reader=request.content)
     loop = asyncio.get_event_loop()
-    task = await data_store.spawn_inserter(stream, pipe, loop, insert_period=0)
+
     try:
+        task = await data_store.spawn_inserter(stream, pipe, loop, insert_period=0)
         await task
     except DataError as e:
         return web.Response(text=str(e), status=400)
-    stream.is_destination = False
-    db.commit()
+    except asyncio.CancelledError as e:
+        raise e
+    finally:
+        stream.is_destination = False
+        db.commit()
     return web.Response(text="ok")
 
 

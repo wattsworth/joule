@@ -51,6 +51,7 @@ class TimescaleStore(DataStore):
                              loop: Loop, insert_period=None) -> asyncio.Task:
         if insert_period is None:
             insert_period = self.insert_period
+
         conn: asyncpg.Connection = await asyncpg.connect(self.dsn)
 
         inserter = Inserter(conn, stream,
@@ -114,34 +115,39 @@ class TimescaleStore(DataStore):
                     await callback(data, stream.layout, 1)
                     await self.pool.release(conn)
                     return
-        await _extract_data(conn, stream, callback, decimation_level, start, end,
-                            block_size=self.extract_block_size)
-        await self.pool.release(conn)
+        try:
+            await _extract_data(conn, stream, callback, decimation_level, start, end,
+                                block_size=self.extract_block_size)
+        except Exception as e:
+            raise e
+        finally:
+            await self.pool.release(conn)
 
-    async def remove(self, stream: 'Stream', start: Optional[int], end: Optional[int]):
+    async def remove(self, stream: 'Stream',
+                     start: Optional[int], end: Optional[int],
+                     exact: bool = True):
         where_clause = psql_helpers.query_time_bounds(start, end)
         async with self.pool.acquire() as conn:
             tables = await psql_helpers.get_table_names(conn, stream)
             for table in tables:
                 # TODO: use drop chunks with newer and older clauses when timescale is updated
-                if start is None:  # use the much faster drop chunks utility
-                    if end is None:
-                        bounds = await psql_helpers.convert_time_bounds(conn, stream, start, end)
-                        if bounds is None:
-                            return  # no data to remove
-                        query = "SELECT drop_chunks(table_name=>'%s', schema_name=>'data', older_than=>'%s'::timestamp)" % \
-                                (table.split(".")[1], bounds[1])
-                        try:
-                            await conn.execute(query)
-                        except asyncpg.exceptions.RaiseError as err:
-                            print("psql: ",err)
-                            pass
-
-                query = 'DELETE FROM %s ' % table + where_clause
+                # ******DROP CHUNKS IS *VERY* APPROXIMATE*********
+                if start is None and "intervals" not in table and not exact:
+                    # use the much faster drop chunks utility and accept the approximate result
+                    bounds = await psql_helpers.convert_time_bounds(conn, stream, start, end)
+                    if bounds is None:
+                        return  # no data to remove
+                    query = "SELECT drop_chunks(table_name=>'%s', schema_name=>'data', older_than=>'%s'::timestamp)" % \
+                            (table.split(".")[1], bounds[1])
+                else:
+                    query = 'DELETE FROM %s ' % table + where_clause
                 try:
                     await conn.execute(query)
                 except asyncpg.UndefinedTableError:
                     return # no data to remove
+                except asyncpg.exceptions.RaiseError as err:
+                    print("psql: ", err)
+                    return
             # create an interval boundary to mark the missing data
             if start is not None:
                 await psql_helpers.close_interval(conn, stream, start)

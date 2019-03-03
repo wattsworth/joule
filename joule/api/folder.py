@@ -52,7 +52,7 @@ async def folder_move(session: Session,
 
 async def folder_delete(session: Session,
                         folder: Union[Folder, str, int],
-                        recursive: bool) -> None:
+                        recursive: bool = False) -> None:
     _recursive = 0
     if recursive:
         _recursive = 1

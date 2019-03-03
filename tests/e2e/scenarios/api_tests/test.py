@@ -1,6 +1,6 @@
 import unittest
 from joule import api
-import folder
+import folder, stream, module, data
 
 async def setup():
     node = api.Node()
@@ -16,11 +16,15 @@ async def setup():
             stream2
         """
 
+
 def main():
     loader = unittest.TestLoader()
-    tests = loader.loadTestsFromModule(folder)
+
     suite = unittest.TestSuite()
-    suite.addTests(tests)
+    suite.addTests(loader.loadTestsFromModule(folder))
+    suite.addTests(loader.loadTestsFromModule(stream))
+    suite.addTests(loader.loadTestsFromModule(module))
+    suite.addTests(loader.loadTestsFromModule(data))
     runner = unittest.TextTestRunner()
     result = runner.run(suite)
     print(result)

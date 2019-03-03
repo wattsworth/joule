@@ -31,5 +31,6 @@ class Folder:
             "name": self.name,
             "description": self.description,
             "streams": [s.to_json() for s in self.streams],
-            "children": [c.to_json() for c in self.children]
+            "children": [c.to_json() for c in self.children],
+            "locked": self.locked
         }

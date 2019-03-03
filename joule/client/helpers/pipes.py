@@ -20,7 +20,7 @@ def build_fd_pipes(pipe_args: str, loop: Loop) -> Tuple[Pipes, Pipes]:
     try:
         pipe_json = json.loads(json.loads(pipe_args))
         # if debugging, pycharm escapes the outer JSON
-        #pipe_json = json.loads(pipe_args.encode('utf-8').decode('unicode_escape'))
+        # pipe_json = json.loads(pipe_args.encode('utf-8').decode('unicode_escape'))
         dest_args = pipe_json['outputs']
         src_args = pipe_json['inputs']
     except (KeyError, json.JSONDecodeError):
@@ -52,10 +52,14 @@ async def build_network_pipes(inputs: Dict[str, str], outputs: Dict[str, str],
     try:
         for name in inputs:
             my_stream = await _parse_stream(session, inputs[name])
-            pipes_in[name] = await data.data_read(session, my_node.loop,
-                                                  my_stream,
-                                                  start_time,
-                                                  end_time)
+            if start_time is None and end_time is None:
+                # subscribe to live data
+                pipes_in[name] = await data.data_subscribe(session, my_node.loop, my_stream)
+            else:
+                pipes_in[name] = await data.data_read(session, my_node.loop,
+                                                      my_stream,
+                                                      start_time,
+                                                      end_time)
 
         for name in outputs:
             my_stream = await _parse_stream(session, outputs[name])
@@ -100,13 +104,13 @@ async def _parse_stream(session: Session, pipe_config) -> stream.Stream:
     datatype = datatype.name.lower()  # API models are plain text attributes
     # use API to get or create the stream on the Joule node
     try:
-        remote_stream = await stream.stream_get(session, path+'/'+name)
+        remote_stream = await stream.stream_get(session, path + '/' + name)
         # make sure the layout agrees
-        if remote_stream.datatype != datatype or\
-           len(remote_stream.elements) != len(element_names):
+        if remote_stream.datatype != datatype or \
+                len(remote_stream.elements) != len(element_names):
             raise errors.ConfigurationError("Invalid stream configuration: [%s] has layout: %s not %s_%d" %
-                                  (remote_stream.name, remote_stream.layout,
-                                   datatype, len(element_names)))
+                                            (remote_stream.name, remote_stream.layout,
+                                             datatype, len(element_names)))
     except errors.ApiError as e:
         if '404' in str(e):
             # create the stream

@@ -27,6 +27,10 @@ class Module:
         self.outputs = outputs
         self.statistics = statistics
 
+    def __repr__(self):
+        return "<joule.api.Module id=%r name=%r description=%r has_interface=%r>" % (
+                self.id, self.name, self.description, self.has_interface)
+
 
 def from_json(json) -> Module:
     inputs = json['inputs']

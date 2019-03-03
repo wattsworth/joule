@@ -18,7 +18,7 @@ class TestFolderControllerErrors(AioHTTPTestCase):
         app = web.Application()
         app.add_routes(joule.controllers.routes)
         app["db"], app["psql"] = create_db(["/top/leaf/stream1:float32[x, y, z]",
-                               "/top/middle/leaf/stream2:int8[val1, val2]"])
+                                            "/top/middle/leaf/stream2:int8[val1, val2]"])
         app["data-store"] = MockStore()
         return app
 
@@ -76,11 +76,6 @@ class TestFolderControllerErrors(AioHTTPTestCase):
         # return "not found" on bad path
         resp = await self.client.delete("/folder.json", params={"path": "/bad/path"})
         self.assertEqual(resp.status, 404)
-        # cannot delete folders with streams
-        resp = await self.client.delete("/folder.json", params={"path": "/top/leaf"})
-        self.assertEqual(resp.status, 400)
-        self.assertTrue('streams' in await resp.text())
-        self.assertIsNotNone(db.query(Stream).filter_by(name="stream1").one())
         # cannot delete folders with children unless recursive is set
         f = folder.find("/a/new/path", db, create=True)
         resp = await self.client.delete("/folder.json", params={"path": "/a"})
@@ -95,9 +90,9 @@ class TestFolderControllerErrors(AioHTTPTestCase):
         # invalid name, nothing should be saved
         payload = {
             "id": my_folder.id,
-            "folder": json.dumps(
+            "folder":
                 {"name": "",
-                 "description": "new description"})
+                 "description": "new description"}
         }
         resp = await self.client.put("/folder.json", json=payload)
         self.assertEqual(resp.status, 400)
@@ -148,4 +143,3 @@ class TestFolderControllerErrors(AioHTTPTestCase):
         resp = await self.client.put("/folder.json", json=payload)
         self.assertEqual(resp.status, 404)
         self.assertTrue('exist' in await resp.text())
-

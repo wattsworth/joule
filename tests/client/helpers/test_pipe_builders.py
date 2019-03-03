@@ -49,7 +49,6 @@ class TestPipeHelpers(FakeJouleTestCase):
         with self.assertLogs(level='INFO') as log:
             loop.run_until_complete(runner())
         log_dump = ' '.join(log.output)
-        self.assertIn("historic connection", log_dump)
         self.stop_server()
         loop.close()
 
@@ -82,7 +81,6 @@ class TestPipeHelpers(FakeJouleTestCase):
         with self.assertLogs(level='INFO') as log:
             loop.run_until_complete(runner())
         log_dump = ' '.join(log.output)
-        self.assertIn("live connection", log_dump)
         self.stop_server()
         loop.close()
 

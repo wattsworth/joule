@@ -86,7 +86,7 @@ class TestFolderController(AioHTTPTestCase):
         f_count = db.query(Folder).count()
         folder.find("/an/empty/folder", db, create=True)
         self.assertEqual(db.query(Folder).count(), f_count + 3)
-        payload = {'path': "/an", 'recursive': "True"}
+        payload = {'path': "/an", 'recursive': "1"}
         resp = await self.client.delete("/folder.json", params=payload)
         self.assertEqual(resp.status, 200)
 
@@ -102,7 +102,7 @@ class TestFolderController(AioHTTPTestCase):
         # change the stream name
         payload = {
             "id": my_folder.id,
-            "folder": json.dumps({"name": "new name", "description": "new description"})
+            "folder": {"name": "new name", "description": "new description"}
         }
         resp = await self.client.put("/folder.json", json=payload)
         self.assertEqual(200, resp.status)

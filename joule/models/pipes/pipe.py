@@ -21,6 +21,7 @@ class Pipe:
        There are many different kinds of pipes
 
     """
+
     class DIRECTION(enum.Enum):
         INPUT = enum.auto()
         OUTPUT = enum.auto()
@@ -44,6 +45,10 @@ class Pipe:
         self.closed = False
         self.decimation_level = 1
         self.subscribers: List['Pipe'] = []
+
+    def __repr__(self):
+        return '<joule.models.Pipe name=%r direction=%r layout=%r>' % (
+            self.name, self.direction.name, self.layout)
 
     def enable_cache(self, lines: int):
         """
@@ -69,7 +74,7 @@ class Pipe:
             raise PipeError("cannot control cache on input pipes")
         raise PipeError("abstract method must be implemented by child")
 
-    async def read(self, flatten=False):
+    async def read(self, flatten=False) -> np.ndarray:
         """
         Read stream data. By default this method returns a structured
         array with ``timestamp`` and ``data`` fields. This method is a coroutine.
@@ -143,7 +148,7 @@ class Pipe:
         not be used. Instead use the coroutine :meth:`close_interval`.
 
         """
-        pass # pragma: no cover
+        pass  # pragma: no cover
 
     def subscribe(self, pipe):
         if self.direction == Pipe.DIRECTION.INPUT:
@@ -231,25 +236,6 @@ class Pipe:
             raise PipeError("invalid data type must be a structured array or 2D matrix")
         return True
 
-    def __repr__(self):
-        msg = "<Pipe(name='%s', direction=" % self.name
-        if self.direction == Pipe.DIRECTION.INPUT:
-            msg += 'INPUT'
-        else:
-            msg += 'OUTPUT'
-        msg += ", module="
-        if self.module is not None:
-            msg += self.module.name
-        else:
-            msg += "[None]"
-        msg += ", stream="
-        if self.stream is not None:
-            msg += self.stream.name
-        else:
-            msg += "[None]"
-        msg += '>'
-        return msg
-
 
 def interval_token(layout):
     nelem = int(layout.split('_')[1])
@@ -260,11 +246,22 @@ def interval_token(layout):
 
 
 def find_interval_token(raw: bytes, layout):
-    token = interval_token(layout).tostring()
-    index = raw.find(token)
+    token = interval_token(layout)[0]
+    token_bytes = token.tostring()
+    index = raw.find(token_bytes)
     if index == -1:
         return None
-    return index, index + len(token)
+    # this data *may* have an interval, need to check if the token
+    # is aligned to a row
+    data = np.frombuffer(raw, dtype=compute_dtype(layout))
+    i = 0
+    for row in data:
+        if np.array_equal(row, token):
+            return i * len(token_bytes), (i + 1) * len(token_bytes)
+        i += 1
+
+    # suprious match, not aligned to a row
+    return None
 
 
 def compute_dtype(layout: str) -> np.dtype:

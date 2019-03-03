@@ -41,11 +41,11 @@ async def data_delete(session: Session,
     await session.delete("/data", params)
 
 
-async def data_write(session:Session,
+async def data_write(session: Session,
                      loop: asyncio.AbstractEventLoop,
                      stream: Union[Stream, str, int],
-                     start_time: Optional[int]=None,
-                     end_time: Optional[int]=None,
+                     start_time: Optional[int] = None,
+                     end_time: Optional[int] = None,
                      ) -> Pipe:
     # stream must exist, does not automatically create a stream
     # retrieve the destination stream object
@@ -65,7 +65,7 @@ async def data_write(session:Session,
 
     # make sure the stream is not currently produced
     if dest_stream.is_destination:
-        raise errors.ApiError("Output [%s] is already being produced" % stream.name)
+        raise errors.ApiError("Stream [%s] is already being produced" % dest_stream.name)
 
     # all checks passed, subscribe to the output
     async def close():
@@ -104,7 +104,6 @@ async def data_read(session: Session,
                     start: Optional[int] = None,
                     end: Optional[int] = None,
                     max_rows: Optional[int] = None) -> Pipe:
-
     # make sure the input is compatible
     src_stream = await stream_get(session, stream)
     if type(stream) is Stream:
@@ -112,26 +111,13 @@ async def data_read(session: Session,
             raise errors.ApiError("Input [%s] configured for [%s] but source is [%s]" % (
                 stream, stream.layout, src_stream.layout))
 
-    # if the input is *live* make sure the stream is being produced
-    if not src_stream.is_destination and (start is None and end is None):
-        raise errors.ApiError(
-            "Stream [%s] is not being produced, specify time bounds for historic execution" % src_stream.name)
     # replace the stub stream (from config file) with actual stream
-    pipe = LocalPipe(src_stream.layout, loop=loop, stream=src_stream)
+    pipe = LocalPipe(src_stream.layout, name=src_stream.name, loop=loop, stream=src_stream)
     pipe.stream = src_stream
-
-    # all checks passed, subscribe to the input
-    if start is None and end is None:
-        if max_rows is not None:
-            raise errors.ApiError("Cannot specify [max_rows] for a live input")
-        task = loop.create_task(_live_reader(session,
+    task = loop.create_task(_historic_reader(session,
                                              src_stream,
-                                             pipe))
-    else:
-        task = loop.create_task(_historic_reader(session,
-                                                 src_stream,
-                                                 pipe,
-                                                 start, end, max_rows))
+                                             pipe,
+                                             start, end, max_rows))
 
     async def close():
         task.cancel()
@@ -141,7 +127,39 @@ async def data_read(session: Session,
             pass
 
     pipe.close_cb = close
+    return pipe
 
+
+async def data_subscribe(session: Session,
+                         loop: asyncio.AbstractEventLoop,
+                         stream: Union[Stream, str, int]) -> Pipe:
+    # make sure the input is compatible
+    src_stream = await stream_get(session, stream)
+    if type(stream) is Stream:
+        if src_stream.layout != src_stream.layout:
+            raise errors.ApiError("Input [%s] configured for [%s] but source is [%s]" % (
+                stream, stream.layout, src_stream.layout))
+
+    # make sure the stream is being produced
+    if not src_stream.is_destination:
+        raise errors.ApiError(
+            "Stream [%s] is not being produced, specify time bounds for historic execution" % src_stream.name)
+    # replace the stub stream (from config file) with actual stream
+    pipe = LocalPipe(src_stream.layout, name=src_stream.name, loop=loop, stream=src_stream)
+    pipe.stream = src_stream
+
+    task = loop.create_task(_live_reader(session,
+                                         src_stream,
+                                         pipe))
+
+    async def close():
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+
+    pipe.close_cb = close
     return pipe
 
 
@@ -149,26 +167,30 @@ async def _live_reader(session: Session, my_stream: Stream,
                        pipe_out: Pipe):
     log.info("requesting live connection to [%s]" % my_stream.name)
     params = {'id': my_stream.id, 'subscribe': '1'}
-    async with session._session.get(session.url+"/data",
-                                    params=params) as response:
-        if response.status != 200:  # pragma: no cover
-            msg = await response.text()
-            log.error("Error reading input [%s]: " % my_stream.name, msg)
-            await pipe_out.close()
-            return
-        pipe_out.change_layout(response.headers['joule-layout'])
-        pipe_out.decimation_level = int(response.headers['joule-decimation'])
-        pipe_in = InputPipe(layout=pipe_out.layout,
-                                  stream=my_stream, reader=response.content)
-        try:
+    try:
+        async with session._session.get(session.url + "/data",
+                                        params=params) as response:
+            if response.status != 200:  # pragma: no cover
+                msg = await response.text()
+                log.error("Error reading input [%s]: " % my_stream.name, msg)
+                await pipe_out.close()
+                return
+            pipe_out.change_layout(response.headers['joule-layout'])
+            pipe_out.decimation_level = int(response.headers['joule-decimation'])
+            pipe_in = InputPipe(layout=pipe_out.layout,
+                                stream=my_stream, reader=response.content)
             while True:
                 data = await pipe_in.read()
                 pipe_in.consume(len(data))
                 await pipe_out.write(data)
                 if pipe_in.end_of_interval:
                     await pipe_out.close_interval()
-        except (asyncio.CancelledError, EmptyPipe):
-            pass
+
+    except (asyncio.CancelledError, EmptyPipe, aiohttp.ClientError):
+        pass
+    except Exception as e:
+        print("unexpected exception: ", e)
+        raise e
     await pipe_out.close()
 
 
@@ -185,27 +207,31 @@ async def _historic_reader(session: Session,
         params['start'] = start_time
     if end_time is not None:
         params['end'] = end_time
-    async with session._session.get(session.url+"/data",
-                                    params=params) as response:
-        if response.status != 200:  # pragma: no cover
-            msg = await response.text()
-            log.error("Error reading input [%s]: %s" % (my_stream.name, msg))
-            await pipe_out.close()
-            return
-        pipe_out.change_layout(response.headers['joule-layout'])
-        pipe_out.decimation_level = int(response.headers['joule-decimation'])
-
-        pipe_in = InputPipe(layout=pipe_out.layout,
-                                  stream=my_stream, reader=response.content)
-        try:
+    try:
+        async with session._session.get(session.url + "/data",
+                                        params=params) as response:
+            if response.status != 200:  # pragma: no cover
+                msg = await response.text()
+                log.error("Error reading input [%s]: %s" % (my_stream.name, msg))
+                await pipe_out.close()
+                return
+            pipe_out.change_layout(response.headers['joule-layout'])
+            pipe_out.decimation_level = int(response.headers['joule-decimation'])
+            pipe_in = InputPipe(layout=pipe_out.layout,
+                                stream=my_stream, reader=response.content)
             while True:
                 data = await pipe_in.read()
                 pipe_in.consume(len(data))
                 await pipe_out.write(data)
                 if pipe_in.end_of_interval:
                     await pipe_out.close_interval()
-        except (asyncio.CancelledError, EmptyPipe):
-            pass
+
+    except (asyncio.CancelledError, EmptyPipe):
+        pass
+    except Exception as e:
+        print("unexpected exception: ", e)
+        raise e
+    finally:
         await pipe_out.close()
 
 
@@ -229,9 +255,9 @@ async def _send_data(session: Session,
         output_complete = True
 
     while not output_complete:
-            try:
-                await session.post("/data",
-                                   params={"id": stream.id},
-                                   data=_data_sender())
-            except errors.ApiError as e:  # pragma: no cover
-                log.info("Error submitting data to joule [%s], retrying" % str(e))
+        try:
+            await session.post("/data",
+                               params={"id": stream.id},
+                               data=_data_sender())
+        except errors.ApiError as e:  # pragma: no cover
+            log.info("Error submitting data to joule [%s], retrying" % str(e))

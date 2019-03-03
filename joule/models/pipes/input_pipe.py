@@ -37,7 +37,9 @@ class InputPipe(Pipe):
                 self._reader_close()
             raise PipeError("Cannot read from a closed pipe")
         rowbytes = self.dtype.itemsize
-        max_rows = self.BUFFER_SIZE - self.last_index
+        max_rows = self.BUFFER_SIZE - (
+                   self.last_index + len(self.unprocessed_np_buffer) % rowbytes)
+
         if max_rows == 0:
             # buffer is full, this must be consumed before a new read
             return self._format_data(self.buffer[:self.last_index], flatten)
@@ -76,21 +78,29 @@ class InputPipe(Pipe):
 
         # append unprocessed np_buffer from previous read
         if len(self.unprocessed_np_buffer) > 0:
-            np_buffer = self.unprocessed_np_buffer + np_buffer
-            self.unprocessed_np_buffer = b''
+            self.unprocessed_np_buffer = self.unprocessed_np_buffer + np_buffer
+            # check if we can process all the data, if not
+            # store the extra in unprocessed_np_buffer
+            max_bytes = max_rows * rowbytes
+            if len(self.unprocessed_np_buffer) <= max_bytes:
+                np_buffer = self.unprocessed_np_buffer
+                self.unprocessed_np_buffer = b''
+            else:
+                np_buffer = self.unprocessed_np_buffer[:max_bytes]
+                self.unprocessed_np_buffer = self.unprocessed_np_buffer[max_bytes:]
 
         # check for an interval
         self.interval_break = False
         loc = find_interval_token(np_buffer, self.layout)
         if loc is not None:
-            self.unprocessed_np_buffer = np_buffer[loc[1]:]
+            self.unprocessed_np_buffer = np_buffer[loc[1]:] + self.unprocessed_np_buffer
             np_buffer = np_buffer[:loc[0]]
             self.interval_break = True
-
         data = np.frombuffer(np_buffer, dtype=self.dtype)
 
         # append data onto buffer
         self.buffer[self.last_index:self.last_index + len(data)] = data
+
         self.last_index += len(data)
         return self._format_data(self.buffer[:self.last_index], flatten)
 
