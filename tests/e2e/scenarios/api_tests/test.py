@@ -1,3 +1,7 @@
+#!/usr/bin/env python3
+import time
+import io
+
 import unittest
 from joule import api
 import folder, stream, module, data
@@ -19,17 +23,23 @@ async def setup():
 
 def main():
     loader = unittest.TestLoader()
-
     suite = unittest.TestSuite()
     suite.addTests(loader.loadTestsFromModule(folder))
     suite.addTests(loader.loadTestsFromModule(stream))
     suite.addTests(loader.loadTestsFromModule(module))
     suite.addTests(loader.loadTestsFromModule(data))
-    runner = unittest.TextTestRunner()
+    output = io.StringIO()
+    #runner = unittest.TextTestRunner(failfast=True)
+    runner = unittest.TextTestRunner(stream=output, failfast=True)
     result = runner.run(suite)
-    print(result)
+    if result.wasSuccessful():
+        print("OK")
+    else:
+        print("FAIL")
+        output.seek(0)
+        print(output.read())
 
 
 if __name__ == '__main__':
+    time.sleep(1)
     main()
-    print("OK")

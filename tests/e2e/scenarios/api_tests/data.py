@@ -1,3 +1,5 @@
+import unittest
+
 import asynctest
 from joule import api, utilities, models
 import numpy as np
@@ -13,7 +15,7 @@ class TestDataMethods(asynctest.TestCase):
         await self.node.close()
 
     async def test_data_read(self):
-        stream = await self.node.data_read("/live/base", end=utilities.time_now())
+        stream = await self.node.data_read("/live/base")
         num_intervals = 0
         # data should start at 0 and count up by 10's every interval
         while True:
@@ -30,7 +32,16 @@ class TestDataMethods(asynctest.TestCase):
         await stream.close()
 
     async def test_data_read_max_rows(self):
-        pass
+        stream = await self.node.data_read("/live/base", max_rows=100)
+        total_rows = 0
+        while True:
+            try:
+                data = await stream.read()
+                total_rows += len(data)
+                stream.consume(len(data))
+            except models.pipes.EmptyPipe:
+                break
+        self.assertLessEqual(total_rows, 100)
 
     async def test_data_subscribe(self):
         stream = await self.node.data_subscribe("/live/plus1")
@@ -77,7 +88,31 @@ class TestDataMethods(asynctest.TestCase):
                 pipe.consume(len(data))
             except models.pipes.EmptyPipe:
                 break
-        self.assertEqual(blk_size*nblks, nrows)
+        self.assertEqual(blk_size * nblks, nrows)
 
     async def test_data_delete(self):
-        pass
+        # copy data to a new stream
+        src = await self.node.stream_get("/live/base")
+        dest = await self.node.stream_create(src, "/tmp")
+        data_in = await self.node.data_read(src)
+        data_out = await self.node.data_write(dest)
+        first_ts = None
+        last_ts = None
+        while True:
+            try:
+                data = await data_in.read()
+                if first_ts is None:
+                    first_ts = data['timestamp'][1]
+                last_ts = data['timestamp'][-1]
+                data_in.consume(len(data))
+                await data_out.write(data)
+            except models.pipes.EmptyPipe:
+                break
+        await data_out.close()
+        dest_info = await self.node.stream_info(dest)
+        self.assertGreater(dest_info.rows, 2)
+        # remove all but the first and last samples
+        await self.node.data_delete(dest, start=first_ts + 1, end=last_ts - 1)
+        dest_info = await self.node.stream_info(dest)
+        self.assertEqual(dest_info.rows, 2)
+        await self.node.stream_delete(dest)

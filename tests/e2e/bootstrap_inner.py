@@ -16,28 +16,38 @@ SCENARIO_DIR = "/joule/tests/e2e/scenarios"
 MODULE_SCRIPT_DIR = "/joule/tests/e2e/module_scripts"
 JOULE_CONF_DIR = "/etc/joule"
 
-FORCE_DUMP = True
+FORCE_DUMP = False
 
 
 def prep_system():
     os.symlink(MODULE_SCRIPT_DIR, "/module_scripts")
 
-    
+
 def run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL):
     return subprocess.run(shlex.split(cmd), stdout=stdout, stderr=stderr)
 
 
 def main():
-
     prep_system()
     for entry in os.scandir(SCENARIO_DIR):
-        if not entry.name.startswith('.') and entry.is_dir():
-            if(os.path.exists("/etc/joule/")):
-                if(os.path.islink("/etc/joule")):
+        if not (entry.name.startswith('.') and entry.is_dir()):
+            if entry.name in ["__pycache__","__init__.py"]:
+                continue
+
+            if (os.path.exists("/etc/joule/")):
+                if (os.path.islink("/etc/joule")):
                     os.unlink("/etc/joule")  # this is a symlink
                 else:
                     shutil.rmtree("/etc/joule/")
             os.symlink(entry.path, "/etc/joule")
+            # clear the existing database
+            jouled = subprocess.Popen(["jouled", "--erase-all",
+                                       "--config", "/etc/joule/main.conf"],
+                                      stdin=subprocess.PIPE,
+                                      stdout=subprocess.PIPE,
+                                      stderr=subprocess.PIPE,
+                                      encoding='utf-8')
+            jouled.communicate("Y\n")
             jouled = subprocess.Popen(["jouled", "--config",
                                        "/etc/joule/main.conf"],
                                       stdout=subprocess.PIPE,
@@ -52,7 +62,7 @@ def main():
                 stdout, _ = jouled.communicate()
                 for line in stdout.rstrip().split('\n'):
                     print("> %s" % line)
-                if test.returncode !=0:
+                if test.returncode != 0:
                     return test.returncode
             time.sleep(6)
     return 0  # success

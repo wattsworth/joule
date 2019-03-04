@@ -26,9 +26,9 @@ async def data_delete(session: Session,
                       end: Optional[int] = None):
     params = {}
     if start is not None:
-        params['start'] = start
+        params['start'] = int(start)
     if end is not None:
-        params['end'] = end
+        params['end'] = int(end)
     if type(stream) is Stream:
         params['id'] = stream.id
     elif type(stream) is str:
@@ -92,9 +92,9 @@ async def data_intervals(session: Session,
     else:
         raise errors.ApiError("Invalid stream datatype. Must be Stream, Path, or ID")
     if start_time is not None:
-        data['start'] = start_time
+        data['start'] = int(start_time)
     if end_time is not None:
-        data['end'] = end_time
+        data['end'] = int(end_time)
     return await session.get("/data/intervals.json", params=data)
 
 
@@ -204,9 +204,9 @@ async def _historic_reader(session: Session,
     if max_rows is not None:
         params['max-rows'] = max_rows
     if start_time is not None:
-        params['start'] = start_time
+        params['start'] = int(start_time)
     if end_time is not None:
-        params['end'] = end_time
+        params['end'] = int(end_time)
     try:
         async with session._session.get(session.url + "/data",
                                         params=params) as response:
