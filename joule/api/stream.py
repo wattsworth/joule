@@ -6,6 +6,27 @@ from joule import errors
 
 
 class Stream:
+    """
+    API Stream model. See :ref:`sec-node-stream-actions` for details on using the API to
+    manipulate streams. Streams are locked if they are active or statically configured. When
+    creating a stream manually, omit the ID and status attributes (**is_***, **active**, and **locked**),
+    these are set by the Joule server.
+
+    Parameters:
+        name (str): folder name, must be unique in the parent
+        description (str): optional field
+        datatype (str): element datatype
+        keep_us (int): store the last N microseconds of data (-1 to keep all and 0 to keep none)
+        is_configured: is the stream statically configured with a *.conf file
+        is_source: is the stream an active data source
+        is_destination: is the stream an active data destination
+        active (bool): is the stream a source or destination
+        locked (bool): is the stream active or configured
+        decimate (bool): is the stream data decimated for visualization
+        elements (List[Element]): list of the stream elements
+
+    """
+
     def __init__(self,
                  name: str = "", description: str = "",
                  datatype: str = "float32", keep_us: int = -1,
@@ -82,6 +103,22 @@ def from_json(json) -> Stream:
 
 
 class Element:
+    """
+    API Element model. Streams have one or more elements. See :ref:`sec-streams` for details on the stream data model.
+
+    Parameters:
+        id (int): unique numeric ID assigned by Joule
+        index (int): column position in the data array (0 = first element)
+        name (str): element name
+        units (str): unit of measurement, may be any string
+        plottable (bool): should the element be visible in the Lumen plotting interface
+        display_type [continous|discrete|event]: plot type, defaults to continuous
+        offset (float): offset data visualization by ``y=(x-offset)*scale_factor``
+        scale_factor (float): scale data visualation with above equation
+        default_max (float): fix auto scale max (set to None to fit plotted data)
+        default_min (float): fix auto scale min (set to None to fit plotted data)
+    """
+
     def __init__(self, name: str = "", units: str = "",
                  plottable: bool = True,
                  display_type: str = 'continuous'):
@@ -133,6 +170,21 @@ def elem_from_json(json) -> Element:
 
 
 class StreamInfo:
+    """
+        API StreamInfo model. Received from :meth:`Node.stream_info` and should not be created directly.
+
+        .. warning::
+            Rows and Bytes values are approximate
+
+        Parameters:
+            start (int): timestamp in UNIX microseconds of the first data element
+            end (int): timestamp in UNIX microsseconds of the last data element
+            rows (int): approximate rows of data in the stream
+            bytes (int): approximate size of the data on disk
+            total_time (int): data duration in microseconds (start-end)
+
+        """
+
     def __init__(self, start: Optional[int], end: Optional[int], rows: int,
                  total_time: int = 0, bytes: int = 0):
         self.start = start
@@ -230,8 +282,8 @@ async def stream_get(session: Session,
 
 async def stream_update(session: Session,
                         stream: Stream) -> None:
-    return await session.put("/stream.json", {"id": stream.id,
-                                              "stream": stream.to_json()})
+    await session.put("/stream.json", {"id": stream.id,
+                                       "stream": stream.to_json()})
 
 
 async def stream_move(session: Session,

@@ -4,9 +4,9 @@ import requests
 from joule.cli.config import pass_config
 
 
-@click.command(name="remove")
-@click.option("--start", "-s" "start", help="timestamp or descriptive string")
-@click.option("--end", "-e", "end", help="timestamp or descriptive string")
+@click.command(name="delete")
+@click.option("-s", "--start", "start", help="timestamp or descriptive string")
+@click.option("-e", "--end", "end", help="timestamp or descriptive string")
 @click.option("--all", is_flag=True, help="remove all data")
 @click.argument("stream")
 @pass_config
@@ -19,9 +19,16 @@ def data_remove(config, start, end, all, stream):
     else:
         params['all'] = '0'
     if start is not None:
-        params['start'] = int(dateparser.parse(start).timestamp() * 1e6)
+        try:
+            params['start'] = int(start)
+        except ValueError:
+            params['start'] = int(dateparser.parse(start).timestamp() * 1e6)
+        print(params['start'])
     if end is not None:
-        params['end'] = int(dateparser.parse(end).timestamp() * 1e6)
+        try:
+            params['end'] = int(end)
+        except ValueError:
+            params['end'] = int(dateparser.parse(end).timestamp() * 1e6)
     try:
         resp = requests.delete(config.url + "/data", params=params)
     except requests.ConnectionError:

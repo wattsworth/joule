@@ -3,6 +3,7 @@ import numpy as np
 import logging
 
 from joule.models.pipes import Pipe, interval_token
+from joule.models.pipes.errors import PipeError
 
 log = logging.getLogger('joule')
 
@@ -22,6 +23,8 @@ class OutputPipe(Pipe):
         self._cache = None
 
     async def write(self, data):
+        if self.closed:
+            raise PipeError("Cannot write to a closed pipe")
         if not self._validate_data(data):
             return
         # make sure dtype is structured
@@ -42,6 +45,8 @@ class OutputPipe(Pipe):
         self._cache_index = 0
 
     async def flush_cache(self):
+        if self.closed:
+            raise PipeError("Pipe is closed")
         if self._cache_index > 0:
             await self._write(self._cache[:self._cache_index])
             self._cache_index = 0
@@ -60,12 +65,16 @@ class OutputPipe(Pipe):
         await self.writer.drain()
 
     async def close_interval(self):
+        if self.closed:
+            raise PipeError("Pipe is closed")
         if self._caching:
             await self.flush_cache()
         self.writer.write(interval_token(self.layout).tostring())
         await self.writer.drain()
 
     def close_interval_nowait(self):
+        if self.closed:
+            raise PipeError("Pipe is closed")
         if self._cache_index > 0:
             log.warning("dumping %d rows of cached data due on %s" % (self._cache_index, self.name))
             self._cache = np.empty(len(self._cache), self.dtype)
@@ -73,7 +82,8 @@ class OutputPipe(Pipe):
         self.writer.write(interval_token(self.layout).tostring())
 
     async def close(self):
-        self.closed = True
+        if self.closed:
+            return
         # if the cache is enabled, flush it
         if self._caching:
             await self.flush_cache()
@@ -89,3 +99,5 @@ class OutputPipe(Pipe):
         # close any subscribers
         for pipe in self.subscribers:
             await pipe.close()
+        self.closed = True
+

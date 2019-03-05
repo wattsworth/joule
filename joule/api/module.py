@@ -5,6 +5,17 @@ from . import node, stream
 
 
 class ModuleStatistics:
+    """
+    API ModuleStatistics model. Received by settings statistics to ``True`` when calling :meth:`Node.module_get` or
+    :meth:`Node.module_info` and should not be created directly.
+
+    Parameters:
+        pid (int): process ID
+        create_time (int): process creation time in UNIX seconds
+        cpu_percent (float): approximate CPU usage
+        memory_percent (float): approximate memory usage
+    """
+
     def __init__(self, pid: int, create_time: int,
                  cpu_percent: float, memory_percent: float):
         self.pid = pid
@@ -12,8 +23,28 @@ class ModuleStatistics:
         self.cpu_percent = cpu_percent
         self.memory_percent = memory_percent
 
+    def __repr__(self):
+        return "<joule.api.ModuleStatistics pid=%r create_time=%r cpu_percent=%r memory_percent=%r>" % (
+                self.pid, self.create_time, self.cpu_percent, self.memory_percent)
+
 
 class Module:
+    """
+    API Module model. See :ref:`sec-node-module-actions` for details on using the API to
+    query modules. See :ref:`modules` for details on writing new modules. See :ref:`sec-modules`
+    for details on adding modules to Joule. Use :meth:`Node.stream_get` to retrieve the associated stream from the path string
+    in the ``inputs`` and ``outputs`` dictionaries.
+
+    Parameters:
+       id (int): unique numeric ID assigned by Joule server
+       name (str): module name, must be unique
+       description (str): optional field
+       has_interface (bool): whether the module provides a web interface
+       inputs (Dict): Mapping of ``[pipe_name] = stream_path`` for module inputs
+       outputs (Dict): Mapping of ``[pipe_name] = stream_path`` for output connections
+       statistics (ModuleStatistics): execution statistics, may be ``None`` depending on API call parameters
+    """
+
     def __init__(self, id: int, name: str, description: str,
                  has_interface: bool,
                  inputs: Dict[str, stream.Stream],

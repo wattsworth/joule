@@ -33,6 +33,8 @@ be running on the same machine.
   cannot keep up with the input and the Joule Pipe buffers are
   accumulating data.
 
+.. _sec-intervals:
+
 Intervals
 +++++++++
 

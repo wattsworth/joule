@@ -127,7 +127,7 @@ class Node:
 
     async def data_delete(self, stream: Union[Stream, str, int],
                           start: Optional[int] = None,
-                          end: Optional[int] = None) -> List[np.ndarray]:
+                          end: Optional[int] = None) -> None:
         return await data_delete(self.session, stream, start, end)
 
     # Module actions
