@@ -1,8 +1,7 @@
 import click
-import dateparser
 import requests
 from joule.cli.config import pass_config
-
+from joule.utilities import human_to_timestamp
 
 @click.command(name="delete")
 @click.option("-s", "--start", "start", help="timestamp or descriptive string")
@@ -20,15 +19,14 @@ def data_remove(config, start, end, all, stream):
         params['all'] = '0'
     if start is not None:
         try:
-            params['start'] = int(start)
+            params['start'] = human_to_timestamp(start)
         except ValueError:
-            params['start'] = int(dateparser.parse(start).timestamp() * 1e6)
-        print(params['start'])
+            raise click.ClickException("invalid start time: [%s]" % start)
     if end is not None:
         try:
-            params['end'] = int(end)
+            params['end'] = human_to_timestamp(end)
         except ValueError:
-            params['end'] = int(dateparser.parse(end).timestamp() * 1e6)
+            raise click.ClickException("invalid end time: [%s]" % end)
     try:
         resp = requests.delete(config.url + "/data", params=params)
     except requests.ConnectionError:

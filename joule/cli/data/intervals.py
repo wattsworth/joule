@@ -1,12 +1,11 @@
 import click
 import asyncio
-import dateparser
 
 from joule import errors
 from joule.api.session import Session
 from joule.api.data import data_intervals
 from joule.cli.config import Config, pass_config
-from joule.utilities import timestamp_to_human
+from joule.utilities import timestamp_to_human, human_to_timestamp
 
 
 @click.command(name="intervals")
@@ -16,15 +15,16 @@ from joule.utilities import timestamp_to_human
 @pass_config
 def intervals(config: Config, start, end, stream: str):
     if start is not None:
-        time = dateparser.parse(start)
-        if time is None:
-            raise click.ClickException("Error: invalid start time: [%s]" % start)
-        start = int(time.timestamp() * 1e6)
+        try:
+            start = human_to_timestamp(start)
+        except ValueError:
+            raise click.ClickException("invalid start time: [%s]" % start)
     if end is not None:
-        time = dateparser.parse(end)
-        if time is None:
-            raise click.ClickException("Error: invalid end time: [%s]" % end)
-        end = int(time.timestamp() * 1e6)
+        try:
+            end = human_to_timestamp(end)
+        except ValueError:
+            raise click.ClickException("invalid end time: [%s]" % end)
+
 
     session = Session(config.url)
     loop = asyncio.get_event_loop()

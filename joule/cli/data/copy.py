@@ -2,7 +2,6 @@ import click
 import requests
 from typing import List, Tuple, Optional
 from operator import attrgetter
-import dateparser
 import aiohttp
 import asyncio
 import json
@@ -12,7 +11,7 @@ import datetime
 from joule.cli.config import pass_config
 from joule.cli.helpers import get_json, get
 from joule.models import stream, Stream, pipes, StreamInfo
-from joule.utilities import interval_difference
+from joule.utilities import interval_difference, human_to_timestamp
 from joule.errors import ConnectionError
 
 Interval = Tuple[int, int]
@@ -77,9 +76,15 @@ def data_copy(config, start, end, source, destination, dest_url):
         click.confirm("WARNING: Element configurations do not match. Continue?", abort=True)
     # make sure the time bounds make sense
     if start is not None:
-        start = int(dateparser.parse(start).timestamp() * 1e6)
+        try:
+            start = human_to_timestamp(start)
+        except ValueError:
+            raise click.ClickException("invalid start time: [%s]" % start)
     if end is not None:
-        end = int(dateparser.parse(end).timestamp() * 1e6)
+        try:
+            end = human_to_timestamp(end)
+        except ValueError:
+            raise click.ClickException("invalid end time: [%s]" % end)
     if (start is not None) and (end is not None) and ((end - start) <= 0):
         raise click.ClickException("Error: start [%s] must be before end [%s]" % (
             datetime.datetime.fromtimestamp(start / 1e6),

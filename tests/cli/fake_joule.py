@@ -53,7 +53,7 @@ class FakeJoule:
                 web.post('/data', self.data_write),
                 web.get('/data', self.data_read),
                 web.get('/data/intervals.json', self.data_intervals),
-                web.delete('/data', self.data_remove),
+                web.delete('/data', self.data_delete),
                 web.get('/modules.json', self.stub_get),
                 web.get('/module.json', self.stub_get),
                 web.get('/module/logs.json', self.stub_get),
@@ -62,7 +62,7 @@ class FakeJoule:
             ])
         self.stub_stream_info = False
         self.stub_stream_move = False
-        self.stub_data_remove = False
+        self.stub_data_delete = False
         self.stub_stream_destroy = False
         self.stub_stream_create = False
         self.stub_data_read = False
@@ -151,8 +151,8 @@ class FakeJoule:
         stream_json['data_info'] = mock_entry.info.to_json()
         return web.json_response(stream_json)
 
-    async def data_remove(self, request: web.Request):
-        if self.stub_data_remove:
+    async def data_delete(self, request: web.Request):
+        if self.stub_data_delete:
             return web.Response(text=self.response, status=self.http_code)
         tag = '??'
         if 'path' in request.query:

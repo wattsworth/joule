@@ -8,15 +8,15 @@ from joule.cli import main
 warnings.simplefilter('always')
 
 
-class TestRemove(FakeJouleTestCase):
+class TestDelete(FakeJouleTestCase):
 
-    def test_data_remove(self):
+    def test_data_delete(self):
         server = FakeJoule()
         url = self.start_server(server)
         runner = CliRunner()
         start_str = "20 January 2015 12:00"
         end_str = "1 hour ago"
-        result = runner.invoke(main, ['--url', url, 'data', 'remove',
+        result = runner.invoke(main, ['--url', url, 'data', 'delete',
                                       '/folder/src',
                                       '--start', start_str,
                                       '--end', end_str])
@@ -32,17 +32,17 @@ class TestRemove(FakeJouleTestCase):
         server = FakeJoule()
         server.response = "stream does not exist"
         server.http_code = 404
-        server.stub_data_remove = True
+        server.stub_data_delete = True
         url = self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'data', 'remove', '/folder/src'])
+        result = runner.invoke(main, ['--url', url, 'data', 'delete', '/folder/src'])
         self.assertTrue("Error" in result.output)
         self.stop_server()
 
     def test_when_server_is_not_available(self):
         url = "http://127.0.0.1:%d" % unused_port()
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'data', 'remove', '/folder/src'])
+        result = runner.invoke(main, ['--url', url, 'data', 'delete', '/folder/src'])
         self.assertTrue('Error' in result.output)
         self.assertEqual(result.exit_code, 1)
 
@@ -50,10 +50,10 @@ class TestRemove(FakeJouleTestCase):
         server = FakeJoule()
         server.response = "test error"
         server.http_code = 500
-        server.stub_data_remove = True
+        server.stub_data_delete = True
         url = self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'data', 'remove', '/folder/src'])
+        result = runner.invoke(main, ['--url', url, 'data', 'delete', '/folder/src'])
         self.assertTrue('500' in result.output)
         self.assertTrue("test error" in result.output)
         self.assertEqual(result.exit_code, 1)

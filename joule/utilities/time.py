@@ -1,4 +1,5 @@
 import datetime
+import dateparser
 
 # --------- Utility functions from Jim Paris ------------
 
@@ -25,6 +26,20 @@ def timestamp_to_human(timestamp: int) -> str:
         return "(maximum)"
     dt = datetime.datetime.fromtimestamp(timestamp_to_unix(timestamp))
     return dt.strftime("%a, %d %b %Y %H:%M:%S %z")
+
+
+def human_to_timestamp(time: str) -> int:
+    """Convert a time specification into a UNIX microsecond timestamp. Time specification
+        may be a wide variety of date formats, relative interval such as "one minute ago", or a numeric
+        timestamp. Raises :exc:ValueError for invalid time specification"""
+    try:
+        return int(time)
+    except ValueError:
+        pass
+    time = dateparser.parse(time)
+    if time is None:
+        raise ValueError
+    return int(time.timestamp()*1e6)
 
 
 def unix_to_timestamp(unix):

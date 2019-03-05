@@ -1,5 +1,4 @@
 import click
-import dateparser
 import asyncio
 import signal
 
@@ -7,6 +6,7 @@ from joule.cli.config import pass_config
 from joule.models.pipes import EmptyPipe
 from joule.api.node import Node
 from joule import errors
+from joule.utilities import human_to_timestamp
 
 stop_requested = False
 
@@ -30,15 +30,15 @@ def data_read(config, start, end, live, max_rows, show_bounds, mark_intervals, s
     if live and max_rows is not None:
         raise click.ClickException("cannot specify --live and --max-rows")
     if start is not None:
-        time = dateparser.parse(start)
-        if time is None:
-            raise click.ClickException("Error: invalid start time: [%s]" % start)
-        start = int(time.timestamp() * 1e6)
+        try:
+            start = human_to_timestamp(start)
+        except ValueError:
+            raise click.ClickException("invalid start time: [%s]" % start)
     if end is not None:
-        time = dateparser.parse(end)
-        if time is None:
-            raise click.ClickException("Error: invalid end time: [%s]" % end)
-        end = int(time.timestamp() * 1e6)
+        try:
+            end = human_to_timestamp(end)
+        except ValueError:
+            raise click.ClickException("invalid end time: [%s]" % end)
 
     loop = asyncio.get_event_loop()
     my_node = Node(config.url, loop)
