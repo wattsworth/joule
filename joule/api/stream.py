@@ -9,7 +9,7 @@ class Stream:
     """
     API Stream model. See :ref:`sec-node-stream-actions` for details on using the API to
     manipulate streams. Streams are locked if they are active or statically configured. When
-    creating a stream manually, omit the ID and status attributes (**is_***, **active**, and **locked**),
+    creating a stream manually, omit the ID and status attributes (**is_\***, **active**, and **locked**),
     these are set by the Joule server.
 
     Parameters:
@@ -17,7 +17,7 @@ class Stream:
         description (str): optional field
         datatype (str): element datatype
         keep_us (int): store the last N microseconds of data (-1 to keep all and 0 to keep none)
-        is_configured: is the stream statically configured with a *.conf file
+        is_configured: is the stream statically configured with a \*.conf file
         is_source: is the stream an active data source
         is_destination: is the stream an active data destination
         active (bool): is the stream a source or destination

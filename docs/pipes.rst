@@ -42,7 +42,7 @@ Streams are divided into intervals of continuous time series data.
 The first write to a pipe starts a new stream interval. Subsequent writes append
 data to this interval. This indicates to data consumers that there are no missing samples
 in the stream. To indicate missing data the producer closes the
- interval. A new interval is started on the next write. The plot below shows a stream
+interval. A new interval is started on the next write. The plot below shows a stream
 with three seperate intervals indicating two regions of missing data.
 
 .. image:: /images/intervals.png
@@ -50,7 +50,7 @@ with three seperate intervals indicating two regions of missing data.
 Data Producers
     The code snippet below shows how a data producer indicates missing samples using intervals.
     In normal operation the sensor output is a single continuous stream interval. If the sensor
-    has an error the exception handler closes the current interval and logs the event. See :ref:`IntermittentReader`
+    has an error the exception handler closes the current interval and logs the event. See :ref:`sec-intermittent-reader`
     for a complete example.
 
 .. code-block:: python
@@ -69,7 +69,7 @@ Data Consumers
     flag. The next call to read will return data from the new interval and clear the flag. Any unconsumed data
     will be returned with the next read even though it is from a previous interval. Therefore it is best practice to completely
     consume data on an interval break and reset any buffers to their initial state as suggested with the fir_filter
-    logic below. See :ref:`MedianFilter` for a complete example on handling interval boundaries.
+    logic below. See :ref:`sec-median-filter` for a complete example on handling interval boundaries.
 
 .. code-block:: python
 
@@ -121,8 +121,7 @@ Subscriptions
 +++++++++++++
 
 A single input can be copied to multiple outputs using pipe subscriptions. Pipes that produce output (OutputPipe or LocalPipe)
-A LocalPipe can subscribe
- to input end of a LocalPipe can be
+A LocalPipe can subscribe to input end of a LocalPipe can be
 subscribed to either an OutputPipe or the output end of another LocalPipe.
 
 .. note::

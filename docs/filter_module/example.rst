@@ -28,12 +28,12 @@ by reducing the frequency of context switches and inter-process communication.
 
 .. _sec-median-filter:
 
-Median Filter
+Offset Filter
 ^^^^^^^^^^^^^
 
-.. literalinclude:: /../../example_modules/jouleexamples/median_filter.py
+.. literalinclude:: /../../example_modules/jouleexamples/offset_filter.py
    :language: python
-   :caption: Source: ``example_modules/jouleexamples/median_filter.py``
+   :caption: Source: ``example_modules/jouleexamples/offset_filter.py``
    :linenos:
 
 The loop executes a WINDOW size median filter. Line 16 reads in new data from the “raw” stream into a

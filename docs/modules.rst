@@ -3,7 +3,7 @@
 Modules
 -------
 
-Modules are executable programs that process data :ref:`streams`. They are
+Modules are executable programs that process data :ref:`sec-streams`. They are
 connected to each other by :ref:`pipes`. Joule runs each module as a separate
 process. This enforces isolation and improves resiliency.
 Malfunctioning modules do not affect other parts of the pipeline

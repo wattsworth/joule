@@ -266,7 +266,7 @@ Data Actions
     Write data to a stream. The stream must not be an active destination from any other source.
     Optionally specify start and end timestamps to remove existing data over the interval you plan to write. This is required when
     writing to a NilmDB backend as intervals are write-once. Writing into an existing interval with the default TimescaleDB
-     backend will merge the new data with the existing data although this is not recommended. This method returns a pipe which
+    backend will merge the new data with the existing data although this is not recommended. This method returns a pipe which
     should be used to write the data. The pipe must be closed after use. See :ref:`pipes`
     for details on Joule Pipes.
 
@@ -391,6 +391,6 @@ Utilities
 +++++++++
 
 .. automodule:: joule.utilities
-    :members: time_now, timestamp_to_human, unix_to_timestamp, timestamp_to_unix, yesno
+    :members: time_now, timestamp_to_human, human_to_timestamp, yesno
 
 

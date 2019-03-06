@@ -39,7 +39,6 @@ Example
 module
 ++++++
 
-.. container:: custom
 
 list
 ''''
@@ -174,6 +173,7 @@ Usage
     joule stream destroy ~ PATH
 Arguments
     PATH: path of stream to destroy
+
 move
 ''''
 
