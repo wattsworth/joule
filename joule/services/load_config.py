@@ -3,8 +3,9 @@ import configparser
 import ipaddress
 import requests
 import psycopg2
+import yarl
 
-from joule.models import config
+from joule.models import config, Proxy
 from joule.errors import ConfigurationError
 
 """
@@ -18,7 +19,12 @@ from joule.errors import ConfigurationError
   CleanupPeriod = 60
   MaxLogLines = 100
   NilmdbUrl = http://localhost/nilmdb
+[Proxies]
+  site1 = http://localhost:3000
+  site2 = https://othersite.com
 """
+
+
 def run(custom_values=None, verify=True) -> config.JouleConfig:
     """provide a dict INI configuration to override defaults
        if verify is True, perform checks on settings to make sure they are appropriate"""
@@ -73,7 +79,7 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
 
     # Database
     if 'Database' in main_config:
-        database = "postgresql://"+main_config['Database']
+        database = "postgresql://" + main_config['Database']
     elif verify:
         raise ConfigurationError("Missing [Database] configuration")
     else:  # pragma: no cover
@@ -110,6 +116,15 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
     except ValueError:
         raise ConfigurationError("MaxLogLines must be a postive number")
 
+    # Proxies
+    uuid = 0
+    proxies = []
+    if 'Proxies' in my_configs:
+        for name in my_configs['Proxies']:
+            url = yarl.URL(my_configs['Proxies'][name])
+            proxies.append(Proxy(name, uuid, url))
+            uuid += 1
+
     return config.JouleConfig(module_directory=module_directory,
                               stream_directory=stream_directory,
                               ip_address=ip_address,
@@ -118,5 +133,6 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
                               insert_period=insert_period,
                               cleanup_period=cleanup_period,
                               max_log_lines=max_log_lines,
-                              nilmdb_url=nilmdb_url
+                              nilmdb_url=nilmdb_url,
+                              proxies=proxies
                               )

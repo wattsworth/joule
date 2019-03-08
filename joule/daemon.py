@@ -90,13 +90,13 @@ class Daemon(object):
             stream.is_destination = False
             stream.is_source = False
 
-        # load modules and streams from configs
+        # load modules, streams, and proxies, from configs
         load_streams.run(self.config.stream_directory, self.db)
         modules = load_modules.run(self.config.module_directory, self.db)
 
         # configure workers
         workers = [Worker(m) for m in modules]
-        self.supervisor = Supervisor(workers)
+        self.supervisor = Supervisor(workers, self.config.proxies)
 
         # save the metadata
         self.db.commit()

@@ -1,6 +1,7 @@
 import unittest
 import configparser
 import tempfile
+import yarl
 import testing.postgresql
 
 from joule.services import load_config
@@ -41,3 +42,21 @@ class TestLoadConfigs(unittest.TestCase):
                 self.assertEqual(my_config.stream_directory, stream_dir)
                 self.assertEqual(my_config.module_directory, module_dir)
         postgresql.stop()
+
+    def test_loads_proxies(self):
+        parser = configparser.ConfigParser()
+        parser.read_string("""
+                    [Proxies]
+                    site1=http://localhost:5000
+                    site two=https://othersite.com
+                """)
+        my_config = load_config.run(custom_values=parser, verify=False)
+        print(my_config.proxies)
+        self.assertEqual(my_config.proxies[0].url, yarl.URL("http://localhost:5000"))
+        self.assertEqual(my_config.proxies[0].uuid, 0)
+        self.assertEqual(my_config.proxies[0].name, "site1")
+
+        self.assertEqual(my_config.proxies[1].url, yarl.URL("https://othersite.com"))
+        self.assertEqual(my_config.proxies[1].uuid, 1)
+        self.assertEqual(my_config.proxies[1].name, "site two")
+

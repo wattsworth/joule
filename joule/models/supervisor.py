@@ -2,7 +2,7 @@ from typing import List, Callable, Dict
 import asyncio
 import logging
 
-from joule.models import Worker, Stream, pipes
+from joule.models import Worker, Stream, Proxy, pipes
 from joule.errors import SubscriptionError, ConfigurationError, ConnectionError
 from joule.api.node import Node
 
@@ -14,8 +14,9 @@ log = logging.getLogger('joule')
 
 class Supervisor:
 
-    def __init__(self, workers: List[Worker]):
+    def __init__(self, workers: List[Worker], proxies: List[Proxy]):
         self._workers = workers
+        self._proxies = proxies
         self.task: asyncio.Task = None
         self.remote_tasks: List[asyncio.Task] = []
         self.remote_inputs: Dict[Stream, pipes.Pipe] = {}
@@ -71,10 +72,16 @@ class Supervisor:
         else:
             raise SubscriptionError("stream [%s] has no producer" % stream.name)
 
-    def get_socket(self, module_uuid):
+    def get_module_socket(self, uuid):
         for w in self.workers:
-            if w.uuid == module_uuid:
+            if w.uuid == uuid:
                 return w.interface_socket
+        return None
+
+    def get_proxy_url(self, uuid):
+        for p in self._proxies:
+            if p.uuid == uuid:
+                return p.url
         return None
 
     async def _connect_remote_outputs(self, worker: Worker, loop: Loop):

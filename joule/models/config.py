@@ -4,7 +4,8 @@ Use load_configs to retrieve Configs object
 """
 
 import enum
-from typing import Optional
+from joule.models import Proxy
+from typing import Optional, List
 
 DEFAULT_CONFIG = {
     "Main":
@@ -18,7 +19,8 @@ DEFAULT_CONFIG = {
             "CleanupPeriod": 60,
             "MaxLogLines": 100,
             "NilmdbUrl": ''
-        }
+        },
+    "Proxies": {}
 }
 
 # NOT currently used
@@ -40,7 +42,8 @@ class JouleConfig:
                  insert_period: int,
                  cleanup_period: int,
                  max_log_lines: int,
-                 nilmdb_url: Optional[str]):
+                 nilmdb_url: Optional[str],
+                 proxies: List[Proxy]):
         self.module_directory = module_directory
         self.stream_directory = stream_directory
         self.ip_address = ip_address
@@ -50,4 +53,5 @@ class JouleConfig:
         self.cleanup_period = cleanup_period
         self.max_log_lings = max_log_lines
         self.nilmdb_url = nilmdb_url
+        self.proxies = proxies
 
