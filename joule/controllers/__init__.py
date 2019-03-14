@@ -5,15 +5,15 @@ from joule.controllers import (
     folder_controller,
     data_controller,
     module_controller,
-    interface_controller)
+    interface_controller,
+    proxy_controller)
 
 routes = [
     web.get('/', root_controller.index),
     web.get('/dbinfo', root_controller.dbinfo),
     web.get('/version', root_controller.version),
     web.get('/version.json', root_controller.version_json),
-    # --- stream controller routes ---
-    # list all streams
+    # --- stream routes ---
     web.get('/streams.json', stream_controller.index),
     web.get('/stream.json', stream_controller.info),
     web.put('/stream/move.json', stream_controller.move),
@@ -38,7 +38,9 @@ routes = [
     # --- interface routes ---
     web.get('/interface/{id}', interface_controller.proxy),
     web.get('/interface/{id}/{path:.*}', interface_controller.proxy),
-    web.post('/interface/{id}/{path:.*}', interface_controller.proxy)
-
+    web.post('/interface/{id}/{path:.*}', interface_controller.proxy),
+    # --- proxy routes ---
+    web.get('/proxies.json', proxy_controller.index),
+    web.get('/proxy.json', proxy_controller.info)
     # TODO: routes for stream tags /streams/tags
 ]

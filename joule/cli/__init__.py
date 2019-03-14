@@ -4,6 +4,7 @@ from joule.cli.stream import streams
 from joule.cli.data import data
 from joule.cli.module import module
 from joule.cli.folder import folders
+from joule.cli.proxy import proxies
 from joule.cli.root import info, initialize
 from joule.cli.config import Config, pass_config
 
@@ -22,3 +23,4 @@ main.add_command(streams)
 main.add_command(data)
 main.add_command(module)
 main.add_command(folders)
+main.add_command(proxies)

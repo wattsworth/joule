@@ -27,6 +27,10 @@ class Supervisor:
     def workers(self):
         return self._workers
 
+    @property
+    def proxies(self):
+        return self._proxies
+
     async def start(self, loop: Loop):
         # returns a co-routine
         tasks: Tasks = []

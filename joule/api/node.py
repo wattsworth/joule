@@ -30,7 +30,22 @@ from joule.api.data import (data_write,
                             data_delete,
                             data_intervals)
 
+from joule.api.proxy import (proxy_list,
+                             proxy_get,
+                             Proxy)
+
 from joule.models.pipes import Pipe
+
+
+class NodeInfo:
+
+    def __init__(self, version: str):
+        self.version = version
+
+
+async def node_info(session):
+    resp = await session.get("/version.json")
+    return NodeInfo(version=resp["version"])
 
 
 class Node:
@@ -47,6 +62,9 @@ class Node:
 
     async def close(self):
         await self.session.close()
+
+    async def info(self) -> NodeInfo:
+        return await node_info(self.session)
 
     # Folder actions
 
@@ -144,3 +162,12 @@ class Node:
     async def module_logs(self,
                           module: Union[Module, str, int]) -> List[str]:
         return await module_logs(self.session, module)
+
+    # Proxy actions
+
+    async def proxy_list(self) -> List[Proxy]:
+        return await proxy_list(self.session)
+
+    async def proxy_get(self,
+                        proxy: Union[Proxy, str, int]) -> Proxy:
+        return await proxy_get(self.session, proxy)

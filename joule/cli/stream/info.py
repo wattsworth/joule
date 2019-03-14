@@ -3,10 +3,11 @@ from tabulate import tabulate
 import datetime
 import asyncio
 
+
 from joule.api.session import Session
 from joule.api.stream import (stream_get,
                               stream_info)
-from joule.models import stream, StreamInfo
+from joule.models import stream
 from joule import errors
 from joule.cli.config import pass_config
 

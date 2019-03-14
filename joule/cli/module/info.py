@@ -33,7 +33,7 @@ async def _run(session: node.Session, name: str):
     if len(module.description) > 0:
         click.echo("Description:\n\t%s" % module.description)
     if module.has_interface:
-        click.echo("Interface URL:\n\t%s/interface/%d/" % (session.url, module.id))
+        click.echo("Interface URL:\n\t%s/interface/%d/" % (module.proxied_url))
     click.echo("Inputs:")
     if len(module.inputs) == 0:
         click.echo("\t--none--")

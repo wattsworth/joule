@@ -1,4 +1,5 @@
 from typing import List, Union, Dict
+import yarl
 
 from joule import errors
 from . import node, stream
@@ -42,6 +43,7 @@ class Module:
        has_interface (bool): whether the module provides a web interface
        inputs (Dict): Mapping of ``[pipe_name] = stream_path`` for module inputs
        outputs (Dict): Mapping of ``[pipe_name] = stream_path`` for output connections
+       url (str): interface URL exposed by Joule
        statistics (ModuleStatistics): execution statistics, may be ``None`` depending on API call parameters
     """
 
@@ -49,21 +51,23 @@ class Module:
                  has_interface: bool,
                  inputs: Dict[str, stream.Stream],
                  outputs: Dict[str, stream.Stream],
+                 url: str = "",
                  statistics: ModuleStatistics = None):
         self.id = id
         self.name = name
         self.description = description
         self.has_interface = has_interface
+        self.url = url
         self.inputs = inputs
         self.outputs = outputs
         self.statistics = statistics
 
     def __repr__(self):
-        return "<joule.api.Module id=%r name=%r description=%r has_interface=%r>" % (
-                self.id, self.name, self.description, self.has_interface)
+        return "<joule.api.Module id=%r name=%r description=%r has_interface=%r url=%r>" % (
+                self.id, self.name, self.description, self.has_interface, self.url)
 
 
-def from_json(json) -> Module:
+def from_json(json, host_url: str) -> Module:
     inputs = json['inputs']
     outputs = json['outputs']
 
@@ -74,9 +78,16 @@ def from_json(json) -> Module:
                                       s['memory_percent'])
     else:
         statistics = None
+
+    if json['has_interface']:
+        host_url = yarl.URL(host_url)
+        url = host_url.parent / ("interface/m%d" % json['id'])
+    else:
+        url = ""
+
     return Module(json['id'], json['name'], json['description'],
                   json['has_interface'],
-                  inputs, outputs, statistics)
+                  inputs, outputs, url, statistics)
 
 
 async def module_get(session: node.Session,
@@ -97,7 +108,7 @@ async def module_get(session: node.Session,
         raise errors.ApiError("Invalid module datatype. Must be Module, Name, or ID")
 
     resp = await session.get("/module.json", params)
-    return from_json(resp)
+    return from_json(resp, session.url)
 
 
 async def module_list(session: node.Session,
@@ -106,7 +117,7 @@ async def module_list(session: node.Session,
     if not statistics:
         _statistics = 0
     resp = await session.get("/modules.json", {"statistics": _statistics})
-    return [from_json(item) for item in resp]
+    return [from_json(item, session.url) for item in resp]
 
 
 async def module_logs(session: node.Session,

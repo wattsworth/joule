@@ -359,6 +359,35 @@ Module Actions
          '[2019-03-04T23:04:36.948160]: WARNING: temperature > 98.6']
 
 
+.. _sec-node-proxy-actions:
+
+Proxy Actions
+'''''''''''''
+
+.. function:: Node.proxy_list() -> List[Proxy]
+
+    Retrieve a list of proxied URL's as :class:`joule.api.Proxy` objects.
+
+    Example:
+        >>> await node.proxy_list()
+        [<joule.api.Proxy id=0 name='flask_app' proxied_url='http://localhost:8088/interface/p0'
+          target_url='http://localhost:5000'>,
+         <joule.api.Proxy id=1 name='intranet_host' proxied_url='http://localhost:8088/interface/p1'
+          target_url='http://internal.domain.com'>]
+
+
+.. function:: Node.proxy_get(module: Union[Proxy, str, int]) -> Proxy
+
+    Retrieve a specific proxy as a :class:`joule.api.Proxy` object. Proxy may be specified by object,
+    name, or numeric ID.
+
+    Example:
+        >>> await node.proxy_get("flask app")
+        <joule.api.Proxy id=0 name='flask app' proxied_url='http://localhost:8088/interface/p0'
+         target_url='http://localhost:5000'>
+
+
+
 Models
 ++++++
 .. autoclass:: joule.api.Folder
@@ -377,6 +406,9 @@ Models
     :members:
 
 .. autoclass:: joule.api.ModuleStatistics
+    :members:
+
+.. autoclass:: joule.api.Proxy
     :members:
 
 Errors
