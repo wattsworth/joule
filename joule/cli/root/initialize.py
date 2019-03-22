@@ -2,40 +2,11 @@ import click
 import os
 import shutil
 import subprocess
-import asyncio
-
-from joule.api.session import Session
-from joule.api.node import (node_info)
-from joule import errors
-
-from .config import pass_config
-
-
-@click.command(name="info")
-@pass_config
-def info(config):
-    session = Session(config.url)
-    loop = asyncio.get_event_loop()
-    try:
-        loop.run_until_complete(_run(session))
-    except errors.ApiError as e:
-        raise click.ClickException(str(e)) from e
-    finally:
-        loop.run_until_complete(
-            session.close())
-        loop.close()
-
-
-async def _run(session):
-    info = await node_info(session)
-    # display info
-    click.echo("Server Version: %s" % info.version)
-    click.echo("Status: online")
 
 
 @click.command(name="initialize")
 @click.option("--dsn", help="PostgreSQL DSN", required=True)
-def initialize(dsn):  # pragma: no cover
+def cmd(dsn):  # pragma: no cover
     import pkg_resources
     import requests
     click.echo("1. creating joule user ", nl=False)
@@ -47,7 +18,7 @@ def initialize(dsn):  # pragma: no cover
     elif proc.returncode == 9:
         click.secho("[" + click.style("EXISTS", fg='yellow') + "]")
     else:
-        click.echo("[" + click.style("ERROR", fg='red') + "]\n unknown error [%d] see [man useradd]" % r)
+        click.echo("[" + click.style("ERROR", fg='red') + "]\n unknown error [%d] see [man useradd]" % proc.returncode)
         exit(1)
     click.echo("2. registering system service ", nl=False)
     service_file = pkg_resources.resource_filename(

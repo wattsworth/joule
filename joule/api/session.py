@@ -4,8 +4,9 @@ from joule import errors
 
 class Session:
 
-    def __init__(self, url: str):
+    def __init__(self, url: str, key: str):
         self.url = url
+        self.key = key
         self._session = None
 
     async def get(self, path, params=None):
@@ -24,7 +25,8 @@ class Session:
     async def _request(self, method, path, data=None, json=None, params=None):
         if self._session is None:
             self._session = aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=None))
+                timeout=aiohttp.ClientTimeout(total=None),
+                headers={"X-API-KEY": self.key})
         try:
             async with self._session.request(method,
                                              self.url + path,
@@ -38,14 +40,14 @@ class Session:
                     try:
                         result = await resp.json()
                     except ValueError:
-                        raise errors.ApiError("Invalid server response (not json)")
+                        raise errors.ApiError("Invalid node response (not json)")
                     return result
                 else:
                     return await resp.text()
 
         except aiohttp.ClientError as e:
-            raise errors.ApiError("Cannot contact Joule server at [%s]" %
-                                  (self.url+path)) from e
+            raise errors.ApiError("Cannot contact Joule node at [%s]" %
+                                  (self.url + path)) from e
 
     async def close(self):
         if self._session is not None:

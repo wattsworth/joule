@@ -4,6 +4,8 @@ from joule.models.folder import Folder
 from joule.models.module import Module
 from joule.models.worker import Worker
 from joule.models.proxy import Proxy
+from joule.models.master import Master
+from joule.models.follower import Follower
 from joule.models.data_store.data_store import DataStore, StreamInfo, DbInfo
 from joule.models.data_store.errors import InsufficientDecimationError, DataError
 from joule.models.data_store.nilmdb import NilmdbStore

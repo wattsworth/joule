@@ -1,5 +1,4 @@
-from sqlalchemy import Column, Integer, Enum, String, ForeignKey
-import enum
+from sqlalchemy import Column, Integer, String
 
 from joule.models.meta import Base
 
@@ -11,24 +10,25 @@ class Follower(Base):
         key (str): API key for accessing the follower
         location (str): URL of the follower
     """
-    __tablename__ = 'master'
+    __tablename__ = 'follower'
     __table_args__ = {"schema": "metadata"}
 
     id: int = Column(Integer, primary_key=True)
     name: str = Column(String, nullable=False, unique=True)
     key: str = Column(String, nullable=False, unique=True)
+    location: str = Column(String, nullable=False, unique=True)
 
     def __repr__(self):
-        return "<Master(id=%r name=%r, type=%r, grantor_id=%r)>" % (
-            self.id, self.name, self.type, self.grantor_id)
+        return "<Follower(id=%r name=%r, location=%r, key=%r)>" % (
+            self.id, self.name, self.location, self.key)
 
     def to_json(self):
         """
-        Returns: Dictionary of Master attributes
+        Returns: Dictionary of Follower attributes
         """
         return {
             'id': self.id,
             'name': self.name,
-            'type': self.type.name,
-            'grantor_id': self.grantor_id
+            'location': self.location,
+            'key': self.key
         }
