@@ -3,7 +3,7 @@ import os
 import json
 from typing import Dict
 from joule.api.session import Session
-from joule.cli.helpers import (get_node_configs, get_default_node)
+from joule.cli.helpers import (get_node_configs, get_default_node, get_cafile)
 
 
 class Config:
@@ -19,7 +19,7 @@ class Config:
         # lazy session construction, raise error if it cannot be created
         if self._session is None:
             node_config = get_node(self.name)
-            self._session = Session(node_config.url, node_config.key)
+            self._session = Session(node_config.url, node_config.key, get_cafile())
         return self._session
 
 pass_config = click.make_pass_decorator(Config, ensure=True)

@@ -12,15 +12,14 @@ from joule.cli.config import Config, pass_config
 @click.argument("destination")
 @pass_config
 def cli_move(config: Config, source, destination):
-    session = node.Session(config.url)
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(
-            stream_move(session, source, destination))
+            stream_move(config.session, source, destination))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
         loop.run_until_complete(
-            session.close())
+            config.session.close())
         loop.close()
     click.echo("OK")

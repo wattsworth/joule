@@ -131,19 +131,18 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
         security_config = my_configs['Security']
         key = security_config["Key"]
         certificate = security_config["Certificate"]
-        ca = security_config["CertificateAuthority"]
         ssl_context = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH)
 
         # configure the ssl context
         # only validate the server cert if we have a ca cert
-        if ca != "":
+        if ("CertificateAuthority" in security_config and
+                security_config["CertificateAuthority"] != ""):
             # CERT_REQUIRED already set by create_default_context, but let's be explicit
             ssl_context.verify_mode = ssl.CERT_REQUIRED
-            ssl_context.load_verify_locations(cafile=ca)
+            ssl_context.load_verify_locations(cafile=security_config["CertificateAuthority"])
         else:
             ssl_context.check_hostname = False
             ssl_context.verify_mode = ssl.CERT_NONE
-
         ssl_context.load_cert_chain(certfile=certificate,
                                     keyfile=key)
     else:

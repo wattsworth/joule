@@ -94,7 +94,7 @@ def admin_initialize(dsn):  # pragma: no cover
     SECURITY_FOLDER = "/etc/joule/security"
     _make_joule_directory(SECURITY_FOLDER)
     shutil.chown(SECURITY_FOLDER, user="root", group="joule")
-    os.chmod(SECURITY_FOLDER, 0o640)
+    os.chmod(SECURITY_FOLDER, 0o750)
     # check if a certificate file exists
     CERT_PATH = os.path.join(SECURITY_FOLDER, "server.crt")
     KEY_PATH = os.path.join(SECURITY_FOLDER, "server.key")
@@ -108,8 +108,9 @@ def admin_initialize(dsn):  # pragma: no cover
         os.chmod(CERT_PATH, 0o640)
         shutil.chown(KEY_PATH, user="root", group="joule")
         os.chmod(KEY_PATH, 0o640)
-        click.echo("[" + click.style("OK", fg="green") + "]")
-    click.echo("[" + click.style("EXISTS", fg="yellow") + "]")
+        click.echo(" [" + click.style("OK", fg="green") + "]")
+    else:
+        click.echo(" [" + click.style("EXISTS", fg="yellow") + "]")
 
 
 def _make_joule_directory(path):  # pragma: no cover
@@ -145,5 +146,5 @@ def _self_signed_cert(cn: str) -> Tuple[crypto.X509, crypto.PKey]:
     cert.gmtime_adj_notAfter(5 * 365 * 24 * 60 * 60)  # 5 years
     cert.set_issuer(cert.get_subject())
     cert.set_pubkey(k)
-    cert.sign(k, b'sha256')
+    cert.sign(k, 'sha256')
     return cert, k

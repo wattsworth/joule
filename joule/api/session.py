@@ -1,12 +1,24 @@
 import aiohttp
 from joule import errors
+import ssl
 
 
 class Session:
 
-    def __init__(self, url: str, key: str):
+    def __init__(self, url: str, key: str, cafile: str):
         self.url = url
         self.key = key
+        self._ssl_context = None
+        # for https nodes
+        if self.url.startswith("https"):
+            self._ssl_context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+            # load cafile to verify the node
+            if cafile != "":
+                self._ssl_context.load_verify_locations(cafile=cafile)
+            else:
+                self._ssl_context.check_hostname = False
+                self._ssl_context.verify_mode = ssl.CERT_NONE
+
         self._session = None
 
     async def get(self, path, params=None):
@@ -32,7 +44,8 @@ class Session:
                                              self.url + path,
                                              data=data,
                                              params=params,
-                                             json=json) as resp:
+                                             json=json,
+                                             ssl=self._ssl_context) as resp:
                 if resp.status != 200:
                     raise errors.ApiError("%s [%d]" % (await resp.text(),
                                                        resp.status))
@@ -45,7 +58,7 @@ class Session:
                 else:
                     return await resp.text()
 
-        except aiohttp.ClientError as e:
+        except ValueError as e:
             raise errors.ApiError("Cannot contact Joule node at [%s]" %
                                   (self.url + path)) from e
 

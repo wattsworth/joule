@@ -15,17 +15,16 @@ def cli_delete(config, stream):
         click.echo("Aborted!")
         return
 
-    session = node.Session(config.url)
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(
-            stream_delete(session, stream))
+            stream_delete(config.session, stream))
         click.echo("OK")
 
     except errors.ApiError as e:
         raise click.ClickException(str(e))
     finally:
         loop.run_until_complete(
-            session.close())
+            config.session.close())
         loop.close()
 

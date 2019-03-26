@@ -5,7 +5,7 @@ import json
 
 import joule.errors
 from joule.cli.helpers import (get_node_configs, NodeConfig,
-write_node_configs)
+                               write_node_configs, set_config_owner)
 
 
 @click.command(name="authorize")
@@ -36,17 +36,20 @@ def admin_authorize(config):
     Base.metadata.create_all(engine)
     db = Session(bind=engine)
 
-    import pdb
-    pdb.set_trace()
     try:
         node_configs = get_node_configs()
     except ValueError as e:
         raise click.ClickException(str(e))
 
     # check if this node is already authorized
-    if 'name' in node_configs:
+    names = [n.name for n in node_configs.values()]
+    if config.name in names:
+        if 'SUDO_USER' in os.environ:
+            username = os.environ["SUDO_USER"]
+        else:
+            username = os.environ["LOGNAME"]
         raise click.ClickException("[%s] is already authorized for [%s]" % (
-            config.name, os.environ["LOGNAME"]))
+            config.name, username))
 
     # create a new master
     my_master = master.Master()
@@ -55,7 +58,7 @@ def admin_authorize(config):
     my_master.name = os.environ["LOGNAME"]
     db.add(my_master)
 
-    # add the key data to nodes.txt
+    # add the key data to nodes.json
     if config.ip_address != "0.0.0.0":
         addr = config.ip_address
     else:
@@ -65,10 +68,18 @@ def admin_authorize(config):
     node_configs[config.name] = node_config
 
     write_node_configs(node_configs)
+    # fix permissions since this was run by root
+    if 'SUDO_USER' in os.environ:
+        uid = int(os.environ["SUDO_UID"])
+        gid = int(os.environ["SUDO_GID"])
+        username = os.environ["SUDO_USER"]
+        set_config_owner(uid, gid)
+    else:
+        username = os.environ["LOGNAME"]
 
     # save the database entry now that everything is written out
     db.commit()
     db.close()
 
     click.echo("Access to node [%s] granted to user [%s]" % (
-        config.name, os.environ["LOGNAME"]))
+        config.name, username))

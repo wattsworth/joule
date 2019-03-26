@@ -15,16 +15,15 @@ from joule.cli.config import pass_config
 @click.option("--id", "-i", is_flag=True, help="show ID's")
 @pass_config
 def cli_list(config, layout, status, id):
-    session = Session(config.url)
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(
-            _run(session, layout, status, id))
+            _run(config.session, layout, status, id))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
         loop.run_until_complete(
-            session.close())
+            config.session.close())
         loop.close()
 
 

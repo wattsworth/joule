@@ -14,8 +14,8 @@ from typing import List
 import psutil
 import sys
 
-from joule.models import (Base, Worker, Folder, config,
-                          DataStore, Element, Stream, pipes)
+from joule.models import (Base, Worker, config,
+                          DataStore, Stream, pipes)
 from joule.models.supervisor import Supervisor
 from joule.errors import ConfigurationError, SubscriptionError
 from joule.models import NilmdbStore, TimescaleStore

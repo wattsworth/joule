@@ -58,12 +58,12 @@ def get_default_node(configs: Dict[str, NodeConfig]) -> NodeConfig:
     if not os.path.isfile(default_node_path):
         with open(default_node_path, 'w') as f:
             first_name = list(configs.keys())[0]
-            f.write(first_name+"\n")
+            f.write(first_name + "\n")
         os.chmod(default_node_path, 0o600)
         return configs[first_name]
 
     # Case 3: Default is not in the nodes.json file
-    with open(default_node_path,'r') as f:
+    with open(default_node_path, 'r') as f:
         name = f.readline().strip()
     if name not in configs:
         raise ValueError("Invalid default node [%s], use [joule node default] to change" % name)
@@ -72,15 +72,46 @@ def get_default_node(configs: Dict[str, NodeConfig]) -> NodeConfig:
     return configs[name]
 
 
+def get_cafile():
+    config_dir = _user_config_dir()
+    cafile = os.path.join(config_dir, "ca.crt")
+    if os.path.isfile(cafile):
+        return cafile
+    else:
+        return ""
+
+
 def write_node_configs(node_configs: Dict[str, NodeConfig]):
     config_dir = _user_config_dir()
     nodes_path = os.path.join(config_dir, "nodes.json")
+    default_node_path = os.path.join(config_dir, "default_node.txt")
 
     # write out the key into nodes.json
     with open(nodes_path, "w") as f:
         json_val = [n.to_json() for n in node_configs.values()]
         json.dump(json_val, f, indent=2)
     os.chmod(nodes_path, 0o600)
+
+    # if the default file is missing or empty, add this node as the default
+    if not os.path.isfile(default_node_path):
+        with open(default_node_path, 'w') as f:
+            f.write("")
+    with open(default_node_path, 'r') as f:
+        name = f.readline()
+    if name == "":
+        with open(default_node_path, 'w') as f:
+            first_name = list(node_configs.keys())[0]
+            f.write(first_name + "\n")
+    os.chmod(default_node_path, 0o600)
+
+
+def set_config_owner(uid: int, gid: int):
+    config_dir = _user_config_dir()
+    os.chown(config_dir, uid, gid)
+    nodes_path = os.path.join(config_dir, "nodes.json")
+    os.chown(nodes_path, uid, gid)
+    default_node_path = os.path.join(config_dir, "default_node.txt")
+    os.chown(default_node_path, uid, gid)
 
 
 def _user_config_dir() -> str:
@@ -115,8 +146,8 @@ def get_json(url: str, params=None) -> Dict:
         raise ConnectionError("Cannot contact Joule server at [%s]" % url) from e
     if resp.status_code != 200:
         raise ConnectionError("%s [%d]: %s" % (url,
-                                                     resp.status_code,
-                                                     resp.text))
+                                               resp.status_code,
+                                               resp.text))
     try:
         data = resp.json()
         return data

@@ -7,7 +7,8 @@ from joule.controllers import (
     module_controller,
     interface_controller,
     proxy_controller,
-    master_controller)
+    master_controller,
+    follower_controller)
 
 routes = [
     web.get('/', root_controller.index),
@@ -46,8 +47,8 @@ routes = [
     # -- master routes --
     web.get('/masters.json', master_controller.index),
     # -- follower routes --
-    web.get('/followers.json', followers_controller.index),
-    web.post('/follower.json', followers_controller.add)
+    web.get('/followers.json', follower_controller.index),
+    web.post('/follower.json', follower_controller.add)
     # TODO: routes for stream tags /streams/tags
 ]
 
