@@ -13,7 +13,6 @@ from sqlalchemy.orm import Session
 from typing import List
 import psutil
 import sys
-import click
 
 from joule.models import (Base, Worker, Folder, config,
                           DataStore, Element, Stream, pipes)
@@ -22,6 +21,7 @@ from joule.errors import ConfigurationError, SubscriptionError
 from joule.models import NilmdbStore, TimescaleStore
 from joule.models.data_store.errors import DataError
 from joule.services import (load_modules, load_streams, load_config)
+import joule.middleware
 import joule.controllers
 
 log = logging.getLogger('joule')
@@ -101,22 +101,6 @@ class Daemon(object):
         # save the metadata
         self.db.commit()
 
-    async def erase_all(self):
-        # --- DANGEROUS: COMPLETELY WIPE THE NODE ---
-        try:
-            await self.data_store.initialize([])
-        except DataError as e:
-            log.error("Database error: %s" % e)
-            print("aborted")
-            exit(1)
-        # erase data
-        await self.data_store.destroy_all()
-        # erase metadata
-        self.db.query(Element).delete()
-        self.db.query(Stream).delete()
-        self.db.query(Folder).delete()
-        self.db.commit()
-
     async def run(self, loop: Loop):
         # initialize streams in the data store
         try:
@@ -140,14 +124,21 @@ class Daemon(object):
         inserter_task_grp = asyncio.gather(*inserter_tasks, loop=loop)
 
         # start the API server
-        app = web.Application()
+        middlewares = [joule.middleware.authorize(
+            exemptions=joule.controllers.insecure_routes)]
+        app = web.Application(middlewares=middlewares)
+
         app['supervisor'] = self.supervisor
         app['data-store'] = self.data_store
         app['db'] = self.db
+        # used to tell master's how to contact this node
+        app['port'] = self.config.port
         app.add_routes(joule.controllers.routes)
         runner = web.AppRunner(app)
         await runner.setup()
-        site = web.TCPSite(runner, self.config.ip_address, self.config.port)
+        site = web.TCPSite(runner, self.config.ip_address,
+                           self.config.port,
+                           ssl_context=self.config.ssl_context)
         await site.start()
 
         # sleep and check for stop condition
@@ -194,7 +185,6 @@ class Daemon(object):
 def main(argv=None):
     parser = argparse.ArgumentParser("Joule Daemon")
     parser.add_argument("--config", default="/etc/joule/main.conf")
-    parser.add_argument("--erase-all", action='store_true', dest='erase')
     args = parser.parse_args(argv)
     log.addFilter(LogDedupFilter())
     logging.basicConfig(
@@ -223,14 +213,9 @@ def main(argv=None):
     loop.set_debug(True)
     daemon = Daemon(my_config)
     daemon.initialize(loop)
-    if args.erase:
-        if click.confirm('Completely erase data on this node?'):
-            loop.run_until_complete(daemon.erase_all())
-        else:
-            print("cancelled")
-    else:
-        loop.add_signal_handler(signal.SIGINT, daemon.stop)
-        loop.run_until_complete(daemon.run(loop))
+
+    loop.add_signal_handler(signal.SIGINT, daemon.stop)
+    loop.run_until_complete(daemon.run(loop))
     loop.close()
 
     # clear out the working directory

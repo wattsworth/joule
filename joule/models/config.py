@@ -6,10 +6,12 @@ Use load_configs to retrieve Configs object
 import enum
 from joule.models import Proxy
 from typing import Optional, List
+import ssl
 
 DEFAULT_CONFIG = {
     "Main":
         {
+            "Name": "joule_node",
             "ModuleDirectory": "/etc/joule/module_configs",
             "StreamDirectory": "/etc/joule/stream_configs",
             "IPAddress": "127.0.0.1",
@@ -18,22 +20,15 @@ DEFAULT_CONFIG = {
             "InsertPeriod": 5,
             "CleanupPeriod": 60,
             "MaxLogLines": 100,
-            "NilmdbUrl": ''
+            "NilmdbUrl": '',
         },
     "Proxies": {}
 }
 
-# NOT currently used
-
-class BACKEND(enum.Enum):
-    NILMDB = enum.auto()
-    POSTGRES = enum.auto()
-    SQLITE = enum.auto()
-    TIMESCALE = enum.auto()
-
 
 class JouleConfig:
     def __init__(self,
+                 name: str,
                  module_directory: str,
                  stream_directory: str,
                  ip_address: str,
@@ -43,7 +38,9 @@ class JouleConfig:
                  cleanup_period: int,
                  max_log_lines: int,
                  nilmdb_url: Optional[str],
+                 ssl_context: ssl.SSLContext,
                  proxies: List[Proxy]):
+        self.name = name
         self.module_directory = module_directory
         self.stream_directory = stream_directory
         self.ip_address = ip_address
@@ -54,4 +51,6 @@ class JouleConfig:
         self.max_log_lings = max_log_lines
         self.nilmdb_url = nilmdb_url
         self.proxies = proxies
+        self.ssl_context = ssl_context
+
 

@@ -45,3 +45,19 @@ async def add(request: web.Request):
     except ValueError as e:
         return web.Response(text="Invalid request, bad argument format", status=400)
     return web.Response(text="OK", status=200)
+
+async def delete(request: web.Request):
+    """
+    Remove the specified node from the list of followers
+    """
+    if "name" in request.query:
+        name = request.query["name"]
+        master = self.db.query(Follower).filter(name == name)
+    elif "id" in request.query:
+        node_id = request.query["id"]
+        master = self.db.query(Follower).filter(id == node_id)
+    else:
+        return web.Response(text="specify name or id to remove", status=400)
+    db.delete(master)
+    db.commit()
+    return web.Response(text="OK")

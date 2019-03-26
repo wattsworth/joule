@@ -4,11 +4,14 @@ import ipaddress
 import requests
 import psycopg2
 import yarl
+import ssl
 
 from joule.models import config, Proxy
 from joule.errors import ConfigurationError
 
 """
+# Example configuration (including optional lines)
+
 [Main]
   ModuleDirectory = /etc/joule/module_configs
   StreamDirectory = /etc/joule/stream_configs
@@ -19,6 +22,10 @@ from joule.errors import ConfigurationError
   CleanupPeriod = 60
   MaxLogLines = 100
   NilmdbUrl = http://localhost/nilmdb
+[Security]
+   Certificate =  /etc/joule/security/server.crt
+   Key = /etc/joule/security/server.key
+   CertificateAuthority = /etc/joule/security/ca.crt
 [Proxies]
   site1 = http://localhost:3000
   site2 = https://othersite.com
@@ -34,6 +41,9 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
         my_configs.read_dict(custom_values)
 
     main_config = my_configs['Main']
+    # Node name
+    node_name = main_config['Name']
+
     # ModuleDirectory
     module_directory = main_config['ModuleDirectory']
     if not os.path.isdir(module_directory) and verify:
@@ -116,6 +126,29 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
     except ValueError:
         raise ConfigurationError("MaxLogLines must be a postive number")
 
+    # Security configuration
+    if 'Security' in my_configs:
+        security_config = my_configs['Security']
+        key = security_config["Key"]
+        certificate = security_config["Certificate"]
+        ca = security_config["CertificateAuthority"]
+        ssl_context = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH)
+
+        # configure the ssl context
+        # only validate the server cert if we have a ca cert
+        if ca != "":
+            # CERT_REQUIRED already set by create_default_context, but let's be explicit
+            ssl_context.verify_mode = ssl.CERT_REQUIRED
+            ssl_context.load_verify_locations(cafile=ca)
+        else:
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+
+        ssl_context.load_cert_chain(certfile=certificate,
+                                    keyfile=key)
+    else:
+        ssl_context = None
+
     # Proxies
     uuid = 0
     proxies = []
@@ -125,14 +158,17 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
             proxies.append(Proxy(name, uuid, url))
             uuid += 1
 
-    return config.JouleConfig(module_directory=module_directory,
-                              stream_directory=stream_directory,
-                              ip_address=ip_address,
-                              port=port,
-                              database=database,
-                              insert_period=insert_period,
-                              cleanup_period=cleanup_period,
-                              max_log_lines=max_log_lines,
-                              nilmdb_url=nilmdb_url,
-                              proxies=proxies
-                              )
+    return config.JouleConfig(
+        name=node_name,
+        module_directory=module_directory,
+        stream_directory=stream_directory,
+        ip_address=ip_address,
+        port=port,
+        database=database,
+        insert_period=insert_period,
+        cleanup_period=cleanup_period,
+        max_log_lines=max_log_lines,
+        nilmdb_url=nilmdb_url,
+        proxies=proxies,
+        ssl_context=ssl_context
+    )

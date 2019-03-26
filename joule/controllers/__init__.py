@@ -50,3 +50,7 @@ routes = [
     web.post('/follower.json', followers_controller.add)
     # TODO: routes for stream tags /streams/tags
 ]
+
+insecure_routes = [
+    ['POST', '/followers/add.json']
+]

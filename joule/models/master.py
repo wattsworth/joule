@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, Enum, String, ForeignKey
 import enum
+import secrets
 
 from joule.models.meta import Base
 
@@ -15,7 +16,7 @@ class Master(Base):
     __table_args__ = {"schema": "metadata"}
 
     id: int = Column(Integer, primary_key=True)
-    name: str = Column(String, nullable=False, unique=True)
+    name: str = Column(String, nullable=False)
     key: str = Column(String, nullable=False, unique=True)
 
     class TYPE(enum.Enum):
@@ -39,3 +40,8 @@ class Master(Base):
             'type': self.type.name,
             'grantor_id': self.grantor_id
         }
+
+
+def make_key():
+    # create an API key
+    return secrets.token_urlsafe(32)
