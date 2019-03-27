@@ -92,7 +92,7 @@ def write_node_configs(node_configs: Dict[str, NodeConfig]):
         json.dump(json_val, f, indent=2)
     os.chmod(nodes_path, 0o600)
 
-    # if the default file is missing or empty, add this node as the default
+    # if the default file is missing or empty, add a node as the default
     if not os.path.isfile(default_node_path):
         with open(default_node_path, 'w') as f:
             f.write("")
@@ -103,6 +103,17 @@ def write_node_configs(node_configs: Dict[str, NodeConfig]):
             first_name = list(node_configs.keys())[0]
             f.write(first_name + "\n")
     os.chmod(default_node_path, 0o600)
+
+
+def set_default_node(name: str):
+    config_dir = _user_config_dir()
+    default_node_path = os.path.join(config_dir, "default_node.txt")
+
+    node_configs = get_node_configs()
+    if name not in node_configs.keys():
+        raise ValueError("Invalid node name, view nodes with [joule node list]")
+    with open(default_node_path, 'w') as f:
+        f.write(name + "\n")
 
 
 def set_config_owner(uid: int, gid: int):

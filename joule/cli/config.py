@@ -20,6 +20,7 @@ class Config:
         if self._session is None:
             node_config = get_node(self.name)
             self._session = Session(node_config.url, node_config.key, get_cafile())
+            click.echo("--connecting to [%s]--" % node_config.name)
         return self._session
 
 pass_config = click.make_pass_decorator(Config, ensure=True)

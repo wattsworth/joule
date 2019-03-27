@@ -4,7 +4,6 @@ import datetime
 import asyncio
 
 
-from joule.api.session import Session
 from joule.api.stream import (stream_get,
                               stream_info)
 from joule.models import stream

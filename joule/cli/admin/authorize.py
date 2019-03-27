@@ -63,7 +63,11 @@ def admin_authorize(config):
         addr = config.ip_address
     else:
         addr = "127.0.0.1"
-    location = "%s:%d" % (addr, config.port)
+    if config.ssl_context != None:
+        scheme = "https"
+    else:
+        scheme = "http"
+    location = "%s://%s:%d" % (scheme, addr, config.port)
     node_config = NodeConfig(config.name, location, my_master.key)
     node_configs[config.name] = node_config
 
