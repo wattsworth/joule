@@ -5,7 +5,6 @@ from joule.cli.data import data
 from joule.cli.module import module
 from joule.cli.folder import folders
 from joule.cli.proxy import proxies
-from joule.cli.root import info
 from joule.cli.admin import admin
 from joule.cli.master import master
 from joule.cli.follower import follower

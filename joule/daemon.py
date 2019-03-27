@@ -59,7 +59,7 @@ class Daemon(object):
                     sys.exit(1)
         # clear out the working directory
         for file_name in os.listdir(WORKING_DIRECTORY):
-            path = os.path.join(WORKING_DIRECTORY,file_name)
+            path = os.path.join(WORKING_DIRECTORY, file_name)
             os.unlink(path)
         # write our pid
         with open(pid_file, 'w') as f:
@@ -133,6 +133,7 @@ class Daemon(object):
         app['db'] = self.db
         # used to tell master's how to contact this node
         app['port'] = self.config.port
+        app['name'] = self.config.name
         app.add_routes(joule.controllers.routes)
         runner = web.AppRunner(app)
         await runner.setup()

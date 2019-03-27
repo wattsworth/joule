@@ -1,8 +1,8 @@
-from typing import List, Union, Dict
+from typing import List, Union
 import yarl
 
 from joule import errors
-from . import node, stream
+from . import node
 
 
 class Proxy:

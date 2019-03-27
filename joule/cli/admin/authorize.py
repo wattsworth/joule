@@ -36,6 +36,11 @@ def admin_authorize(config):
     Base.metadata.create_all(engine)
     db = Session(bind=engine)
 
+    if 'SUDO_USER' in os.environ:
+        username = os.environ["SUDO_USER"]
+    else:
+        username = os.environ["LOGNAME"]
+
     try:
         node_configs = get_node_configs()
     except ValueError as e:
@@ -44,29 +49,30 @@ def admin_authorize(config):
     # check if this node is already authorized
     names = [n.name for n in node_configs.values()]
     if config.name in names:
-        if 'SUDO_USER' in os.environ:
-            username = os.environ["SUDO_USER"]
-        else:
-            username = os.environ["LOGNAME"]
         raise click.ClickException("[%s] is already authorized for [%s]" % (
             config.name, username))
 
-    # create a new master
-    my_master = master.Master()
-    my_master.key = master.make_key()
-    my_master.type = master.Master.TYPE.USER
-    my_master.name = os.environ["LOGNAME"]
-    db.add(my_master)
+    # check if this name is associated with a master entry
+    my_master = db.query(master.Master). \
+        filter(master.Master.TYPE == master.Master.TYPE.USER). \
+        filter(master.Master.name == username).first()
+    if my_master is None:
+        # create a new master entry
+        my_master = master.Master()
+        my_master.key = master.make_key()
+        my_master.type = master.Master.TYPE.USER
+        my_master.name = username
+        db.add(my_master)
 
     # add the key data to nodes.json
     if config.ip_address != "0.0.0.0":
         addr = config.ip_address
     else:
         addr = "127.0.0.1"
-    if config.ssl_context != None:
-        scheme = "https"
-    else:
+    if config.ssl_context is None:
         scheme = "http"
+    else:
+        scheme = "https"
     location = "%s://%s:%d" % (scheme, addr, config.port)
     node_config = NodeConfig(config.name, location, my_master.key)
     node_configs[config.name] = node_config
@@ -76,10 +82,7 @@ def admin_authorize(config):
     if 'SUDO_USER' in os.environ:
         uid = int(os.environ["SUDO_UID"])
         gid = int(os.environ["SUDO_GID"])
-        username = os.environ["SUDO_USER"]
         set_config_owner(uid, gid)
-    else:
-        username = os.environ["LOGNAME"]
 
     # save the database entry now that everything is written out
     db.commit()

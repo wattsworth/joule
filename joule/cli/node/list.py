@@ -7,8 +7,11 @@ from joule.cli.helpers import get_node_configs, get_default_node
 @click.command(name="list")
 @pass_config
 def node_list(config):
-    node_configs = get_node_configs()
-    default_node = get_default_node(node_configs)
+    try:
+        node_configs = get_node_configs()
+        default_node = get_default_node(node_configs)
+    except ValueError as e:
+        raise click.ClickException(str(e))
     result = []
     default_indicator = click.style("\u25CF", fg="green")
     for node in node_configs.values():

@@ -1,7 +1,7 @@
 import click
-from .list import master_list
-from .delete import master_delete
-from .add import master_add
+from .list import cli_list
+from .delete import cli_delete
+from .add import cli_add
 
 
 @click.group(name="master")
@@ -9,6 +9,6 @@ def master():
     pass  # pragma: no cover
 
 
-master.add_command(master_list)
-master.add_command(master_add)
-master.add_command(master_delete)
+master.add_command(cli_list)
+master.add_command(cli_delete)
+master.add_command(cli_add)

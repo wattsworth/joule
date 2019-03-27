@@ -39,19 +39,34 @@ from joule.models.pipes import Pipe
 
 class NodeInfo:
 
-    def __init__(self, version: str):
+    def __init__(self, version: str, name: str):
         self.version = version
+        self.name = name
 
 
 async def node_info(session):
     resp = await session.get("/version.json")
-    return NodeInfo(version=resp["version"])
+    return NodeInfo(version=resp["version"], name=resp["name"])
+
+
+class NodeConfig:
+    def __init__(self, name, url, key):
+        self.name = name
+        self.url = url
+        self.key = key
+
+    def to_json(self):
+        return {
+            "name": self.name,
+            "url": self.url,
+            "key": self.key
+        }
 
 
 class Node:
-    def __init__(self, url: str = "http://localhost:8088",
+    def __init__(self, url: str, key: str, cafile: str = "",
                  loop: Optional[asyncio.AbstractEventLoop] = None):
-        self.session = Session(url)
+        self.session = Session(url, key, cafile)
         self._url = url
         if loop is None:
             loop = asyncio.get_event_loop()

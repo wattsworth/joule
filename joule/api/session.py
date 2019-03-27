@@ -58,9 +58,8 @@ class Session:
                 else:
                     return await resp.text()
 
-        except ValueError as e:
-            raise errors.ApiError("Cannot contact Joule node at [%s]" %
-                                  (self.url + path)) from e
+        except aiohttp.ClientError as e:
+            raise errors.ApiError("Cannot contact node at [%s]" % self.url) from e
 
     async def close(self):
         if self._session is not None:

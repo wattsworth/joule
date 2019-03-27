@@ -4,20 +4,7 @@ import os
 import json
 
 from joule.errors import ConnectionError
-
-
-class NodeConfig:
-    def __init__(self, name, url, key):
-        self.name = name
-        self.url = url
-        self.key = key
-
-    def to_json(self):
-        return {
-            "name": self.name,
-            "url": self.url,
-            "key": self.key
-        }
+from joule.api.node import NodeConfig
 
 
 def get_node_configs() -> Dict[str, NodeConfig]:
@@ -110,8 +97,17 @@ def set_default_node(name: str):
     default_node_path = os.path.join(config_dir, "default_node.txt")
 
     node_configs = get_node_configs()
-    if name not in node_configs.keys():
+    if len(name) > 0 and name not in node_configs.keys():
         raise ValueError("Invalid node name, view nodes with [joule node list]")
+    if name == "":
+        if len(node_configs) == 0:
+            return  # nothing to do, no nodes available
+        # pick a new default node
+        with open(default_node_path, 'w') as f:
+            first_name = list(node_configs.keys())[0]
+            f.write(first_name + "\n")
+            return
+
     with open(default_node_path, 'w') as f:
         f.write(name + "\n")
 
