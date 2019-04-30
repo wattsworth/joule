@@ -11,18 +11,18 @@ warnings.simplefilter('always')
 class TestStreamDelete(FakeJouleTestCase):
     def test_deletes_stream(self):
         server = FakeJoule()
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
         # does not delete with out confirmation
-        result = runner.invoke(main,
-                      ['--url', url, 'stream', 'delete',
+        runner.invoke(main,
+                      ['stream', 'delete',
                        '/folder/stream'],
                       input='\n')
         self.assertTrue(self.msgs.empty())
 
         # executes deletes with confirmation
         result = runner.invoke(main,
-                               ['--url', url, 'stream', 'delete',
+                               ['stream', 'delete',
                                 '/folder/stream'],
                                input='y\n')
         self.assertEqual(result.exit_code, 0)
@@ -37,9 +37,9 @@ class TestStreamDelete(FakeJouleTestCase):
         server.response = error_msg
         server.http_code = error_code
         server.stub_stream_destroy = True
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'stream', 'delete', '/folder/stream'],
+        result = runner.invoke(main, ['stream', 'delete', '/folder/stream'],
                                input='y\n')
         self.assertTrue('%d' % error_code in result.output)
         self.assertTrue(error_msg in result.output)

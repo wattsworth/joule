@@ -49,10 +49,13 @@ class Daemon(object):
         # check the working directory, create if necessary
         if not os.path.isdir(WORKING_DIRECTORY):
             os.mkdir(WORKING_DIRECTORY)
+        # make sure the ownership is correct
+        os.chmod(WORKING_DIRECTORY, 0o700)
+
         # make sure this is the only copy of jouled running
-        pid_file = os.path.join(WORKING_DIRECTORY,'pid')
+        pid_file = os.path.join(WORKING_DIRECTORY, 'pid')
         if os.path.exists(pid_file):
-            with open(pid_file,'r') as f:
+            with open(pid_file, 'r') as f:
                 pid = int(f.readline())
                 if psutil.pid_exists(pid):
                     log.error("jouled is already running with pid %d" % pid)
@@ -64,6 +67,7 @@ class Daemon(object):
         # write our pid
         with open(pid_file, 'w') as f:
             f.write('%d\n' % os.getpid())
+        os.chmod(pid_file, 0o600)
 
         if self.config.nilmdb_url is not None:
             self.data_store: DataStore = \
@@ -134,13 +138,19 @@ class Daemon(object):
         # used to tell master's how to contact this node
         app['port'] = self.config.port
         app['name'] = self.config.name
+        app['ssl_context'] = self.config.ssl_context
         app.add_routes(joule.controllers.routes)
         runner = web.AppRunner(app)
+
         await runner.setup()
         site = web.TCPSite(runner, self.config.ip_address,
                            self.config.port,
                            ssl_context=self.config.ssl_context)
+        sock_file = os.path.join(WORKING_DIRECTORY, 'api')
+        sock_site = web.UnixSite(runner, sock_file)
+        await sock_site.start()
         await site.start()
+        os.chmod(sock_file, 0o600)
 
         # sleep and check for stop condition
         while not self.stop_requested:

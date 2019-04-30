@@ -1,5 +1,4 @@
 from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
-import unittest
 import aiohttp
 from aiohttp import web
 import argparse
@@ -17,6 +16,7 @@ from tests.controllers.helpers import MockWorker
 
 SOCKET_PATH = '/tmp/interface.test'
 
+
 class InterfaceModule(FilterModule):
 
     async def run(self, parsed_args, inputs, outputs):
@@ -24,7 +24,7 @@ class InterfaceModule(FilterModule):
             await asyncio.sleep(0.1)
 
     def routes(self):
-        return[
+        return [
             web.get('/', self.index),
             web.get('/test', self.get_test),
             web.post('/test_json', self.post_json),
@@ -57,7 +57,7 @@ class TestInterfaceController(AioHTTPTestCase):
     async def get_application(self):
         app = web.Application()
         app.add_routes(joule.controllers.routes)
-        socket_name= '/tmp/interface.test'
+        socket_name = '/tmp/interface.test'
         if os.path.exists(socket_name):
             os.unlink(socket_name)
         winterface = MockWorker("reader", {}, {'output': '/reader/path'},
@@ -72,12 +72,13 @@ class TestInterfaceController(AioHTTPTestCase):
         module = InterfaceModule()
         args = argparse.Namespace(socket='/tmp/interface.test',
                                   url='http://localhost:8088',
+                                  node="", api_socket="",
                                   pipes=json.dumps(json.dumps(
                                       {'inputs': {}, 'outputs': {}})))
         old_loop = asyncio.get_event_loop()
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        proc = multiprocessing.Process(target=module.start, args=(args, ))
+        proc = multiprocessing.Process(target=module.start, args=(args,))
         f = io.StringIO()
         with redirect_stdout(f):
             proc.start()
@@ -85,11 +86,11 @@ class TestInterfaceController(AioHTTPTestCase):
         asyncio.set_event_loop(old_loop)
         payload = {'param1': '1', 'param2': '2'}
         # passes root as / to module
-        resp = await self.client.request("GET", "/interface/101?param1=1&param2=2")
+        resp = await self.client.request("GET", "/interface/m101?param1=1&param2=2")
         msg = await resp.text()
         self.assertEqual(payload, json.loads(msg))
         # another path, this one shuts down the module
-        resp = await self.client.request("GET", "/interface/101/test?param1=1&param2=2")
+        resp = await self.client.request("GET", "/interface/m101/test?param1=1&param2=2")
         msg = await resp.text()
         proc.join()
         # trigger pipe removal
@@ -105,6 +106,7 @@ class TestInterfaceController(AioHTTPTestCase):
         module = InterfaceModule()
         args = argparse.Namespace(socket='/tmp/interface.test',
                                   url='http://localhost:8088',
+                                  node="", api_socket="",
                                   pipes=json.dumps(json.dumps(
                                       {'inputs': {}, 'outputs': {}})))
         old_loop = asyncio.get_event_loop()
@@ -118,7 +120,7 @@ class TestInterfaceController(AioHTTPTestCase):
         asyncio.set_event_loop(old_loop)
         # POST json (preserves types)
         payload = {'param1': 1, 'param2': '2'}
-        resp = await self.client.request("POST", "/interface/101/test_json", json=payload)
+        resp = await self.client.request("POST", "/interface/m101/test_json", json=payload)
         msg = await resp.text()
         self.assertEqual(payload, json.loads(msg))
         # POST form data (does not preserve types)
@@ -126,7 +128,7 @@ class TestInterfaceController(AioHTTPTestCase):
         data = aiohttp.FormData()
         data.add_field('param1', '1')
         data.add_field('param2', '2')
-        resp = await self.client.request("POST", "/interface/101/test_form", data=data)
+        resp = await self.client.request("POST", "/interface/m101/test_form", data=data)
         msg = await resp.text()
         self.assertEqual(payload, json.loads(msg))
         proc.join()

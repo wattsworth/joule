@@ -31,23 +31,22 @@ def main():
     prep_system()
     for entry in os.scandir(SCENARIO_DIR):
         if not (entry.name.startswith('.') and entry.is_dir()):
-            if entry.name in ["__pycache__","__init__.py"]:
+            if entry.name in ["__pycache__", "__init__.py"]:
                 continue
 
-            if (os.path.exists("/etc/joule/")):
-                if (os.path.islink("/etc/joule")):
+            if os.path.exists("/etc/joule/"):
+                if os.path.islink("/etc/joule"):
                     os.unlink("/etc/joule")  # this is a symlink
                 else:
                     shutil.rmtree("/etc/joule/")
             os.symlink(entry.path, "/etc/joule")
             # clear the existing database
-            jouled = subprocess.Popen(["jouled", "--erase-all",
-                                       "--config", "/etc/joule/main.conf"],
-                                      stdin=subprocess.PIPE,
-                                      stdout=subprocess.PIPE,
-                                      stderr=subprocess.PIPE,
-                                      encoding='utf-8')
-            jouled.communicate("Y\n")
+            subprocess.run("joule admin erase --yes".split(" "))
+            # get API permissions
+            os.environ["LOGNAME"] = "e2e"
+            os.environ["JOULE_USER_CONFIG_DIR"] = "/tmp/joule_user"
+            subprocess.run("joule admin authorize".split(" "))
+
             jouled = subprocess.Popen(["jouled", "--config",
                                        "/etc/joule/main.conf"],
                                       stdout=subprocess.PIPE,

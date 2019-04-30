@@ -4,7 +4,8 @@ import signal
 
 from joule.cli.config import pass_config
 from joule.models.pipes import EmptyPipe
-from joule.api.node import Node
+from joule.api.data import (data_subscribe,
+                            data_read)
 from joule import errors
 from joule.utilities import human_to_timestamp
 
@@ -20,8 +21,7 @@ stop_requested = False
 @click.option('-m', "--mark-intervals", help="include [# interval break] tags", is_flag=True)
 @click.argument("stream")
 @pass_config
-def data_read(config, start, end, live, max_rows, show_bounds, mark_intervals, stream):
-
+def cmd(config, start, end, live, max_rows, show_bounds, mark_intervals, stream):
     signal.signal(signal.SIGTERM, handler)
     signal.signal(signal.SIGINT, handler)
 
@@ -41,13 +41,12 @@ def data_read(config, start, end, live, max_rows, show_bounds, mark_intervals, s
             raise click.ClickException("invalid end time: [%s]" % end)
 
     loop = asyncio.get_event_loop()
-    my_node = Node(config.url, loop)
 
     async def _run():
         if live:
-            pipe = await my_node.data_subscribe(stream)
+            pipe = await config.node.data_subscribe(stream)
         else:
-            pipe = await my_node.data_read(stream, start, end, max_rows)
+            pipe = await config.node.data_read(stream, start, end, max_rows)
         try:
             while not stop_requested:
                 try:
@@ -75,7 +74,7 @@ def data_read(config, start, end, live, max_rows, show_bounds, mark_intervals, s
         raise click.ClickException(str(e)) from e
     finally:
         loop.run_until_complete(
-            my_node.close())
+            config.node.close())
         loop.close()
 
 

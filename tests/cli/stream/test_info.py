@@ -22,9 +22,9 @@ class TestStreamInfo(FakeJouleTestCase):
         with open(STREAM_INFO, 'r') as f:
             server.response = f.read()
         server.stub_stream_info = True  # use the response text
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'stream', 'info', '/folder_1/random'])
+        result = runner.invoke(main, ['stream', 'info', '/folder_1/random'])
         self.assertEqual(result.exit_code, 0)
         # make sure the items are populated correctly
         output = result.output.split('\n')
@@ -75,9 +75,9 @@ class TestStreamInfo(FakeJouleTestCase):
 
             server.stub_stream_info = True  # use the response text
             server.response = json.dumps(stream)
-            url = self.start_server(server)
+            self.start_server(server)
             runner = CliRunner()
-            result = runner.invoke(main, ['--url', url, 'stream', 'info', '/folder_1/random'])
+            result = runner.invoke(main, ['stream', 'info', '/folder_1/random'])
             # just make sure different configurations do not cause errors in the output
             self.assertEqual(result.exit_code, 0)
             self.stop_server()
@@ -87,26 +87,19 @@ class TestStreamInfo(FakeJouleTestCase):
         server.response = "stream does not exist"
         server.http_code = 404
         server.stub_stream_info = True
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'stream', 'info', '/bad/path'])
+        result = runner.invoke(main, [ 'stream', 'info', '/bad/path'])
         self.assertTrue("Error" in result.output)
         self.stop_server()
-
-    def test_when_server_is_not_available(self):
-        url = "http://127.0.0.1:%d" % unused_port()
-        runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'stream', 'info', '/folder/stream'])
-        self.assertTrue('Error' in result.output)
-        self.assertEqual(result.exit_code, 1)
 
     def test_when_server_returns_invalid_data(self):
         server = FakeJoule()
         server.response = "notjson"
         server.stub_stream_info = True
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'stream', 'info', 'folder/stream'])
+        result = runner.invoke(main, ['stream', 'info', 'folder/stream'])
         self.assertTrue('Error' in result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()
@@ -116,9 +109,9 @@ class TestStreamInfo(FakeJouleTestCase):
         server.response = "test error"
         server.http_code = 500
         server.stub_stream_info = True
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'stream', 'info', 'folder/stream'])
+        result = runner.invoke(main, ['stream', 'info', 'folder/stream'])
         self.assertTrue('500' in result.output)
         self.assertTrue("test error" in result.output)
         self.assertEqual(result.exit_code, 1)

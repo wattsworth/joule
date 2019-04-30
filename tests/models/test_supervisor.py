@@ -1,6 +1,5 @@
 from joule.models import Module, Worker, pipes
 from joule.models.supervisor import Supervisor
-from joule.errors import ConfigurationError, SubscriptionError
 from typing import List
 import functools
 import asyncio
@@ -19,7 +18,7 @@ class TestSupervisor(AsyncTestCase):
         for x in range(TestSupervisor.NUM_WORKERS):
             module = Module(name="m%d" % x, exec_cmd="", uuid=x)
             self.workers.append(Worker(module))
-        self.supervisor = Supervisor(self.workers)
+        self.supervisor = Supervisor(self.workers, [])
 
     def test_returns_workers(self):
         self.assertEqual(self.workers, self.supervisor.workers)
@@ -54,10 +53,10 @@ class TestSupervisor(AsyncTestCase):
         for worker in self.workers:
             uuid = worker.module.uuid
             self.assertEqual(worker.interface_socket,
-                             self.supervisor.get_socket(uuid))
+                             self.supervisor.get_module_socket(uuid))
         # returns None if the uuid doesn't exist
         bad_uuid = 68
-        self.assertIsNone(self.supervisor.get_socket(bad_uuid))
+        self.assertIsNone(self.supervisor.get_module_socket(bad_uuid))
 
     def test_restarts_producers(self):
         restarted = False
@@ -86,7 +85,7 @@ class TestSupervisor(AsyncTestCase):
         subscription_requests = 0
 
         class MockNode:
-            def __init__(self, url,loop):
+            def __init__(self, url, loop):
                 pass
 
             async def data_read(self, stream):
@@ -98,8 +97,11 @@ class TestSupervisor(AsyncTestCase):
             async def close(self):
                 pass
 
-        with mock.patch('joule.models.supervisor.Node',
-                        MockNode):
+        def create_mock_node(url, loop):
+            return MockNode(url, loop)
+
+        with mock.patch('joule.models.supervisor.create_tcp_node',
+                        create_mock_node):
             self.supervisor.subscribe(remote_stream, p1, self.loop)
             self.supervisor.subscribe(remote_stream, p2, self.loop)
 
@@ -122,7 +124,7 @@ class TestSupervisor(AsyncTestCase):
         module = Module(name="remote_output", exec_cmd="", uuid=0)
         module.outputs = {'output': remote_stream}
         worker = Worker(module)
-        supervisor = Supervisor([worker])
+        supervisor = Supervisor([worker], [])
 
         async def mock_run(subscribe, loop):
             await asyncio.sleep(0)
@@ -132,7 +134,7 @@ class TestSupervisor(AsyncTestCase):
         output_requested = False
 
         class MockNode:
-            def __init__(self, url,loop):
+            def __init__(self, url, loop):
                 pass
 
             async def data_write(self, stream):
@@ -144,8 +146,11 @@ class TestSupervisor(AsyncTestCase):
             async def close(self):
                 pass
 
-        with mock.patch('joule.models.supervisor.Node',
-                        MockNode):
+        def create_mock_node(url, loop):
+            return MockNode(url, loop)
+
+        with mock.patch('joule.models.supervisor.create_tcp_node',
+                        create_mock_node):
             self.loop.run_until_complete(supervisor.start(self.loop))
             self.supervisor.task = asyncio.sleep(0)
             self.loop.run_until_complete(self.supervisor.stop(self.loop))
@@ -155,5 +160,3 @@ class TestSupervisor(AsyncTestCase):
         # worker should be producing data into the pipe
         self.assertEqual(1, len(worker.subscribers[remote_stream]))
         self.loop.run_until_complete(supervisor.stop(self.loop))
-
-

@@ -14,12 +14,11 @@ class TestInfo(FakeJouleTestCase):
         server = FakeJoule()
         with open(VERSION_JSON, 'r') as f:
             server.response = f.read()
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'info'])
+        result = runner.invoke(main, ['node', 'info'])
         self.assertEqual(result.exit_code, 0)
         output = result.output
         # make sure the version is displayed
         self.assertIn("0.8.2", output)
         self.stop_server()
-

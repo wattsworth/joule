@@ -1,11 +1,8 @@
 import click
 import os
 import configparser
-import json
 
-import joule.errors
-from joule.cli.helpers import (get_node_configs, NodeConfig,
-                               write_node_configs, set_config_owner)
+from joule import api, errors
 
 
 @click.command(name="authorize")
@@ -28,11 +25,15 @@ def admin_authorize(config):
         raise click.ClickException("Cannot load joule configuration file at [%s]" % config)
     except PermissionError:
         raise click.ClickException("Cannot read joule configuration file at [%s] (run as root)" % config)
-    except joule.errors.ConfigurationError as e:
+    except errors.ConfigurationError as e:
         raise click.ClickException("Invalid configuration: %s" % e)
 
     # create a connection to the database
     engine = create_engine(config.database)
+    with engine.connect() as conn:
+        conn.execute('CREATE SCHEMA IF NOT EXISTS data')
+        conn.execute('CREATE SCHEMA IF NOT EXISTS metadata')
+
     Base.metadata.create_all(engine)
     db = Session(bind=engine)
 
@@ -42,19 +43,13 @@ def admin_authorize(config):
         username = os.environ["LOGNAME"]
 
     try:
-        node_configs = get_node_configs()
+        nodes = api.get_nodes()
     except ValueError as e:
         raise click.ClickException(str(e))
 
-    # check if this node is already authorized
-    names = [n.name for n in node_configs.values()]
-    if config.name in names:
-        raise click.ClickException("[%s] is already authorized for [%s]" % (
-            config.name, username))
-
     # check if this name is associated with a master entry
     my_master = db.query(master.Master). \
-        filter(master.Master.TYPE == master.Master.TYPE.USER). \
+        filter(master.Master.type == master.Master.TYPE.USER). \
         filter(master.Master.name == username).first()
     if my_master is None:
         # create a new master entry
@@ -74,17 +69,9 @@ def admin_authorize(config):
     else:
         scheme = "https"
     location = "%s://%s:%d" % (scheme, addr, config.port)
-    node_config = NodeConfig(config.name, location, my_master.key)
-    node_configs[config.name] = node_config
+    my_node = api.create_tcp_node(location, my_master.key, config.name)
+    api.save_node(my_node)
 
-    write_node_configs(node_configs)
-    # fix permissions since this was run by root
-    if 'SUDO_USER' in os.environ:
-        uid = int(os.environ["SUDO_UID"])
-        gid = int(os.environ["SUDO_GID"])
-        set_config_owner(uid, gid)
-
-    # save the database entry now that everything is written out
     db.commit()
     db.close()
 

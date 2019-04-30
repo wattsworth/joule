@@ -1,15 +1,15 @@
 import asyncio
 import numpy as np
-import requests
 import logging
 from unittest import mock
 
 from joule.models.pipes import interval_token, EmptyPipe
 from joule.models.stream import StreamInfo, Stream
 from joule.models.element import Element
-from joule.api import node
+from joule import api
 from joule.errors import ConfigurationError, ApiError
 from joule.client.helpers import build_network_pipes
+from joule import errors
 from tests import helpers
 from tests.cli.fake_joule import FakeJoule, FakeJouleTestCase, MockDbEntry
 
@@ -23,9 +23,9 @@ class TestPipeHelpers(FakeJouleTestCase):
         server = FakeJoule()
         src_data = create_source_data(server)
 
-        url = self.start_server(server)
+        self.start_server(server)
         loop = asyncio.get_event_loop()
-        my_node = node.Node(url, loop)
+        my_node = api.get_node()
 
         async def runner():
             pipes_in, pipes_out = await build_network_pipes({'input': '/test/source:uint8[x,y,z]'},
@@ -56,9 +56,9 @@ class TestPipeHelpers(FakeJouleTestCase):
         server = FakeJoule()
         src_data = create_source_data(server, is_destination=True)
 
-        url = self.start_server(server)
+        self.start_server(server)
         loop = asyncio.get_event_loop()
-        my_node = node.Node(url, loop)
+        my_node = api.get_node()
 
         async def runner():
             pipes_in, pipes_out = await build_network_pipes({'input': '/test/source:uint8[x,y,z]'},
@@ -91,10 +91,9 @@ class TestPipeHelpers(FakeJouleTestCase):
 
         create_destination(server)
 
-        url = self.start_server(server)
+        self.start_server(server)
         loop = asyncio.get_event_loop()
-        my_node = node.Node(url, loop)
-
+        my_node = api.get_node()
         async def runner():
             pipes_in, pipes_out = await build_network_pipes({},
                                                             {'output': '/test/dest:uint8[e0,e1,e2]'},
@@ -126,9 +125,10 @@ class TestPipeHelpers(FakeJouleTestCase):
         server = FakeJoule()
         create_destination(server)
 
-        url = self.start_server(server)
+        self.start_server(server)
         loop = asyncio.get_event_loop()
-        my_node = node.Node(url, loop)
+
+        my_node = api.get_node()
 
         async def runner():
             with mock.patch('joule.client.helpers.pipes.click') as mock_click:
@@ -182,24 +182,26 @@ class TestPipeHelpers(FakeJouleTestCase):
 
     def test_creates_output_stream_if_necessary(self):
         server = FakeJoule()
-        url = self.start_server(server)
+        self.start_server(server)
         loop = asyncio.get_event_loop()
-        my_node = node.Node(url, loop)
+
+        my_node = api.get_node()
 
         self.assertEqual(len(server.streams), 0)
 
         async def runner():
             # the destination does not exist
-            resp = requests.get(url + '/stream.json?path=/test/dest')
-            self.assertEqual(resp.status_code, 404)
+            with self.assertRaises(errors.ApiError):
+                await my_node.stream_get("/test/dest")
             pipes_in, pipes_out = await build_network_pipes({},
                                                             {'output': '/test/dest:uint8[e0,e1,e2]'},
                                                             my_node,
                                                             None, None)
             await pipes_out['output'].close()
             # make sure the stream exists
-            resp = requests.get(url + '/stream.json?path=/test/dest')
-            self.assertEqual(resp.status_code, 200)
+            dest_stream = await my_node.stream_get("/test/dest")
+            self.assertIsNotNone(dest_stream)
+
             await my_node.close()
 
         with self.assertLogs(level='INFO') as log:
@@ -212,8 +214,9 @@ class TestPipeHelpers(FakeJouleTestCase):
     def test_configuration_errors(self):
         server = FakeJoule()
         loop = asyncio.get_event_loop()
-        url = self.start_server(server)
-        my_node = node.Node(url, loop)
+        self.start_server(server)
+        my_node = api.get_node()
+
         # must specify an inline configuration
         with self.assertRaises(ConfigurationError):
             loop.run_until_complete(build_network_pipes({'input': '/test/source'},
@@ -228,9 +231,9 @@ class TestPipeHelpers(FakeJouleTestCase):
     def test_input_errors(self):
         server = FakeJoule()
         create_source_data(server, is_destination=False)
-        url = self.start_server(server)
+        self.start_server(server)
         loop = asyncio.get_event_loop()
-        my_node = node.Node(url, loop)
+        my_node = api.get_node()
 
         # errors on layout differences
         with self.assertRaises(ConfigurationError) as e:
@@ -253,9 +256,9 @@ class TestPipeHelpers(FakeJouleTestCase):
         server = FakeJoule()
         create_destination(server)
         create_source_data(server, is_destination=True)
-        url = self.start_server(server)
+        self.start_server(server)
         loop = asyncio.get_event_loop()
-        my_node = node.Node(url, loop)
+        my_node = api.get_node()
 
         # errors on layout differences
         with self.assertRaises(ConfigurationError) as e:

@@ -3,6 +3,7 @@ from aiohttp.test_utils import unused_port
 import warnings
 import numpy as np
 import logging
+import asyncio
 
 from ..fake_joule import FakeJoule, FakeJouleTestCase
 from joule.cli import main
@@ -26,9 +27,9 @@ class TestDataCopy(FakeJouleTestCase):
                          range(3)]
         server.add_stream('/test/destination', dest, StreamInfo(None, None, 0), None)
 
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'data', 'copy', '/test/source', '/test/destination'])
+        result = runner.invoke(main, ['data', 'copy', '/test/source', '/test/destination'])
         _print_result_on_error(result)
         self.assertEqual(result.exit_code, 0)
         mock_entry = self.msgs.get()
@@ -49,9 +50,9 @@ class TestDataCopy(FakeJouleTestCase):
                          range(3)]
         server.add_stream('/test/destination', dest, StreamInfo(int(ts[0]), int(ts[-1]),
                                                                 len(ts)), src_data, intervals)
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'data', 'copy',
+        result = runner.invoke(main, ['data', 'copy',
                                       '--start', str(ts[0]), '--end', str(ts[-1]),
                                       '/test/source', '/test/destination'])
         _print_result_on_error(result)
@@ -72,20 +73,14 @@ class TestDataCopy(FakeJouleTestCase):
         server.add_stream('/test/source', src, src_info, src_data, [[src_info.start, src_info.end]])
         server.add_stream('/test/source', src, src_info, src_data, [[src_info.start, src_info.end]])
 
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'data', 'copy', '/test/source', '/test/destination'])
+        result = runner.invoke(main, ['data', 'copy', '/test/source', '/test/destination'])
+        _print_result_on_error(result)
         self.assertEqual(result.exit_code, 0)
         mock_entry = self.msgs.get()
         np.testing.assert_array_equal(src_data, mock_entry.data)
         self.stop_server()
-
-    def test_when_server_is_not_available(self):
-        url = "http://127.0.0.1:%d" % unused_port()
-        runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'data', 'copy', '/test/source', '/test/destination'])
-        self.assertTrue('Error' in result.output)
-        self.assertEqual(result.exit_code, 1)
 
     def test_when_source_is_empty(self):
         server = FakeJoule()
@@ -95,9 +90,9 @@ class TestDataCopy(FakeJouleTestCase):
         src = Stream(id=0, name="source", keep_us=100, datatype=Stream.DATATYPE.FLOAT32)
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         server.add_stream('/test/source', src, src_info, np.ndarray([]))
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'data', 'copy', '/test/source', '/test/destination'])
+        result = runner.invoke(main, ['data', 'copy', '/test/source', '/test/destination'])
         self.assertTrue('Error' in result.output and 'source' in result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()
@@ -113,9 +108,9 @@ class TestDataCopy(FakeJouleTestCase):
         src_info = StreamInfo(int(src_data['timestamp'][0]), int(src_data['timestamp'][-1]), len(src_data))
 
         server.add_stream('/test/source', src, src_info, np.ndarray([]))
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'data', 'copy', '/test/source', 'badpath'])
+        result = runner.invoke(main, ['data', 'copy', '/test/source', 'badpath'])
         self.assertTrue('Error' in result.output and 'destination' in result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()
@@ -126,9 +121,9 @@ class TestDataCopy(FakeJouleTestCase):
 
         server.response = "notjson"
         server.http_code = 200
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'data', 'copy', '/test/source', '/stub/response'])
+        result = runner.invoke(main, ['data', 'copy', '/test/source', '/stub/response'])
         self.assertTrue('Error' in result.output)
 
         self.assertEqual(result.exit_code, 1)
@@ -141,9 +136,9 @@ class TestDataCopy(FakeJouleTestCase):
         dest.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in
                          range(5)]
         server.add_stream('/test/destination', dest, StreamInfo(None, None, 0), None)
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'data', 'copy', '/test/source', '/test/destination'])
+        result = runner.invoke(main, ['data', 'copy', '/test/source', '/test/destination'])
         self.assertTrue('not compatible' in result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()
@@ -157,14 +152,16 @@ class TestDataCopy(FakeJouleTestCase):
             in
             range(3)]
         server.add_stream('/test/destination', dest, StreamInfo(None, None, 0), None)
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
         # does not copy without confirmation
-        result = runner.invoke(main, ['--url', url, 'data', 'copy', '/test/source', '/test/destination'])
+        result = runner.invoke(main, ['data', 'copy', '/test/source', '/test/destination'])
         self.assertTrue(self.msgs.empty())
-        self.assertNotEqual(result.exit_code, 0)
         # copies with confirmation
-        result = runner.invoke(main, ['--url', url, 'data', 'copy', '/test/source', '/test/destination'],
+        loop = asyncio.new_event_loop()
+        loop.set_debug(True)
+        asyncio.set_event_loop(loop)
+        result = runner.invoke(main, ['data', 'copy', '/test/source', '/test/destination'],
                                input='y\n')
         mock_entry = self.msgs.get()
         self.assertTrue(len(mock_entry.data) > 0)
@@ -174,10 +171,10 @@ class TestDataCopy(FakeJouleTestCase):
     def test_start_must_be_before_end(self):
         server = FakeJoule()
         create_source_data(server)
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
         # does not copy without confirmation
-        result = runner.invoke(main, ['--url', url, 'data', 'copy',
+        result = runner.invoke(main, ['data', 'copy',
                                       '/test/source', '/test/destination',
                                       '--start', '1 hour ago', '--end', '2 hours ago'])
         self.assertEqual(result.exit_code, 1)
@@ -190,9 +187,9 @@ class TestDataCopy(FakeJouleTestCase):
         server.http_code = 400
         server.response = 'nilmdb error'
         create_source_data(server)
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'data', 'copy',
+        result = runner.invoke(main, ['data', 'copy',
                                       '/test/source', '/test/destination'])
         self.assertEqual(result.exit_code, 1)
         self.assertTrue('Error' in result.output and 'source' in result.output)
@@ -204,9 +201,9 @@ class TestDataCopy(FakeJouleTestCase):
         server.http_code = 400
         server.response = 'nilmdb error'
         create_source_data(server)
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'data', 'copy',
+        result = runner.invoke(main, ['data', 'copy',
                                       '/test/source', '/test/destination'])
         self.assertEqual(result.exit_code, 1)
         self.assertTrue('Error' in result.output and 'destination' in result.output)
@@ -214,10 +211,9 @@ class TestDataCopy(FakeJouleTestCase):
 
 
 def _print_result_on_error(result):
-    if result.exit_code == -1:
-        print("exception: ", result.exception)
     if result.exit_code != 0:
         print("output: ", result.output)
+        print("exception: ", result.exception)
 
 
 def create_source_data(server):

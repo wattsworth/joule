@@ -1,6 +1,7 @@
 import unittest
 import configparser
 import tempfile
+import asyncio
 
 from joule.services import load_config
 from joule.errors import ConfigurationError
@@ -102,4 +103,7 @@ class TestLoadConfigErrors(unittest.TestCase):
                                    NilmdbUrl=http://127.0.0.1:234/bad_nilmdb
                                """ % (module_dir, stream_dir))
                 with self.assertRaisesRegex(ConfigurationError, "NilmDB"):
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
                     load_config.run(custom_values=parser)
+                    loop.close()

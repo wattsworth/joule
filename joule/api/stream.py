@@ -1,6 +1,6 @@
 from typing import Optional, Union, Dict, List
 
-from .session import Session
+from .session import BaseSession
 from .folder_type import Folder
 from joule import errors
 
@@ -214,7 +214,7 @@ def info_from_json(json) -> StreamInfo:
                           0)
 
 
-async def stream_delete(session: Session,
+async def stream_delete(session: BaseSession,
                         stream: Union[Stream, str, int]):
     data = {}
     if type(stream) is Stream:
@@ -229,7 +229,7 @@ async def stream_delete(session: Session,
     await session.delete("/stream.json", data)
 
 
-async def stream_create(session: Session,
+async def stream_create(session: BaseSession,
                         stream: Stream, folder: Union[Folder, str, int]) -> Stream:
     data = {"stream": stream.to_json()}
 
@@ -246,7 +246,7 @@ async def stream_create(session: Session,
     return from_json(resp)
 
 
-async def stream_info(session: Session,
+async def stream_info(session: BaseSession,
                       stream: Union[Stream, str, int]) -> StreamInfo:
     data = {}
 
@@ -263,7 +263,7 @@ async def stream_info(session: Session,
     return info_from_json(resp['data_info'])
 
 
-async def stream_get(session: Session,
+async def stream_get(session: BaseSession,
                      stream: Union[Stream, str, int]) -> Stream:
     data = {}
 
@@ -280,13 +280,13 @@ async def stream_get(session: Session,
     return from_json(resp)
 
 
-async def stream_update(session: Session,
+async def stream_update(session: BaseSession,
                         stream: Stream) -> None:
     await session.put("/stream.json", {"id": stream.id,
                                        "stream": stream.to_json()})
 
 
-async def stream_move(session: Session,
+async def stream_move(session: BaseSession,
                       source: Union[Stream, str, int],
                       destination: Union[Folder, str, int]) -> None:
     data = {}

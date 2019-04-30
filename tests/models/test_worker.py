@@ -4,7 +4,6 @@ from unittest import mock
 import logging
 import signal
 import stat
-import psutil
 import numpy as np
 import shlex
 import json
@@ -35,7 +34,6 @@ MODULE_ECHO_ARGS = os.path.join(os.path.dirname(__file__),
 MODULE_SIMPLE_FILTER = os.path.join(os.path.dirname(__file__),
                                     'worker_scripts', 'simple_filter.py')
 warnings.simplefilter('always')
-
 
 
 class TestWorker(unittest.TestCase):
@@ -73,7 +71,7 @@ class TestWorker(unittest.TestCase):
         m_consumers[0].inputs = {"input1": streams[0], "input2": streams[2]}
         m_consumers[1].inputs = {"input1": streams[2], "input2": streams[3]}
         self.consumers: List[Worker] = [Worker(m) for m in m_consumers]
-        self.supervisor = Supervisor(self.producers + self.consumers)
+        self.supervisor = Supervisor(self.producers + self.consumers, [])
 
     def tearDown(self):
         closed = self.loop.is_closed()
@@ -235,6 +233,8 @@ class TestWorker(unittest.TestCase):
         parser = argparse.ArgumentParser()
         parser.add_argument("--pipes")
         parser.add_argument("--socket")
+        parser.add_argument("--api-socket")
+        parser.add_argument("--node")
         parser.add_argument("--arg1")
         parser.add_argument("--arg2")
         # get the second log entry which is the echo'd arguments
@@ -319,7 +319,7 @@ class TestWorker(unittest.TestCase):
         self.module.exec_cmd = "/usr/bin/env python3 " + MODULE_SIMPLE_FILTER
 
         interval1_data = helpers.create_data('float32_3', start=1000, step=100, length=100)
-        interval2_data = helpers.create_data('float32_3', start=1001+100*100, step=100, length=100)
+        interval2_data = helpers.create_data('float32_3', start=1001 + 100 * 100, step=100, length=100)
 
         async def mock_producers():
             # await asyncio.sleep(0.5)
@@ -327,7 +327,7 @@ class TestWorker(unittest.TestCase):
             while len(subscribers) == 0:
                 await asyncio.sleep(0.01)
             # add two intervals of mock data to the producer queues
-            input1 = subscribers[0]#self.producers[0].subscribers[self.streams[0]][0]
+            input1 = subscribers[0]  # self.producers[0].subscribers[self.streams[0]][0]
             await input1.write(interval1_data)
             await input1.close_interval()
             await input1.write(interval2_data)
@@ -417,13 +417,13 @@ class TestWorker(unittest.TestCase):
             try:
                 fstat = os.fstat(fd)
                 if stat.S_ISFIFO(fstat.st_mode):
-                    existing_pipes+=1
+                    existing_pipes += 1
             except OSError:
                 pass
 
         yield
         # make sure the same number of pipes are open
-        new_pipes=0
+        new_pipes = 0
         for str_fd in set(os.listdir('/proc/self/fd/')):
             fd = int(str_fd)
             try:

@@ -2,7 +2,7 @@ from tests.api import mock_session
 import random
 import asynctest
 
-from joule.api.node import Node
+from joule.api.node import TcpNode
 from joule import errors
 
 from joule.api.stream import Stream
@@ -14,7 +14,7 @@ class TestStreamApi(asynctest.TestCase):
 
     async def setUp(self):
         # no URL or event loop
-        self.node = Node('mock_url', None)
+        self.node = TcpNode('mock_node', 'http://url', 'api_key')
         self.session = mock_session.MockSession()
         self.node.session = self.session
 

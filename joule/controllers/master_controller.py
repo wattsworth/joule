@@ -1,5 +1,7 @@
 from aiohttp import web
 from sqlalchemy.orm import Session, exc
+import secrets
+import aiohttp
 
 from joule.models.master import Master, make_key
 
@@ -9,30 +11,86 @@ async def add(request: web.Request):
     Contact specified node and add self as a follower
     """
     db: Session = request.app["db"]
+    node_name: str = request.app["name"]
+    port: int = request.app["port"]
+    ssl_context = request.app["ssl_context"]
+    if request.content_type != 'application/json':
+        return web.Response(text='content-type must be application/json', status=400)
+    body = await request.json()
+
     try:
-        master_type = request.query['master_type'].lower()
-        identifier = request.query['identifier'].lower()
+        master_type = body['master_type'].lower()
+        identifier = body['identifier'].lower()
         if master_type not in ['user', 'node']:
             raise ValueError("master_type must be [user|node]")
     except (KeyError, ValueError) as e:
         return web.Response(text="Invalid request %s" % str(e))
+    my_master = None
     try:
         if master_type == 'user':
-            # create a new user API key
+            # check if this name is associated with a master entry
+            my_master = db.query(Master). \
+                filter(Master.type == Master.TYPE.USER). \
+                filter(Master.name == identifier).first()
+            if my_master is None:
+                # create a new user API key
+                my_master = Master(name=identifier,
+                                   type=Master.TYPE.USER,
+                                   key=make_key())
+                grantor_key = request.headers["X-API-KEY"]
+                my_master.grantor_id = db.query(Master.id).filter(
+                    Master.key == grantor_key).one()
+                db.add(my_master)
+                db.commit()
+            return web.json_response({"key": my_master.key,
+                                      "name": node_name})
+        elif master_type == 'node':
+            # create a new node API key
             my_master = Master()
-            my_master.name = identifier
             my_master.key = make_key()
-            my_master.type = Master.TYPE.USER
-            grantor_key = request.headers["JOULE_API_KEY"]
-            my_master.grantor_id = db.query(Master.id).get(
-                Master.key == grantor_key)
-            return web.Response(text=my_master.key)
-        else:
-            return web.Response(text="TODO", status=500)
-    except KeyError as e:
-        return web.Response(text="Missing [%s] parameter" % str(e), status=400)
-    except ValueError as e:
-        return web.Response(text="Invalid value for parameter: [%s]" % str(e), status=400)
+            my_master.type = Master.TYPE.NODE
+            grantor_key = request.headers["X-API-KEY"]
+            my_master.grantor_id = db.query(Master.id).filter(
+                Master.key == grantor_key).one()
+            # make a temporary name
+            my_master.name = "pending_%s" % secrets.token_hex(5)
+            db.add(my_master)
+            db.commit()
+            # post this key to the master
+            name = await _send_key(my_master, identifier, port,
+                                   node_name, ssl_context)
+
+            # remove the key for this node if it already exists
+            db.query(Master). \
+                filter(Master.type == Master.TYPE.NODE). \
+                filter(Master.name == name).delete()
+            my_master.name = name
+            db.add(my_master)
+            db.commit()
+            return web.json_response({"name": my_master.name})
+    except (ValueError, KeyError) as e:
+        if my_master is not None:
+            db.delete(my_master)
+            db.commit()
+        return web.Response(text="Cannot add master: [%s]" % str(e), status=400)
+
+
+async def _send_key(master: Master,
+                    url: str,
+                    port: int,
+                    name: str,
+                    ssl_context) -> str:
+    # TODO handle CA, http(s) identification, lumen auth, etc
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url + "/follower.json",
+                                ssl=ssl_context,
+                                json={'key': master.key,
+                                      'port': port,
+                                      'name': name}) as resp:
+            if resp.status != 200:
+                raise ValueError(await resp.text())
+            val = await resp.json()
+            return val['name']
 
 
 async def index(request: web.Request):
@@ -51,14 +109,18 @@ async def delete(request: web.Request):
         name = request.query["name"]
         str_master_type = request.query["master_type"]
         master_type = Master.TYPE[str_master_type.upper()]
-        master = db.query(Master).\
-            filter(Master.name == name).\
-            filter(Master.type == master_type).\
+        master = db.query(Master). \
+            filter(Master.name == name). \
+            filter(Master.type == master_type). \
             one()
+        if master.key == request.headers["X-API-KEY"]:
+            return web.Response(text="cannot delete yourself, this would lock you out of the node", status=400)
+
         db.delete(master)
     except ValueError:
         return web.Response(text="specify name and master_type", status=400)
     except exc.NoResultFound:
-        return web.Response(text="%s [%s] is not a master of node [%s]" % (str_master_type, name, node_name), status=404)
+        return web.Response(text="%s [%s] is not a master of node [%s]" % (str_master_type, name, node_name),
+                            status=404)
     db.commit()
     return web.Response(text="OK")

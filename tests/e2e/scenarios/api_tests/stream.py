@@ -5,7 +5,7 @@ from joule import api, errors
 class TestStreamMethods(asynctest.TestCase):
 
     async def setUp(self):
-        self.node = api.Node()
+        self.node = api.get_node()
         """
         └── test
             ├── f1
@@ -121,7 +121,7 @@ class TestStreamMethods(asynctest.TestCase):
         with self.assertRaises(errors.ApiError):
             await self.node.stream_delete("/live/plus1")
         stream = await self.node.stream_get("/live/plus1")
-        self.assertEqual(stream.name,"plus1")
+        self.assertEqual(stream.name, "plus1")
 
     async def testStreamInfo(self):
         info = await self.node.stream_info("/live/base")

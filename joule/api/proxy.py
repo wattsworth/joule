@@ -2,7 +2,7 @@ from typing import List, Union
 import yarl
 
 from joule import errors
-from . import node
+from .session import BaseSession
 
 
 class Proxy:
@@ -37,7 +37,7 @@ def from_json(json: dict, host_url: str) -> Proxy:
                  proxied_url=str(proxied_url), target_url=json['url'])
 
 
-async def proxy_get(session: node.Session,
+async def proxy_get(session: BaseSession,
                     proxy: Union[Proxy, str, int]) -> Proxy:
     params = {}
     if type(proxy) is Proxy:
@@ -50,9 +50,9 @@ async def proxy_get(session: node.Session,
         raise errors.ApiError("Invalid proxy datatype. Must be Proxy, Name, or ID")
 
     resp = await session.get("/proxy.json", params)
-    return from_json(resp, session.url)
+    return from_json(resp)
 
 
-async def proxy_list(session: node.Session) -> List[Proxy]:
+async def proxy_list(session: BaseSession) -> List[Proxy]:
     resp = await session.get("/proxies.json")
     return [from_json(item, session.url) for item in resp]

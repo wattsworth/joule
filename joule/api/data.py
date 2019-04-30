@@ -3,7 +3,7 @@ import asyncio
 import aiohttp
 import numpy as np
 
-from .session import Session
+from .session import BaseSession
 from .stream import (Stream,
                      stream_get,
                      stream_create)
@@ -20,7 +20,7 @@ import logging
 log = logging.getLogger('joule')
 
 
-async def data_delete(session: Session,
+async def data_delete(session: BaseSession,
                       stream: Union[Stream, str, int],
                       start: Optional[int] = None,
                       end: Optional[int] = None):
@@ -41,7 +41,7 @@ async def data_delete(session: Session,
     await session.delete("/data", params)
 
 
-async def data_write(session: Session,
+async def data_write(session: BaseSession,
                      loop: asyncio.AbstractEventLoop,
                      stream: Union[Stream, str, int],
                      start_time: Optional[int] = None,
@@ -77,7 +77,7 @@ async def data_write(session: Session,
     return pipe
 
 
-async def data_intervals(session: Session,
+async def data_intervals(session: BaseSession,
                          stream: Union[Stream, str, int],
                          start_time: Optional[int] = None,
                          end_time: Optional[int] = None,
@@ -98,7 +98,7 @@ async def data_intervals(session: Session,
     return await session.get("/data/intervals.json", params=data)
 
 
-async def data_read(session: Session,
+async def data_read(session: BaseSession,
                     loop: asyncio.AbstractEventLoop,
                     stream: Union[Stream, str, int],
                     start: Optional[int] = None,
@@ -130,7 +130,7 @@ async def data_read(session: Session,
     return pipe
 
 
-async def data_subscribe(session: Session,
+async def data_subscribe(session: BaseSession,
                          loop: asyncio.AbstractEventLoop,
                          stream: Union[Stream, str, int]) -> Pipe:
     # make sure the input is compatible
@@ -163,13 +163,15 @@ async def data_subscribe(session: Session,
     return pipe
 
 
-async def _live_reader(session: Session, my_stream: Stream,
+async def _live_reader(session: BaseSession, my_stream: Stream,
                        pipe_out: Pipe):
     log.info("requesting live connection to [%s]" % my_stream.name)
     params = {'id': my_stream.id, 'subscribe': '1'}
     try:
-        async with session._session.get(session.url + "/data",
-                                        params=params) as response:
+        raw_session = await session.get_session()
+        async with raw_session.get(session.url + "/data",
+                                   params=params,
+                                   ssl=session.ssl_context) as response:
             if response.status != 200:  # pragma: no cover
                 msg = await response.text()
                 log.error("Error reading input [%s]: " % my_stream.name, msg)
@@ -194,7 +196,7 @@ async def _live_reader(session: Session, my_stream: Stream,
     await pipe_out.close()
 
 
-async def _historic_reader(session: Session,
+async def _historic_reader(session: BaseSession,
                            my_stream: Stream,
                            pipe_out: Pipe,
                            start_time: int, end_time: int,
@@ -208,8 +210,10 @@ async def _historic_reader(session: Session,
     if end_time is not None:
         params['end'] = int(end_time)
     try:
-        async with session._session.get(session.url + "/data",
-                                        params=params) as response:
+        my_session = await session.get_session()
+        async with my_session.get(session.url + "/data",
+                                  params=params,
+                                  ssl=session.ssl_context) as response:
             if response.status != 200:  # pragma: no cover
                 msg = await response.text()
                 log.error("Error reading input [%s]: %s" % (my_stream.name, msg))
@@ -235,7 +239,7 @@ async def _historic_reader(session: Session,
         await pipe_out.close()
 
 
-async def _send_data(session: Session,
+async def _send_data(session: BaseSession,
                      stream: Stream,
                      pipe: Pipe):
     output_complete = False

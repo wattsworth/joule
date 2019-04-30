@@ -1,6 +1,5 @@
 import click
 import asyncio
-import datetime
 
 from joule import errors
 from joule.api import node
@@ -12,26 +11,25 @@ from joule.cli.config import Config, pass_config
 @click.argument("name")
 @pass_config
 def cli_info(config: Config, name: str):
-    session = node.Session(config.url)
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(
-            _run(session, name))
+            _run(config.node, name))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
         loop.run_until_complete(
-            session.close())
+            config.node.close())
         loop.close()
 
 
-async def _run(session: node.Session, name: str):
-    proxy = await proxy_get(session, name)
+async def _run(node: node.BaseNode, name: str):
+    proxy = await node.proxy_get(name)
     # display proxy information
     click.echo()
     click.echo("ID:\n\t%d" % proxy.id)
     click.echo("Name:\n\t%s" % proxy.name)
-    click.echo("Proxy URL:\n\t%s/interface/p%d/" % (session.url, proxy.id))
+    click.echo("Proxy URL:\n\t%s/interface/p%d/" % (node.url, proxy.id))
     click.echo("Source URL:\n\t%s" % proxy.url)
 
 

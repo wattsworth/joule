@@ -4,7 +4,8 @@ import logging
 
 from joule.models import Worker, Stream, Proxy, pipes
 from joule.errors import SubscriptionError, ConfigurationError, ConnectionError
-from joule.api.node import Node
+
+from joule.api import create_tcp_node
 
 Tasks = List[asyncio.Task]
 Loop = asyncio.AbstractEventLoop
@@ -107,7 +108,7 @@ class Supervisor:
         Continuously tries to make a connection to dest_stream and write src_pipe's data to it
         """
         dest_pipe = None
-        node = Node(dest_stream.remote_url, loop)
+        node = create_tcp_node(dest_stream.remote_url, loop)
         try:
             while True:
                 try:
@@ -147,7 +148,7 @@ class Supervisor:
         Continuously tries to make a connection to src_stream and write its data to dest_pipe
         """
         src_pipe = None
-        node = Node(src_stream.remote_url, loop)
+        node = create_tcp_node(src_stream.remote_url, loop)
         try:
             while True:
                 try:

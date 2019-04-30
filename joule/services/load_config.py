@@ -1,10 +1,11 @@
 import os
 import configparser
 import ipaddress
-import requests
 import psycopg2
 import yarl
 import ssl
+import aiohttp
+import asyncio
 
 from joule.models import config, Proxy
 from joule.errors import ConfigurationError
@@ -72,18 +73,9 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
     if 'NilmdbUrl' in main_config and main_config['NilmdbUrl'] != '':
         nilmdb_url = main_config['NilmdbUrl']
         if verify:
-            try:
-                resp = requests.get(nilmdb_url)
-                if not resp.ok:
-                    raise requests.exceptions.ConnectionError
-            except requests.exceptions.ConnectionError:
-                raise ConfigurationError(
-                    "Cannot contact NilmDB server at [%s]" % nilmdb_url
-                )
-            if 'NilmDB' not in resp.text:
-                raise ConfigurationError(
-                    "Host at [%s] is not a NilmDB server" % nilmdb_url
-                )
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(verify_nilmdb_url(nilmdb_url))
+
     else:
         nilmdb_url = None
 
@@ -171,3 +163,18 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
         proxies=proxies,
         ssl_context=ssl_context
     )
+
+
+async def verify_nilmdb_url(url):
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as resp:
+                text = await resp.text()
+                if 'NilmDB' not in text:
+                    raise ConfigurationError(
+                        "Host at [%s] is not a NilmDB server" % url
+                    )
+    except aiohttp.ClientError:
+        raise ConfigurationError(
+            "Cannot contact NilmDB at [%s]" % url
+        )

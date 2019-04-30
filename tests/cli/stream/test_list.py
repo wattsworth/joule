@@ -20,9 +20,9 @@ class TestStreamList(FakeJouleTestCase):
         server = FakeJoule()
         with open(STREAM_LIST, 'r') as f:
             server.response = f.read()
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'stream', 'list'])
+        result = runner.invoke(main, ['stream', 'list'])
         self.assertEqual(result.exit_code, 0)
         output = result.output
         # make sure the folders are listed
@@ -41,9 +41,9 @@ class TestStreamList(FakeJouleTestCase):
         server = FakeJoule()
         with open(STREAM_LIST, 'r') as f:
             server.response = f.read()
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'stream', 'list', '-s', '-l'])
+        result = runner.invoke(main, ['stream', 'list', '-s', '-l'])
         self.assertEqual(result.exit_code, 0)
         output = result.output
         # check for the legend
@@ -52,19 +52,12 @@ class TestStreamList(FakeJouleTestCase):
         self.assertTrue("int32_1" in output)
         self.stop_server()
 
-    def test_when_server_is_not_available(self):
-        url = "http://127.0.0.1:%d" % unused_port()
-        runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'stream', 'list'])
-        self.assertTrue('Error' in result.output)
-        self.assertEqual(result.exit_code, 1)
-
     def test_when_server_returns_invalid_data(self):
         server = FakeJoule()
         server.response = "notjson"
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'stream', 'list'])
+        result = runner.invoke(main, ['stream', 'list'])
         self.assertTrue('Error' in result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()
@@ -75,9 +68,9 @@ class TestStreamList(FakeJouleTestCase):
         error_code = 500
         server.response = error_msg
         server.http_code = error_code
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'stream', 'list'])
+        result = runner.invoke(main, ['stream', 'list'])
         self.assertTrue('%d' % error_code in result.output)
         self.assertTrue(error_msg in result.output)
         self.assertEqual(result.exit_code, 1)

@@ -56,6 +56,7 @@ class TestBaseModule(helpers.AsyncTestCase):
         module = SimpleModule()
         # generate a warning for the socket
         args = argparse.Namespace(socket='none', pipes='unset',
+                                  api_socket='unset', node="",
                                   url="http://localhost:8088",
                                   stop_on_request=True)
         # fire sigint
@@ -83,6 +84,7 @@ class TestBaseModule(helpers.AsyncTestCase):
         module.STOP_TIMEOUT = 0.1
         args = argparse.Namespace(socket='none',
                                   pipes='unset',
+                                  api_socket='unset', node="",
                                   url="http://localhost:8088",
                                   stop_on_request=False)
         # fire sigint
@@ -139,6 +141,7 @@ class TestBaseModule(helpers.AsyncTestCase):
                     """))
                 f.flush()
                 args = argparse.Namespace(socket='none', pipes='unset',
+                                          api_socket='unset', node="",
                                           start_time='1 hour ago', end_time=None, force=True,
                                           module_config=f.name, url='http://localhost:8088')
                 module.start(args)

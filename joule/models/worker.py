@@ -24,6 +24,7 @@ popen_lock = None
 log = logging.getLogger('joule')
 
 SOCKET_BASE = "/tmp/joule/module%d"
+API_SOCKET = "/tmp/joule/api"
 
 
 def _initialize_popen_lock():
@@ -407,6 +408,8 @@ class Worker:
         # add a socket if the module has a web interface
         if self.module.has_interface:
             cmd += ["--socket", self.interface_name]
+        # API access
+        cmd += ["--api-socket", API_SOCKET]
         for (arg, value) in self.module.arguments.items():
             cmd += ["--" + arg, value]
         return cmd

@@ -21,9 +21,9 @@ class TestDataIntervals(FakeJouleTestCase):
     def test_shows_all_data_intervals(self):
         server = FakeJoule()
         intervals = create_source_data(server)
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'data', 'intervals',
+        result = runner.invoke(main, ['data', 'intervals',
                                       '--start', '1 hour ago', '--end','now',
                                       '/test/source'])
 
@@ -31,7 +31,7 @@ class TestDataIntervals(FakeJouleTestCase):
         # make sure the intervals are displayed (one per line)
         output = result.output.split('\n')
         num_intervals = 0
-        for line in output:
+        for line in output[1:]:
             if '[' in line:
                 self.assertIn('Thu, 24 Jan', line)
                 num_intervals+=1
@@ -41,16 +41,16 @@ class TestDataIntervals(FakeJouleTestCase):
     def test_handles_no_intervals(self):
         server = FakeJoule()
         create_source_data(server, no_intervals=True)
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'data', 'intervals',
+        result = runner.invoke(main, ['data', 'intervals',
                                       '--start', '1 hour ago', '--end', 'now',
                                       '/test/source'])
 
         self.assertEqual(result.exit_code, 0)
         # make sure the intervals are displayed (one per line)
         output = result.output.split('\n')
-        for line in output:
+        for line in output[1:]:
             self.assertNotIn('[', line)
 
         self.stop_server()
@@ -59,27 +59,20 @@ class TestDataIntervals(FakeJouleTestCase):
         server = FakeJoule()
         server.response = "stream does not exist"
         server.http_code = 404
-        server.stub_stream_info = True
-        url = self.start_server(server)
+        server.stub_data_intervals = True
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'stream', 'info', '/bad/path'])
+        result = runner.invoke(main, ['data', 'intervals', '/bad/path'])
         self.assertTrue("Error" in result.output)
         self.stop_server()
-
-    def test_when_server_is_not_available(self):
-        url = "http://127.0.0.1:%d" % unused_port()
-        runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'stream', 'info', '/folder/stream'])
-        self.assertTrue('Error' in result.output)
-        self.assertEqual(result.exit_code, 1)
 
     def test_when_server_returns_invalid_data(self):
         server = FakeJoule()
         server.response = "notjson"
-        server.stub_stream_info = True
-        url = self.start_server(server)
+        server.stub_data_intervals = True
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'stream', 'info', 'folder/stream'])
+        result = runner.invoke(main, ['data', 'intervals', 'folder/stream'])
         self.assertTrue('Error' in result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()
@@ -88,10 +81,10 @@ class TestDataIntervals(FakeJouleTestCase):
         server = FakeJoule()
         server.response = "test error"
         server.http_code = 500
-        server.stub_stream_info = True
-        url = self.start_server(server)
+        server.stub_data_intervals = True
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'stream', 'info', 'folder/stream'])
+        result = runner.invoke(main, ['data', 'intervals', 'folder/stream'])
         self.assertTrue('500' in result.output)
         self.assertTrue("test error" in result.output)
         self.assertEqual(result.exit_code, 1)

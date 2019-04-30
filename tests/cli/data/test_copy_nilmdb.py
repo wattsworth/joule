@@ -61,10 +61,10 @@ class TestDataCopyWithNilmDb(FakeJouleTestCase):
                                range(3)]
         source_server.add_stream('/test/destination', src_stream, StreamInfo(None, None, 0), None)
 
-        source_url = self.start_server(source_server)
+        self.start_server(source_server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', source_url, 'data', 'copy',
-                                      '-U', dest_url, '/test/source', '/existing/float32_3'],
+        result = runner.invoke(main, ['data', 'copy',
+                                      '-d', dest_url, '/test/source', '/existing/float32_3'],
                                input='y\n', catch_exceptions=True)
         _print_result_on_error(result)
         # expect data transfer call
@@ -89,10 +89,10 @@ class TestDataCopyWithNilmDb(FakeJouleTestCase):
                                range(3)]
         source_server.add_stream('/test/destination', src_stream, StreamInfo(None, None, 0), None)
 
-        source_url = self.start_server(source_server)
+        self.start_server(source_server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', source_url, 'data', 'copy',
-                                      '-U', dest_url, '/test/source', '/test/destination'], catch_exceptions=False)
+        result = runner.invoke(main, ['data', 'copy',
+                                      '-d', dest_url, '/test/source', '/test/destination'], catch_exceptions=False)
         _print_result_on_error(result)
         # expect a stream create call
         nilmdb_call = nilmdb_msgs.get_nowait()
@@ -119,10 +119,11 @@ class TestDataCopyWithNilmDb(FakeJouleTestCase):
         source_url = self._start_nilmdb(nilmdb_msgs)
         # create the source and destination streams
 
-        dest_url = self.start_server(dest_server)
+        self.start_server(dest_server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', source_url, 'data', 'copy',
-                                      '-U', dest_url, '/test/source', '/test/destination'],
+        result = runner.invoke(main, ['data', 'copy',
+                                      '--source-url', source_url,
+                                      '-d', "fake_joule", '/test/source', '/test/destination'],
                                catch_exceptions=False)
         _print_result_on_error(result)
         self.assertEqual(0, result.exit_code)

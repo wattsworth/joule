@@ -15,28 +15,21 @@ class TestModuleLogs(FakeJouleTestCase):
         server = FakeJoule()
         with open(MODULE_LOGS, 'r') as f:
             server.response = f.read()
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'module', 'logs','my_module'])
+        result = runner.invoke(main, ['module', 'logs', 'my_module'])
         self.assertEqual(result.exit_code, 0)
         output = result.output
-        self.assertTrue(len(output)>0)
+        self.assertTrue(len(output) > 0)
         self.assertTrue("starting" in output)
         self.stop_server()
-
-    def test_when_server_is_not_available(self):
-        url = "http://127.0.0.1:%d" % unused_port()
-        runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'module', 'logs', 'my_module'])
-        self.assertTrue('Error' in result.output)
-        self.assertEqual(result.exit_code, 1)
 
     def test_when_server_returns_invalid_data(self):
         server = FakeJoule()
         server.response = "notjson"
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'module', 'logs', 'my_module'])
+        result = runner.invoke(main, ['module', 'logs', 'my_module'])
         self.assertTrue('Error' in result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()
@@ -47,9 +40,9 @@ class TestModuleLogs(FakeJouleTestCase):
         error_code = 500
         server.response = error_msg
         server.http_code = error_code
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'module', 'logs', 'my_module'])
+        result = runner.invoke(main, ['module', 'logs', 'my_module'])
         self.assertTrue('%d' % error_code in result.output)
         self.assertTrue(error_msg in result.output)
         self.assertEqual(result.exit_code, 1)

@@ -5,7 +5,7 @@ from joule import api, errors
 class TestFolderMethods(asynctest.TestCase):
 
     async def setUp(self):
-        self.node = api.Node()
+        self.node = api.get_node()
         """
         └── test
             ├── f1

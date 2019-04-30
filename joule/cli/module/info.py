@@ -3,8 +3,7 @@ import asyncio
 import datetime
 
 from joule import errors
-from joule.api import node
-from joule.api.module import (module_get)
+from joule.api import BaseNode
 from joule.cli.config import Config, pass_config
 
 
@@ -12,28 +11,25 @@ from joule.cli.config import Config, pass_config
 @click.argument("name")
 @pass_config
 def cli_info(config: Config, name: str):
-    session = node.Session(config.url)
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(
-            _run(session, name))
+            _run(config.node, name))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
         loop.run_until_complete(
-            session.close())
+            config.node.close())
         loop.close()
 
 
-async def _run(session: node.Session, name: str):
-    module = await module_get(session, name)
+async def _run(node: BaseNode, name: str):
+    module = await node.module_get(name)
     # display module information
     click.echo()
     click.echo("Name:\n\t%s" % module.name)
     if len(module.description) > 0:
         click.echo("Description:\n\t%s" % module.description)
-    if module.has_interface:
-        click.echo("Interface URL:\n\t%s/interface/%d/" % (module.proxied_url))
     click.echo("Inputs:")
     if len(module.inputs) == 0:
         click.echo("\t--none--")

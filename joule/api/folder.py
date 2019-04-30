@@ -1,8 +1,8 @@
-from typing import Union, Optional
+from typing import Union
 
 from joule import errors
 from .folder_type import Folder
-from .session import Session
+from .session import BaseSession
 from .stream import from_json as stream_from_json
 
 
@@ -19,12 +19,12 @@ def from_json(json) -> Folder:
     return my_folder
 
 
-async def folder_root(session: Session) -> Folder:
+async def folder_root(session: BaseSession) -> Folder:
     resp = await session.get("/streams.json")
     return from_json(resp)
 
 
-async def folder_move(session: Session,
+async def folder_move(session: BaseSession,
                       source: Union[Folder, str, int],
                       destination: Union[Folder, str, int]) -> None:
     data = {}
@@ -50,7 +50,7 @@ async def folder_move(session: Session,
     await session.put("/folder/move.json", data)
 
 
-async def folder_delete(session: Session,
+async def folder_delete(session: BaseSession,
                         folder: Union[Folder, str, int],
                         recursive: bool = False) -> None:
     _recursive = 0
@@ -70,13 +70,13 @@ async def folder_delete(session: Session,
     await session.delete("/folder.json", data)
 
 
-async def folder_update(session: Session,
+async def folder_update(session: BaseSession,
                         folder: Folder) -> None:
     return await session.put("/folder.json", {"id": folder.id,
                                               "folder": folder.to_json()})
 
 
-async def folder_get(session: Session,
+async def folder_get(session: BaseSession,
                      folder: Union[Folder, str, int]) -> Folder:
     params = {}
     if type(folder) is Folder:

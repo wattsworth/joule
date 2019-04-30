@@ -12,11 +12,11 @@ class TestDelete(FakeJouleTestCase):
 
     def test_data_delete(self):
         server = FakeJoule()
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
         start_str = "20 January 2015 12:00"
         end_str = "1 hour ago"
-        result = runner.invoke(main, ['--url', url, 'data', 'delete',
+        result = runner.invoke(main, ['data', 'delete',
                                       '/folder/src',
                                       '--start', start_str,
                                       '--end', end_str])
@@ -33,27 +33,20 @@ class TestDelete(FakeJouleTestCase):
         server.response = "stream does not exist"
         server.http_code = 404
         server.stub_data_delete = True
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'data', 'delete', '/folder/src'])
+        result = runner.invoke(main, ['data', 'delete', '/folder/src'])
         self.assertTrue("Error" in result.output)
         self.stop_server()
-
-    def test_when_server_is_not_available(self):
-        url = "http://127.0.0.1:%d" % unused_port()
-        runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'data', 'delete', '/folder/src'])
-        self.assertTrue('Error' in result.output)
-        self.assertEqual(result.exit_code, 1)
 
     def test_when_server_returns_error_code(self):
         server = FakeJoule()
         server.response = "test error"
         server.http_code = 500
         server.stub_data_delete = True
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'data', 'delete', '/folder/src'])
+        result = runner.invoke(main, ['data', 'delete', '/folder/src'])
         self.assertTrue('500' in result.output)
         self.assertTrue("test error" in result.output)
         self.assertEqual(result.exit_code, 1)

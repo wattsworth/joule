@@ -6,12 +6,13 @@ import joule.controllers
 from tests.controllers.helpers import MockStore
 
 
-class TestStreamController(AioHTTPTestCase):
+class TestRootController(AioHTTPTestCase):
 
     async def get_application(self):
         app = web.Application()
         app.add_routes(joule.controllers.routes)
         app["data-store"] = MockStore()
+        app["name"] = "test_suite"
         return app
 
     @unittest_run_loop
@@ -43,6 +44,3 @@ class TestStreamController(AioHTTPTestCase):
         self.assertEqual(resp.status, 200)
         # check one of the keys to make sure this is a dbinfo object
         self.assertTrue('path' in dbinfo)
-
-
-

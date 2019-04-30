@@ -32,12 +32,12 @@ async def proxy(request: web.Request):
                                host=request.host)
         socket = supervisor.get_module_socket(uuid)
         if socket is None:
-            return web.Response(text="invalid id", status=400)
+            return web.Response(text="id not found", status=404)
         conn = aiohttp.UnixConnector(path=socket)
     else:  # proxy
         target_url = supervisor.get_proxy_url(uuid)
         if target_url is None:
-            return web.Response(text="invalid id", status=400)
+            return web.Response(text="id not found", status=404)
         conn = aiohttp.TCPConnector()
 
     url = URL.build(

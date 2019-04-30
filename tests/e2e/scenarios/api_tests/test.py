@@ -29,7 +29,6 @@ def main():
     suite.addTests(loader.loadTestsFromModule(module))
     suite.addTests(loader.loadTestsFromModule(data))
     output = io.StringIO()
-    #runner = unittest.TextTestRunner(failfast=True)
     runner = unittest.TextTestRunner(stream=output, failfast=True)
     result = runner.run(suite)
     if result.wasSuccessful():

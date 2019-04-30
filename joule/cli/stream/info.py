@@ -18,17 +18,17 @@ def cli_info(config, path):
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(
-            _run(config.session, path))
+            _run(config.node, path))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
         loop.run_until_complete(
-            config.session.close())
+            config.node.close())
         loop.close()
 
 
-async def _run(session, path):
-    my_stream = await stream_get(session, path)
+async def _run(node, path):
+    my_stream = await node.stream_get(path)
     # display stream information
     click.echo()
     click.echo("\tName:         %s" % my_stream.name)
@@ -39,7 +39,7 @@ async def _run(session, path):
     click.echo()
     # display information from the data store
     click.echo("\tStatus:       %s" % _display_status(my_stream.locked, my_stream.active))
-    my_info = await stream_info(session, path)
+    my_info = await node.stream_info(path)
     click.echo("\tStart:        %s" % _display_time(my_info.start))
     click.echo("\tEnd:          %s" % _display_time(my_info.end))
     click.echo("\tRows:         %d" % my_info.rows)

@@ -2,8 +2,7 @@ import click
 import asyncio
 
 from joule import errors
-from joule.api import node
-from joule.api.module import (module_logs)
+from joule.api import BaseNode
 from joule.cli.config import pass_config
 
 
@@ -11,20 +10,19 @@ from joule.cli.config import pass_config
 @click.argument("name")
 @pass_config
 def cli_logs(config, name):
-    session = node.Session(config.url)
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(
-            _run(session, name))
+            _run(config.node, name))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
         loop.run_until_complete(
-            session.close())
+            config.node.close())
         loop.close()
 
 
-async def _run(session: node.Session, name:str):
-    logs = await module_logs(session, name)
+async def _run(node: BaseNode, name:str):
+    logs = await node.module_logs(name)
     for line in logs:
         print(line)

@@ -3,7 +3,7 @@ import time
 import numpy as np
 import asyncio
 from joule.models.pipes import EmptyPipe
-from joule.api.node import Node
+from joule import api
 
 
 def main():
@@ -13,14 +13,14 @@ def main():
 
 
 async def _run(loop: asyncio.AbstractEventLoop):
-    node = Node('http://localhost:8088', loop)
+    node = api.get_node()
     await check_modules(node)
     await check_logs(node)
     await check_data(node)
     await node.close()
 
 
-async def check_modules(node: Node):
+async def check_modules(node: api.BaseNode):
     """
     Test: check module status
     Goal:
@@ -31,7 +31,7 @@ async def check_modules(node: Node):
       misconfigured: not present b/c can't be loaded
     """
     modules = await node.module_list(statistics=True)
-    assert(len(modules) == 4)  # normal1,normal2,filter,broken
+    assert (len(modules) == 4)  # normal1,normal2,filter,broken
     for module in modules:
         if module.name in ['Normal1', 'Normal2', 'CAdder']:
             assert module.statistics.pid is not None, module.name
@@ -41,7 +41,7 @@ async def check_modules(node: Node):
             assert 0  # unexpected module in status report
 
 
-async def check_data(node: Node):
+async def check_data(node: api.BaseNode):
     """
     Test: check data inserted into nilmdb
     Goal:
@@ -129,7 +129,7 @@ async def check_data(node: Node):
                                    expected_data[:verify_len, :])
 
 
-async def check_logs(node: Node):
+async def check_logs(node: api.BaseNode):
     """
     Test: logs should contain info and stderr from modules
     Goal: 
@@ -150,7 +150,7 @@ async def check_logs(node: Node):
         else:
             assert num_starts > 1
 
-    
+
 if __name__ == "__main__":
     main()
     print("OK")

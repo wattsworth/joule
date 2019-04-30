@@ -2,10 +2,9 @@ from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 from aiohttp import web
 import aiohttp
 import numpy as np
-from unittest import mock
 from sqlalchemy.orm import Session
 
-from joule.models import folder, Stream, Folder, StreamInfo, pipes
+from joule.models import Stream, pipes
 import joule.controllers
 from tests.controllers.helpers import create_db, MockStore, MockSupervisor
 from tests import helpers

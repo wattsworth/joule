@@ -3,8 +3,7 @@ import asyncio
 from tabulate import tabulate
 
 from joule import errors
-from joule.api import node
-from joule.api.module import (module_list)
+from joule.api import BaseNode
 from joule.cli.config import pass_config
 
 
@@ -15,17 +14,17 @@ def cli_list(config, statistics):
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(
-            _run(config.session, statistics))
+            _run(config.node, statistics))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
         loop.run_until_complete(
-            config.session.close())
+            config.node.close())
         loop.close()
 
 
-async def _run(session, statistics):
-    modules = await module_list(session, statistics)
+async def _run(node: BaseNode, statistics):
+    modules = await node.module_list(statistics)
     # display module information
     headers = ['Name', 'Inputs', 'Outputs']
     if statistics:

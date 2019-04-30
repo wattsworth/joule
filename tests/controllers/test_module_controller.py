@@ -14,7 +14,7 @@ class TestModuleController(AioHTTPTestCase):
         app.add_routes(joule.controllers.routes)
         wreader = MockWorker("reader", {}, {'output': '/reader/path'})
         wfilter = MockWorker("filter", {'input': '/reader/path'}, {'output': '/output/path'})
-        app["supervisor"] = Supervisor([wreader, wfilter])  # type: ignore
+        app["supervisor"] = Supervisor([wreader, wfilter], [])  # type: ignore
         return app
 
     @unittest_run_loop

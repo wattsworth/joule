@@ -10,6 +10,7 @@ import os
 import uvloop
 
 from joule.api import node
+from joule import api
 from joule.client import helpers
 # import directly so it can be mocked easily in unit tests
 from joule.errors import ConfigurationError, ApiError
@@ -25,6 +26,7 @@ class BaseModule:
     This is an abstract class and should not be inherited directly. Instead inherit from one of
     the following children :class:`joule.ReaderModule`, :class:`joule.FilterModule`, or :class:`joule.CompositeModule`
     """
+
     def __init__(self):
         self.stop_requested = False
         self.pipes: List[pipes.Pipe] = []
@@ -75,7 +77,7 @@ class BaseModule:
         # override in client for alternate shutdown strategy
         self.stop_requested = True
 
-    def start(self, parsed_args: argparse.Namespace=None):
+    def start(self, parsed_args: argparse.Namespace = None):
         """
         Execute the module. Do not override this function. Creates an event loop and
         executes the :meth:`run` coroutine.
@@ -103,7 +105,10 @@ class BaseModule:
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
         loop = asyncio.get_event_loop()
         self.stop_requested = False
-        self.node = node.Node(parsed_args.url, loop)
+        if parsed_args.api_socket != "unset":
+            self.node = node.UnixNode("local", parsed_args.api_socket, loop)
+        else:
+            self.node = api.get_node(parsed_args.node)
         self.runner: web.AppRunner = loop.run_until_complete(self._start_interface(parsed_args))
         app = None
         if self.runner is not None:
@@ -128,7 +133,7 @@ class BaseModule:
         except (asyncio.CancelledError, pipes.EmptyPipe):
             pass
         self._cleanup(loop)
-        
+
     def _cleanup(self, loop: Loop):
 
         if self.runner is not None:
@@ -147,13 +152,19 @@ class BaseModule:
         grp.add_argument("--pipes",
                          default="unset",
                          help='RESERVED, managed by jouled')
-        # --socket: UNIX socket set by jouled
+        # --socket: UNIX socket set by jouled for interface proxy
         grp.add_argument("--socket",
                          default="unset",
                          help='RESERVED, managed by jouled')
+        # --api-socket: UNIX socket for API calls back to jouled
+        grp.add_argument("--api-socket",
+                         default="unset",
+                         help='RESERVED, managed by jouled')
+        # --port: port to host interface on during isolated execution
         grp.add_argument("--port", type=int,
                          default=8080,
                          help='port for isolated execution')
+        # --host: IP address to host interface on during isolated exedcution
         grp.add_argument("--host",
                          default="0.0.0.0",
                          help="IP address for isolated execution")
@@ -166,7 +177,8 @@ class BaseModule:
                          default="unset",
                          help="specify directory of stream configs " +
                               "for isolated execution")
-        grp.add_argument("--url", default="http://localhost:8088",
+        # --node: node to connect to for isolated execution
+        grp.add_argument("--node", default="",
                          help="joule node for isolated execution")
         # --start_time: historical isolation mode
         grp.add_argument("--start_time", default=None,

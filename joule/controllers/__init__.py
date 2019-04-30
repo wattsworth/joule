@@ -46,13 +46,15 @@ routes = [
     web.get('/proxy.json', proxy_controller.info),
     # -- master routes --
     web.get('/masters.json', master_controller.index),
+    web.post('/master.json', master_controller.add),
     web.delete('/master.json', master_controller.delete),
     # -- follower routes --
     web.get('/followers.json', follower_controller.index),
-    web.post('/follower.json', follower_controller.add)
+    web.post('/follower.json', follower_controller.add),
+    web.delete('/follower.json', follower_controller.delete)
     # TODO: routes for stream tags /streams/tags
 ]
 
 insecure_routes = [
-    ['POST', '/followers/add.json']
+    ['POST', '/follower.json']
 ]

@@ -11,7 +11,6 @@ from aiohttp.test_utils import unused_port
 import threading
 import time
 import requests
-import unittest
 
 from joule.client import ReaderModule
 from joule.models import Stream, Element, pipes
@@ -60,6 +59,7 @@ class TestReaderModule(helpers.AsyncTestCase):
         data = helpers.create_data(self.stream.layout)
         args = argparse.Namespace(pipes=pipe_arg, socket="unset",
                                   url='http://localhost:8080',
+                                  node="", api_socket="",
                                   mock_data=data)
         # run the reader module
         loop = asyncio.new_event_loop()
@@ -80,6 +80,7 @@ class TestReaderModule(helpers.AsyncTestCase):
         args = argparse.Namespace(pipes="unset",
                                   module_config="unset",
                                   url='http://localhost:8080',
+                                  node="", api_socket="",
                                   socket="unset", mock_data=data)
         # run the reader module
         f = io.StringIO()
@@ -102,6 +103,7 @@ class TestReaderModule(helpers.AsyncTestCase):
                                   module_config="unset",
                                   socket="unset",
                                   url='http://localhost:8080',
+                                  node="", api_socket="",
                                   mock_data=data)
         # run the reader module
         with self.assertLogs(level="ERROR") as logs:
@@ -116,6 +118,7 @@ class TestReaderModule(helpers.AsyncTestCase):
         args = argparse.Namespace(pipes="unset", module_config="unset",
                                   socket="unset", port=port, host="127.0.0.1",
                                   url='http://localhost:8080',
+                                  node="", api_socket="",
                                   mock_data=data)
 
         def get_page():
@@ -140,6 +143,7 @@ class TestReaderModule(helpers.AsyncTestCase):
         args = argparse.Namespace(pipes="unset", module_config="unset",
                                   url='http://localhost:8080',
                                   socket=socket_path,
+                                  node="", api_socket="",
                                   mock_data=data)
 
         def get_page():

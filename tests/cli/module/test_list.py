@@ -15,9 +15,9 @@ class TestModuleList(FakeJouleTestCase):
         server = FakeJoule()
         with open(MODULE_LIST, 'r') as f:
             server.response = f.read()
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'module', 'list'])
+        result = runner.invoke(main, ['module', 'list'])
         self.assertEqual(result.exit_code, 0)
         output = result.output
         # make sure modules are listed
@@ -28,19 +28,12 @@ class TestModuleList(FakeJouleTestCase):
             self.assertTrue(stream in output)
         self.stop_server()
 
-    def test_when_server_is_not_available(self):
-        url = "http://127.0.0.1:%d" % unused_port()
-        runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'module', 'list'])
-        self.assertTrue('Error' in result.output)
-        self.assertEqual(result.exit_code, 1)
-
     def test_when_server_returns_invalid_data(self):
         server = FakeJoule()
         server.response = "notjson"
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'module', 'list'])
+        result = runner.invoke(main, ['module', 'list'])
         self.assertTrue('Error' in result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()
@@ -51,9 +44,9 @@ class TestModuleList(FakeJouleTestCase):
         error_code = 500
         server.response = error_msg
         server.http_code = error_code
-        url = self.start_server(server)
+        self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['--url', url, 'module', 'list'])
+        result = runner.invoke(main, ['module', 'list'])
         self.assertTrue('%d' % error_code in result.output)
         self.assertTrue(error_msg in result.output)
         self.assertEqual(result.exit_code, 1)

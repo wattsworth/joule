@@ -1,7 +1,11 @@
 from typing import Union, List, Optional
-import numpy as np
-import asyncio
-from .session import Session
+from asyncio import AbstractEventLoop
+
+from .node_info import NodeInfo
+
+from joule import errors
+
+from joule.api.session import BaseSession, TcpSession
 
 from joule.api.folder import (Folder,
                               folder_root,
@@ -34,52 +38,28 @@ from joule.api.proxy import (proxy_list,
                              proxy_get,
                              Proxy)
 
+from joule.api.master import (master_add,
+                              master_delete,
+                              master_list,
+                              Master)
+
 from joule.models.pipes import Pipe
 
 
-class NodeInfo:
+class BaseNode:
 
-    def __init__(self, version: str, name: str):
-        self.version = version
+    def __init__(self, name: str,
+                 session: BaseSession, loop: AbstractEventLoop):
         self.name = name
-
-
-async def node_info(session):
-    resp = await session.get("/version.json")
-    return NodeInfo(version=resp["version"], name=resp["name"])
-
-
-class NodeConfig:
-    def __init__(self, name, url, key):
-        self.name = name
-        self.url = url
-        self.key = key
-
-    def to_json(self):
-        return {
-            "name": self.name,
-            "url": self.url,
-            "key": self.key
-        }
-
-
-class Node:
-    def __init__(self, url: str, key: str, cafile: str = "",
-                 loop: Optional[asyncio.AbstractEventLoop] = None):
-        self.session = Session(url, key, cafile)
-        self._url = url
-        if loop is None:
-            loop = asyncio.get_event_loop()
+        self.session = session
         self.loop = loop
-
-    def __repr__(self):
-        return "<joule.api.Node url=\"%s\">" % self._url
 
     async def close(self):
         await self.session.close()
 
     async def info(self) -> NodeInfo:
-        return await node_info(self.session)
+        resp = await self.session.get("/version.json")
+        return NodeInfo(version=resp["version"], name=resp["name"])
 
     # Folder actions
 
@@ -186,3 +166,17 @@ class Node:
     async def proxy_get(self,
                         proxy: Union[Proxy, str, int]) -> Proxy:
         return await proxy_get(self.session, proxy)
+
+    # Master actions
+
+    async def master_list(self) -> List[Master]:
+        return await master_list(self.session)
+
+    async def master_delete(self, master_type: str, name: str) -> None:
+        return await master_delete(self.session, master_type, name)
+
+    async def master_add(self, master_type, identifier) -> None:
+        return await master_add(self.session, master_type, identifier)
+
+    # Follower actions
+

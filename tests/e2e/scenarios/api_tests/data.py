@@ -1,5 +1,3 @@
-import unittest
-
 import asynctest
 from joule import api, utilities, models
 import numpy as np
@@ -9,7 +7,7 @@ import asyncio
 class TestDataMethods(asynctest.TestCase):
 
     async def setUp(self):
-        self.node = api.Node()
+        self.node = api.get_node()
 
     async def tearDown(self):
         await self.node.close()

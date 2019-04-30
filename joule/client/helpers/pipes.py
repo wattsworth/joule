@@ -5,8 +5,7 @@ import json
 import logging
 
 from joule.models import pipes
-from joule.api import stream, data, node
-from joule.api.session import Session
+from joule.api import BaseNode, stream
 from joule import errors
 from joule.services.parse_pipe_config import parse_pipe_config, parse_inline_config
 from joule.utilities import timestamp_to_human
@@ -41,9 +40,8 @@ def build_fd_pipes(pipe_args: str, loop: Loop) -> Tuple[Pipes, Pipes]:
 
 
 async def build_network_pipes(inputs: Dict[str, str], outputs: Dict[str, str],
-                              my_node: node.Node, start_time: Optional[int], end_time: Optional[int],
+                              my_node: BaseNode, start_time: Optional[int], end_time: Optional[int],
                               force=False):
-    session = my_node.session
     if not force:
         _display_warning(outputs.values(), start_time, end_time)
 
@@ -51,22 +49,20 @@ async def build_network_pipes(inputs: Dict[str, str], outputs: Dict[str, str],
     pipes_out = {}
     try:
         for name in inputs:
-            my_stream = await _parse_stream(session, inputs[name])
+            my_stream = await _parse_stream(my_node, inputs[name])
             if start_time is None and end_time is None:
                 # subscribe to live data
-                pipes_in[name] = await data.data_subscribe(session, my_node.loop, my_stream)
+                pipes_in[name] = await my_node.data_subscribe(my_stream)
             else:
-                pipes_in[name] = await data.data_read(session, my_node.loop,
-                                                      my_stream,
-                                                      start_time,
-                                                      end_time)
+                pipes_in[name] = await my_node.data_read(my_stream,
+                                                         start_time,
+                                                         end_time)
 
         for name in outputs:
-            my_stream = await _parse_stream(session, outputs[name])
-            pipes_out[name] = await data.data_write(session, my_node.loop,
-                                                    my_stream,
-                                                    start_time,
-                                                    end_time)
+            my_stream = await _parse_stream(my_node, outputs[name])
+            pipes_out[name] = await my_node.data_write(my_stream,
+                                                       start_time,
+                                                       end_time)
     except (errors.ApiError, errors.ConfigurationError) as e:
         # close any pipes that were created
         for name in pipes_in:
@@ -95,7 +91,7 @@ def _display_warning(paths, start_time, end_time):
             exit(1)
 
 
-async def _parse_stream(session: Session, pipe_config) -> stream.Stream:
+async def _parse_stream(node: BaseNode, pipe_config) -> stream.Stream:
     (path, name, inline_config) = parse_pipe_config(pipe_config)
     if inline_config == "":
         raise errors.ConfigurationError(
@@ -104,7 +100,7 @@ async def _parse_stream(session: Session, pipe_config) -> stream.Stream:
     datatype = datatype.name.lower()  # API models are plain text attributes
     # use API to get or create the stream on the Joule node
     try:
-        remote_stream = await stream.stream_get(session, path + '/' + name)
+        remote_stream = await node.stream_get(path + '/' + name)
         # make sure the layout agrees
         if remote_stream.datatype != datatype or \
                 len(remote_stream.elements) != len(element_names):
@@ -124,9 +120,8 @@ async def _parse_stream(session: Session, pipe_config) -> stream.Stream:
                 e.index = i
                 new_stream.elements.append(e)
             log.info("creating output stream [%s%s]" % (path, name))
-            remote_stream = await stream.stream_create(session,
-                                                       new_stream,
-                                                       path)
+            remote_stream = await node.stream_create(new_stream,
+                                                     path)
         else:
             raise e
     return remote_stream

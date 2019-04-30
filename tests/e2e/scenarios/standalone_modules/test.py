@@ -5,7 +5,7 @@ import subprocess
 import numpy as np
 import asyncio
 
-from joule.api.node import Node
+from joule import api
 from joule.api.stream import Stream, Element
 from joule.models.pipes import EmptyPipe
 
@@ -20,7 +20,7 @@ def main():
 
 
 async def _run(loop: asyncio.AbstractEventLoop):
-    node = Node('http://localhost:8088', loop)
+    node = api.get_node()
     procs = start_standalone_procs1()
 
     time.sleep(4)  # let procs run
@@ -63,7 +63,7 @@ def start_standalone_procs1():
     return [p1]
 
 
-async def start_standalone_procs2(node: Node):
+async def start_standalone_procs2(node: api.BaseNode):
     # proc3 tries to write to /counting/plus3 with wrong dtype
 
     p3 = subprocess.run(build_standalone_args("proc3"),
@@ -109,7 +109,7 @@ def stop_standalone_procs(procs):
         proc.kill()
 
 
-async def check_modules(node: Node):
+async def check_modules(node: api.BaseNode):
     """
     Test: check module status
     Goal:
@@ -120,7 +120,7 @@ async def check_modules(node: Node):
     assert (len(modules) == 2)
 
 
-async def check_data(node: Node):
+async def check_data(node: api.BaseNode):
     """
     Test: check data inserted into nilmdb
     Goal:
@@ -182,7 +182,7 @@ async def check_data(node: Node):
                                    expected_data[:verify_len, :])
 
 
-async def check_logs(node: Node):
+async def check_logs(node: api.BaseNode):
     """
     Test: logs should contain info and stderr from modules
     Goal: 

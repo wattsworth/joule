@@ -51,7 +51,6 @@ class TestLoadConfigs(unittest.TestCase):
                     site two=https://othersite.com
                 """)
         my_config = load_config.run(custom_values=parser, verify=False)
-        print(my_config.proxies)
         self.assertEqual(my_config.proxies[0].url, yarl.URL("http://localhost:5000"))
         self.assertEqual(my_config.proxies[0].uuid, 0)
         self.assertEqual(my_config.proxies[0].name, "site1")

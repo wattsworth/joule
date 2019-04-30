@@ -13,7 +13,7 @@ class TestInterfaceController(AioHTTPTestCase):
         app.add_routes(joule.controllers.routes)
         winterface = MockWorker("reader", {}, {'output': '/reader/path'},
                                 uuid=101, socket=None)
-        app["supervisor"] = Supervisor([winterface])  # type: ignore
+        app["supervisor"] = Supervisor([winterface], [])  # type: ignore
         return app
 
     @unittest_run_loop
@@ -25,14 +25,14 @@ class TestInterfaceController(AioHTTPTestCase):
         self.assertTrue('invalid' in await resp.text())
 
         # unknown module id
-        resp: web.Response = await self.client.request("GET", "/interface/57889/test")
+        resp: web.Response = await self.client.request("GET", "/interface/m57889/test")
         self.assertEqual(404, resp.status)
-        self.assertTrue('module' in await resp.text())
+        self.assertTrue('not found' in await resp.text())
 
         # module does not have an interface
-        resp: web.Response = await self.client.request("GET", "/interface/101/test")
+        resp: web.Response = await self.client.request("GET", "/interface/m101/test")
         self.assertEqual(404, resp.status)
-        self.assertTrue('module' in await resp.text())
+        self.assertTrue('not found' in await resp.text())
 
 
 

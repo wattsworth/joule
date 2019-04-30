@@ -10,9 +10,12 @@ import time
 import signal
 import asyncio
 import json
+import psutil
+import tempfile
+
 
 from tests import helpers
-from joule.models import Stream, StreamInfo, pipes, stream
+from joule.models import Stream, StreamInfo, pipes, stream, master
 
 
 # from https://github.com/aio-libs/aiohttp/blob/master/examples/fake_server.py
@@ -40,7 +43,8 @@ class FakeJoule:
     def __init__(self):
         self.loop = None
         self.runner = None
-        self.app = web.Application()
+        self.app = web.Application(middlewares=[self._authorize])
+
         self.app.router.add_routes(
             [
                 web.get('/', self.info),
@@ -69,13 +73,16 @@ class FakeJoule:
         self.stub_data_write = False
         self.stub_folder_move = False
         self.stub_folder_destroy = False
+        self.stub_data_intervals = False
         self.response = ""
         self.http_code = 200
         self.streams: Dict[str, MockDbEntry] = {}
         self.msgs = None
+        self.key = "invalid"
 
-    def start(self, port, msgs: multiprocessing.Queue, inbound_msgs):
+    def start(self, port, msgs: multiprocessing.Queue, inbound_msgs, key):
         self.msgs = msgs
+        self.key = key
         #f = io.StringIO()
         #with redirect_stdout(f):
         #web.run_app(self.app, host='127.0.0.1', port=port,
@@ -86,6 +93,15 @@ class FakeJoule:
         inbound_msgs.close()
         msgs.join_thread()
         inbound_msgs.join_thread()
+
+    @web.middleware
+    async def _authorize(self, request, handler):
+        if 'X-API-KEY' not in request.headers:
+            raise web.HTTPForbidden()
+        key = request.headers['X-API-KEY']
+        if key != self.key:
+            raise web.HTTPForbidden()
+        return await handler(request)
 
     async def _run_server(self, port, msgs):
         runner = web.AppRunner(self.app)
@@ -214,6 +230,8 @@ class FakeJoule:
         return web.Response(text="ok")
 
     async def data_intervals(self, request: web.Request):
+        if self.stub_data_intervals:
+            return web.Response(text=self.response, status=self.http_code)
         entry = self._find_entry(request.query)
         intervals = [[int(x) for x in interval] for interval in entry.intervals]
 
@@ -253,11 +271,10 @@ class FakeJoule:
                 raise ValueError
             return self.streams[params['path']]
 
-import psutil, pdb
-
 
 class FakeJouleTestCase(helpers.AsyncTestCase):
     def start_server(self, server):
+        key = master.make_key()
         self.proc = psutil.Process()
         port = unused_port()
         self.msgs = multiprocessing.Queue()
@@ -265,10 +282,19 @@ class FakeJouleTestCase(helpers.AsyncTestCase):
         self.server_proc = multiprocessing.Process(target=server.start,
                                                    args=(port,
                                                          self.msgs,
-                                                         self.outbound_msgs))
+                                                         self.outbound_msgs,
+                                                         key))
         self.server_proc.start()
-        time.sleep(0.10)
-        return "http://localhost:%d" % port
+        time.sleep(0.30)
+        # create a .joule config directory with key info
+        self.conf_dir = tempfile.TemporaryDirectory()
+        with open(os.path.join(self.conf_dir.name, "nodes.json"), 'w') as f:
+            f.write(json.dumps([{"name": "fake_joule",
+                                 "key": key,
+                                 "url": "http://localhost:%d" % port}]))
+        with open(os.path.join(self.conf_dir.name, "default_node.txt"), 'w') as f:
+            f.write("fake_joule")
+        os.environ["JOULE_USER_CONFIG_DIR"] = self.conf_dir.name
 
     def stop_server(self):
         if self.server_proc is None:
@@ -289,5 +315,5 @@ class FakeJouleTestCase(helpers.AsyncTestCase):
         del self.outbound_msgs
         del self.msgs
         del self.server_proc
-
-
+        self.conf_dir.cleanup()
+        del os.environ["JOULE_USER_CONFIG_DIR"]

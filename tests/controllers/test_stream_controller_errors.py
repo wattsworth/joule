@@ -2,7 +2,6 @@ from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 from sqlalchemy.orm import Session
 from aiohttp import web
 import aiohttp
-import json
 
 from joule.models import Stream, Element
 import joule.controllers

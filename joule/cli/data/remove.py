@@ -1,7 +1,11 @@
 import click
-import requests
+import asyncio
+
 from joule.cli.config import pass_config
+from joule.api.data import data_delete
 from joule.utilities import human_to_timestamp
+from joule import errors
+
 
 @click.command(name="delete")
 @click.option("-s", "--start", "start", help="timestamp or descriptive string")
@@ -10,28 +14,33 @@ from joule.utilities import human_to_timestamp
 @click.argument("stream")
 @pass_config
 def data_remove(config, start, end, all, stream):
-    params = {"path": stream}
+    loop = asyncio.get_event_loop()
     if all:
         if start is not None or end is not None:
-            raise click.ClickException("ERROR: specify either --all or --start/--end")
-        params['all'] = '1'
-    else:
-        params['all'] = '0'
+            raise click.ClickException("specify either --all or --start/--end")
+    if all is None and start is None and end is None:
+        raise click.ClickException("specify either --all or --start/--end")
     if start is not None:
         try:
-            params['start'] = human_to_timestamp(start)
+            start = human_to_timestamp(start)
         except ValueError:
             raise click.ClickException("invalid start time: [%s]" % start)
     if end is not None:
         try:
-            params['end'] = human_to_timestamp(end)
+            end = human_to_timestamp(end)
         except ValueError:
             raise click.ClickException("invalid end time: [%s]" % end)
+
     try:
-        resp = requests.delete(config.url + "/data", params=params)
-    except requests.ConnectionError:
-        raise click.ClickException("Error contacting Joule server at [%s]" % config.url)
-    if resp.status_code != 200:
-        raise click.ClickException("Error [%d]: %s" % (resp.status_code, resp.text))
-    else:
-        click.echo("OK")
+        loop.run_until_complete(config.node.data_delete(
+            stream, start, end))
+    except errors.ApiError as e:
+        raise click.ClickException(str(e)) from e
+    except:
+        import traceback
+        traceback.print_exc()
+    finally:
+        loop.run_until_complete(
+            config.node.close())
+        loop.close()
+    click.echo("OK")

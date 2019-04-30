@@ -2,7 +2,7 @@ from tests.api import mock_session
 import random
 import asynctest
 
-from joule.api.node import Node
+from joule.api.node import TcpNode
 from joule import errors
 
 from joule.api.stream import Stream
@@ -14,7 +14,7 @@ class TestFolderApi(asynctest.TestCase):
 
     async def setUp(self):
         # no URL or event loop
-        self.node = Node('mock_url', None)
+        self.node = TcpNode('mock_node', 'http://url', 'api_key')
         self.session = mock_session.MockSession()
         self.node.session = self.session
 
@@ -37,7 +37,7 @@ class TestFolderApi(asynctest.TestCase):
         src.id = 1
         dest = Folder()
         dest.id = 2
-        await self.node.folder_move(src,dest)
+        await self.node.folder_move(src, dest)
         self.assertEqual(self.session.path, "/folder/move.json")
         self.assertEqual(self.session.data,
                          {'src_id': 1, 'dest_id': 2})
@@ -67,7 +67,7 @@ class TestFolderApi(asynctest.TestCase):
         # can delete by Folder
         src = Folder()
         src.id = 1
-        await self.node.folder_delete(src,recursive=False)
+        await self.node.folder_delete(src, recursive=False)
         self.assertEqual(self.session.method, 'DELETE')
         self.assertEqual(self.session.path, "/folder.json")
         self.assertEqual(self.session.data, {'id': 1, 'recursive': 0})
@@ -123,7 +123,7 @@ def build_folder(depth) -> Folder:
         target.streams.append(s)
     if depth > 0:
         for n in range(random.randint(2, 3)):
-            target.children.append(build_folder(depth-1))
+            target.children.append(build_folder(depth - 1))
     return target
 
 

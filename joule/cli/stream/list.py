@@ -3,11 +3,10 @@ import asyncio
 from treelib import Tree
 
 from joule import errors
-from joule.api.session import Session
 from joule.api.stream import Stream
 from joule.api.folder import (Folder, folder_root)
 from joule.cli.config import pass_config
-
+from joule.api import BaseNode
 
 @click.command(name="list")
 @click.option("--layout", "-l", is_flag=True, help="include stream layout")
@@ -18,18 +17,18 @@ def cli_list(config, layout, status, id):
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(
-            _run(config.session, layout, status, id))
+            _run(config.node, layout, status, id))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
         loop.run_until_complete(
-            config.session.close())
+            config.node.close())
         loop.close()
 
 
-async def _run(session, layout: bool, status: bool, showid: bool):
+async def _run(node: BaseNode, layout: bool, status: bool, showid: bool):
     tree = Tree()
-    root = await folder_root(session)
+    root = await node.folder_root()
     root.name = ""  # omit root name
     _process_folder(tree, root, None, layout, status, showid)
     if status:
