@@ -39,7 +39,8 @@ class JouleConfig:
                  max_log_lines: int,
                  nilmdb_url: Optional[str],
                  ssl_context: ssl.SSLContext,
-                 proxies: List[Proxy]):
+                 proxies: List[Proxy],
+                 cafile: str):
         self.name = name
         self.module_directory = module_directory
         self.stream_directory = stream_directory
@@ -52,5 +53,6 @@ class JouleConfig:
         self.nilmdb_url = nilmdb_url
         self.proxies = proxies
         self.ssl_context = ssl_context
+        self.cafile = cafile
 
 

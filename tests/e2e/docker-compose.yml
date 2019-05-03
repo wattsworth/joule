@@ -3,18 +3,31 @@ services:
   joule:
     build: ../../.
     links:
-      - nilmdb
+    # - nilmdb
       - timescale
     depends_on:
       - timescale
-      - nilmdb
+    #  - nilmdb
     entrypoint: /joule/tests/e2e/bootstrap_inner.py
-  nilmdb:
-    image: jdonnal/nilmdb
+  joule_follower:
+    build: ../../.
+    links:
+      - timescale_follower
+    depends_on:
+      - timescale_follower
+    entrypoint: /joule/tests/e2e/bootstrap_follower.py
+  # nilmdb:
+  #   image: jdonnal/nilmdb
+  #   logging:
+  #    driver: none
+  #   stop_signal: SIGKILL
+  timescale:
+    image: timescale/timescaledb:latest-pg10
+    environment:
+      POSTGRES_PASSWORD: password
     logging:
       driver: none
-    stop_signal: SIGKILL
-  timescale:
+  timescale_follower:
     image: timescale/timescaledb:latest-pg10
     environment:
       POSTGRES_PASSWORD: password

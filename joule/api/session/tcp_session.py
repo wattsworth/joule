@@ -12,6 +12,7 @@ class TcpSession(BaseSession):
         self.url = url
         self.key = key
         self.ssl_context = None
+        self.cafile = cafile
         # for https nodes
         if self.url.startswith("https"):
             self.ssl_context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)

@@ -119,6 +119,7 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
         raise ConfigurationError("MaxLogLines must be a postive number")
 
     # Security configuration
+    ca_file = ""
     if 'Security' in my_configs:
         security_config = my_configs['Security']
         key = security_config["Key"]
@@ -132,6 +133,7 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
             # CERT_REQUIRED already set by create_default_context, but let's be explicit
             ssl_context.verify_mode = ssl.CERT_REQUIRED
             ssl_context.load_verify_locations(cafile=security_config["CertificateAuthority"])
+            ca_file = security_config["CertificateAuthority"]
         else:
             ssl_context.check_hostname = False
             ssl_context.verify_mode = ssl.CERT_NONE
@@ -161,7 +163,8 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
         max_log_lines=max_log_lines,
         nilmdb_url=nilmdb_url,
         proxies=proxies,
-        ssl_context=ssl_context
+        ssl_context=ssl_context,
+        cafile=ca_file
     )
 
 

@@ -71,7 +71,7 @@ class TestWorker(unittest.TestCase):
         m_consumers[0].inputs = {"input1": streams[0], "input2": streams[2]}
         m_consumers[1].inputs = {"input1": streams[2], "input2": streams[3]}
         self.consumers: List[Worker] = [Worker(m) for m in m_consumers]
-        self.supervisor = Supervisor(self.producers + self.consumers, [])
+        self.supervisor = Supervisor(self.producers + self.consumers, [], None)
 
     def tearDown(self):
         closed = self.loop.is_closed()

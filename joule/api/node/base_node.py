@@ -43,6 +43,9 @@ from joule.api.master import (master_add,
                               master_list,
                               Master)
 
+from joule.api.follower import (follower_delete,
+                                follower_list)
+
 from joule.models.pipes import Pipe
 
 
@@ -179,4 +182,10 @@ class BaseNode:
         return await master_add(self.session, master_type, identifier)
 
     # Follower actions
+
+    async def follower_list(self) -> List['BaseNode']:
+        return await follower_list(self.session)
+
+    async def follower_delete(self, node: Union['BaseNode', str]):
+        return await follower_delete(self.session, node)
 

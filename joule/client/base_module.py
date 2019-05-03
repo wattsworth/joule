@@ -106,7 +106,12 @@ class BaseModule:
         loop = asyncio.get_event_loop()
         self.stop_requested = False
         if parsed_args.api_socket != "unset":
-            self.node = node.UnixNode("local", parsed_args.api_socket, loop)
+            # should be set by the joule daemon
+            if 'JOULE_CA_FILE' in os.environ:
+                cafile = os.environ['JOULE_CA_FILE']
+            else:
+                cafile = ""
+            self.node = node.UnixNode("local", parsed_args.api_socket, cafile, loop)
         else:
             self.node = api.get_node(parsed_args.node)
         self.runner: web.AppRunner = loop.run_until_complete(self._start_interface(parsed_args))

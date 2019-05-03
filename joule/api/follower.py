@@ -1,18 +1,19 @@
-from typing import List
-
-from . import node
+from typing import List, TYPE_CHECKING
 from .session import BaseSession
 
+if TYPE_CHECKING:
+    from .node import TcpNode, BaseNode
 
-def from_json(json) -> node.TcpNode:
-    return node.create_tcp_node(json['name'], json['location'], json['key'])
 
-
-async def follower_list(session: BaseSession) -> List[node.TcpNode]:
+async def follower_list(session: BaseSession) -> List['BaseNode']:
     resp = await session.get("/followers.json")
-    return [from_json(item) for item in resp]
+    return [TcpNode(item['name'], item['location'], item['key'], session.cafile) for item in resp]
 
 
-async def follower_delete(session: BaseSession, name: str):
+async def follower_delete(session: BaseSession, node):
+    if type(node) is not str:
+        name = node.name
+    else:
+        name = node
     data = {"name": name}
     await session.delete("/follower.json", params=data)

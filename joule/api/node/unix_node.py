@@ -7,10 +7,10 @@ from joule.api.session import UnixSession
 
 class UnixNode(BaseNode):
 
-    def __init__(self, name: str, path: str,
+    def __init__(self, name: str, path: str, cafile: str = "",
                  loop: Optional[AbstractEventLoop] = None):
         self._path = path
-        session = UnixSession(path)
+        session = UnixSession(path, cafile)
         if loop is None:
             loop = get_event_loop()
         super().__init__(name, session, loop)

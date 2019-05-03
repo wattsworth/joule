@@ -18,7 +18,7 @@ class TestSupervisor(AsyncTestCase):
         for x in range(TestSupervisor.NUM_WORKERS):
             module = Module(name="m%d" % x, exec_cmd="", uuid=x)
             self.workers.append(Worker(module))
-        self.supervisor = Supervisor(self.workers, [])
+        self.supervisor = Supervisor(self.workers, [], None)
 
     def test_returns_workers(self):
         self.assertEqual(self.workers, self.supervisor.workers)
@@ -85,7 +85,7 @@ class TestSupervisor(AsyncTestCase):
         subscription_requests = 0
 
         class MockNode:
-            def __init__(self, url, loop):
+            def __init__(self):
                 pass
 
             async def data_read(self, stream):
@@ -97,16 +97,17 @@ class TestSupervisor(AsyncTestCase):
             async def close(self):
                 pass
 
-        def create_mock_node(url, loop):
-            return MockNode(url, loop)
+        def get_mock_node(name: str):
+            #TODO: name should just be the CN of the node
+            self.assertEqual(name, "http://remote:3000")
+            return MockNode()
 
-        with mock.patch('joule.models.supervisor.create_tcp_node',
-                        create_mock_node):
-            self.supervisor.subscribe(remote_stream, p1, self.loop)
-            self.supervisor.subscribe(remote_stream, p2, self.loop)
+        self.supervisor.get_node = get_mock_node
+        self.supervisor.subscribe(remote_stream, p1, self.loop)
+        self.supervisor.subscribe(remote_stream, p2, self.loop)
 
-            self.supervisor.task = asyncio.sleep(0)
-            self.loop.run_until_complete(self.supervisor.stop(self.loop))
+        self.supervisor.task = asyncio.sleep(0)
+        self.loop.run_until_complete(self.supervisor.stop(self.loop))
 
         # make sure there is only one connection to the remote
         self.assertEqual(subscription_requests, 1)
@@ -124,7 +125,6 @@ class TestSupervisor(AsyncTestCase):
         module = Module(name="remote_output", exec_cmd="", uuid=0)
         module.outputs = {'output': remote_stream}
         worker = Worker(module)
-        supervisor = Supervisor([worker], [])
 
         async def mock_run(subscribe, loop):
             await asyncio.sleep(0)
@@ -134,7 +134,7 @@ class TestSupervisor(AsyncTestCase):
         output_requested = False
 
         class MockNode:
-            def __init__(self, url, loop):
+            def __init__(self):
                 pass
 
             async def data_write(self, stream):
@@ -146,14 +146,16 @@ class TestSupervisor(AsyncTestCase):
             async def close(self):
                 pass
 
-        def create_mock_node(url, loop):
-            return MockNode(url, loop)
+        def get_mock_node(name: str):
+            #TODO: name should just be the CN of the node
+            self.assertEqual(name, "remote:3000")
+            return MockNode()
 
-        with mock.patch('joule.models.supervisor.create_tcp_node',
-                        create_mock_node):
-            self.loop.run_until_complete(supervisor.start(self.loop))
-            self.supervisor.task = asyncio.sleep(0)
-            self.loop.run_until_complete(self.supervisor.stop(self.loop))
+        supervisor = Supervisor([worker], [], get_mock_node)
+
+        self.loop.run_until_complete(supervisor.start(self.loop))
+        self.supervisor.task = asyncio.sleep(0)
+        self.loop.run_until_complete(self.supervisor.stop(self.loop))
 
         # pipe should be created
         self.assertTrue(output_requested)

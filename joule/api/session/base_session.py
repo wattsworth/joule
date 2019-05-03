@@ -7,6 +7,7 @@ class BaseSession:
         self.url = ""
         self._session = None
         self.ssl_context = None
+        self.cafile = ""
 
     async def get_session(self):
         return self._session

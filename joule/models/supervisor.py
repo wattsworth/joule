@@ -1,11 +1,12 @@
 from typing import List, Callable, Dict
 import asyncio
 import logging
+from sqlalchemy import orm
 
-from joule.models import Worker, Stream, Proxy, pipes
+from joule.models import Worker, Stream, Proxy, Follower, pipes
 from joule.errors import SubscriptionError, ConfigurationError, ConnectionError
 
-from joule.api import create_tcp_node
+from joule.api import BaseNode
 
 Tasks = List[asyncio.Task]
 Loop = asyncio.AbstractEventLoop
@@ -15,9 +16,10 @@ log = logging.getLogger('joule')
 
 class Supervisor:
 
-    def __init__(self, workers: List[Worker], proxies: List[Proxy]):
+    def __init__(self, workers: List[Worker], proxies: List[Proxy], get_node: Callable[[str], BaseNode]):
         self._workers = workers
         self._proxies = proxies
+        self.get_node = get_node
         self.task: asyncio.Task = None
         self.remote_tasks: List[asyncio.Task] = []
         self.remote_inputs: Dict[Stream, pipes.Pipe] = {}
@@ -108,7 +110,10 @@ class Supervisor:
         Continuously tries to make a connection to dest_stream and write src_pipe's data to it
         """
         dest_pipe = None
-        node = create_tcp_node(dest_stream.remote_url, loop)
+        node = self.get_node(dest_stream.remote_url)
+        if node is None:
+            log.error("output requested from [%s] but this node is not a follower" % dest_stream.remote_url)
+            return
         try:
             while True:
                 try:
@@ -148,7 +153,11 @@ class Supervisor:
         Continuously tries to make a connection to src_stream and write its data to dest_pipe
         """
         src_pipe = None
-        node = create_tcp_node(src_stream.remote_url, loop)
+        node = self.get_node(src_stream.remote_url)
+        if node is None:
+            log.error("input requested from [%s] but this node is not a follower" % src_stream.remote_url)
+            return
+
         try:
             while True:
                 try:
@@ -159,7 +168,8 @@ class Supervisor:
                             if not dest_pipe.closed:
                                 await dest_pipe.write(data)
                             else:
-                                log.info("destination [%s] is closed, OK if this is during shutdown" % dest_pipe.stream.name)
+                                log.info(
+                                    "destination [%s] is closed, OK if this is during shutdown" % dest_pipe.stream.name)
                             src_pipe.consume(len(data))
                     except pipes.EmptyPipe:
                         await dest_pipe.close_interval()
@@ -174,5 +184,3 @@ class Supervisor:
                 await src_pipe.close()
             await dest_pipe.close()
             await node.close()
-
-

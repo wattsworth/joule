@@ -62,7 +62,7 @@ class TestInterfaceController(AioHTTPTestCase):
             os.unlink(socket_name)
         winterface = MockWorker("reader", {}, {'output': '/reader/path'},
                                 uuid=101, socket=socket_name)
-        app["supervisor"] = Supervisor([winterface], [])  # type: ignore
+        app["supervisor"] = Supervisor([winterface], [], None)  # type: ignore
         return app
 
     @unittest_run_loop

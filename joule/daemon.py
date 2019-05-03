@@ -18,8 +18,9 @@ from joule.models import (Base, Worker, config,
                           DataStore, Stream, pipes)
 from joule.models.supervisor import Supervisor
 from joule.errors import ConfigurationError, SubscriptionError
-from joule.models import NilmdbStore, TimescaleStore
+from joule.models import NilmdbStore, TimescaleStore, Follower
 from joule.models.data_store.errors import DataError
+from joule.api import TcpNode
 from joule.services import (load_modules, load_streams, load_config)
 import joule.middleware
 import joule.controllers
@@ -100,7 +101,19 @@ class Daemon(object):
 
         # configure workers
         workers = [Worker(m) for m in modules]
-        self.supervisor = Supervisor(workers, self.config.proxies)
+
+        def get_node(name: str):
+            follower = self.db.query(Follower) \
+                .filter_by(name=name) \
+                .one_or_none()
+            if follower is None:
+                return None
+
+            return TcpNode(follower.name, follower.location,
+                           follower.key,
+                           self.config.cafile, loop)
+
+        self.supervisor = Supervisor(workers, self.config.proxies, get_node)
 
         # save the metadata
         self.db.commit()
@@ -139,6 +152,9 @@ class Daemon(object):
         app['port'] = self.config.port
         app['name'] = self.config.name
         app['ssl_context'] = self.config.ssl_context
+        # publish the cafile location to the environment for modules to use
+
+        os.environ["JOULE_CA_FILE"] = self.config.cafile
         app.add_routes(joule.controllers.routes)
         runner = web.AppRunner(app)
 

@@ -6,10 +6,11 @@ from joule import errors
 
 class UnixSession(BaseSession):
 
-    def __init__(self, path: str):
+    def __init__(self, path: str, cafile: str):
         super().__init__()
         self.path = path
         self.url = "http://joule.localhost"
+        self.cafile = cafile
 
     async def get_session(self):
         if self._session is None:
