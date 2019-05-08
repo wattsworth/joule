@@ -1,6 +1,6 @@
 import click
 from joule.cli.config import pass_config
-from joule.api import node
+from joule import api
 from joule import errors
 
 
@@ -9,7 +9,7 @@ from joule import errors
 @pass_config
 def node_delete(config, name):
     try:
-        node.delete(name)
+        api.delete_node(name)
     except errors.ApiError as e:
         raise click.ClickException(str(e))
     click.echo("Removed [%s] from nodes" % name)

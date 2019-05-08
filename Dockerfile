@@ -19,7 +19,6 @@ WORKDIR /joule
 RUN python3 setup.py -q install
 
 
-
 CMD /usr/local/bin/jouled
 
 

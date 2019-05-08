@@ -24,6 +24,7 @@ from joule.api import TcpNode
 from joule.services import (load_modules, load_streams, load_config)
 import joule.middleware
 import joule.controllers
+import ssl
 
 log = logging.getLogger('joule')
 async_log = logging.getLogger('asyncio')
@@ -99,6 +100,17 @@ class Daemon(object):
         load_streams.run(self.config.stream_directory, self.db)
         modules = load_modules.run(self.config.module_directory, self.db)
 
+        # configure security parameters
+        self.ssl_context = None
+        self.cafile = ""
+        if self.config.security is not None:
+            self.ssl_context = ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
+            self.ssl_context.load_cert_chain(certfile=self.config.security.certfile,
+                                               keyfile=self.config.security.keyfile)
+            if self.config.security.cafile != "":
+                # publish the cafile location to the environment for modules to use
+                os.environ["JOULE_CA_FILE"] = self.config.security.cafile
+                self.cafile = self.config.security.cafile
         # configure workers
         workers = [Worker(m) for m in modules]
 
@@ -111,7 +123,7 @@ class Daemon(object):
 
             return TcpNode(follower.name, follower.location,
                            follower.key,
-                           self.config.cafile, loop)
+                           self.cafile, loop)
 
         self.supervisor = Supervisor(workers, self.config.proxies, get_node)
 
@@ -151,17 +163,17 @@ class Daemon(object):
         # used to tell master's how to contact this node
         app['port'] = self.config.port
         app['name'] = self.config.name
-        app['ssl_context'] = self.config.ssl_context
-        # publish the cafile location to the environment for modules to use
 
-        os.environ["JOULE_CA_FILE"] = self.config.cafile
+        # for acting as a client when accessing remote streams and joining other nodes
+        app['cafile'] = self.cafile
+
         app.add_routes(joule.controllers.routes)
         runner = web.AppRunner(app)
 
         await runner.setup()
         site = web.TCPSite(runner, self.config.ip_address,
                            self.config.port,
-                           ssl_context=self.config.ssl_context)
+                           ssl_context=self.ssl_context)
         sock_file = os.path.join(WORKING_DIRECTORY, 'api')
         sock_site = web.UnixSite(runner, sock_file)
         await sock_site.start()

@@ -26,6 +26,16 @@ DEFAULT_CONFIG = {
 }
 
 
+class SecurityConfig:
+    def __init__(self,
+                 certfile: str,
+                 keyfile: str,
+                 cafile: str):
+        self.certfile = certfile
+        self.keyfile = keyfile
+        self.cafile = cafile
+
+
 class JouleConfig:
     def __init__(self,
                  name: str,
@@ -38,9 +48,8 @@ class JouleConfig:
                  cleanup_period: int,
                  max_log_lines: int,
                  nilmdb_url: Optional[str],
-                 ssl_context: ssl.SSLContext,
                  proxies: List[Proxy],
-                 cafile: str):
+                 security: Optional[SecurityConfig]):
         self.name = name
         self.module_directory = module_directory
         self.stream_directory = stream_directory
@@ -52,7 +61,4 @@ class JouleConfig:
         self.max_log_lings = max_log_lines
         self.nilmdb_url = nilmdb_url
         self.proxies = proxies
-        self.ssl_context = ssl_context
-        self.cafile = cafile
-
-
+        self.security = security

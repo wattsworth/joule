@@ -110,7 +110,7 @@ class FakeJoule:
         await site.start()
 
         while 1:
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(0.1)
             if not msgs.empty():
                 msgs.get()
                 break
@@ -285,7 +285,16 @@ class FakeJouleTestCase(helpers.AsyncTestCase):
                                                          self.outbound_msgs,
                                                          key))
         self.server_proc.start()
-        time.sleep(0.30)
+        ready = False
+        time.sleep(0.01)
+        while not ready:
+            for conn in psutil.net_connections():
+                if conn.laddr.port == port:
+                    ready = True
+                    break
+            else:
+                time.sleep(0.01)
+
         # create a .joule config directory with key info
         self.conf_dir = tempfile.TemporaryDirectory()
         with open(os.path.join(self.conf_dir.name, "nodes.json"), 'w') as f:

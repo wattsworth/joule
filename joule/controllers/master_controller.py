@@ -2,7 +2,9 @@ from aiohttp import web
 from sqlalchemy.orm import Session, exc
 import secrets
 import aiohttp
+import ssl
 
+from joule.api.session import TcpSession
 from joule.models.master import Master, make_key
 
 
@@ -13,7 +15,7 @@ async def add(request: web.Request):
     db: Session = request.app["db"]
     node_name: str = request.app["name"]
     port: int = request.app["port"]
-    ssl_context = request.app["ssl_context"]
+    cafile = request.app["cafile"]
     if request.content_type != 'application/json':
         return web.Response(text='content-type must be application/json', status=400)
     body = await request.json()
@@ -57,8 +59,8 @@ async def add(request: web.Request):
             db.add(my_master)
             db.commit()
             # post this key to the master
-            name = await _send_key(my_master, identifier, port,
-                                   node_name, ssl_context)
+            name = await _send_key(my_master.key, identifier, port,
+                                   node_name, request.app["cafile"], request.app["name"])
 
             # remove the key for this node if it already exists
             db.query(Master). \
@@ -75,22 +77,27 @@ async def add(request: web.Request):
         return web.Response(text="Cannot add master: [%s]" % str(e), status=400)
 
 
-async def _send_key(master: Master,
-                    url: str,
-                    port: int,
-                    name: str,
-                    ssl_context) -> str:
+async def _send_key(key: str,
+                    identifier: str,
+                    local_port: int,
+                    local_name: str,
+                    cafile: str,
+                    host: str) -> str:
     # TODO handle CA, http(s) identification, lumen auth, etc
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url + "/follower.json",
-                                ssl=ssl_context,
-                                json={'key': master.key,
-                                      'port': port,
-                                      'name': name}) as resp:
-            if resp.status != 200:
-                raise ValueError(await resp.text())
-            val = await resp.json()
-            return val['name']
+    if not identifier.startswith("http"):
+        url = "https://" + identifier + ":8088"
+    else:
+        url = identifier
+    print("connecting to node at [%s] =====" % url)
+    session = TcpSession(url, key, cafile)
+    params = {'key': key,
+              'port': local_port,
+              'name': local_name}
+    if cafile != "":
+        params["host"] = host
+    resp = await session.post("/follower.json", json=params)
+    await session.close()
+    return resp['name']
 
 
 async def index(request: web.Request):
@@ -123,4 +130,4 @@ async def delete(request: web.Request):
         return web.Response(text="%s [%s] is not a master of node [%s]" % (str_master_type, name, node_name),
                             status=404)
     db.commit()
-    return web.Response(text="OK")
+    return web.Response(text="ok")

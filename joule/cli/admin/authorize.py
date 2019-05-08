@@ -60,11 +60,14 @@ def admin_authorize(config):
         db.add(my_master)
 
     # add the key data to nodes.json
-    if config.ip_address != "0.0.0.0":
+    if config.security.cafile != "":
+        addr = config.name
+    elif config.ip_address != "0.0.0.0":
         addr = config.ip_address
     else:
         addr = "127.0.0.1"
-    if config.ssl_context is None:
+
+    if config.security is None:
         scheme = "http"
     else:
         scheme = "https"

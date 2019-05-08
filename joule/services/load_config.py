@@ -119,28 +119,13 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
         raise ConfigurationError("MaxLogLines must be a postive number")
 
     # Security configuration
-    ca_file = ""
     if 'Security' in my_configs:
-        security_config = my_configs['Security']
-        key = security_config["Key"]
-        certificate = security_config["Certificate"]
-        ssl_context = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH)
-
-        # configure the ssl context
-        # only validate the server cert if we have a ca cert
-        if ("CertificateAuthority" in security_config and
-                security_config["CertificateAuthority"] != ""):
-            # CERT_REQUIRED already set by create_default_context, but let's be explicit
-            ssl_context.verify_mode = ssl.CERT_REQUIRED
-            ssl_context.load_verify_locations(cafile=security_config["CertificateAuthority"])
-            ca_file = security_config["CertificateAuthority"]
-        else:
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
-        ssl_context.load_cert_chain(certfile=certificate,
-                                    keyfile=key)
+        security = config.SecurityConfig(my_configs['Security']['Certificate'],
+                                         my_configs['Security']['Key'],
+                                         my_configs.get('Security',
+                                                        'CertificateAuthority', fallback=""))
     else:
-        ssl_context = None
+        security = None
 
     # Proxies
     uuid = 0
@@ -163,8 +148,7 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
         max_log_lines=max_log_lines,
         nilmdb_url=nilmdb_url,
         proxies=proxies,
-        ssl_context=ssl_context,
-        cafile=ca_file
+        security=security
     )
 
 

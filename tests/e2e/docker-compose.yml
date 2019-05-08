@@ -1,6 +1,6 @@
 version: '2.1'
 services:
-  joule:
+  node1.joule:
     build: ../../.
     links:
     # - nilmdb
@@ -9,7 +9,7 @@ services:
       - timescale
     #  - nilmdb
     entrypoint: /joule/tests/e2e/bootstrap_inner.py
-  joule_follower:
+  node2.joule:
     build: ../../.
     links:
       - timescale_follower

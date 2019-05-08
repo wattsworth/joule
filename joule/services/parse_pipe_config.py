@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from joule.errors import ConfigurationError
-from joule.models import Stream, Element
+from joule.models import Stream, Element, Follower
 from joule.models import stream, folder
 
 
@@ -16,8 +16,8 @@ from joule.models import stream, folder
 
 def run(pipe_config: str, db: Session) -> Stream:
     # check for a remote stream config
-    (pipe_config, url) = strip_remote_config(pipe_config)
-    local = url is None
+    (pipe_config, node_name) = strip_remote_config(pipe_config)
+    local = node_name is None
     # separate the configuration pieces
     (path, name, inline_config) = parse_pipe_config(pipe_config)
     name = stream.validate_name(name)
@@ -34,6 +34,10 @@ def run(pipe_config: str, db: Session) -> Stream:
             if len(inline_config) > 0:
                 _validate_config_match(existing_stream, datatype, element_names)
             return existing_stream
+    else: # make sure the remote node is a follower
+        if db.query(Follower).filter_by(name=node_name).one_or_none() is None:
+            raise ConfigurationError("Remote node [%s] is not a follower" % node_name)
+
     # if the stream doesn't exist it or its remote, it *must* have inline configuration
     if len(inline_config) == 0:
         if local:
@@ -53,7 +57,7 @@ def run(pipe_config: str, db: Session) -> Stream:
         my_folder.streams.append(my_stream)
         db.add(my_stream)
     else:
-        my_stream.set_remote(url, path+'/'+my_stream.name)
+        my_stream.set_remote(node_name, path+'/'+my_stream.name)
     return my_stream
 
 
@@ -62,13 +66,13 @@ def strip_remote_config(pipe_config: str) -> (str, str):
         # check for the remote URL return stripped config and info
         if pipe_config[0] == '/':
             return pipe_config, None
-        # this is a remote stream, separate out the URL
+        # this is a remote stream, separate out the node name
         pieces = pipe_config.split(' ')
-        url = "http://"+pieces[0]
+        node = pieces[0]
         pipe_config = pieces[1]
     except (ValueError, IndexError):
         raise ConfigurationError("invalid pipe configuration [%s]" % pipe_config)
-    return pipe_config, url
+    return pipe_config, node
 
 
 def parse_pipe_config(pipe_config: str) -> (str, str, str):

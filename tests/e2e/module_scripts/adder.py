@@ -12,7 +12,7 @@ class Adder(joule.FilterModule):
                             help="apply an offset")
         
     async def run(self, parsed_args, inputs, outputs):
-        stream_in = inputs["input"]
+        stream_in: joule = inputs["input"]
         stream_out = outputs["output"]
         while not self.stop_requested:
             try:
@@ -21,8 +21,12 @@ class Adder(joule.FilterModule):
                 await asyncio.sleep(0.25)
                 await stream_out.write(sarray)
                 stream_in.consume(len(sarray))
+                if stream_in.end_of_interval:
+                    print("closing interval")
+                    await stream_out.close_interval()
 
             except joule.EmptyPipe:
+                print("got an empty pipe, exiting")
                 exit(1)
             
 

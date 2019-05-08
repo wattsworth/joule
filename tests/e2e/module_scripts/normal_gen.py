@@ -24,7 +24,7 @@ class NormalGen(joule.ReaderModule):
                 ts_data = np.hstack((ts, data))
                 await output.write(ts_data)
                 data_ts = top_ts
-                await asyncio.sleep(1 / freq)
+                await asyncio.sleep(rows / freq)
 
 
 if __name__ == "__main__":

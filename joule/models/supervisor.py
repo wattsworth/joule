@@ -4,7 +4,7 @@ import logging
 from sqlalchemy import orm
 
 from joule.models import Worker, Stream, Proxy, Follower, pipes
-from joule.errors import SubscriptionError, ConfigurationError, ConnectionError
+from joule.errors import SubscriptionError, ConfigurationError, ApiError
 
 from joule.api import BaseNode
 
@@ -24,7 +24,7 @@ class Supervisor:
         self.remote_tasks: List[asyncio.Task] = []
         self.remote_inputs: Dict[Stream, pipes.Pipe] = {}
 
-        self.REMOTE_HANDLER_RESTART_INTERVAL = 1
+        self.REMOTE_HANDLER_RESTART_INTERVAL = 5
 
     @property
     def workers(self):
@@ -110,9 +110,9 @@ class Supervisor:
         Continuously tries to make a connection to dest_stream and write src_pipe's data to it
         """
         dest_pipe = None
-        node = self.get_node(dest_stream.remote_url)
+        node = self.get_node(dest_stream.remote_node)
         if node is None:
-            log.error("output requested from [%s] but this node is not a follower" % dest_stream.remote_url)
+            log.error("output requested from [%s] but this node is not a follower" % dest_stream.remote_node)
             return
         try:
             while True:
@@ -153,15 +153,15 @@ class Supervisor:
         Continuously tries to make a connection to src_stream and write its data to dest_pipe
         """
         src_pipe = None
-        node = self.get_node(src_stream.remote_url)
+        node = self.get_node(src_stream.remote_node)
         if node is None:
-            log.error("input requested from [%s] but this node is not a follower" % src_stream.remote_url)
+            log.error("input requested from [%s] but this node is not a follower" % src_stream.remote_node)
             return
 
         try:
             while True:
                 try:
-                    src_pipe = await node.data_read(src_stream.remote_path)
+                    src_pipe = await node.data_subscribe(src_stream.remote_path)
                     try:
                         while True:
                             data = await src_pipe.read()
@@ -174,7 +174,7 @@ class Supervisor:
                     except pipes.EmptyPipe:
                         await dest_pipe.close_interval()
                     log.error("Subscriber:: _handle_remote_input: connection terminated unexepectedly")
-                except (ConfigurationError, ConnectionError) as e:
+                except (ConfigurationError, ApiError) as e:
                     log.error("Subscriber::_handle_remote_input: %s" % str(e))
                 await asyncio.sleep(self.REMOTE_HANDLER_RESTART_INTERVAL)
         except asyncio.CancelledError:

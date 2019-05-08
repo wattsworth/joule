@@ -133,17 +133,17 @@ class Stream(Base):
         bool: true if the stream resides on a remote system
         """
         try:
-            return self._remote_url is not None
+            return self._remote_node is not None
         except AttributeError:
             return False
 
     @property
-    def remote_url(self) -> str:
+    def remote_node(self) -> str:
         """
         str: URL of remote host, blank if the stream is local
         """
         try:
-            return self._remote_url
+            return self._remote_node
         except AttributeError:
             return ''
 
@@ -157,14 +157,14 @@ class Stream(Base):
         except AttributeError:
             return ''
 
-    def set_remote(self, url: str, path: str):
+    def set_remote(self, node: str, path: str):
         """
         Associate the stream with a remote system
         Args:
             url: remote URL
             path: stream path on remote system
         """
-        self._remote_url = url
+        self._remote_node = node
         self._remote_path = path
 
     def to_json(self, info: Dict[int, StreamInfo] = None) -> Dict:

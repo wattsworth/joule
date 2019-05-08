@@ -33,7 +33,7 @@ class UnixSession(BaseSession):
                                                        resp.status))
                 if resp.content_type != 'application/json':
                     body = await resp.text()
-                    if body != "ok":
+                    if body.lower() != "ok":
                         raise errors.ApiError("Invalid node response (not json)")
                     else:
                         return None

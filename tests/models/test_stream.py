@@ -34,11 +34,11 @@ class TestStream(unittest.TestCase):
         # has a meaningful string representation
         self.assertTrue("test" in "%r" % my_stream)
         # if remote is not set, the pseudo attributes are empty
-        self.assertEqual(my_stream.remote_url, '')
+        self.assertEqual(my_stream.remote_node, '')
         self.assertEqual(my_stream.remote_path, '')
         # if remote is set, these attributes have values
         my_stream.set_remote("remote_url", "remote_path")
-        self.assertEqual(my_stream.remote_url, "remote_url")
+        self.assertEqual(my_stream.remote_node, "remote_url")
         self.assertEqual(my_stream.remote_path, "remote_path")
 
     def test_json(self):

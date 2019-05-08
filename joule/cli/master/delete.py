@@ -24,4 +24,4 @@ def cli_delete(config, type, name):
 
 async def _run(node, master_type, name):
     await node.master_delete(master_type, name)
-    click.echo("Access to node [%s] revoked for user [%s]" % (node.name, name))
+    click.echo("Access to node [%s] revoked for %s [%s]" % (node.name, master_type, name))

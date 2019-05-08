@@ -52,13 +52,17 @@ def delete_node(node: Union[str, BaseNode]) -> None:
     else:
         name = node.name
     if name not in configs:
-        raise errors.ApiError("Node [%s] does not exist" % node.name)
+        raise errors.ApiError("Node [%s] does not exist" % name)
     del configs[name]
     _write_node_configs(configs)
     # if this is the default node, pick a new one
-    default_config = _get_default_node(configs)
-    if default_config.name == name:
-        set_default_node("")
+    try:
+        default_config = _get_default_node(configs)
+        if default_config.name == name:
+            set_default_node("")
+    except ValueError:
+        # this was the last node, no other nodes available
+        pass
 
 
 def set_default_node(node: Union[str, BaseNode]) -> None:

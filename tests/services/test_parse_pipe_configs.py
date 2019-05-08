@@ -4,9 +4,10 @@ import unittest
 
 from tests.helpers import DbTestCase
 from joule.models import (Base, Stream, Folder,
-                          Element)
+                          Element, Follower)
 from joule.errors import ConfigurationError
 from joule.services import parse_pipe_config
+
 
 class TestParsePipeConfig(DbTestCase):
 
@@ -28,7 +29,11 @@ class TestParsePipeConfig(DbTestCase):
 
         root = Folder(name="root")
         root.children = [folder_test]
+
+        remote_node = Follower(name="remote.node", key="api_key", location="https://remote.com:8088")
         self.db.add(root)
+        self.db.add(remote_node)
+        self.db.commit()
 
     def test_parses_new_stream_configs(self):
         my_stream = parse_pipe_config.run("/test/new_stream:int8[x,y]", self.db)
@@ -56,9 +61,9 @@ class TestParsePipeConfig(DbTestCase):
         self.assertEqual(my_stream, existing_stream)
 
     def test_parses_remote_stream_configs(self):
-        my_stream = parse_pipe_config.run("remote.com:3000 /path/to/stream:float32[x,y]", self.db)
+        my_stream = parse_pipe_config.run("remote.node /path/to/stream:float32[x,y]", self.db)
         self.assertTrue(my_stream.is_remote)
-        self.assertEqual(my_stream.remote_url, "http://remote.com:3000")
+        self.assertEqual(my_stream.remote_node, "remote.node")
         self.assertEqual(my_stream.remote_path, "/path/to/stream")
 
     def test_errors_on_invalid_configs(self):

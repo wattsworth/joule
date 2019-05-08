@@ -4,6 +4,7 @@ import warnings
 import numpy as np
 import logging
 import asyncio
+import unittest
 
 from ..fake_joule import FakeJoule, FakeJouleTestCase
 from joule.cli import main
@@ -13,7 +14,6 @@ from tests import helpers
 warnings.simplefilter('always')
 log = logging.getLogger('aiohttp.access')
 log.setLevel(logging.WARNING)
-
 
 class TestDataCopy(FakeJouleTestCase):
 

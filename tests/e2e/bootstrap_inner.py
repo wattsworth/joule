@@ -15,6 +15,7 @@ SOURCE_DIR = "/joule"
 SCENARIO_DIR = "/joule/tests/e2e/scenarios"
 MODULE_SCRIPT_DIR = "/joule/tests/e2e/module_scripts"
 JOULE_CONF_DIR = "/etc/joule"
+SECURITY_DIR = "/joule/tests/e2e/security"
 
 FORCE_DUMP = False
 
@@ -40,13 +41,14 @@ def main():
                 else:
                     shutil.rmtree("/etc/joule/")
             os.symlink(entry.path, "/etc/joule")
+            os.symlink(SECURITY_DIR, "/etc/joule/security")
             # clear the existing database
             subprocess.run("joule admin erase --yes".split(" "))
             # get API permissions
             os.environ["LOGNAME"] = "e2e"
             os.environ["JOULE_USER_CONFIG_DIR"] = "/tmp/joule_user"
             subprocess.run("joule admin authorize".split(" "))
-
+            shutil.copy("/etc/joule/security/ca.joule.crt", "/tmp/joule_user/ca.crt")
             jouled = subprocess.Popen(["jouled", "--config",
                                        "/etc/joule/main.conf"],
                                       stdout=subprocess.PIPE,
@@ -56,14 +58,13 @@ def main():
             sys.stdout.flush()
             test = subprocess.run(os.path.join(entry.path, "test.py"))
             jouled.send_signal(signal.SIGINT)
+            stdout, _ = jouled.communicate()
             if test.returncode != 0 or FORCE_DUMP:
                 print("----dump from jouled----")
-                stdout, _ = jouled.communicate()
                 for line in stdout.rstrip().split('\n'):
                     print("> %s" % line)
                 if test.returncode != 0:
                     return test.returncode
-            time.sleep(6)
     return 0  # success
 
 

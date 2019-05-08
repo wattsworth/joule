@@ -8,6 +8,8 @@ import time
 import os
 import signal
 import json
+import psutil
+import unittest
 
 from ..fake_joule import FakeJoule, FakeJouleTestCase
 from tests.models.data_store.fake_nilmdb import FakeNilmdb, FakeStream
@@ -17,14 +19,21 @@ from tests import helpers
 
 warnings.simplefilter('always')
 
-
 class TestDataCopyWithNilmDb(FakeJouleTestCase):
 
     def _start_nilmdb(self, msgs):
         port = unused_port()
         self.nilmdb_proc = multiprocessing.Process(target=self._run_nilmdb, args=(port, msgs))
         self.nilmdb_proc.start()
-        time.sleep(0.10)
+        ready = False
+        time.sleep(0.01)
+        while not ready:
+            for conn in psutil.net_connections():
+                if conn.laddr.port == port:
+                    ready = True
+                    break
+            else:
+                time.sleep(0.01)
         return "http://localhost:%d" % port
 
     def _stop_nilmdb(self):

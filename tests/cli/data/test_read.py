@@ -5,6 +5,7 @@ import warnings
 import numpy as np
 import logging
 import asyncio
+import unittest
 
 from ..fake_joule import FakeJoule, FakeJouleTestCase
 from joule.cli import main
@@ -19,7 +20,6 @@ log.setLevel(logging.WARNING)
 class TestDataRead(FakeJouleTestCase):
 
     def test_reads_data(self):
-
         server = FakeJoule()
         # create the source stream
         src = Stream(id=0, name="source", keep_us=100, datatype=Stream.DATATYPE.FLOAT32)
@@ -81,6 +81,7 @@ class TestDataRead(FakeJouleTestCase):
 
         # do not mark the intervals and hide the bounds
         runner = CliRunner()
+
         result = runner.invoke(main, ['data', 'read', '/test/source',
                                       '--start', '0', '--end', '1 hour ago',
                                       '--max-rows', '28'])
@@ -116,8 +117,10 @@ class TestDataRead(FakeJouleTestCase):
         server.stub_data_read = True
         self.start_server(server)
         runner = CliRunner()
+
         with self.assertLogs(level=logging.ERROR):
             runner.invoke(main, ['data', 'read', '/test/source', '--start', 'now'])
+
 
         self.stop_server()
 

@@ -1,22 +1,22 @@
 import click
 import asyncio
 from joule.cli.config import pass_config
-from joule.api import node
-from joule import errors
+from joule import errors, api
 
 
 @click.command(name="add")
+@click.argument("name")
 @click.argument("url")
 @click.argument("key")
 @pass_config
-def node_add(config, url, key):
+def node_add(config, name, url, key):
 
     loop = asyncio.get_event_loop()
     my_node = None
     try:
-        my_node = node.create_tcp_node(url, key)
-        loop.run_until_complete(node.save(my_node))
-        click.echo("Added [%s] to authorized nodes" % config.name)
+        my_node = api.TcpNode(name, url, key)
+        api.save_node(my_node)
+        click.echo("Added [%s] to authorized nodes" % name)
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
