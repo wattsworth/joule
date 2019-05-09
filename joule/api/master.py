@@ -1,4 +1,4 @@
-from typing import List, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, Dict, Optional
 
 from joule import errors
 from .session import BaseSession
@@ -16,19 +16,15 @@ def from_json(json) -> Master:
 
 
 async def master_add(session: BaseSession, master_type: str,
-                     identifier: str) -> Master:
+                     identifier: str, parameters: Optional[Dict] = None) -> Master:
     data = {"master_type": master_type,
-            "identifier": identifier}
-    try:
-        resp = await session.post("/master.json", json=data)
-        if master_type == "user":
-            return Master(master_type, resp["name"], resp["key"])
-        else:
-            return Master(master_type, resp["name"], "omitted")
-    except errors.ApiError as e:
-        if "lumen" in str(e):
-            print("this is a lumen node, need e-mail/password")
-        raise e
+            "identifier": identifier,
+            "lumen_params": parameters}
+    resp = await session.post("/master.json", json=data)
+    if master_type == "user":
+        return Master(master_type, resp["name"], resp["key"])
+    else:
+        return Master(master_type, resp["name"], "omitted")
 
 
 async def master_delete(session: BaseSession, master_type: str, name: str):

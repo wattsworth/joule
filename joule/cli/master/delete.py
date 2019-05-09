@@ -6,7 +6,7 @@ from joule.cli.config import pass_config
 
 
 @click.command(name="delete")
-@click.argument("type", type=click.Choice(['user', 'node']))
+@click.argument("type", type=click.Choice(['user', 'joule', 'lumen']))
 @click.argument("name")
 @pass_config
 def cli_delete(config, type, name):

@@ -9,7 +9,7 @@ class Master(Base):
     """
     Attributes:
         name (str): master name
-        type (Master.TYPE): whether the master is a user or a node
+        type (Master.TYPE): whether the master is a user, joule, or lumen
         key (str): API key for accessing this node
     """
     __tablename__ = 'master'
@@ -21,7 +21,8 @@ class Master(Base):
 
     class TYPE(enum.Enum):
         USER = enum.auto()
-        NODE = enum.auto()
+        JOULE_NODE = enum.auto()
+        LUMEN_NODE = enum.auto()
 
     type: TYPE = Column(Enum(TYPE))
     grantor_id: int = Column(Integer, ForeignKey('metadata.master.id'))

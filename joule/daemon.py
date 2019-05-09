@@ -163,6 +163,10 @@ class Daemon(object):
         # used to tell master's how to contact this node
         app['port'] = self.config.port
         app['name'] = self.config.name
+        if self.ssl_context is None:
+            app['scheme'] = 'http'
+        else:
+            app['scheme'] = 'https'
 
         # for acting as a client when accessing remote streams and joining other nodes
         app['cafile'] = self.cafile

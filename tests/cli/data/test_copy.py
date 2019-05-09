@@ -1,10 +1,8 @@
 from click.testing import CliRunner
-from aiohttp.test_utils import unused_port
 import warnings
 import numpy as np
 import logging
 import asyncio
-import unittest
 
 from ..fake_joule import FakeJoule, FakeJouleTestCase
 from joule.cli import main
@@ -14,6 +12,7 @@ from tests import helpers
 warnings.simplefilter('always')
 log = logging.getLogger('aiohttp.access')
 log.setLevel(logging.WARNING)
+
 
 class TestDataCopy(FakeJouleTestCase):
 
@@ -34,7 +33,7 @@ class TestDataCopy(FakeJouleTestCase):
         self.assertEqual(result.exit_code, 0)
         mock_entry = self.msgs.get()
         np.testing.assert_array_equal(src_data, mock_entry.data)
-        #self.assertEqual(len(mock_entry.intervals), 3)
+        # self.assertEqual(len(mock_entry.intervals), 3)
         self.stop_server()
 
     def test_does_not_copy_existing_data(self):
@@ -155,7 +154,7 @@ class TestDataCopy(FakeJouleTestCase):
         self.start_server(server)
         runner = CliRunner()
         # does not copy without confirmation
-        result = runner.invoke(main, ['data', 'copy', '/test/source', '/test/destination'])
+        runner.invoke(main, ['data', 'copy', '/test/source', '/test/destination'])
         self.assertTrue(self.msgs.empty())
         # copies with confirmation
         loop = asyncio.new_event_loop()

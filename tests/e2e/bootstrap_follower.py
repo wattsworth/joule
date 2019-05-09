@@ -43,7 +43,7 @@ def main():
                               stderr=subprocess.STDOUT,
                               universal_newlines=True)
     time.sleep(2)
-    subprocess.run("joule master add node node1.joule".split(" "))
+    subprocess.run("joule master add joule node1.joule".split(" "))
     stdout, _ = jouled.communicate()
     for line in stdout.rstrip().split('\n'):
         print("> %s" % line)

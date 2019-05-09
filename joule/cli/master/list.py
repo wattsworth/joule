@@ -25,16 +25,23 @@ async def _run(node):
     masters = await node.master_list()
     # display module information
     users = [m.name for m in masters if m.master_type == 'USER']
-    nodes = [m.name for m in masters if m.master_type == 'NODE']
+    joule_nodes = [m.name for m in masters if m.master_type == 'JOULE_NODE']
+    lumen_nodes = [m.name for m in masters if m.master_type == 'LUMEN_NODE']
     click.echo("Users:")
     if len(users) > 0:
         for user in users:
             click.echo("\t%s" % user)
     else:
         click.echo("\t[None]")
-    click.echo("Nodes:")
-    if len(nodes) > 0:
-        for node in nodes:
+    click.echo("Joule Nodes:")
+    if len(joule_nodes) > 0:
+        for node in joule_nodes:
+            click.echo("\t%s" % node)
+    else:
+        click.echo("\t[None]")
+    click.echo("Lumen Nodes:")
+    if len(lumen_nodes) > 0:
+        for node in lumen_nodes:
             click.echo("\t%s" % node)
     else:
         click.echo("\t[None]")

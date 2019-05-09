@@ -46,12 +46,12 @@ class TcpSession(BaseSession):
                                        json=json,
                                        ssl=self.ssl_context) as resp:
                 if resp.status != 200:
-                    raise errors.ApiError("%s [%d]" % (await resp.text(),
-                                                       resp.status))
+                    msg = await resp.text()
+                    raise errors.ApiError("%s [%d]" % (msg, resp.status))
                 if resp.content_type != 'application/json':
                     body = await resp.text()
                     if body.lower() != "ok":
-                        raise errors.ApiError("Invalid node response (not json)")
+                        raise errors.ApiError("Invalid node response: %s" % body)
                     else:
                         return None
                 try:

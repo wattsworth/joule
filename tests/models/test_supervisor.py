@@ -88,7 +88,7 @@ class TestSupervisor(AsyncTestCase):
             def __init__(self):
                 pass
 
-            async def data_read(self, stream):
+            async def data_subscribe(self, stream):
                 nonlocal subscription_requests
                 pipe = pipes.LocalPipe(layout='float64_2')
                 subscription_requests += 1

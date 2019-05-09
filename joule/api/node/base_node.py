@@ -1,4 +1,4 @@
-from typing import Union, List, Optional
+from typing import Union, List, Optional, Dict
 from asyncio import AbstractEventLoop
 
 from .node_info import NodeInfo
@@ -177,8 +177,8 @@ class BaseNode:
     async def master_delete(self, master_type: str, name: str) -> None:
         return await master_delete(self.session, master_type, name)
 
-    async def master_add(self, master_type, identifier) -> Master:
-        return await master_add(self.session, master_type, identifier)
+    async def master_add(self, master_type, identifier, lumen_parameters: Optional[Dict] = None) -> Master:
+        return await master_add(self.session, master_type, identifier, lumen_parameters)
 
     # Follower actions
     async def follower_list(self) -> List['BaseNode']:
@@ -191,4 +191,3 @@ class BaseNode:
             name = node
         data = {"name": name}
         await self.session.delete("/follower.json", params=data)
-

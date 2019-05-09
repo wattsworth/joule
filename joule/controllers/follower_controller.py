@@ -30,10 +30,11 @@ async def add(request: web.Request):
     try:
         key = body["key"]
         port = body["port"]
-        if "host" in body:
-            location = "https://" + body["host"] + ":" + str(port)
+        scheme = body["scheme"]
+        if "name_is_host" in body:
+            location = scheme+"://" + body["name"] + ":" + str(port)
         else:
-            location = "http://" + request.remote + ":" + str(port)
+            location = scheme+"://" + request.remote + ":" + str(port)
         try:
             node = TcpNode("new_follower", location, key, cafile)
             info = await node.info()
