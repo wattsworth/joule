@@ -5,6 +5,15 @@ from .session import BaseSession
 
 
 class Master:
+    """
+    API Master model. See :ref:`sec-node-master-actions` for details on using the API to
+    manage master users and nodes.
+
+    Parameters:
+       master_type (str): one of [user|joule_node|lumen_node]
+       name: unique identifier for the master (username, node name, or URL)
+    """
+
     def __init__(self, master_type: str, name: str, key: str):
         self.master_type = master_type
         self.name = name

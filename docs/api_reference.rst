@@ -386,6 +386,51 @@ Proxy Actions
         <joule.api.Proxy id=0 name='flask app' proxied_url='http://localhost:8088/interface/p0'
          target_url='http://localhost:5000'>
 
+.. _sec-node-master-actions:
+
+Master Actions
+''''''''''''''
+
+.. function:: Node.master_add(master_type: str, identifier: str, lumen_parameters: Optional[Dict] = None) -> Master:
+
+    Grant API access to a user or node. It is recommended to use the CLI to add masters to Joule
+
+    Parameters:
+        :master_type: one of [user|joule_node|lumen_node]
+        :identifier: master name, either username, URL, or domain name
+        :lumen_parameters: authentication credentials required for a lumen master
+
+    Example:
+        >>> todo
+
+
+.. function:: Node.master_list() -> List[Master]
+
+   Retrieve a list of masters that can control this node as :class:`joule.api.Master` objects.
+
+   Example:
+       >>> todo
+
+.. function:: Node.master_removet(master: Union[Master, str])
+
+   Remove the specified master, revokes API access priveleges
+
+Follower Actions
+''''''''''''''''
+
+
+.. function:: Node.follower_list() -> List[BaseNode]
+
+   Retrieve a list of nodes that can be controlled by this node as :class:`joule.api.BaseNode` objects.
+
+   Example:
+       >>> todo
+
+.. function:: Node.follower_remove(follower: Union[BaseNode, str])
+
+   Remove the specified follower, does not invalidate the associated API key
+
+
 
 
 Models

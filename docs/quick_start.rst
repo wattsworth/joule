@@ -17,9 +17,13 @@ make sure Joule is installed and the jouled service is running:
   $> joule --version
   joule, version 0.9
 
+  # authorize local user access to joule server
+  $> sudo joule admin authorize
+  Access to node [node1.joule] granted to user [xxxxxx]
+
   # confirm the local joule server is running
-  $> joule info
-  Server Version: 0.9
+  $> joule node info
+  Server Version: 0.9.x
   Status: online
 
   </div>
@@ -293,6 +297,17 @@ Next Steps
 
 For more details on modules and streams read :ref:`using-joule` or
 visit the `Lumen Documentation`_ to start visualizing your data.
+To add the joule server to lumen use the master command shown below:
+
+
+.. raw:: html
+
+  <div class="bash-code">
+
+  # connect joule to the local lumen server
+  $> joule master add lumen localhost
+  # ...follow prompts
+  </div>
 
 .. _Lumen Documentation: /lumen/getting_started.html
 
