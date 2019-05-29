@@ -40,28 +40,28 @@ class Module:
        id (int): unique numeric ID assigned by Joule server
        name (str): module name, must be unique
        description (str): optional field
-       has_interface (bool): whether the module provides a web interface
+       is_app (bool): whether the module provides a web interface
        inputs (Dict): Mapping of ``[pipe_name] = stream_path`` for module inputs
        outputs (Dict): Mapping of ``[pipe_name] = stream_path`` for output connections
        statistics (ModuleStatistics): execution statistics, may be ``None`` depending on API call parameters
     """
 
     def __init__(self, id: int, name: str, description: str,
-                 has_interface: bool,
+                 is_app: bool,
                  inputs: Dict[str, stream.Stream],
                  outputs: Dict[str, stream.Stream],
                  statistics: ModuleStatistics = None):
         self.id = id
         self.name = name
         self.description = description
-        self.has_interface = has_interface
+        self.is_app = is_app
         self.inputs = inputs
         self.outputs = outputs
         self.statistics = statistics
 
     def __repr__(self):
-        return "<joule.api.Module id=%r name=%r description=%r has_interface=%r>" % (
-            self.id, self.name, self.description, self.has_interface)
+        return "<joule.api.Module id=%r name=%r description=%r is_app=%r>" % (
+            self.id, self.name, self.description, self.is_app)
 
 
 def from_json(json) -> Module:
@@ -77,7 +77,7 @@ def from_json(json) -> Module:
         statistics = None
 
     return Module(json['id'], json['name'], json['description'],
-                  json['has_interface'],
+                  json['is_app'],
                   inputs, outputs, statistics)
 
 

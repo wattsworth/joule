@@ -54,7 +54,7 @@ setup(
                    'nose2',
                    'testing.postgresql',
                    'requests'],
-    test_suite='nose2.collector.collector',
+    test_suite='tests',
     namespace_packages=[],
     packages=find_packages(exclude=["tests.*"]),
     include_package_data=True,

@@ -133,18 +133,18 @@ class Worker:
         return self.module.description
 
     @property
-    def has_interface(self):
-        return self.module.has_interface
+    def is_app(self):
+        return self.module.is_app
 
     @property
     def interface_socket(self):
-        if self.module.has_interface:
+        if self.module.is_app:
             return SOCKET_BASE % self.module.uuid
         return None
 
     @property
     def interface_name(self):
-        if self.module.has_interface:
+        if self.module.is_app:
             return SOCKET_BASE % self.module.uuid
         return "none"
 
@@ -406,7 +406,7 @@ class Worker:
         cmd += ["--pipes", json.dumps(json.dumps(
             {'outputs': output_args, 'inputs': input_args}))]
         # add a socket if the module has a web interface
-        if self.module.has_interface:
+        if self.module.is_app:
             cmd += ["--socket", self.interface_name]
         # API access
         cmd += ["--api-socket", API_SOCKET]

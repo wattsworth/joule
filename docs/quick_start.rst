@@ -18,8 +18,8 @@ make sure Joule is installed and the jouled service is running:
   joule, version 0.9
 
   # authorize local user access to joule server
-  $> sudo joule admin authorize
-  Access to node [node1.joule] granted to user [xxxxxx]
+  $> sudo -E joule admin authorize
+  Access to node [xxxx] granted to user [xxxx]
 
   # confirm the local joule server is running
   $> joule node info
@@ -49,7 +49,7 @@ for more details on this and other Joule modules.
 .. _Module Documentation: /modules
 
 
-Try out **random** on the command line:
+Try out **joule-random-reader** on the command line:
 
 .. raw:: html
 
@@ -67,7 +67,8 @@ Try out **random** on the command line:
 
   </div>
 
-Now let's add this module to our pipeline. We need to create a :ref:`sec-modules` file
+When a reader module is run from the command line its output stream is sent
+to standard output (the screen). Now let's add this module to our pipeline. We need to create a :ref:`sec-modules` file
 to tell Joule how to execute the module and where
 to connect its output. To do this create the following file:
 
@@ -137,6 +138,15 @@ new module is running:
     │   y    │    —    │ continuous │   auto    │
     ╘════════╧═════════╧════════════╧═══════════╛
 
+  # view live data stream
+  $> joule data subscribe /demo/random
+  1485188853650944 0.32359053067687582 0.70028608966895545
+  1485188853750944 0.72139550945715136 0.39218791387411422
+  1485188853850944 0.40728044378612194 0.26446072057019654
+  1485188853950944 0.61021957330250398 0.27359526775709841
+  # output continues, hit ctrl-c to stop
+
+
   </div>
 
 The Data Processor
@@ -195,7 +205,7 @@ both modules are running:
   │ Data Source    │              │ /demo/random   │       0 │       63172 │
   ╘════════════════╧══════════════╧════════════════╧═════════╧═════════════╛
 
-  $> joule logs "Data Processor"
+  $> joule module logs "Data Processor"
   [2018-09-12T16:00:34.298364]: ---starting module---
 
   # confirm the pipeline is producing data (check /demo/random as well)
@@ -222,11 +232,12 @@ both modules are running:
 
   </div>
 
-The User Interface
-------------------
+The Data App
+------------
 
-Now let's add a user interface to complete the pipeline. Joule provides a built-in
-visualizer module.  See the `Module Documentation`_ page for more details on this
+Finally let's add a Data App to complete our pipeline with a user interface. Joule provides a simple built-in
+module to visualize recent values and historic highs and lows of stream elements.
+See the `Module Documentation`_ page for more details on the visualizer
 and other Joule modules.
 
 Add the following file to the configuration directory to add the
@@ -241,7 +252,7 @@ module to the pipeline.
   [Main]
   exec_cmd = joule-visualizer-filter
   name = User Interface
-  has_interface = yes
+  is_app = yes
 
   [Arguments]
   title = Quick Start Data Pipeline
@@ -252,7 +263,7 @@ module to the pipeline.
 
   </div>
 
-The URL of the interface is available in the module info:
+Restart Joule and confirm that the new module is active
 
 .. raw:: html
 
@@ -279,8 +290,8 @@ The URL of the interface is available in the module info:
         User Interface
     Description:
 
-    Interface URL:
-        http://localhost:8088/interface/1/
+    This module is a Data App
+
     Inputs:
         smoothed: /demo/smoothed
         random: /demo/random
@@ -289,15 +300,14 @@ The URL of the interface is available in the module info:
 
     </div>
 
-Open a browser and navigate to the specified URL to view the interface.
 
+Viewing Data Apps
+-----------------
 
-Next Steps
-----------
-
-For more details on modules and streams read :ref:`using-joule` or
-visit the `Lumen Documentation`_ to start visualizing your data.
-To add the joule server to lumen use the master command shown below:
+Data Apps can be accessed through the Lumen webserver. First, link Joule to the
+local Lumen server using the command below. Note if the Lumen server is
+already activated you will need an authorization key to add additional Joule
+nodes. See `Lumen Documentation`_ for more details.
 
 
 .. raw:: html
@@ -305,9 +315,20 @@ To add the joule server to lumen use the master command shown below:
   <div class="bash-code">
 
   # connect joule to the local lumen server
-  $> joule master add lumen localhost
+  $> joule master add lumen 127.0.0.1
   # ...follow prompts
   </div>
+
+Now open a browser and point it to http://localhost if you are on the
+target machine or use the IP address of the machine if you want to access
+it from another device. Log in with you username and password created above.
+From the main page, expand the local Joule node and click the Data App
+to open the visualizer or select one of the stream elements to view
+data in the plotting interface.
+
+For more details on modules and streams read :ref:`using-joule` or
+visit the `Lumen Documentation`_ for details on visualizing and plotting data.
+
 
 .. _Lumen Documentation: /lumen/getting_started.html
 

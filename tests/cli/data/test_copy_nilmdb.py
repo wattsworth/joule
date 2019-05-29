@@ -27,6 +27,8 @@ class TestDataCopyWithNilmDb(FakeJouleTestCase):
         self.nilmdb_proc.start()
         ready = False
         time.sleep(0.01)
+        url = "http://localhost:%d" % port
+
         while not ready:
             for conn in psutil.net_connections():
                 if conn.laddr.port == port:
@@ -46,7 +48,8 @@ class TestDataCopyWithNilmDb(FakeJouleTestCase):
         del self.nilmdb_proc
 
     def _run_nilmdb(self, port, msgs):
-        loop = asyncio.get_event_loop()
+
+        loop = asyncio.new_event_loop()
         server = FakeNilmdb(loop)
         # create an empty stream
         server.streams['/existing/float32_3'] = FakeStream(

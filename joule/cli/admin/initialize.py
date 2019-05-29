@@ -11,7 +11,6 @@ import secrets
 @click.option("--dsn", help="PostgreSQL DSN", required=True)
 def admin_initialize(dsn):  # pragma: no cover
     import pkg_resources
-    import requests
     click.echo("1. creating joule user ", nl=False)
     proc = subprocess.run("useradd -r -G dialout joule".split(" "), stderr=subprocess.PIPE)
     if proc.returncode == 0:
@@ -55,21 +54,6 @@ def admin_initialize(dsn):  # pragma: no cover
     shutil.chown("/etc/joule/main.conf", user="root", group="joule")
     # only root can write, and only joule members can read
     os.chmod("/etc/joule/main.conf", 0o640)
-
-    # check if module_docs.json exists
-    MODULE_DOCS = "/etc/joule/module_docs.json"
-    if not os.path.isfile(MODULE_DOCS):
-        # try to get the latest copy from wattsworth.net
-        r = requests.get('http://docs.wattsworth.net/store/data.json')
-        with open(MODULE_DOCS, 'w') as f:
-            if r.status_code == 200:
-                f.write(r.text)
-            else:
-                f.write("[]")
-    # set ownership to joule user
-    shutil.chown(MODULE_DOCS, user="joule", group="joule")
-    # give everyone rw access
-    os.chmod(MODULE_DOCS, 0o666)
 
     # setup stream config directory
     _make_joule_directory("/etc/joule/stream_configs")

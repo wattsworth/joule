@@ -16,7 +16,7 @@ async def index(request):
             "id": worker.uuid,
             "name": worker.name,
             "description": worker.description,
-            "has_interface": worker.has_interface,
+            "is_app": worker.is_app,
             "inputs": {},
             "outputs": {}}
         if get_stats:
@@ -47,7 +47,7 @@ async def info(request):
         "id": worker.uuid,
         "name": worker.name,
         "description": worker.description,
-        "has_interface": worker.has_interface,
+        "is_app": worker.is_app,
         "inputs": {},
         "outputs": {},
         "statistics": (await worker.statistics()).to_json()}

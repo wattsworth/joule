@@ -100,7 +100,6 @@ async def _send_node_key(key: str,
                          local_name: str,
                          local_scheme: str,
                          cafile: str) -> str:
-    # TODO handle CA, http(s) identification, lumen auth, etc
     # if the identifier is an IP address or a domain name, turn it into a URL
     if not identifier.startswith("http"):
         url = await detect_url(identifier, 8088)
@@ -130,7 +129,7 @@ async def _send_lumen_key(key: str,
                           lumen_params: Dict) -> str:
     # if the identifier is an IP address or a domain name, turn it into a URL
     if not identifier.startswith("http"):
-        url = await detect_url(identifier)
+        url = await detect_url(identifier+"/api")
         if url is None:
             raise errors.ApiError("cannot connect to [%s] on port 80 or 443" % identifier)
     else:
@@ -185,7 +184,7 @@ async def delete(request: web.Request):
             return web.Response(text="cannot delete yourself, this would lock you out of the node", status=400)
 
         db.delete(master)
-    except ValueError:
+    except (KeyError, ValueError):
         return web.Response(text="specify name and master_type", status=400)
     except exc.NoResultFound:
         return web.Response(text="%s [%s] is not a master of node [%s]" % (str_master_type, name, node_name),

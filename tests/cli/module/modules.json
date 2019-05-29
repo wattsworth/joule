@@ -3,7 +3,7 @@
       "id":0,
       "name":"Module3",
       "description":"a filter",
-      "has_interface":false,
+      "is_app":false,
       "inputs":{
          "input1":"/folder_1/stream_1_1",
          "input2":"/folder_1/stream_1_2"
@@ -22,7 +22,7 @@
       "id":1,
       "name":"Module2",
       "description":"a reader",
-      "has_interface":true,
+      "is_app":true,
       "inputs":{
 
       },
@@ -40,7 +40,7 @@
       "id":2,
       "name":"Module1",
       "description":"a reader",
-      "has_interface":true,
+      "is_app":true,
       "inputs":{
 
       },
@@ -58,7 +58,7 @@
       "id":3,
       "name":"Module4",
       "description":"a filter",
-      "has_interface":false,
+      "is_app":false,
       "inputs":{
          "input1":"/folder_1/stream_1_1",
          "input2":"/folder_2/stream_2_1"
@@ -78,7 +78,7 @@
       "id":4,
       "name":"Filtered",
       "description":"a filter",
-      "has_interface":true,
+      "is_app":true,
       "inputs":{
          "input":"/folder_1/random"
       },
@@ -96,7 +96,7 @@
       "id":5,
       "name":"Random",
       "description":"a reader",
-      "has_interface":true,
+      "is_app":true,
       "inputs":{
 
       },

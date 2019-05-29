@@ -50,7 +50,7 @@ class TestBaseModule(helpers.AsyncTestCase):
         os.kill(os.getpid(), signal.SIGINT)
 
     # this test also checks for socket warnings if the module
-    # has routes but joule doesn't provide a socket (b/c the has_interface
+    # has routes but joule doesn't provide a socket (b/c the is_app
     # flag is false in the config)
     def test_stops_on_sigint(self):
         module = SimpleModule()
@@ -77,7 +77,7 @@ class TestBaseModule(helpers.AsyncTestCase):
             loop.close()
 
     # this test also checks for socket warnings if the module
-    # has routes but joule doesn't provide a socket (b/c the has_interface
+    # has routes but joule doesn't provide a socket (b/c the is_app
     # flag is false in the config)
     def test_cancels_execution_if_necessary(self):
         module = SimpleModule()

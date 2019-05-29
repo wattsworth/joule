@@ -27,6 +27,8 @@ async def _run(node: BaseNode, name: str):
     module = await node.module_get(name)
     # display module information
     click.echo()
+    if module.is_app:
+        click.echo("This is module is a Data App\n")
     click.echo("Name:\n\t%s" % module.name)
     if len(module.description) > 0:
         click.echo("Description:\n\t%s" % module.description)

@@ -60,7 +60,7 @@ def admin_authorize(config):
         db.add(my_master)
 
     # add the key data to nodes.json
-    if config.security.cafile != "":
+    if config.security is not None and config.security.cafile != "":
         addr = config.name
     elif config.ip_address != "0.0.0.0":
         addr = config.ip_address

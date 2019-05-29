@@ -327,8 +327,8 @@ Module Actions
 
     Example:
         >>> await node.module_list()
-        [<joule.api.Module id=0 name='plus1' description='adds 1 to the input' has_interface=False>,
-         <joule.api.Module id=1 name='counter' description='counts up by 10s' has_interface=False>]
+        [<joule.api.Module id=0 name='plus1' description='adds 1 to the input' is_app=False>,
+         <joule.api.Module id=1 name='counter' description='counts up by 10s' is_app=False>]
 
 
 .. function:: Node.module_get(module: Union[Module, str, int], statistics: bool = False) -> Module
@@ -340,7 +340,7 @@ Module Actions
 
     Example:
         >>> my_module = await node.module_get("my module")
-        <joule.api.Module id=0 name='my module' description='adds 1 to the input' has_interface=False>
+        <joule.api.Module id=0 name='my module' description='adds 1 to the input' is_app=False>
         >>> my_module.statistics
         <joule.api.ModuleStatistics pid=1460 create_time=1551805343.4 cpu_percent=5.60 memory_percent=6.23>
 

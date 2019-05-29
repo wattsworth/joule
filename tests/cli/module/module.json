@@ -1,7 +1,7 @@
 {
    "name":"ModuleName",
    "description":"the module description",
-   "has_interface": true,
+   "is_app": true,
    "id": 1,
    "inputs":{
       "my_input":"/folder_1/random"

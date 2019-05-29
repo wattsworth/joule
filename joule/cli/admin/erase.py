@@ -17,10 +17,11 @@ def abort_if_false(ctx, param, value):
 
 @click.command(name="erase")
 @click.option("-c", "--config", help="main configuration file", default="/etc/joule/main.conf")
+@click.option("-l", "--links", is_flag=True, help="delete masters and followers as well as data")
 @click.option('--yes', is_flag=True, callback=abort_if_false,
               expose_value=False,
               prompt='Are you sure you want to wipe the local node?')
-def admin_erase(config):
+def admin_erase(config, links):
     from joule.services import load_config
     from joule.errors import ConfigurationError
     # make sure joule is not running
@@ -49,15 +50,16 @@ def admin_erase(config):
         raise click.ClickException("Invalid configuration: %s" % e)
 
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(run(joule_config))
+    loop.run_until_complete(run(joule_config,links))
     loop.close()
 
 
-async def run(config):
+async def run(config, delete_links):
     from sqlalchemy import create_engine
     from sqlalchemy.orm import Session
 
     from joule.models import (Stream, Element,
+                              Master, Follower,
                               Folder, Base, TimescaleStore)
     from joule.errors import DataError
 
@@ -72,8 +74,10 @@ async def run(config):
     db.query(Element).delete()
     db.query(Stream).delete()
     db.query(Folder).delete()
+    if delete_links:
+        db.query(Master).delete()
+        db.query(Follower).delete()
     db.commit()
-
 
     if config.nilmdb_url is not None:
         click.echo("Not erasing NilmDB data")

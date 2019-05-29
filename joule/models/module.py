@@ -11,7 +11,7 @@ Configuration File:
 name = module name
 description = module description
 exec_cmd = /path/to/file
-has_interface = no
+is_app = no
 
 [Arguments]
 key = value
@@ -41,11 +41,11 @@ class Module:
 
     def __init__(self, name: str, exec_cmd: str, description: str = "",
                  log_size: int = 100,
-                 has_interface: bool = False, uuid: int = None):
+                 is_app: bool = False, uuid: int = None):
         self.name = name
         self.exec_cmd = exec_cmd
         self.description = description
-        self.has_interface = has_interface
+        self.is_app = is_app
         self.log_size = log_size
         # arg_name => value
         self.arguments: Dict[str, str] = {}
@@ -64,7 +64,7 @@ class Module:
             'name': self.name,
             'description': self.description,
             'exec_cmd': self.exec_cmd,
-            'has_interface': self.has_interface,
+            'is_app': self.is_app,
             'arguments': self.arguments,
             'inputs': dict((name, stream.id) for (name, stream) in self.inputs.items()),
             'outputs': dict((name, stream.id) for (name, stream) in self.outputs.items())
@@ -80,11 +80,11 @@ def from_config(config: configparser.ConfigParser) -> Module:
         name = validate_name(main_configs["name"])
         description = main_configs.get("description", fallback="")
         exec_cmd = main_configs["exec_cmd"]
-        has_interface = main_configs.getboolean("has_interface", fallback=False)
+        is_app = main_configs.getboolean("is_app", fallback=False)
     except KeyError as e:
         raise ConfigurationError("[Main] missing %s" % e.args[0]) from e
     my_module = Module(name=name, description=description, exec_cmd=exec_cmd,
-                       has_interface=has_interface)
+                       is_app=is_app)
     # parse the arguments
     if 'Arguments' in config:
         for name, value in config['Arguments'].items():

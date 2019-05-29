@@ -141,10 +141,10 @@ class MockStore(DataStore):
 
 
 class MockWorker:
-    def __init__(self, name, inputs, outputs, uuid=1, has_interface=False, socket=None):
+    def __init__(self, name, inputs, outputs, uuid=1, is_app=False, socket=None):
         self.name = name
         self.description = "description for %s" % name
-        self.has_interface = has_interface
+        self.is_app = is_app
         self.uuid = uuid
         self.interface_socket = socket
         self.input_connections = []

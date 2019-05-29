@@ -56,7 +56,7 @@ class TestWorker(unittest.TestCase):
 
         self.module = Module(name="module", exec_cmd="/bin/true",
                              description="test module",
-                             has_interface=False, uuid=123)
+                             is_app=False, uuid=123)
         self.module.inputs = {"input1": streams[0], "input2": streams[1]}
         self.module.outputs = {"output1": streams[2], "output2": streams[3]}
         self.module.log_size = LOG_SIZE
@@ -95,14 +95,14 @@ class TestWorker(unittest.TestCase):
         self.assertEqual(self.worker.uuid, self.module.uuid)
         self.assertEqual(self.worker.name, self.module.name)
         self.assertEqual(self.worker.description, self.module.description)
-        self.assertEqual(self.worker.has_interface, self.module.has_interface)
+        self.assertEqual(self.worker.is_app, self.module.is_app)
         connection = DataConnection("stub", 0, self.streams[0], pipes.Pipe())
         self.assertEqual(connection.location, "/mock/path")
 
     def test_generates_socket_name(self):
         self.assertIsNone(self.worker.interface_socket)
         self.assertEqual(self.worker.interface_name, "none")
-        self.module.has_interface = True
+        self.module.is_app = True
         socket = self.worker.interface_socket
         name = self.worker.interface_name
         self.assertIn(str(self.module.uuid), socket)
@@ -224,7 +224,7 @@ class TestWorker(unittest.TestCase):
         self.module.exec_cmd = "python3 " + MODULE_ECHO_ARGS
         self.module.arguments = {'arg1': "value1",
                                  'arg2': "value2"}
-        self.module.has_interface = True
+        self.module.is_app = True
         self.worker.log = Mock()
         loop.run_until_complete(self.worker.run(self.supervisor.subscribe,
                                                 loop, restart=False))

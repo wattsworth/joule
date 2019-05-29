@@ -62,7 +62,10 @@ class FakeJoule:
                 web.get('/module.json', self.stub_get),
                 web.get('/module/logs.json', self.stub_get),
                 web.put('/folder/move.json', self.move_folder),
-                web.delete('/folder.json', self.delete_folder)
+                web.delete('/folder.json', self.delete_folder),
+                web.get('/masters.json', self.stub_get),
+                web.post('/master.json', self.create_master),
+                web.delete('/master.json', self.delete_master)
             ])
         self.stub_stream_info = False
         self.stub_stream_move = False
@@ -74,6 +77,8 @@ class FakeJoule:
         self.stub_folder_move = False
         self.stub_folder_destroy = False
         self.stub_data_intervals = False
+        self.stub_master = False
+        self.first_lumen_user = True
         self.response = ""
         self.http_code = 200
         self.streams: Dict[str, MockDbEntry] = {}
@@ -256,6 +261,33 @@ class FakeJoule:
         # so we can check that the message was received
         self.msgs.put((path, destination))
         return web.json_response(data={"stub": "value"})
+
+    async def create_master(self, request: web.Request):
+        if self.stub_master:
+            return web.Response(text=self.response, status=self.http_code)
+        body = await request.json()
+        if body["master_type"] == "user":
+            self.msgs.put(body)
+            return web.json_response({"key": "fakekey", "name": body["identifier"]})
+        if body["master_type"] == "joule":
+            self.msgs.put(body)
+            return web.json_response({"name": body["identifier"]})
+        if body["master_type"] == "lumen":
+            if len(body["lumen_params"]) == 0:
+                if self.first_lumen_user:
+                    self.first_lumen_user = False
+                    return web.Response(text="first_name")
+                else:
+                    return web.Response(text="auth_key", status=400)
+            lumen_params = body["lumen_params"]
+            self.msgs.put(lumen_params)
+            return web.json_response({"name": body["identifier"]})
+
+    async def delete_master(self, request: web.Request):
+        if self.stub_master:
+            return web.Response(text=self.response, status=self.http_code)
+        self.msgs.put(request.query['name'])
+        return web.Response(text="ok")
 
     def _find_entry(self, params):
         if 'id' in params:

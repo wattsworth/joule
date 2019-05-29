@@ -54,7 +54,7 @@ Module Configuration
     name = module name
     exec_cmd = /path/to/executable
     #optional
-    has_interface = no
+    is_app = no
     description = a short description
 
     # Specify command line arguments
@@ -84,7 +84,7 @@ Only the **[Main]** section is required, other sections should be included as ne
 **[Main]**
   * ``exec_cmd`` -- path to module executable, may include command line arguments
   * ``name`` -- module name
-  * ``has_interface`` -- **[yes|no]** whether the module provides a web interface
+  * ``is_app`` -- **[yes|no]** whether the module provides a web interface
   * ``description`` -- optional module description
 
 **[Arguments]**

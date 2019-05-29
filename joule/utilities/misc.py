@@ -39,7 +39,6 @@ async def detect_url(host, port: Optional[int] = None):
                 pass
             return "https://" + host
         except ClientError as e:
-            raise e
             # try again over http
             try:
                 async with session.get("http://" + host) as resp:

@@ -1,6 +1,5 @@
 from click.testing import CliRunner
 import os
-from aiohttp.test_utils import unused_port
 import warnings
 from tests.cli.fake_joule import FakeJoule, FakeJouleTestCase
 from joule.cli import main

@@ -12,7 +12,7 @@ class TestModule(unittest.TestCase):
                  name = test
                  description = long text
                  exec_cmd = /bin/runit.sh
-                 has_interface = yes
+                 is_app = yes
                [Arguments]
                  arg1 = val1
                  arg2 = val2
@@ -25,18 +25,18 @@ class TestModule(unittest.TestCase):
         self.assertEqual(m.name, "test")
         self.assertEqual(m.description, "long text")
         self.assertEqual(m.exec_cmd, "/bin/runit.sh")
-        self.assertEqual(m.has_interface, True)
+        self.assertEqual(m.is_app, True)
         self.assertEqual(len(m.arguments), 2)  # default value
         self.assertEqual(m.arguments["arg1"], "val1")
         self.assertEqual(m.arguments["arg2"], "val2")
 
     def test_uses_default_values(self):
         self.config.remove_section("Arguments")
-        self.config.remove_option("Main", "has_interface")
+        self.config.remove_option("Main", "is_app")
         self.config.remove_option("Main", "description")
         m = module.from_config(self.config)
         self.assertEqual(m.description, "")
-        self.assertEqual(m.has_interface, False)
+        self.assertEqual(m.is_app, False)
         self.assertEqual(len(m.arguments), 0)
 
     def test_requires_name_setting(self):
