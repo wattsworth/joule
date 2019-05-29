@@ -34,7 +34,7 @@ def intervals(config: Config, start, end, stream: str):
         traceback.print_exc()
     finally:
         loop.run_until_complete(
-            config.node.close())
+            config.close_node())
         loop.close()
 
 

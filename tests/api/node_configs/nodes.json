@@ -1,0 +1,17 @@
+[
+  {
+    "name": "node1.joule",
+    "url": "https://node1.joule:8088",
+    "key": "node1key"
+  },
+  {
+    "name": "node2.joule",
+    "url": "https://node2.joule:8088",
+    "key": "node2key"
+  },
+  {
+    "name": "node3.joule",
+    "url": "https://node3.joule:8088",
+    "key": "node3key"
+  }
+]

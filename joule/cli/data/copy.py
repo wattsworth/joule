@@ -33,7 +33,7 @@ def data_copy(config, start, end, destination_node, source_url, source, destinat
         raise click.ClickException(str(e)) from e
     finally:
         loop.run_until_complete(
-            config.node.close())
+            config.close_node())
         loop.close()
 
 

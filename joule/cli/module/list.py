@@ -12,6 +12,7 @@ from joule.cli.config import pass_config
 @pass_config
 def cli_list(config, statistics):
     loop = asyncio.get_event_loop()
+
     try:
         loop.run_until_complete(
             _run(config.node, statistics))
@@ -19,7 +20,7 @@ def cli_list(config, statistics):
         raise click.ClickException(str(e)) from e
     finally:
         loop.run_until_complete(
-            config.node.close())
+            config.close_node())
         loop.close()
 
 

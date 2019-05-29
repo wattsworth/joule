@@ -18,7 +18,7 @@ def move(config: Config, source: str, destination: str):
         raise click.ClickException(str(e)) from e
     finally:
         loop.run_until_complete(
-            config.node.close())
+            config.close_node())
         loop.close()
     click.echo("OK")
 
@@ -37,7 +37,7 @@ def delete(config, folder, recursive):
         raise click.ClickException(str(e))
     finally:
         loop.run_until_complete(
-            config.node.close())
+            config.close_node())
         loop.close()
 
 

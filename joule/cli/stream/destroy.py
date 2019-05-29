@@ -24,6 +24,6 @@ def cli_delete(config, stream):
         raise click.ClickException(str(e))
     finally:
         loop.run_until_complete(
-            config.node.close())
+            config.close_node())
         loop.close()
 

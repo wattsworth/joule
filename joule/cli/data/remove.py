@@ -41,6 +41,6 @@ def data_remove(config, start, end, all, stream):
         traceback.print_exc()
     finally:
         loop.run_until_complete(
-            config.node.close())
+            config.close_node())
         loop.close()
     click.echo("OK")

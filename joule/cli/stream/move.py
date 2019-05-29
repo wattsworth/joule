@@ -19,6 +19,6 @@ def cli_move(config: Config, source, destination):
         raise click.ClickException(str(e)) from e
     finally:
         loop.run_until_complete(
-            config.node.close())
+            config.close_node())
         loop.close()
     click.echo("OK")

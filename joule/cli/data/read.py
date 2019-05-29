@@ -74,7 +74,7 @@ def cmd(config, start, end, live, max_rows, show_bounds, mark_intervals, stream)
         raise click.ClickException(str(e)) from e
     finally:
         loop.run_until_complete(
-            config.node.close())
+            config.close_node())
         loop.close()
 
 

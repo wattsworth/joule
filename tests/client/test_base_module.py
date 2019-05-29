@@ -7,6 +7,7 @@ import time
 import threading
 import tempfile
 from aiohttp import web
+import unittest
 from unittest import mock
 
 from joule.client import BaseModule
@@ -56,7 +57,7 @@ class TestBaseModule(helpers.AsyncTestCase):
         module = SimpleModule()
         # generate a warning for the socket
         args = argparse.Namespace(socket='none', pipes='unset',
-                                  api_socket='unset', node="",
+                                  api_socket='dummval', node="",
                                   url="http://localhost:8088",
                                   stop_on_request=True)
         # fire sigint
@@ -84,7 +85,7 @@ class TestBaseModule(helpers.AsyncTestCase):
         module.STOP_TIMEOUT = 0.1
         args = argparse.Namespace(socket='none',
                                   pipes='unset',
-                                  api_socket='unset', node="",
+                                  api_socket='dummyval', node="",
                                   url="http://localhost:8088",
                                   stop_on_request=False)
         # fire sigint
@@ -103,6 +104,10 @@ class TestBaseModule(helpers.AsyncTestCase):
         self.assertFalse(module.completed)
         if not loop.is_closed():
             loop.close()
+
+    @unittest.skip("TODO")
+    def test_creates_node_object(self):
+        pass
 
     # builds network pipes if pipe arg is 'unset'
     def test_builds_network_pipes(self):
@@ -140,8 +145,10 @@ class TestBaseModule(helpers.AsyncTestCase):
                     output2 = /test/output2:float32[x,y,z]
                     """))
                 f.flush()
+                # set api_socket to dummyval to prevent module from requesting
+                # the node from the user configs which is not present here
                 args = argparse.Namespace(socket='none', pipes='unset',
-                                          api_socket='unset', node="",
+                                          api_socket='dummyval', node="",
                                           start_time='1 hour ago', end_time=None, force=True,
                                           module_config=f.name, url='http://localhost:8088')
                 module.start(args)

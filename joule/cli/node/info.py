@@ -17,7 +17,7 @@ def node_info(config):
 
     finally:
         loop.run_until_complete(
-            config.node.close())
+            config.close_node())
         loop.close()
 
 
