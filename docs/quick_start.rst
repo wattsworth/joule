@@ -77,7 +77,7 @@ to connect its output. To do this create the following file:
 
   <div class="config-file">
 
-  : /etc/joule/module_configs/my_reader.conf
+  : /etc/joule/module_configs/data_source.conf
 
   [Main]
   exec_cmd = joule-random-reader
@@ -166,7 +166,7 @@ the module to the pipeline create the following file:
 
     <div class="config-file">
 
-    : /etc/joule/module_configs/demo_filter.conf
+    : /etc/joule/module_configs/data_processor.conf
 
     [Main]
     exec_cmd = joule-mean-filter
@@ -247,11 +247,11 @@ module to the pipeline.
 
   <div class="config-file">
 
-  : /etc/joule/module_configs/user_interface.conf
+  : /etc/joule/module_configs/data_app.conf
 
   [Main]
   exec_cmd = joule-visualizer-filter
-  name = User Interface
+  name = Data App
   is_app = yes
 
   [Arguments]
@@ -278,26 +278,31 @@ Restart Joule and confirm that the new module is active
     ╞════════════════╪════════════════╪════════════════╪═════════╪═════════════╡
     │ Data Processor │ /demo/random   │ /demo/smoothed │       2 │       63924 │
     ├────────────────┼────────────────┼────────────────┼─────────┼─────────────┤
-    │ User Interface │ /demo/smoothed │                │       0 │       64548 │
+    │ Data App       │ /demo/smoothed │                │       0 │       64548 │
     │                │ /demo/random   │                │         │             │
     ├────────────────┼────────────────┼────────────────┼─────────┼─────────────┤
     │ Data Source    │                │ /demo/random   │       0 │       62748 │
     ╘════════════════╧════════════════╧════════════════╧═════════╧═════════════╛
 
     # check the module info to find the interface URL
-    $> joule module info "User Interface"
+    $> joule module info "Data App"
+    --connecting to [joule_node]--
+
+    This is module is a Data App
+
     Name:
-        User Interface
-    Description:
-
-    This module is a Data App
-
+        Data App
     Inputs:
         smoothed: /demo/smoothed
         random: /demo/random
     Outputs:
         --none--
-
+    CPU Usage:
+        0.00%
+    Memory Usage:
+        3.95%
+    Uptime:
+        0:18:25.660176
     </div>
 
 
@@ -316,12 +321,12 @@ nodes. See `Lumen Documentation`_ for more details.
 
   # connect joule to the local lumen server
   $> joule master add lumen 127.0.0.1
-  # ...follow prompts
+  # ...follow prompts to create a user account
   </div>
 
-Now open a browser and point it to http://localhost if you are on the
+Now open a browser and point it to http://127.0.0.1 if you are on the
 target machine or use the IP address of the machine if you want to access
-it from another device. Log in with you username and password created above.
+it from another device. Log in with the user credentials you just added.
 From the main page, expand the local Joule node and click the Data App
 to open the visualizer or select one of the stream elements to view
 data in the plotting interface.
