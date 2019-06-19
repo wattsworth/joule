@@ -105,7 +105,7 @@ new module is running:
   $> sudo service joule restart
 
   # check pipeline status using the joule CLI
-  $> joule module list
+  $> joule module list -s
   ╒═════════════╤══════════╤══════════════╤═════════╤═════════════╕
   │ Name        │ Inputs   │ Outputs      │   CPU % │   Mem (KiB) │
   ╞═════════════╪══════════╪══════════════╪═════════╪═════════════╡

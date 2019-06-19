@@ -9,7 +9,10 @@ from joule.utilities.misc import detect_url
 from joule import errors
 
 
-async def add(request: web.Request):
+# NOTE: This controller is best tested with e2e
+# ignored for unittests
+
+async def add(request: web.Request):  # pragma: no cover
     """
     Contact specified node and add self as a follower
     """
@@ -99,7 +102,7 @@ async def _send_node_key(key: str,
                          local_port: int,
                          local_name: str,
                          local_scheme: str,
-                         cafile: str) -> str:
+                         cafile: str) -> str:  # pragma: no cover
     # if the identifier is an IP address or a domain name, turn it into a URL
     if not identifier.startswith("http"):
         url = await detect_url(identifier, 8088)
@@ -126,10 +129,10 @@ async def _send_lumen_key(key: str,
                           local_name: str,
                           local_scheme: str,
                           cafile: str,
-                          lumen_params: Dict) -> str:
+                          lumen_params: Dict) -> str:  # pragma: no cover
     # if the identifier is an IP address or a domain name, turn it into a URL
     if not identifier.startswith("http"):
-        url = await detect_url(identifier+"/api")
+        url = await detect_url(identifier + "/api")
         if url is None:
             raise errors.ApiError("cannot connect to [%s] on port 80 or 443" % identifier)
     else:
