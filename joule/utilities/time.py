@@ -1,6 +1,7 @@
 import datetime
 import dateparser
 
+
 # --------- Utility functions from Jim Paris ------------
 
 
@@ -39,13 +40,21 @@ def human_to_timestamp(time: str) -> int:
     time = dateparser.parse(time)
     if time is None:
         raise ValueError
-    return int(time.timestamp()*1e6)
+    return int(time.timestamp() * 1e6)
 
 
 def unix_to_timestamp(unix):
     """Convert a Unix timestamp (floating point seconds since epoch)
     into a NILM timestamp (integer microseconds since epoch)"""
     return int(round(unix * 1e6))
+
+
+def timestamp_to_datetime(timestamp: int):
+    return datetime.datetime.utcfromtimestamp(timestamp / 1e6)
+
+
+def datetime_to_timestamp(date: datetime):
+    return int(date.replace(tzinfo=datetime.timezone.utc).timestamp() * 1e6)
 
 
 seconds_to_timestamp = unix_to_timestamp

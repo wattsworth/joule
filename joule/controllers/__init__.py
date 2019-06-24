@@ -8,7 +8,8 @@ from joule.controllers import (
     interface_controller,
     proxy_controller,
     master_controller,
-    follower_controller)
+    follower_controller,
+    annotation_controller)
 
 routes = [
     web.get('/', root_controller.index),
@@ -51,8 +52,13 @@ routes = [
     # -- follower routes --
     web.get('/followers.json', follower_controller.index),
     web.post('/follower.json', follower_controller.add),
-    web.delete('/follower.json', follower_controller.delete)
-    # TODO: routes for stream tags /streams/tags
+    web.delete('/follower.json', follower_controller.delete),
+    # -- annotation routes --
+    web.get('/annotations.json', annotation_controller.index),
+    web.get('/annotation.json', annotation_controller.get),
+    web.put('/annotation.json', annotation_controller.update),
+    web.post('/annotation.json', annotation_controller.create),
+    web.delete('/annotation.json', annotation_controller.delete),
 ]
 
 insecure_routes = [

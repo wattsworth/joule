@@ -11,7 +11,7 @@ from operator import attrgetter
 from joule.models.meta import Base
 from joule.errors import ConfigurationError
 from joule.models.data_store.data_store import StreamInfo
-from joule.models import element
+from joule.models import element, annotation
 
 if TYPE_CHECKING:
     from joule.models import (Folder)  # pragma: no cover
@@ -65,6 +65,9 @@ class Stream(Base):
     elements: List[element.Element] = relationship("Element",
                                                    cascade="all, delete-orphan",
                                                    back_populates="stream")
+    annotations: List[annotation.Annotation] = relationship("Annotation",
+                                                            cascade="all, delete-orphan",
+                                                            back_populates="stream")
 
     def merge_configs(self, other: 'Stream') -> None:
         # replace configurable attributes with other's values

@@ -108,7 +108,7 @@ class Decimator:
         self.path_created = False
         self.child: Decimator = None
         self.debug = debug
-        if(self.debug):
+        if self.debug:
             print("creating decim level %d" % self.level)
         # hold off to rate limit traffic
         self.holdoff = 0  # random.random()
