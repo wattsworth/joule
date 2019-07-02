@@ -1,7 +1,6 @@
 from aiohttp import web
 from sqlalchemy.orm import Session
 from joule.models import Stream, DataStore, stream
-import json
 
 from joule.models import folder, Folder
 from joule.errors import ConfigurationError

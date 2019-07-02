@@ -34,7 +34,8 @@ class Annotation(Base):
             'id': self.id,
             'title': self.title,
             'content': self.content,
-            'start': int(self.start.replace(tzinfo=datetime.timezone.utc).timestamp() * 1e6)
+            'start': int(self.start.replace(tzinfo=datetime.timezone.utc).timestamp() * 1e6),
+            'stream_id': self.stream_id
         }
         if self.end is not None:
             json['end'] = int(self.end.replace(tzinfo=datetime.timezone.utc).timestamp() * 1e6)
@@ -55,11 +56,11 @@ def from_json(json):
         if 'start' in json:
             ts = float(json['start'])
             my_annotation.start = datetime.datetime.utcfromtimestamp(ts / 1e6)
-        if 'end' in json:
+        if 'end' in json and json['end'] is not None:
             ts = float(json['end'])
             my_annotation.end = datetime.datetime.utcfromtimestamp(ts / 1e6)
         if 'content' in json:
             my_annotation.content = json['content']
-    except (ValueError, KeyError):
+    except (ValueError, KeyError, TypeError):
         raise ApiError("Invalid values for annotation")
     return my_annotation

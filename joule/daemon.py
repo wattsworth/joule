@@ -81,7 +81,7 @@ class Daemon(object):
                 TimescaleStore(self.config.database, self.config.insert_period,
                                self.config.cleanup_period, loop)
 
-        engine = create_engine(self.config.database)
+        engine = create_engine(self.config.database, echo=False)
         self.engine = engine  # keep for erasing database if needed
         with engine.connect() as conn:
             conn.execute('CREATE SCHEMA IF NOT EXISTS data')
@@ -106,7 +106,7 @@ class Daemon(object):
         if self.config.security is not None:
             self.ssl_context = ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
             self.ssl_context.load_cert_chain(certfile=self.config.security.certfile,
-                                               keyfile=self.config.security.keyfile)
+                                             keyfile=self.config.security.keyfile)
             if self.config.security.cafile != "":
                 # publish the cafile location to the environment for modules to use
                 os.environ["JOULE_CA_FILE"] = self.config.security.cafile
@@ -154,7 +154,8 @@ class Daemon(object):
 
         # start the API server
         middlewares = [joule.middleware.authorize(
-            exemptions=joule.controllers.insecure_routes)]
+            exemptions=joule.controllers.insecure_routes),
+            joule.middleware.sql_rollback]
         app = web.Application(middlewares=middlewares)
 
         app['supervisor'] = self.supervisor

@@ -26,7 +26,8 @@ from joule.api.stream import (Stream,
                               stream_move,
                               stream_delete,
                               stream_create,
-                              stream_info)
+                              stream_info,
+                              stream_annotation_delete)
 
 from joule.api.data import (data_write,
                             data_read,
@@ -42,6 +43,12 @@ from joule.api.master import (master_add,
                               master_delete,
                               master_list,
                               Master)
+
+from joule.api.annotation import (annotation_create,
+                                  annotation_delete,
+                                  annotation_update,
+                                  annotation_get,
+                                  Annotation)
 
 from joule.models.pipes import Pipe
 
@@ -114,6 +121,12 @@ class BaseNode:
     async def stream_info(self,
                           stream: Union[Stream, str, int]) -> StreamInfo:
         return await stream_info(self.session, stream)
+
+    async def stream_annotation_delete(self,
+                                       stream: Union[Stream, str, int],
+                                       start: Optional[int],
+                                       end: Optional[int]):
+        return await stream_annotation_delete(self.session, stream, start, end)
 
     # Data actions
 
@@ -191,3 +204,23 @@ class BaseNode:
             name = node
         data = {"name": name}
         await self.session.delete("/follower.json", params=data)
+
+    # Annotation actions
+    async def annotation_get(self, stream: Union[int, str, Stream],
+                             start: Optional[int] = None,
+                             end: Optional[int] = None) -> List[Annotation]:
+        return await annotation_get(self.session, stream, start, end)
+
+    async def annotation_create(self,
+                                annotation: Annotation,
+                                stream: Union[int, str, Stream], ) -> Annotation:
+        return await annotation_create(self.session,
+                                       annotation, stream)
+
+    async def annotation_delete(self,
+                                annotation: Union[int, Annotation]):
+        return await annotation_delete(self.session, annotation)
+
+    async def annotation_update(self,
+                                annotation: Annotation):
+        return await annotation_update(self.session, annotation)

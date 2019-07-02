@@ -16,7 +16,7 @@ class Config:
         # lazy node construction, raise error if it cannot be created
         if self._node is None:
             self._node = api.get_node(self.name)
-            click.echo("--connecting to [%s]--" % self._node.name)
+            click.echo("--connecting to [%s]--" % self._node.name, err=True)
             self.name = self._node.name
         return self._node
 

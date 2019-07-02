@@ -23,13 +23,13 @@ class TestFolderApi(asynctest.TestCase):
         await self.node.folder_move(1, 2)
         self.assertEqual(self.session.method, 'PUT')
         self.assertEqual(self.session.path, "/folder/move.json")
-        self.assertEqual(self.session.data,
+        self.assertEqual(self.session.request_data,
                          {'src_id': 1, 'dest_id': 2})
         # can move by path
         await self.node.folder_move('/a/path', '/b/path')
         self.assertEqual(self.session.method, 'PUT')
         self.assertEqual(self.session.path, "/folder/move.json")
-        self.assertEqual(self.session.data,
+        self.assertEqual(self.session.request_data,
                          {'src_path': '/a/path', 'dest_path': '/b/path'})
 
         # can move by Folder
@@ -39,7 +39,7 @@ class TestFolderApi(asynctest.TestCase):
         dest.id = 2
         await self.node.folder_move(src, dest)
         self.assertEqual(self.session.path, "/folder/move.json")
-        self.assertEqual(self.session.data,
+        self.assertEqual(self.session.request_data,
                          {'src_id': 1, 'dest_id': 2})
 
     async def test_folder_move_errors(self):
@@ -57,12 +57,12 @@ class TestFolderApi(asynctest.TestCase):
         await self.node.folder_delete(1, recursive=False)
         self.assertEqual(self.session.method, 'DELETE')
         self.assertEqual(self.session.path, "/folder.json")
-        self.assertEqual(self.session.data, {'id': 1, 'recursive': 0})
+        self.assertEqual(self.session.request_data, {'id': 1, 'recursive': 0})
         # can delete by path
         await self.node.folder_delete('/a/path', recursive=True)
         self.assertEqual(self.session.method, 'DELETE')
         self.assertEqual(self.session.path, "/folder.json")
-        self.assertEqual(self.session.data, {'path': '/a/path', 'recursive': 1})
+        self.assertEqual(self.session.request_data, {'path': '/a/path', 'recursive': 1})
 
         # can delete by Folder
         src = Folder()
@@ -70,7 +70,7 @@ class TestFolderApi(asynctest.TestCase):
         await self.node.folder_delete(src, recursive=False)
         self.assertEqual(self.session.method, 'DELETE')
         self.assertEqual(self.session.path, "/folder.json")
-        self.assertEqual(self.session.data, {'id': 1, 'recursive': 0})
+        self.assertEqual(self.session.request_data, {'id': 1, 'recursive': 0})
 
     async def test_folder_delete_errors(self):
         self.session.method = None
@@ -80,24 +80,24 @@ class TestFolderApi(asynctest.TestCase):
 
     async def test_folder_get(self):
         target = build_folder(3)
-        self.session.response = target.to_json()
+        self.session.response_data = target.to_json()
         folder = await self.node.folder_get(1)
         self.assertEqual(folder.to_json(), target.to_json())
         self.assertEqual(self.session.method, 'GET')
         self.assertEqual(self.session.path, "/folder.json")
-        self.assertEqual(self.session.data, {'id': 1})
+        self.assertEqual(self.session.request_data, {'id': 1})
         # can get by path
         await self.node.folder_get('/a/path')
         self.assertEqual(self.session.method, 'GET')
         self.assertEqual(self.session.path, "/folder.json")
-        self.assertEqual(self.session.data, {'path': '/a/path'})
+        self.assertEqual(self.session.request_data, {'path': '/a/path'})
 
         # can get by Folder
         src = Folder()
         src.id = 1
         await self.node.folder_get(src)
         self.assertEqual(self.session.path, "/folder.json")
-        self.assertEqual(self.session.data, {'id': 1})
+        self.assertEqual(self.session.request_data, {'id': 1})
 
     async def test_folder_get_errors(self):
         self.session.method = None

@@ -1,5 +1,4 @@
 from tests.api import mock_session
-import random
 import asynctest
 
 from joule.api.node import TcpNode
@@ -23,13 +22,13 @@ class TestStreamApi(asynctest.TestCase):
         await self.node.stream_move(1, 2)
         self.assertEqual(self.session.method, 'PUT')
         self.assertEqual(self.session.path, "/stream/move.json")
-        self.assertEqual(self.session.data,
+        self.assertEqual(self.session.request_data,
                          {'src_id': 1, 'dest_id': 2})
         # can move by path
         await self.node.stream_move('/a/path', '/b/path')
         self.assertEqual(self.session.method, 'PUT')
         self.assertEqual(self.session.path, "/stream/move.json")
-        self.assertEqual(self.session.data,
+        self.assertEqual(self.session.request_data,
                          {'src_path': '/a/path', 'dest_path': '/b/path'})
 
         # can move by Folder and Stream
@@ -39,7 +38,7 @@ class TestStreamApi(asynctest.TestCase):
         dest.id = 2
         await self.node.stream_move(src, dest)
         self.assertEqual(self.session.path, "/stream/move.json")
-        self.assertEqual(self.session.data,
+        self.assertEqual(self.session.request_data,
                          {'src_id': 1, 'dest_id': 2})
 
     async def test_stream_move_errors(self):
@@ -57,12 +56,12 @@ class TestStreamApi(asynctest.TestCase):
         await self.node.stream_delete(1)
         self.assertEqual(self.session.method, 'DELETE')
         self.assertEqual(self.session.path, "/stream.json")
-        self.assertEqual(self.session.data, {'id': 1})
+        self.assertEqual(self.session.request_data, {'id': 1})
         # can delete by path
         await self.node.stream_delete('/a/path')
         self.assertEqual(self.session.method, 'DELETE')
         self.assertEqual(self.session.path, "/stream.json")
-        self.assertEqual(self.session.data, {'path': '/a/path'})
+        self.assertEqual(self.session.request_data, {'path': '/a/path'})
 
         # can delete by Stream
         src = Stream()
@@ -70,7 +69,7 @@ class TestStreamApi(asynctest.TestCase):
         await self.node.stream_delete(src)
         self.assertEqual(self.session.method, 'DELETE')
         self.assertEqual(self.session.path, "/stream.json")
-        self.assertEqual(self.session.data, {'id': 1})
+        self.assertEqual(self.session.request_data, {'id': 1})
 
     async def test_stream_delete_errors(self):
         self.session.method = None
@@ -81,24 +80,24 @@ class TestStreamApi(asynctest.TestCase):
     async def test_stream_get(self):
         target = build_stream('test', 'int8[a,b]')
         target.id = 1
-        self.session.response = target.to_json()
+        self.session.response_data = target.to_json()
         stream = await self.node.stream_get(1)
         self.assertEqual(stream.to_json(), target.to_json())
         self.assertEqual(self.session.method, 'GET')
         self.assertEqual(self.session.path, "/stream.json")
-        self.assertEqual(self.session.data, {'id': 1})
+        self.assertEqual(self.session.request_data, {'id': 1})
         # can get by path
         await self.node.stream_get('/a/path')
         self.assertEqual(self.session.method, 'GET')
         self.assertEqual(self.session.path, "/stream.json")
-        self.assertEqual(self.session.data, {'path': '/a/path'})
+        self.assertEqual(self.session.request_data, {'path': '/a/path'})
 
         # can get by Stream
         src = Stream()
         src.id = 1
         await self.node.stream_get(src)
         self.assertEqual(self.session.path, "/stream.json")
-        self.assertEqual(self.session.data, {'id': 1})
+        self.assertEqual(self.session.request_data, {'id': 1})
 
     async def test_stream_get_errors(self):
         self.session.method = None

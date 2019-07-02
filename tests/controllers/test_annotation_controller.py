@@ -42,34 +42,30 @@ class TestAnnotationController(AioHTTPTestCase):
         resp = await self.client.request("GET", "/annotations.json",
                                          params=[("stream_id", self.stream1.id),
                                                  ("stream_id", self.stream2.id)])
-        values = await resp.json()
-        stream1_annotations = values[str(self.stream1.id)]
-        stream2_annotations = values[str(self.stream2.id)]
-        self.assertEqual(len(stream1_annotations), 5)
-        self.assertEqual(len(stream2_annotations), 5)
-        for annotation in stream1_annotations:
-            self.assertIn("stream1", annotation["title"])
-            self.assertIsNone(annotation["end"])
-        for annotation in stream2_annotations:
-            self.assertIn("stream2", annotation["title"])
-            self.assertEqual(annotation["end"] - annotation["start"], 200)
-
+        annotations_json = await resp.json()
+        self.assertEqual(len(annotations_json), 10)
+        for annotation in annotations_json:
+            if "stream1" in annotation["title"]:
+                self.assertIsNone(annotation["end"])
+            elif "stream2" in annotation["title"]:
+                self.assertEqual(annotation["end"] - annotation["start"], 200)
+            else:
+                self.fail("invalid stream title")
         # 2.) retrieve a time bounded list
         resp = await self.client.request("GET", "/annotations.json",
                                          params={"stream_id": self.stream1.id,
                                                  "start": 500,
                                                  "end": 3500})
-        values = await resp.json()
-        stream1_annotations = values[str(self.stream1.id)]
+        annotations_json = await resp.json()
         # expect 1000, 2000, 3000 start timestamps
-        self.assertEqual(len(stream1_annotations), 3)
-        for annotation in stream1_annotations:
+        self.assertEqual(len(annotations_json), 3)
+        for annotation in annotations_json:
             self.assertIn("stream1", annotation["title"])
             self.assertGreater(annotation["start"], 500)
             self.assertLess(annotation["start"], 3500)
 
     @unittest_run_loop
-    async def test_annotation_create(self):
+    async def test_annotation_create_by_stream_id(self):
         annotation_json = {
             "title": "new_annotation",
             "content": "content",
@@ -77,8 +73,8 @@ class TestAnnotationController(AioHTTPTestCase):
             "end": 1000,
             "stream_id": self.stream1.id
         }
-        resp: aiohttp.ClientResponse = await self.client.request("POST", "/annotation.json",
-                                                                 json=annotation_json)
+        resp = await self.client.request("POST", "/annotation.json",
+                                         json=annotation_json)
         values = await resp.json()
         new_id = values["id"]
         # make sure it was added
@@ -88,3 +84,67 @@ class TestAnnotationController(AioHTTPTestCase):
         self.assertEqual(new_annotation.start, utilities.timestamp_to_datetime(900))
         self.assertEqual(new_annotation.end, utilities.timestamp_to_datetime(1000))
 
+    @unittest_run_loop
+    async def test_annotation_create_by_stream_path(self):
+        annotation_json = {
+            "title": "new_annotation",
+            "content": "content",
+            "start": 900,
+            "end": 1000,
+            "stream_path": "/top/leaf/stream1"
+        }
+        resp = await self.client.request("POST", "/annotation.json",
+                                         json=annotation_json)
+        values = await resp.json()
+        new_id = values["id"]
+        # make sure it was added
+        new_annotation = self.db.query(Annotation).get(new_id)
+        self.assertEqual(new_annotation.title, "new_annotation")
+        self.assertEqual(new_annotation.stream_id, self.stream1.id)
+        self.assertEqual(new_annotation.start, utilities.timestamp_to_datetime(900))
+        self.assertEqual(new_annotation.end, utilities.timestamp_to_datetime(1000))
+
+    @unittest_run_loop
+    async def test_annotation_edit(self):
+        old_annotation = self.db.query(Annotation).filter_by(stream_id=self.stream1.id).first()
+        annotation_json = {
+            "title": "updated",
+            "content": "this is updated too",
+            "start": utilities.datetime_to_timestamp(old_annotation.start) + 100,  # should not update
+            "end": 1000,  # should not update
+            "id": old_annotation.id
+        }
+        resp = await self.client.request("PUT", "/annotation.json",
+                                         json=annotation_json)
+        self.assertEqual(resp.status, 200)
+        new_annotation = self.db.query(Annotation).get(old_annotation.id)
+        self.assertEqual(new_annotation.title, "updated")
+        self.assertEqual(new_annotation.content, "this is updated too")
+        self.assertEqual(new_annotation.start, old_annotation.start)
+        self.assertEqual(new_annotation.end, old_annotation.end)
+
+    @unittest_run_loop
+    async def test_annotation_delete(self):
+        old_annotation = self.db.query(Annotation).filter_by(stream_id=self.stream1.id).first()
+
+        resp = await self.client.request("DELETE", "/annotation.json",
+                                         params={"id": old_annotation.id})
+        self.assertEqual(resp.status, 200)
+        self.assertIsNone(self.db.query(Annotation).filter_by(id=old_annotation.id).one_or_none())
+
+    @unittest_run_loop
+    async def test_annotation_delete_cascade(self):
+        # make sure annotation are deleted when streams are deleted
+        for stream in self.db.query(Stream).all():
+            self.db.delete(stream)
+        self.db.commit()
+        self.assertEqual(0, self.db.query(Annotation).count())
+
+    @unittest_run_loop
+    async def test_annotation_delete_all(self):
+        resp = await self.client.request("DELETE", "/stream/annotations.json",
+                                         params={"stream_id": self.stream1.id})
+        self.assertEqual(resp.status, 200)
+        self.assertEqual(0, self.db.query(Annotation).
+                         filter_by(stream_id=self.stream1.id).
+                         count())

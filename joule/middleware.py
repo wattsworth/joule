@@ -1,6 +1,10 @@
-from aiohttp.web import middleware, HTTPForbidden
+from aiohttp.web import middleware, HTTPForbidden, HTTPBadRequest
 from sqlalchemy.orm import Session
+import logging
+from sqlalchemy.exc import SQLAlchemyError
 from joule.models import Master
+
+log = logging.getLogger('joule')
 
 
 def authorize(exemptions=None):
@@ -30,3 +34,14 @@ def authorize(exemptions=None):
         return await handler(request)
 
     return _authorize
+
+
+@middleware
+async def sql_rollback(request, handler):
+    db: Session = request.app["db"]
+    try:
+        return await handler(request)
+    except SQLAlchemyError as e:
+        log.warning("Invalid HTTP request: %s", e)
+        db.rollback()
+        raise HTTPBadRequest

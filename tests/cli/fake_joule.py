@@ -16,7 +16,7 @@ import tempfile
 
 from tests import helpers
 from joule.models import Stream, StreamInfo, pipes, stream, master
-
+from joule.api import annotation
 
 # from https://github.com/aio-libs/aiohttp/blob/master/examples/fake_server.py
 
@@ -65,7 +65,12 @@ class FakeJoule:
                 web.delete('/folder.json', self.delete_folder),
                 web.get('/masters.json', self.stub_get),
                 web.post('/master.json', self.create_master),
-                web.delete('/master.json', self.delete_master)
+                web.delete('/master.json', self.delete_master),
+                web.get('/annotations.json', self.stub_get),
+                web.put('/annotation.json', self.update_annotation),
+                web.post('/annotation.json', self.create_annotation),
+                web.delete('/annotation.json', self.delete_annotation),
+                web.delete('/stream/annotation.json', self.delete_all_annotations)
             ])
         self.stub_stream_info = False
         self.stub_stream_move = False
@@ -78,6 +83,7 @@ class FakeJoule:
         self.stub_folder_destroy = False
         self.stub_data_intervals = False
         self.stub_master = False
+        self.stub_annotation = False
         self.first_lumen_user = True
         self.response = ""
         self.http_code = 200
@@ -288,6 +294,40 @@ class FakeJoule:
             return web.Response(text=self.response, status=self.http_code)
         self.msgs.put(request.query['name'])
         return web.Response(text="ok")
+
+    async def update_annotation(self, request: web.Request):
+        if self.stub_annotation:
+            return web.Response(text=self.response, status=self.http_code)
+        body = await request.json()
+        title = body['title']
+        content = body['content']
+        # so we can check that the message was received
+        self.msgs.put((title, content))
+        return web.json_response(data={"stub": "value"})
+
+    async def create_annotation(self, request: web.Request):
+        if self.stub_annotation:
+            return web.Response(text=self.response, status=self.http_code)
+        body = await request.json()
+        body["id"] = 1
+        # so we can check that the message was received
+        self.msgs.put((annotation.from_json(body)))
+        return web.json_response(data=body)
+
+    async def delete_annotation(self, request: web.Request):
+        if self.stub_annotation:
+            return web.Response(text=self.response, status=self.http_code)
+
+        self.msgs.put(request.query['id'])
+        return web.json_response(text="ok")
+
+    async def delete_all_annotations(self, request: web.Request):
+        if self.stub_annotation:
+            return web.Response(text=self.response, status=self.http_code)
+
+        self.msgs.put(dict(request.query))
+        return web.Response(text="ok")
+
 
     def _find_entry(self, params):
         if 'id' in params:

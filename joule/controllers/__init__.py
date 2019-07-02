@@ -55,10 +55,10 @@ routes = [
     web.delete('/follower.json', follower_controller.delete),
     # -- annotation routes --
     web.get('/annotations.json', annotation_controller.index),
-    web.get('/annotation.json', annotation_controller.get),
     web.put('/annotation.json', annotation_controller.update),
     web.post('/annotation.json', annotation_controller.create),
     web.delete('/annotation.json', annotation_controller.delete),
+    web.delete('/stream/annotations.json', annotation_controller.delete_all)
 ]
 
 insecure_routes = [

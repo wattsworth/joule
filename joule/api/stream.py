@@ -2,6 +2,9 @@ from typing import Optional, Union, Dict, List
 
 from .session import BaseSession
 from .folder_type import Folder
+from .annotation import Annotation
+from .annotation import from_json as annotation_from_json
+
 from joule import errors
 
 
@@ -309,3 +312,25 @@ async def stream_move(session: BaseSession,
     else:
         raise errors.ApiError("Invalid destination datatype. Must be Folder, Path, or ID")
     await session.put("/stream/move.json", data)
+
+
+async def stream_annotation_delete(session: BaseSession,
+                                   stream: Union[Stream, str, int],
+                                   start: Optional[int],
+                                   end: Optional[int]):
+    data = {}
+    if start is not None:
+        data["start"] = start
+    if end is not None:
+        data["end"] = end
+
+    if type(stream) is Stream:
+        data["stream_id"] = stream.id
+    elif type(stream) is int:
+        data["stream_id"] = stream
+    elif type(stream) is str:
+        data["stream_path"] = stream
+    else:
+        raise errors.ApiError("Invalid source datatype. Must be Stream, Path, or ID")
+
+    await session.delete("/stream/annotation.json", params=data)
