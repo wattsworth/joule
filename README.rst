@@ -1,5 +1,5 @@
 .. image:: https://coveralls.io/repos/github/wattsworth/joule/badge.svg?branch=master
-:target: https://coveralls.io/github/wattsworth/joule?branch=master
+  :target: https://coveralls.io/github/wattsworth/joule?branch=master
 
 Joule
 ========
