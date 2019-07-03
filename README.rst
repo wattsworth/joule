@@ -1,3 +1,5 @@
+[![Coverage Status](https://coveralls.io/repos/github/wattsworth/joule/badge.svg?branch=master)](https://coveralls.io/github/wattsworth/joule?branch=master)
+
 Joule
 ========
 
@@ -13,7 +15,8 @@ boot and are restarted if they fail. Joule also collects runtime
 statistics and logs for each module making it easy to detect
 bugs and find bottlenecks in processing pipelines.
 
-See http://wattsworth.net/joule for full documentation
+See https://wattsworth.net/joule for full documentation. To get started see:
+https://wattsworth.net/joule/quick_start.html
 
 Streams
 -------
@@ -70,6 +73,13 @@ Joule requires Python 3.6 or later. Install Joule by running:
 
   $> python3 setup.py install
 
+To run the Joule daemon, first configure your system with:
+
+  $> sudo joule admin initialize
+
+Then control the daemon as a system service:
+
+  $> sudo systemctl [enable|disable|start|stop|status] joule
 
 
 

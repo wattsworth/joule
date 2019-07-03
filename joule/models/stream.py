@@ -228,16 +228,10 @@ def from_json(data: Dict) -> Stream:
         elements.append(element.from_json(item))
         index += 1
 
-    datatype_name = data["datatype"].upper()
-    try:
-        datatype = Stream.DATATYPE[datatype_name]
-    except KeyError:
-        raise KeyError("invalid datatype")
-
     return Stream(id=data["id"],
-                  name=data["name"],
+                  name=validate_name(data["name"]),
                   description=data["description"],
-                  datatype=datatype,
+                  datatype=validate_datatype(data["datatype"].upper()),
                   keep_us=data["keep_us"],
                   decimate=data["decimate"],
                   is_configured=data["is_configured"],

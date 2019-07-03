@@ -38,7 +38,7 @@ async def index(request):
         for path in request.query.getall("stream_path"):
             stream = folder.find_stream_by_path(path, db)
             if stream is None:
-                return web.Response(text="invalid stream_path %s" % path, status=400)
+                return web.Response(text="stream [%s] does not exist" % path, status=404)
             stream_ids.append(stream.id)
 
     for stream_id in stream_ids:
@@ -134,7 +134,7 @@ async def delete_all(request):
         return web.Response(text="[start] and [end] must be microsecond utc timestamps", status=400)
 
     if my_stream is None:
-        return web.Response(text="invalid stream %s", status=400)
+        return web.Response(text="stream does not exist", status=404)
 
     annotations = db.query(Annotation).filter_by(stream_id=my_stream.id)
 

@@ -102,16 +102,13 @@ async def create(request):
         new_stream.id = None
         for elem in new_stream.elements:
             elem.id = None
-        # make sure name is not empty
-        if len(new_stream.name) == 0:
-            raise KeyError("name")
         # make sure name is unique in this destination
         existing_names = [s.name for s in destination.streams]
         if new_stream.name in existing_names:
             raise ConfigurationError("stream with the same name exists in the folder")
         destination.streams.append(new_stream)
         db.commit()
-    except ValueError as e:
+    except (TypeError, ValueError) as e:
         db.rollback()
         return web.Response(text="Invalid stream JSON: %r" % e, status=400)
     except ConfigurationError as e:

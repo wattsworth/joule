@@ -71,6 +71,17 @@ class TestStreamController(AioHTTPTestCase):
         self.assertEqual(folder3.parent.name, "new")
         # check the source
         self.assertEqual(len(folder1.streams), 0)
+        # move stream1 back to folder1
+        payload = {
+            "src_path": "/new/folder3/stream1",
+            "dest_id": folder1.id
+        }
+        resp = await self.client.put("/stream/move.json", json=payload)
+        self.assertEqual(resp.status, 200)
+        # check the destination
+        self.assertEqual(folder1.streams[0].name, "stream1")
+        # check the source
+        self.assertEqual(len(folder3.streams), 0)
 
     @unittest_run_loop
     async def test_stream_create(self):
@@ -89,6 +100,21 @@ class TestStreamController(AioHTTPTestCase):
         created_stream: Stream = db.query(Stream).filter_by(name="test").one()
         self.assertEqual(len(created_stream.elements), len(new_stream.elements))
         self.assertEqual(created_stream.folder.name, "new folder")
+
+        # can create by dest_id as well
+        folder1: Folder = db.query(Folder).filter_by(name="folder1").one()
+        new_stream.name = "test2"
+        payload = {
+            "dest_id": folder1.id,
+            "stream": new_stream.to_json()
+        }
+        resp = await self.client.post("/stream.json", json=payload)
+
+        self.assertEqual(resp.status, 200)
+        # check the stream was created correctly
+        created_stream: Stream = db.query(Stream).filter_by(name="test2").one()
+        self.assertEqual(len(created_stream.elements), len(new_stream.elements))
+        self.assertEqual(created_stream.folder.name, "folder1")
 
     @unittest_run_loop
     async def test_stream_delete_by_path(self):

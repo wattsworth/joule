@@ -120,10 +120,10 @@ class Element(Base):
 def from_json(data: Dict) -> Element:
     return Element(id=data["id"],
                    index=data["index"],
-                   name=data["name"],
+                   name=validate_name(data["name"]),
                    units=data["units"],
                    plottable=data["plottable"],
-                   display_type=Element.DISPLAYTYPE[data["display_type"].upper()],
+                   display_type=validate_type(data["display_type"].upper()),
                    offset=data["offset"],
                    scale_factor=data["scale_factor"],
                    default_max=data["default_max"],

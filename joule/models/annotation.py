@@ -53,14 +53,13 @@ class Annotation(Base):
 def from_json(json):
     try:
         my_annotation = Annotation(title=json['title'])
-        if 'start' in json:
-            ts = float(json['start'])
-            my_annotation.start = datetime.datetime.utcfromtimestamp(ts / 1e6)
+        ts = float(json['start'])
+        my_annotation.start = datetime.datetime.utcfromtimestamp(ts / 1e6)
         if 'end' in json and json['end'] is not None:
             ts = float(json['end'])
             my_annotation.end = datetime.datetime.utcfromtimestamp(ts / 1e6)
         if 'content' in json:
             my_annotation.content = json['content']
     except (ValueError, KeyError, TypeError):
-        raise ApiError("Invalid values for annotation")
+        raise ApiError("invalid values for annotation")
     return my_annotation

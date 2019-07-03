@@ -18,13 +18,32 @@ class TestFolderControllerErrors(AioHTTPTestCase):
         app = web.Application()
         app.add_routes(joule.controllers.routes)
         app["db"], app["psql"] = create_db(["/top/leaf/stream1:float32[x, y, z]",
+                                            "/top/same_name/stream3:float32[x, y, z]",
                                             "/top/middle/leaf/stream2:int8[val1, val2]"])
         app["data-store"] = MockStore()
         return app
 
     @unittest_run_loop
+    async def test_folder_info(self):
+        # must specify an id or path
+        resp = await self.client.get("/folder.json", params={})
+        self.assertEqual(resp.status, 400)
+        self.assertIn("specify an id or path", await resp.text())
+
+        # folder must exist
+        resp = await self.client.get("/folder.json", params={"id": 2343})
+        self.assertEqual(resp.status, 404)
+        self.assertIn("does not exist", await resp.text())
+
+    @unittest_run_loop
     async def test_folder_move(self):
         db: Session = self.app["db"]
+
+        # must be a json request
+        resp = await self.client.put("/folder/move.json", data={"dest_path": "/new/location"})
+        self.assertEqual(resp.status, 400)
+        self.assertIn("json", await resp.text())
+
         # must specify an id or a path
         resp = await self.client.put("/folder/move.json", json={"dest_path": "/new/location"})
         self.assertEqual(resp.status, 400)
@@ -82,11 +101,24 @@ class TestFolderControllerErrors(AioHTTPTestCase):
         self.assertEqual(resp.status, 400)
         self.assertTrue('recursive' in await resp.text())
         self.assertIsNotNone(db.query(Folder).get(f.id))
+        # cannot delete locked folders
+        my_folder = folder.find("/top/middle", db)
+        my_folder.children[0].streams[0].is_configured = True
+        resp = await self.client.delete("/folder.json", params={"path": "/top/middle"})
+        self.assertEqual(resp.status, 400)
+        self.assertIn("locked", await resp.text())
+
 
     @unittest_run_loop
     async def test_folder_update(self):
         db: Session = self.app["db"]
         my_folder = folder.find("/top/middle", db)
+
+        # must be a json request
+        resp = await self.client.put("/folder.json", data={"bad": "notjson"})
+        self.assertEqual(resp.status, 400)
+        self.assertIn("json", await resp.text())
+
         # invalid name, nothing should be saved
         payload = {
             "id": my_folder.id,
@@ -134,6 +166,7 @@ class TestFolderControllerErrors(AioHTTPTestCase):
         resp = await self.client.put("/folder.json", json=payload)
         self.assertEqual(resp.status, 400)
         self.assertTrue('locked' in await resp.text())
+        my_folder.children[0].streams[0].is_configured = False
 
         # folder must exist
         payload = {
@@ -143,3 +176,16 @@ class TestFolderControllerErrors(AioHTTPTestCase):
         resp = await self.client.put("/folder.json", json=payload)
         self.assertEqual(resp.status, 404)
         self.assertTrue('exist' in await resp.text())
+
+        # folder name cannot conflict with a peer
+        payload = {
+            "id": my_folder.id,
+            "folder":
+                {"name": "same_name",
+                 "description": "new description"}
+        }
+        resp = await self.client.put("/folder.json", json=payload)
+        self.assertEqual(resp.status, 400)
+        self.assertIn('folder with this name', await resp.text())
+        my_folder = folder.find("/top/middle", db)
+        self.assertEqual("middle", my_folder.name)

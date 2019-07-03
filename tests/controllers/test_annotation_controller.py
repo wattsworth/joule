@@ -1,6 +1,5 @@
 from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 from aiohttp import web
-import aiohttp
 
 import joule.controllers
 from tests.controllers.helpers import create_db
@@ -42,9 +41,9 @@ class TestAnnotationController(AioHTTPTestCase):
         resp = await self.client.request("GET", "/annotations.json",
                                          params=[("stream_id", self.stream1.id),
                                                  ("stream_id", self.stream2.id)])
-        annotations_json = await resp.json()
-        self.assertEqual(len(annotations_json), 10)
-        for annotation in annotations_json:
+        all_annotations_json = await resp.json()
+        self.assertEqual(len(all_annotations_json), 10)
+        for annotation in all_annotations_json:
             if "stream1" in annotation["title"]:
                 self.assertIsNone(annotation["end"])
             elif "stream2" in annotation["title"]:
@@ -63,6 +62,13 @@ class TestAnnotationController(AioHTTPTestCase):
             self.assertIn("stream1", annotation["title"])
             self.assertGreater(annotation["start"], 500)
             self.assertLess(annotation["start"], 3500)
+
+        # 3.) retrieve annotation by path
+        resp = await self.client.request("GET", "/annotations.json",
+                                         params=[("stream_id", self.stream1.id),
+                                                 ("stream_path", "/top/middle/leaf/stream2")])
+        annotations_json = await resp.json()
+        self.assertEqual(annotations_json, all_annotations_json)
 
     @unittest_run_loop
     async def test_annotation_create_by_stream_id(self):
@@ -142,9 +148,39 @@ class TestAnnotationController(AioHTTPTestCase):
 
     @unittest_run_loop
     async def test_annotation_delete_all(self):
+        # delete a time range
+        self.assertEqual(5, self.db.query(Annotation).
+                         filter_by(stream_id=self.stream1.id).
+                         count())
+        resp = await self.client.request("DELETE", "/stream/annotations.json",
+                                         params={"stream_id": self.stream1.id,
+                                                 "start": 500,
+                                                 "end": 3500})
+        # expect 1000, 2000, 3000 to be deleted, just 2 left (0 and 4000)
+        self.assertEqual(resp.status, 200)
+        self.assertEqual(2, self.db.query(Annotation).
+                         filter_by(stream_id=self.stream1.id).
+                         count())
+        annotations = self.db.query(Annotation).filter_by(stream_id=self.stream1.id).all()
+        for a in annotations:
+            ts = utilities.datetime_to_timestamp(a.start)
+            if (ts > 500) and (ts < 3500):
+                self.fail("this annotation should be deleted")
+
+        # delete by stream_id
         resp = await self.client.request("DELETE", "/stream/annotations.json",
                                          params={"stream_id": self.stream1.id})
         self.assertEqual(resp.status, 200)
         self.assertEqual(0, self.db.query(Annotation).
                          filter_by(stream_id=self.stream1.id).
+                         count())
+        # delete by path
+        self.assertEqual(5, self.db.query(Annotation).
+                         filter_by(stream_id=self.stream2.id).
+                         count())
+        resp = await self.client.request("DELETE", "/stream/annotations.json",
+                                         params={"stream_path": "/top/middle/leaf/stream2"})
+        self.assertEqual(resp.status, 200)
+        self.assertEqual(0, self.db.query(Annotation).
+                         filter_by(stream_id=self.stream2.id).
                          count())

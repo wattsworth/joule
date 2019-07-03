@@ -12,7 +12,8 @@ async def index(request: web.Request):
     return web.json_response([f.to_json() for f in followers])
 
 
-async def add(request: web.Request):
+# Note: this is covered with e2e tests
+async def add(request: web.Request):  # pragma: no cover
     """
     Called by a Joule node to allow *this* node to control it
     Parameters:

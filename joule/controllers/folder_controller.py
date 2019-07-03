@@ -15,7 +15,7 @@ async def info(request: web.Request):
     elif 'id' in request.query:
         my_folder = db.query(Folder).get(request.query["id"])
     else:
-        return web.Response(text="specify an id or a path", status=400)
+        return web.Response(text="specify an id or path", status=400)
     if my_folder is None:
         return web.Response(text="folder does not exist", status=404)
     return web.json_response(my_folder.to_json())
@@ -125,7 +125,7 @@ async def delete(request):
         return web.Response(text="specify [recursive] or remove child folders first", status=400)
 
     for stream in my_folder.streams:
-        if stream.locked:
+        if stream.locked:  # pragma: no cover
             # shouldn't ever get here because of the check above, but just in case
             return web.Response(text="cannot delete folder with locked streams", status=400)
         await data_store.destroy(stream)
@@ -141,7 +141,7 @@ async def _recursive_delete(folders: List[Folder], db: Session, data_store: Data
         return
     for f in folders:
         for stream in f.streams:
-            if stream.locked:
+            if stream.locked:  # pragma: no cover
                 # shouldn't ever get here because a locked folder shouldn't call us
                 raise ConfigurationError("cannot delete folder with locked streams")
             await data_store.destroy(stream)

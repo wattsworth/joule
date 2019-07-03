@@ -18,6 +18,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         app = web.Application()
         app.add_routes(joule.controllers.routes)
         app["db"], app["psql"] = create_db(["/folder1/stream1:float32[x, y, z]",
+                                            "/folder1/same_name:float32[x, y, z]",
                                             "/folder2/deeper/stream2:int8[val1, val2]",
                                             "/folder_x1/same_name:float32[x, y, z]",
                                             "/folder_x2/same_name:int8[val1, val2]"
@@ -42,6 +43,10 @@ class TestStreamControllerErrors(AioHTTPTestCase):
     async def test_stream_move(self):
         db: Session = self.app["db"]
 
+        # must be json
+        resp = await self.client.put("/stream/move.json", data={"dest_path": "/new/folder3"})
+        self.assertEqual(resp.status, 400)
+        self.assertIn("json", await resp.text())
         # must specify an id or a path
         resp = await self.client.put("/stream/move.json", json={"dest_path": "/new/folder3"})
         self.assertEqual(resp.status, 400)
@@ -78,8 +83,16 @@ class TestStreamControllerErrors(AioHTTPTestCase):
 
     @unittest_run_loop
     async def test_stream_create(self):
+        # must be json
+        resp = await self.client.post("/stream.json", data={"bad_values": "not_json"})
+        self.assertEqual(resp.status, 400)
+        self.assertIn("json", await resp.text())
+
         # must specify a stream
-        resp = await self.client.post("/stream.json", json={"path": "/folder2/deeper"})
+        resp = await self.client.post("/stream.json", json={"dest_path": "/folder2/deeper"})
+        self.assertEqual(resp.status, 400)
+        # invalid dest_path
+        resp = await self.client.post("/stream.json", json={"dest_path": "notapath"})
         self.assertEqual(resp.status, 400)
         # must specify a path
         new_stream = Stream(name="test", datatype=Stream.DATATYPE.FLOAT32)
@@ -87,10 +100,50 @@ class TestStreamControllerErrors(AioHTTPTestCase):
                                        display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(3)]
         resp = await self.client.post("/stream.json", json={"stream": new_stream.to_json()})
         self.assertEqual(resp.status, 400)
-        # invalid stream json
-        resp = await self.client.post("/stream.json", json={"path": "/path/to",
+        # stream must have a unique name in the folder
+        new_stream.name = "stream1"
+        resp = await self.client.post("/stream.json", json={"stream": new_stream.to_json(),
+                                                            "dest_path": "/folder1"})
+        self.assertEqual(resp.status, 400)
+        self.assertIn("same name", await resp.text())
+        # invalid dest_path
+        resp = await self.client.post("/stream.json", json={"stream": new_stream.to_json(),
+                                                            "dest_path": "notapath"})
+        self.assertEqual(resp.status, 400)
+        # stream must have a name
+        new_stream.name = ""
+        resp = await self.client.post("/stream.json", json={"stream": new_stream.to_json(),
+                                                            "dest_path": "/a/valid/path"})
+        self.assertEqual(resp.status, 400)
+        self.assertIn("name", await resp.text())
+        new_stream.name = "test"
+        # stream must have at least one element
+        new_stream.elements = []
+        resp = await self.client.post("/stream.json", json={"stream": new_stream.to_json(),
+                                                            "dest_path": "/a/valid/path"})
+        self.assertEqual(resp.status, 400)
+        self.assertIn("element", await resp.text())
+
+        # invalid stream json (test all different exception paths)
+        resp = await self.client.post("/stream.json", json={"dest_path": "/path/to",
                                                             "stream": 'notjson'})
         self.assertEqual(resp.status, 400)
+        self.assertIn("JSON", await resp.text())
+
+        json = new_stream.to_json()
+        json["datatype"] = "invalid"
+        resp = await self.client.post("/stream.json", json={"dest_path": "/path/to",
+                                                            "stream": json})
+        self.assertEqual(resp.status, 400)
+        self.assertIn("specification", await resp.text())
+        self.assertIn("datatype", await resp.text())
+
+        del json["datatype"]
+        resp = await self.client.post("/stream.json", json={"dest_path": "/path/to",
+                                                            "stream": json})
+        self.assertEqual(resp.status, 400)
+        self.assertIn("datatype", await resp.text())
+
         # incorrect stream format
         resp = await self.client.post("/stream.json", json={"path": "/path/to",
                                                             "stream": '{"invalid": 2}'})
@@ -120,6 +173,12 @@ class TestStreamControllerErrors(AioHTTPTestCase):
     async def test_stream_update(self):
         db: Session = self.app["db"]
         my_stream: Stream = db.query(Stream).filter_by(name="stream1").one()
+
+        # must be json
+        resp = await self.client.put("/stream.json", data={"bad_values": "not_json"})
+        self.assertEqual(resp.status, 400)
+        self.assertIn("json", await resp.text())
+
         # invalid element display_type, nothing should be saved
         payload = {
             "id": my_stream.id,
@@ -182,3 +241,13 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         resp = await self.client.put("/stream.json", json=payload)
         self.assertEqual(resp.status, 404)
         self.assertTrue('exist' in await resp.text())
+
+        # stream name must be unique in the folder
+        my_stream.is_configured = False  # unlock
+        payload = {
+            "id": my_stream.id,
+            "stream": {"name": "same_name"}
+        }
+        resp = await self.client.put("/stream.json", json=payload)
+        self.assertEqual(resp.status, 400)
+        self.assertIn('same name', await resp.text())

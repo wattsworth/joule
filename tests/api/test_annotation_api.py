@@ -75,6 +75,40 @@ class TestAnnotationApi(asynctest.TestCase):
         await self.node.annotation_update(annotation)
         self.assertEqual(self.session.request_data["id"], 1)
 
+    async def test_annotation_get(self):
+        json = [{
+            "id": 1,
+            "stream_id": 1,
+            "title": "note",
+            "start": 100,
+            "end": None,
+            "content": "nothing special"}]
+
+        # get by stream id
+        self.session.response_data = json
+        await self.node.annotation_get(1)
+        req_data = self.session.request_data
+        self.assertEqual(req_data["stream_id"], 1)
+
+        # get by stream object
+        stream = Stream(name="test")
+        stream.id = 100
+        await self.node.annotation_get(stream)
+        req_data = self.session.request_data
+        self.assertEqual(req_data["stream_id"], 100)
+
+        # get by stream path
+        await self.node.annotation_get("/stream/path")
+        req_data = self.session.request_data
+        self.assertEqual(req_data["stream_path"], "/stream/path")
+
+        # error otherwise
+        with self.assertRaises(errors.ApiError):
+            await self.node.annotation_get({})
+
+
+
+
 
 
 
