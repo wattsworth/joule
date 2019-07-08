@@ -27,10 +27,11 @@ class NilmdbStore(DataStore):
         self.decimation_factor = 4
         self.insert_period = insert_period
         self.cleanup_period = cleanup_period
-        self.connector = aiohttp.TCPConnector(loop=loop)
         self.loop = loop
+        self.connector = None
 
     async def initialize(self, streams: List[Stream]) -> None:
+        self.connector = aiohttp.TCPConnector(loop=self.loop)
         url = "{server}/stream/create".format(server=self.server)
         try:
             async with self._get_client() as session:
