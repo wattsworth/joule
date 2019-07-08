@@ -8,6 +8,7 @@ from ..fake_joule import FakeJoule, FakeJouleTestCase
 from joule.cli import main
 from joule.models import Stream, Element, StreamInfo, pipes
 from tests import helpers
+import time
 
 warnings.simplefilter('always')
 log = logging.getLogger('aiohttp.access')
@@ -31,6 +32,9 @@ class TestDataCopy(FakeJouleTestCase):
         result = runner.invoke(main, ['data', 'copy', '/test/source', '/test/destination'])
         _print_result_on_error(result)
         self.assertEqual(result.exit_code, 0)
+        while self.msgs.empty():
+            time.sleep(0.1)
+            print("waiting...")
         mock_entry = self.msgs.get()
         np.testing.assert_array_equal(src_data, mock_entry.data)
         # self.assertEqual(len(mock_entry.intervals), 3)
@@ -77,6 +81,9 @@ class TestDataCopy(FakeJouleTestCase):
         result = runner.invoke(main, ['data', 'copy', '/test/source', '/test/destination'])
         _print_result_on_error(result)
         self.assertEqual(result.exit_code, 0)
+        while self.msgs.empty():
+            time.sleep(0.1)
+            print("waiting...")
         mock_entry = self.msgs.get()
         np.testing.assert_array_equal(src_data, mock_entry.data)
         self.stop_server()

@@ -25,6 +25,7 @@ class TestNilmdbStore(asynctest.TestCase):
         # use a 0 insert period for test execution
         self.store = NilmdbStore(url, 0, 60, self.loop)
 
+
         # make a couple example streams
         # stream1 int8_3
         self.stream1 = Stream(id=1, name="stream1", datatype=Stream.DATATYPE.INT8,
@@ -41,6 +42,7 @@ class TestNilmdbStore(asynctest.TestCase):
     async def test_initialize(self):
 
         await self.store.initialize([self.stream1, self.stream2])
+        await self.store.close()
         # can initialize streams multiple times
         await self.store.initialize([self.stream1])
 
@@ -57,6 +59,7 @@ class TestNilmdbStore(asynctest.TestCase):
 
         with self.assertRaises(DataError) as e:
             await self.store.initialize([self.stream1, self.stream2])
+        await self.store.close()
         # when nilmdb server is not available
         self.store.server = 'http://localhost:%d' % unused_port()
         with self.assertRaises(DataError):
@@ -88,6 +91,7 @@ class TestNilmdbStore(asynctest.TestCase):
         self.assertTrue('overlaps' in str(e.exception))
 
     async def test_extract(self):
+        await self.store.initialize([])
         # initialize nilmdb state
         nrows = 1000
         self.fake_nilmdb.streams['/joule/1'] = FakeStream(
@@ -172,6 +176,7 @@ class TestNilmdbStore(asynctest.TestCase):
                                      callback=callback, decimation_level=5)
 
     async def test_extract_empty_data(self):
+        await self.store.initialize([])
         # initialize nilmdb state
         self.fake_nilmdb.streams['/joule/1'] = FakeStream(
             layout=self.stream1.layout, start=100, end=1000, rows=0)
@@ -192,6 +197,7 @@ class TestNilmdbStore(asynctest.TestCase):
         await self.store.extract(self.stream1, start=100, end=1000, callback=callback)
 
     async def test_extract_errors(self):
+        await self.store.initialize([])
         # initialize nilmdb state
         nrows = 1000
         self.fake_nilmdb.streams['/joule/1'] = FakeStream(
@@ -214,6 +220,7 @@ class TestNilmdbStore(asynctest.TestCase):
         self.assertTrue('empty' in str(e.exception))
 
     async def test_intervals(self):
+        await self.store.initialize([])
         intervals = [[1, 2], [2, 3], [3, 4]]
         self.fake_nilmdb.streams['/joule/1'] = FakeStream(
             layout=self.stream1.layout, start=100, end=1000,
@@ -247,6 +254,7 @@ class TestNilmdbStore(asynctest.TestCase):
                                        end=None)
 
     async def test_remove(self):
+        await self.store.initialize([])
         # initialize nilmdb state
         self.fake_nilmdb.streams['/joule/1'] = FakeStream(
             layout=self.stream1.layout, start=1, end=100, rows=100)
@@ -266,6 +274,7 @@ class TestNilmdbStore(asynctest.TestCase):
             self.assertTrue(call["path"] in paths)
 
     async def test_info(self):
+        await self.store.initialize([])
         with open(STREAM_LIST, 'r') as f:
             self.fake_nilmdb.stream_list_response = f.read()
         streams = [helpers.create_stream('S%d' % x, 'float32_3', id=x) for x in range(8)]
@@ -288,6 +297,7 @@ class TestNilmdbStore(asynctest.TestCase):
         self.assertEqual(s2_info.total_time, 100)
 
     async def test_bytes_per_row(self):
+        await self.store.initialize([])
         examples = [['float32_8', 40],
                     ['uint8_1', 9],
                     ['int16_20', 48],
@@ -301,12 +311,14 @@ class TestNilmdbStore(asynctest.TestCase):
             self.assertTrue(layout in str(e.exception))
 
     async def test_dbinfo(self):
+        await self.store.initialize([])
         dbinfo = await self.store.dbinfo()
         # constants in fake_nilmdb
         self.assertEqual(dbinfo.path, '/opt/data')
         self.assertEqual(dbinfo.free, 178200829952)
 
     async def test_destroy(self):
+        await self.store.initialize([])
         # initialize nilmdb state
         self.fake_nilmdb.streams['/joule/1'] = FakeStream(
             layout=self.stream1.layout, start=1, end=100, rows=100)

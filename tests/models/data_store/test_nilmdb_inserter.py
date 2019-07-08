@@ -21,7 +21,7 @@ class TestNilmdbInserter(asynctest.TestCase):
         url = await self.fake_nilmdb.start()
         # use a 0 insert period for test execution
         self.store = NilmdbStore(url, 0, 60, self.loop)
-
+        await self.store.initialize([])
         # make a couple example streams
         # stream1 int8_3
         self.stream1 = Stream(id=1, name="stream1", datatype=Stream.DATATYPE.INT8,

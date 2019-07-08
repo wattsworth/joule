@@ -289,7 +289,8 @@ class NilmdbStore(DataStore):
                                      loop=self.loop, connector_owner=False)
 
     async def close(self):
-        await self.connector.close()
+        if self.connector is not None:
+            await self.connector.close()
 
 
 def bytes_per_row(layout: str) -> int:
