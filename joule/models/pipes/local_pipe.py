@@ -24,7 +24,7 @@ class LocalPipe(Pipe):
     """
 
     def __init__(self, layout: str, loop: Loop = None, name: str = None,
-                 close_cb = None, debug: bool = False, stream=None):
+                 close_cb = None, debug: bool = False, stream=None, write_limit=0):
 
         super().__init__(name=name, layout=layout, stream=stream)
         if loop is None:
@@ -37,7 +37,7 @@ class LocalPipe(Pipe):
         self.read_buffer = np.empty((0,), dtype=self.dtype)
         self.close_cb = close_cb
         # initialize buffer and queue
-        self.queue = asyncio.Queue(loop=loop)
+        self.queue = asyncio.Queue(loop=loop, maxsize=write_limit)
         self.queued_rows = 0
         self.last_index = 0
         self.direction = Pipe.DIRECTION.TWOWAY
@@ -150,7 +150,12 @@ class LocalPipe(Pipe):
         for pipe in self.subscribers:
             await pipe.write(sarray)
 
-        self.queue.put_nowait(sarray)
+        # if the queue size is infinite do not wait
+        if self.queue.maxsize <= 0:
+            self.queue.put_nowait(sarray)
+        else:
+            # wait until a slot is available
+            await self.queue.put(sarray)
         self.queued_rows += len(sarray)
         if self.debug:
             print("[%s:write] queueing block with [%d] rows" % (self.name, len(sarray)))

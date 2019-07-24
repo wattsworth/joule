@@ -1,0 +1,2 @@
+restore_command = 'cp {{ wal_path }}/%f "%p"'
+archive_cleanup_command = 'pg_archivecleanup {{ wal_path }} %r'

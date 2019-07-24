@@ -15,7 +15,7 @@ WIDTH = 3
 class TestFileReader(helpers.AsyncTestCase):
 
     def test_reads_timestamped_values(self):
-        data = helpers.create_data("float32_8")
+        data = helpers.create_data("float32_8", length=3)
         (data_file, path) = tempfile.mkstemp()
         with open(data_file, 'w') as f:
             for row in data:
@@ -33,7 +33,7 @@ class TestFileReader(helpers.AsyncTestCase):
         os.remove(path)
 
     def test_timestamps_raw_values(self):
-        data = helpers.create_data("float32_8")
+        data = helpers.create_data("float32_8", length=3)
         (data_file, path) = tempfile.mkstemp()
         with open(data_file, 'w') as f:
             for row in data:
@@ -49,8 +49,8 @@ class TestFileReader(helpers.AsyncTestCase):
         # timestamps should be close to now
         actual = np.average(result['timestamp'])
         expected = int(time.time() * 1e6)
-        # should be within 0.1 second
-        np.testing.assert_almost_equal(actual / 1e6, expected / 1e6, decimal=1)
+        # should be within 1 second
+        np.testing.assert_almost_equal(actual / 1e6, expected / 1e6, decimal=0)
         np.testing.assert_array_almost_equal(data['data'], result['data'])
         os.remove(path)
 

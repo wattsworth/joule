@@ -1,0 +1,63 @@
+port = {{port}}
+max_connections = 15 # (change requires restart)
+max_wal_senders = 1		# max number of walsender processes
+
+#superuser_reserved_connections = 3	# (change requires restart)
+unix_socket_directories = '{{sock_dir}}'
+#unix_socket_group = ''			# (change requires restart)
+unix_socket_permissions = 0600		# begin with 0 to use octal notation
+
+ssl = off
+
+#------------------------------------------------------------------------------
+# RESOURCE USAGE (except WAL)
+#------------------------------------------------------------------------------
+
+# - Memory -
+
+shared_buffers = 128MB # min 128kB
+
+dynamic_shared_memory_type = posix
+log_destination = 'stderr'
+# - Process Title -
+
+cluster_name = '10/backup'
+#stats_temp_directory = '/var/run/postgresql/10-backup.pg_stat_tmp'
+
+hot_standby = off
+# - Statistics Monitoring -
+
+#log_parser_stats = off
+#log_planner_stats = off
+#log_executor_stats = off
+#log_statement_stats = off
+
+datestyle = 'iso, mdy'
+#intervalstyle = 'postgres'
+timezone = UTC
+#timezone_abbreviations = 'Default'     # Select the set of available time zone
+					# abbreviations.  Currently, there are
+					#   Default
+					#   Australia (historical usage)
+					#   India
+					# You can create your own file in
+					# share/timezonesets/.
+#extra_float_digits = 0			# min -15, max 3
+#client_encoding = sql_ascii		# actually, defaults to database
+					# encoding
+
+# These settings are initialized by initdb, but they can be changed.
+lc_messages = 'C.UTF-8' # locale for system error message
+					# strings
+lc_monetary = 'C.UTF-8' # locale for monetary formatting
+lc_numeric = 'C.UTF-8' # locale for number formatting
+lc_time = 'C.UTF-8' # locale for time formatting
+
+# default configuration for text search
+default_text_search_config = 'pg_catalog.english'
+
+
+
+exit_on_error = on			# terminate session on any error?
+
+shared_preload_libraries = timescaledb

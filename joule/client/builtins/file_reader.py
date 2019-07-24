@@ -2,6 +2,7 @@ from joule.client import ReaderModule
 from joule import utilities
 import textwrap
 import numpy as np
+import asyncio
 
 ARGS_DESC = """
 ---
@@ -94,6 +95,7 @@ class FileReader(ReaderModule):
                 if parsed_args.timestamp:
                     data = np.insert(data, 0, utilities.time_now())
                 await output.write(np.array([data]))
+                await asyncio.sleep(0.1)
                 if self.stop_requested:
                     break
 
