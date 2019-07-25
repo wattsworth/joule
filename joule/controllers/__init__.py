@@ -13,6 +13,7 @@ from joule.controllers import (
 
 routes = [
     web.get('/', root_controller.index),
+    web.get('/db/connection.json', root_controller.db_connection),
     web.get('/dbinfo', root_controller.dbinfo),
     web.get('/version', root_controller.version),
     web.get('/version.json', root_controller.version_json),

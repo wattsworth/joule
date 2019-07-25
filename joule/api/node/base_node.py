@@ -1,9 +1,8 @@
 from typing import Union, List, Optional, Dict
 from asyncio import AbstractEventLoop
+import sqlalchemy
 
 from .node_info import NodeInfo
-
-from joule import errors
 
 from joule.api.session import BaseSession, TcpSession
 
@@ -50,7 +49,11 @@ from joule.api.annotation import (annotation_create,
                                   annotation_get,
                                   Annotation)
 
+from joule.api.db import (db_connect,
+                          db_connection_info)
+
 from joule.models.pipes import Pipe
+from joule.utilities import ConnectionInfo
 
 
 class BaseNode:
@@ -224,3 +227,10 @@ class BaseNode:
     async def annotation_update(self,
                                 annotation: Annotation):
         return await annotation_update(self.session, annotation)
+
+    # Database actions
+    async def db_connect(self) -> sqlalchemy.engine.Engine:
+        return await db_connect(self.session)
+
+    async def db_connection_info(self) -> ConnectionInfo:
+        return await db_connection_info(self.session)

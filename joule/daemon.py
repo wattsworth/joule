@@ -6,12 +6,15 @@ import time
 import argparse
 import uvloop
 import signal
+import secrets
 from aiohttp import web
 import faulthandler
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 from typing import List
 import psutil
+import dsnparse
 import sys
 
 from joule.models import (Base, Worker, config,
@@ -24,6 +27,7 @@ from joule.api import TcpNode
 from joule.services import (load_modules, load_streams, load_config)
 import joule.middleware
 import joule.controllers
+from joule.utilities import ConnectionInfo
 import ssl
 
 log = logging.getLogger('joule')
@@ -43,6 +47,7 @@ class Daemon(object):
         self.engine = None
         self.supervisor: Supervisor = None
         self.data_store: DataStore = None
+        self.module_connection_info = None
         self.tasks: List[asyncio.Task] = []
         self.stop_requested = False
 
@@ -83,10 +88,40 @@ class Daemon(object):
 
         engine = create_engine(self.config.database, echo=False)
         self.engine = engine  # keep for erasing database if needed
+
+        # create a database user for modules
+        password = secrets.token_hex(8)
+        parsed_dsn = dsnparse.parse(self.config.database)
+        self.module_connection_info = ConnectionInfo(username="joule_module",
+                                                     password=password,
+                                                     port=parsed_dsn.port,
+                                                     host=parsed_dsn.host,
+                                                     database=parsed_dsn.database)
+        # NOTE: joule user must be able to create a role and grant access to db
+        # ALTER ROLE joule WITH CREATEROLE;
+        # GRANT ALL PRIVILEGES ON DATABASE joule TO joule WITH GRANT OPTION;
         with engine.connect() as conn:
             conn.execute('CREATE SCHEMA IF NOT EXISTS data')
             conn.execute('CREATE SCHEMA IF NOT EXISTS metadata')
 
+            # create a module user
+            cmd = """
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'joule_module') THEN
+                CREATE ROLE joule_module;
+            END IF;
+            END
+            $$;"""
+            conn.execute(cmd)
+            conn.execute("ALTER ROLE joule_module WITH PASSWORD '%s'" % password)
+            conn.execute("GRANT CONNECT ON DATABASE %s TO joule_module" % parsed_dsn.database)
+            conn.execute("GRANT USAGE ON SCHEMA data TO joule_module")
+            conn.execute("GRANT USAGE ON SCHEMA metadata TO joule_module")
+            conn.execute("GRANT SELECT ON ALL TABLES IN SCHEMA metadata TO joule_module;")
+            conn.execute("GRANT SELECT ON ALL TABLES IN SCHEMA data TO joule_module;")
+
+        print(self.module_connection_info.to_dsn())
         Base.metadata.create_all(engine)
         self.db = Session(bind=engine)
 
@@ -158,6 +193,7 @@ class Daemon(object):
             joule.middleware.sql_rollback]
         app = web.Application(middlewares=middlewares)
 
+        app['module-connection-info'] = self.module_connection_info
         app['supervisor'] = self.supervisor
         app['data-store'] = self.data_store
         app['db'] = self.db
@@ -256,7 +292,18 @@ def main(argv=None):
     loop = asyncio.get_event_loop()
     loop.set_debug(True)
     daemon = Daemon(my_config)
-    daemon.initialize(loop)
+    try:
+        daemon.initialize(loop)
+    except SQLAlchemyError as e:
+        print("""
+        Error initializing database, ensure user 'joule' has sufficient permissions:
+        From a shell run
+        $> sudo -u postgres psql
+        postgres=# ALTER ROLE joule WITH CREATEROLE;
+        postgres=# GRANT ALL PRIVILEGES ON DATABASE joule TO joule WITH GRANT OPTION;
+        """)
+        loop.close()
+        exit(1)
 
     loop.add_signal_handler(signal.SIGINT, daemon.stop)
     loop.run_until_complete(daemon.run(loop))
