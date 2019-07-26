@@ -121,7 +121,6 @@ class Daemon(object):
             conn.execute("GRANT SELECT ON ALL TABLES IN SCHEMA metadata TO joule_module;")
             conn.execute("GRANT SELECT ON ALL TABLES IN SCHEMA data TO joule_module;")
 
-        print(self.module_connection_info.to_dsn())
         Base.metadata.create_all(engine)
         self.db = Session(bind=engine)
 

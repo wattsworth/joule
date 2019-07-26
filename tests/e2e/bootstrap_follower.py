@@ -11,12 +11,14 @@ import shlex
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from joule.models import Base, master
+
 SOURCE_DIR = "/joule"
 MODULE_SCRIPT_DIR = "/joule/tests/e2e/module_scripts"
 JOULE_CONF_DIR = "/joule/tests/e2e/follower"
 
 FORCE_DUMP = False
 MASTER_KEY = "gPSGE1EIbKuu2G9_AYnYLZ2I2pqZlfSRMrILpS0R4EA"
+
 
 def prep_system():
     os.symlink(MODULE_SCRIPT_DIR, "/module_scripts")
@@ -36,7 +38,6 @@ def main():
     os.environ["JOULE_USER_CONFIG_DIR"] = "/tmp/joule_user"
     subprocess.run(("joule admin authorize --config %s" % config_file).split(" "))
 
-
     jouled = subprocess.Popen(["jouled", "--config",
                                config_file],
                               stdout=subprocess.PIPE,
@@ -47,7 +48,6 @@ def main():
     stdout, _ = jouled.communicate()
     for line in stdout.rstrip().split('\n'):
         print("> %s" % line)
-
 
     return 0  # success
 

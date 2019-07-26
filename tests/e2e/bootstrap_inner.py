@@ -15,7 +15,7 @@ SOURCE_DIR = "/joule"
 SCENARIO_DIR = "/joule/tests/e2e/scenarios"
 MODULE_SCRIPT_DIR = "/joule/tests/e2e/module_scripts"
 JOULE_CONF_DIR = "/etc/joule"
-SECURITY_DIR = "/joule/tests/e2e/security"
+SECURITY_DIR = "/joule/tests/e2e/pki"
 
 FORCE_DUMP = False
 

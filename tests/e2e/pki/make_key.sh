@@ -32,7 +32,6 @@ EOF
 
 echo "#2 create CSR"
 openssl req -new -key $CLIENT_KEY -out client.csr -config csr.conf
-#openssl req -new -out oats.csr
 
 echo "#3 create signed certificate"
 openssl x509 -req -in client.csr -CA ca.joule.crt -CAkey ca.joule.key -CAcreateserial -out $CLIENT_CRT

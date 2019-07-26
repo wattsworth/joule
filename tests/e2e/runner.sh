@@ -1,6 +1,11 @@
 #!/bin/bash
 
 
+#update the certificates in PKI
+cd pki
+bash update_certs.sh
+cd -
+
 #Build the docker image
 #echo "PRE: building docker image"
 #docker build ../.. -f Dockerfile -t jdonnal/joule:testing  >> /dev/null
