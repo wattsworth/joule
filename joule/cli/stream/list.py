@@ -56,7 +56,7 @@ def _process_stream(tree: Tree, stream: Stream, parent_id,
     if showid:
         tag += " (%d)" % stream.id
     if layout:
-        tag += stream.layout
+        tag += " (%s)" % stream.layout
     if status:
         if stream.active:
             tag = click.style("\u25CF ", fg="green") + tag

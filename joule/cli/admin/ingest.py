@@ -9,7 +9,6 @@ import time
 import asyncio
 import typing
 import uuid
-import pdb
 import sqlalchemy.exc
 from tabulate import tabulate
 from typing import Optional, List
@@ -19,7 +18,7 @@ from aiohttp.test_utils import unused_port
 
 from joule import errors
 
-TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), 'restore_templates')
+TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), 'local_postgres_templates')
 
 if typing.TYPE_CHECKING:
     import sqlalchemy
@@ -27,12 +26,13 @@ if typing.TYPE_CHECKING:
     from joule.models import Base, Stream, folder, TimescaleStore
 
 
-@click.command(name="restore")
+@click.command(name="ingest")
 @click.option("-c", "--config", help="main configuration file", default="/etc/joule/main.conf")
 @click.option("-f", "--file", help="backup file to restore", default="joule_backup.tar")
+@click.option("-d", "--dsn", help="DSN connection string for live restore")
 @click.option("-m", "--map", help="map file of source to destination streams")
 @click.option("-b", "--pgctl-binary", help="override default pg_ctl location")
-def admin_restore(config, file, map, pgctl_binary):
+def admin_ingest(config, file, dsn, map, pgctl_binary):
     # expensive imports so only execute if the function is called
     from joule.services import load_config
     import sqlalchemy
@@ -41,17 +41,6 @@ def admin_restore(config, file, map, pgctl_binary):
 
     parser = configparser.ConfigParser()
     loop = asyncio.get_event_loop()
-
-    # if pgctl_binary is not specified, try to autodect it
-    if pgctl_binary is None:
-        try:
-            completed_proc = subprocess.run(["psql", "-V"], stdout=subprocess.PIPE)
-            output = completed_proc.stdout.decode('utf-8')
-            version = output.split(" ")[2]
-            major_version = version.split(".")[0]
-            pgctl_binary = "/usr/lib/postgresql/%s/bin/pg_ctl" % major_version
-        except (FileNotFoundError, IndexError):
-            raise click.ClickException("cannot autodetect pg_ctl location, specify with -b")
 
     # parse the map file if specified
     stream_map = None
@@ -85,9 +74,6 @@ def admin_restore(config, file, map, pgctl_binary):
     except errors.ConfigurationError as e:
         raise click.ClickException("Invalid configuration: %s" % e)
 
-    if not os.path.isfile(file):
-        raise click.ClickException("backup file [%s] does not exist" % file)
-
     dest_engine = sqlalchemy.create_engine(joule_config.database)
 
     Base.metadata.create_all(dest_engine)
@@ -100,118 +86,154 @@ def admin_restore(config, file, map, pgctl_binary):
     if "SUDO_UID" in os.environ:
         os.setuid(int(os.environ["SUDO_UID"]))
 
-    # uncompress the archive
-    click.echo("extracting database files")
+    # create a log file for exec cmds
     pg_log_name = "joule_restore_log_%s.txt" % uuid.uuid4().hex.upper()[0:6]
     pg_log = open(pg_log_name, 'w')
 
-    with tempfile.TemporaryDirectory(dir="./") as backup_path:
-        os.chmod(backup_path, 0o700)
-        base_path = os.path.join(backup_path, "base")
-        wal_path = os.path.join(backup_path, "wal")
-        os.mkdir(base_path, mode=0o700)
-        os.mkdir(wal_path, mode=0o700)
-
-        # extract the base
-        args = ["--extract"]
-        args += ["--directory", base_path]
-        args += ["--file", file]
-        cmd = ["tar"] + args
-        subprocess.call(cmd)
-
-        # extract the wal (and remove from base)
-        args = ["--extract"]
-        args += ["--directory", wal_path]
-        args += ["--remove-files"]
-        args += ["--file", os.path.join(base_path, 'pg_wal.tar')]
-        cmd = ["tar"] + args
-        subprocess.call(cmd, stderr=pg_log)
-        os.remove(os.path.join(base_path, "pg_wal.tar"))
-
-        # read the info file for database name and user
-        with open(os.path.join(backup_path, "base", "info.json"), 'r') as f:
-            db_info = json.load(f)
-
-        # create the config files
-        env = jinja2.Environment(loader=jinja2.FileSystemLoader(TEMPLATE_DIR))
-
-        template = env.get_template("postgresql.conf.jinja2")
-        sock_path = os.path.join(backup_path, "sock")
-        os.mkdir(sock_path)
-        db_port = unused_port()
-        output = template.render(port=db_port, sock_dir=os.path.abspath(sock_path))
-        with open(os.path.join(base_path, "postgresql.conf"), "w") as f:
-            f.write(output)
-
-        template = env.get_template("pg_hba.conf.jinja2")
-        output = template.render(user=db_info["user"])
-        with open(os.path.join(base_path, "pg_hba.conf"), "w") as f:
-            f.write(output)
-
-        template = env.get_template("pg_ident.conf.jinja2")
-        output = template.render()
-        with open(os.path.join(base_path, "pg_ident.conf"), "w") as f:
-            f.write(output)
-
-        template = env.get_template("recovery.conf.jinja2")
-        output = template.render(wal_path=os.path.abspath(wal_path))
-        with open(os.path.join(base_path, "recovery.conf"), "w") as f:
-            f.write(output)
-
-        # start postgres
-
-        args = ["-D", base_path]
-        args += ["start"]
-        cmd = [pgctl_binary] + args
+    # if pgctl_binary is not specified, try to autodect it
+    if pgctl_binary is None:
         try:
-            subprocess.call(cmd, stderr=pg_log, stdout=pg_log)
-        except FileNotFoundError:
-            raise click.ClickException(
-                "Cannot find pg_ctl, expected [%s] to exist. Specify location with -b" % pgctl_binary)
+            completed_proc = subprocess.run(["psql", "-V"], stdout=subprocess.PIPE)
+            output = completed_proc.stdout.decode('utf-8')
+            version = output.split(" ")[2]
+            major_version = version.split(".")[0]
+            pgctl_binary = "/usr/lib/postgresql/%s/bin/pg_ctl" % major_version
+        except (FileNotFoundError, IndexError):
+            raise click.ClickException("cannot autodetect pg_ctl location, specify with -b")
 
-        click.echo("waiting for database to initialize")
-        time.sleep(2)
-        # connect to the database
-        dsn = "postgresql://%s:%s@localhost:%d/%s" % (
-            db_info["user"],
-            db_info["password"],
-            db_port,
-            db_info["database"])
-        src_engine = sqlalchemy.create_engine(dsn)
+    # determine if this is a file restore or live restore
+    if dsn is not None:
+        live_restore = True
+        # to appease type checker
+        backup_dir = None
+        backup_path = ""
+    else:
+        if not os.path.isfile(file):
+            raise click.ClickException("backup file [%s] does not exist" % file)
+        backup_dir = tempfile.TemporaryDirectory(dir="./")
+        backup_path = backup_dir.name
+        dsn = start_postgres(file, backup_path, pgctl_binary, pg_log)
+        live_restore = False
 
-        num_tries = 0
-        max_tries = 3
-        while True:
-            try:
-                Base.metadata.create_all(src_engine)
-                break
-            except sqlalchemy.exc.OperationalError as e:
-                num_tries += 1
-                click.echo("... still waiting for database to initialize (%d/%d)" % (num_tries, max_tries))
-                time.sleep(5)
-                if num_tries >= max_tries:
-                    raise click.ClickException("cannot initialize database, log saved in [%s]" % pg_log_name)
+    src_engine = sqlalchemy.create_engine(dsn)
 
-        src_db = Session(bind=src_engine)
-        src_datastore = TimescaleStore(dsn, 0, 0, loop)
-
+    num_tries = 0
+    max_tries = 3
+    while True:
         try:
-            loop.run_until_complete(run(src_db, dest_db,
-                                        src_datastore, dest_datastore,
-                                        stream_map))
-        except errors.ConfigurationError as e:
-            print("Logs written to [%s]" % pg_log_name)
-            raise click.ClickException(str(e))
-        finally:
-            # stop postgres
-            dest_db.close()
-            src_db.close()
-            args = ["-D", base_path]
+            Base.metadata.create_all(src_engine)
+            break
+        except sqlalchemy.exc.OperationalError as e:
+            if live_restore:
+                raise click.ClickException(str(e))  # this should work immediately
+            num_tries += 1
+            click.echo("... attempting to connect to source database (%d/%d)" % (num_tries, max_tries))
+            time.sleep(5)
+            if num_tries >= max_tries:
+                raise click.ClickException("cannot connect to source database, log saved in [%s]" % pg_log_name)
+
+    src_db = Session(bind=src_engine)
+    src_datastore = TimescaleStore(dsn, 0, 0, loop)
+
+    try:
+        loop.run_until_complete(run(src_db, dest_db,
+                                    src_datastore, dest_datastore,
+                                    stream_map))
+    except errors.ConfigurationError as e:
+        print("Logs written to [%s]" % pg_log_name)
+        raise click.ClickException(str(e))
+    finally:
+        # close connections
+        dest_db.close()
+        src_db.close()
+        # clean up database if not a live_restore
+        if not live_restore:
+            args = ["-D", os.path.join(backup_path, "base")]
             args += ["stop"]
             cmd = [pgctl_binary] + args
             subprocess.call(cmd, stderr=pg_log, stdout=pg_log)
-        pg_log.close()
-        os.remove(pg_log_name)
+            # remove the database files
+            backup_dir.cleanup()
+
+    pg_log.close()
+    os.remove(pg_log_name)
+
+
+def start_postgres(archive, backup_path, pgctl_binary, log) -> str:
+    # uncompress the archive
+    click.echo("extracting database files")
+
+    os.chmod(backup_path, 0o700)
+    base_path = os.path.join(backup_path, "base")
+    wal_path = os.path.join(backup_path, "wal")
+    os.mkdir(base_path, mode=0o700)
+    os.mkdir(wal_path, mode=0o700)
+
+    # extract the base
+    args = ["--extract"]
+    args += ["--directory", base_path]
+    args += ["--file", archive]
+    cmd = ["tar"] + args
+    subprocess.call(cmd)
+
+    # extract the wal (and remove from base)
+    args = ["--extract"]
+    args += ["--directory", wal_path]
+    args += ["--remove-files"]
+    args += ["--file", os.path.join(base_path, 'pg_wal.tar')]
+    cmd = ["tar"] + args
+    subprocess.call(cmd, stderr=log)
+    os.remove(os.path.join(base_path, "pg_wal.tar"))
+
+    # read the info file for database name and user
+    with open(os.path.join(backup_path, "base", "info.json"), 'r') as f:
+        db_info = json.load(f)
+
+    # create the config files
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(TEMPLATE_DIR))
+
+    template = env.get_template("postgresql.conf.jinja2")
+    sock_path = os.path.join(backup_path, "sock")
+    os.mkdir(sock_path)
+    db_port = unused_port()
+    output = template.render(port=db_port, sock_dir=os.path.abspath(sock_path))
+    with open(os.path.join(base_path, "postgresql.conf"), "w") as f:
+        f.write(output)
+
+    template = env.get_template("pg_hba.conf.jinja2")
+    output = template.render(user=db_info["user"])
+    with open(os.path.join(base_path, "pg_hba.conf"), "w") as f:
+        f.write(output)
+
+    template = env.get_template("pg_ident.conf.jinja2")
+    output = template.render()
+    with open(os.path.join(base_path, "pg_ident.conf"), "w") as f:
+        f.write(output)
+
+    template = env.get_template("recovery.conf.jinja2")
+    output = template.render(wal_path=os.path.abspath(wal_path))
+    with open(os.path.join(base_path, "recovery.conf"), "w") as f:
+        f.write(output)
+
+    # start postgres
+
+    args = ["-D", base_path]
+    args += ["start"]
+    cmd = [pgctl_binary] + args
+    try:
+        subprocess.call(cmd, stderr=log, stdout=log)
+    except FileNotFoundError:
+        raise click.ClickException(
+            "Cannot find pg_ctl, expected [%s] to exist. Specify location with -b" % pgctl_binary)
+
+    click.echo("waiting for database to initialize")
+    time.sleep(2)
+    # connect to the database
+    return "postgresql://%s:%s@localhost:%d/%s" % (
+        db_info["user"],
+        db_info["password"],
+        db_port,
+        db_info["database"])
 
 
 async def run(src_db: 'Session',
@@ -258,6 +280,11 @@ async def run(src_db: 'Session',
             dest_folder.streams.append(dest)
             dest_intervals = None
         else:
+            # make sure the destination is compatible
+            if dest.layout != source.layout:
+                raise errors.ConfigurationError(
+                    "source stream [%s] is not compatible with destination stream [%s]" % (item[0], item[1]))
+
             dest_intervals = await dest_datastore.intervals(dest, None, None)
 
         # figure out the time bounds to copy
