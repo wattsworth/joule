@@ -177,15 +177,21 @@ def admin_restore(config, file, map, pgctl_binary):
             db_info["password"],
             db_port,
             db_info["database"])
+        src_engine = sqlalchemy.create_engine(dsn)
+
+        num_tries = 0
+        max_tries = 3
         while True:
             try:
-                src_engine = sqlalchemy.create_engine(dsn)
+                Base.metadata.create_all(src_engine)
                 break
-            except sqlalchemy.exc.OperationalError:
-                click.echo("waiting for database to initialize")
-                time.sleep(2)
+            except sqlalchemy.exc.OperationalError as e:
+                num_tries += 1
+                click.echo("... still waiting for database to initialize (%d/%d)" % (num_tries, max_tries))
+                time.sleep(5)
+                if num_tries >= max_tries:
+                    raise click.ClickException("cannot initialize database, log saved in [%s]" % pg_log_name)
 
-        Base.metadata.create_all(src_engine)
         src_db = Session(bind=src_engine)
         src_datastore = TimescaleStore(dsn, 0, 0, loop)
 
