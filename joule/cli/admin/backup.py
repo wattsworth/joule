@@ -30,6 +30,12 @@ def admin_backup(config, file):
     except errors.ConfigurationError as e:
         raise click.ClickException("Invalid configuration: %s" % e)
 
+    # demote priveleges
+    if "SUDO_GID" in os.environ:
+        os.setgid(int(os.environ["SUDO_GID"]))
+    if "SUDO_UID" in os.environ:
+        os.setuid(int(os.environ["SUDO_UID"]))
+
     if not file.endswith("tar"):
         file += ".tar"
 
@@ -66,6 +72,8 @@ def admin_backup(config, file):
         with open(os.path.join(backup_path, "info.json"), 'w') as f:
             f.write(json.dumps(db_info, indent=2))
 
+        # allow read access to wal
+        os.chmod(os.path.join(backup_path,"pg_wal.tar"), 0o644)
         # combine backup into a single archive
         args = ["--append"]
         args += ["--directory", backup_path]

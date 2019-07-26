@@ -109,7 +109,7 @@ class Daemon(object):
             DO $$
             BEGIN
                 IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'joule_module') THEN
-                CREATE ROLE joule_module;
+                CREATE USER joule_module;
             END IF;
             END
             $$;"""
