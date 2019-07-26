@@ -73,7 +73,7 @@ def admin_backup(config, file):
             f.write(json.dumps(db_info, indent=2))
 
         # allow read access to wal
-        os.chmod(os.path.join(backup_path,"pg_wal.tar"), 0o644)
+        os.chmod(os.path.join(backup_path, "pg_wal.tar"), 0o644)
         # combine backup into a single archive
         args = ["--append"]
         args += ["--directory", backup_path]

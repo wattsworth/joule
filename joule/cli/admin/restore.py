@@ -10,6 +10,7 @@ import asyncio
 import typing
 import uuid
 import pdb
+import sqlalchemy.exc
 from tabulate import tabulate
 from typing import Optional, List
 import csv
@@ -30,7 +31,7 @@ if typing.TYPE_CHECKING:
 @click.option("-c", "--config", help="main configuration file", default="/etc/joule/main.conf")
 @click.option("-f", "--file", help="backup file to restore", default="joule_backup.tar")
 @click.option("-m", "--map", help="map file of source to destination streams")
-@click.option("-b", "--pgctl-binary", default="/usr/lib/postgresql/10/bin/pg_ctl")
+@click.option("-b", "--pgctl-binary", help="override default pg_ctl location")
 def admin_restore(config, file, map, pgctl_binary):
     # expensive imports so only execute if the function is called
     from joule.services import load_config
@@ -40,6 +41,17 @@ def admin_restore(config, file, map, pgctl_binary):
 
     parser = configparser.ConfigParser()
     loop = asyncio.get_event_loop()
+
+    # if pgctl_binary is not specified, try to autodect it
+    if pgctl_binary is None:
+        try:
+            completed_proc = subprocess.run(["psql", "-V"], stdout=subprocess.PIPE)
+            output = completed_proc.stdout.decode('utf-8')
+            version = output.split(" ")[2]
+            major_version = version.split(".")[0]
+            pgctl_binary = "/usr/lib/postgresql/%s/bin/pg_ctl" % major_version
+        except (FileNotFoundError, IndexError):
+            raise click.ClickException("cannot autodetect pg_ctl location, specify with -b")
 
     # parse the map file if specified
     stream_map = None
@@ -61,7 +73,7 @@ def admin_restore(config, file, map, pgctl_binary):
         except errors.ConfigurationError as e:
             raise click.ClickException(str(e))
 
-# load the Joule configuration file
+    # load the Joule configuration file
     try:
         with open(config, 'r') as f:
             parser.read_file(f, config)
@@ -151,7 +163,11 @@ def admin_restore(config, file, map, pgctl_binary):
         args = ["-D", base_path]
         args += ["start"]
         cmd = [pgctl_binary] + args
-        subprocess.call(cmd, stderr=pg_log, stdout=pg_log)
+        try:
+            subprocess.call(cmd, stderr=pg_log, stdout=pg_log)
+        except FileNotFoundError:
+            raise click.ClickException(
+                "Cannot find pg_ctl, expected [%s] to exist. Specify location with -b" % pgctl_binary)
 
         click.echo("waiting for database to initialize")
         time.sleep(2)
@@ -161,7 +177,13 @@ def admin_restore(config, file, map, pgctl_binary):
             db_info["password"],
             db_port,
             db_info["database"])
-        src_engine = sqlalchemy.create_engine(dsn)
+        while True:
+            try:
+                src_engine = sqlalchemy.create_engine(dsn)
+                break
+            except sqlalchemy.exc.OperationalError:
+                click.echo("waiting for database to initialize")
+                time.sleep(2)
 
         Base.metadata.create_all(src_engine)
         src_db = Session(bind=src_engine)
@@ -281,7 +303,7 @@ async def copy(copy_map: 'CopyMap',
             label='[%s] --> [%s]' % (copy_map.source_path, copy_map.dest_path),
             length=duration) as bar:
         for interval in copy_map.intervals:
-            await copy_interval(interval[0], interval[1]+1, bar,
+            await copy_interval(interval[0], interval[1] + 1, bar,
                                 copy_map.source, copy_map.dest,
                                 src_datastore, dest_datastore)
 

@@ -1,6 +1,7 @@
 recursive-include joule/resources *
 recursive-include joule/client/builtins *
 recursive-include joule/models/data_store/sql *
+recursive-include joule/cli/admin/restore_templates *
 
 prune tests
 include versioneer.py
