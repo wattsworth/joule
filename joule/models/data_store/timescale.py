@@ -95,6 +95,8 @@ class TimescaleStore(DataStore):
                       callback: Callable[[np.ndarray, str, int], Coroutine],
                       max_rows: int = None, decimation_level=None):
         conn = await self.pool.acquire()
+        # limit time bounds to range of base stream
+        (start, end) = psql_helpers.limit_time_bounds(conn, stream, start, end)
         # figure out appropriate decimation level
         if decimation_level is None:
             if max_rows is None:

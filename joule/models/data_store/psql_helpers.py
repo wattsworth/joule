@@ -8,6 +8,7 @@ import logging
 
 from joule.errors import DataError
 from joule.models.stream import Stream
+import joule.utilities
 
 log = logging.getLogger('joule')
 
@@ -209,6 +210,7 @@ async def get_table_names(conn: asyncpg.Connection, stream: Stream, with_schema=
     else:
         return [r['table_name'] for r in records] + ['stream%d' % stream.id]
 
+
 async def get_all_table_names(conn: asyncpg.Connection, with_schema=True) -> List[str]:
     query = r'''select table_name from information_schema.tables 
                where table_schema='data' 
@@ -219,7 +221,6 @@ async def get_all_table_names(conn: asyncpg.Connection, with_schema=True) -> Lis
         return ['data.' + r['table_name'] for r in records]
     else:
         return [r['table_name'] for r in records]
-
 
 
 async def get_boundaries(conn: asyncpg.Connection, stream: Stream,
@@ -277,4 +278,23 @@ async def convert_time_bounds(conn: asyncpg.Connection,
         end = end.replace(tzinfo=datetime.timezone.utc)
     else:
         end = datetime.datetime.fromtimestamp(end / 1e6, tz=datetime.timezone.utc)
+    return start, end
+
+
+async def limit_time_bounds(conn: asyncpg.Connection,
+                            stream: Stream,
+                            start: Optional[int], end: Optional[int]) -> Tuple[Optional[int], Optional[int]]:
+    data_bounds = await convert_time_bounds(conn, stream, None, None)
+    if data_bounds is None:
+        return None, None
+    data_start = joule.utilities.datetime_to_timestamp(data_bounds[0])
+    data_end = joule.utilities.datetime_to_timestamp(data_bounds[1])
+    if start is None:
+        start = data_start
+    else:
+        start = max(start, data_start)
+    if end is None:
+        end = data_end
+    else:
+        end = min(end, data_end)
     return start, end

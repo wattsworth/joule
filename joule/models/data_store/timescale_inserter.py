@@ -85,8 +85,12 @@ class Inserter:
         keep_s = self.stream.keep_us//1e6
         for table in tables:
             if 'interval' in table:
-                continue
-            query = "SELECT drop_chunks(interval '%d seconds', '%s', 'data')" % (keep_s, table)
+                # drop all boundaries before the cutoff
+                cutoff = joule.utilities.timestamp_to_datetime(
+                    joule.utilities.time_now() - self.stream.keep_us)
+                query = "DELETE FROM data.%s WHERE time < '%s'" % (table, cutoff)
+            else:
+                query = "SELECT drop_chunks(interval '%d seconds', '%s', 'data')" % (keep_s, table)
             await self.conn.execute(query)
 
 

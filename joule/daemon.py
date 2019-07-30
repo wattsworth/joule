@@ -120,6 +120,8 @@ class Daemon(object):
             conn.execute("GRANT USAGE ON SCHEMA metadata TO joule_module")
             conn.execute("GRANT SELECT ON ALL TABLES IN SCHEMA metadata TO joule_module;")
             conn.execute("GRANT SELECT ON ALL TABLES IN SCHEMA data TO joule_module;")
+            # test out pg_read_all_settings command
+            conn.execute("show data_directory")
 
         Base.metadata.create_all(engine)
         self.db = Session(bind=engine)
@@ -300,6 +302,7 @@ def main(argv=None):
         $> sudo -u postgres psql
         postgres=# ALTER ROLE joule WITH CREATEROLE;
         postgres=# GRANT ALL PRIVILEGES ON DATABASE joule TO joule WITH GRANT OPTION;
+        postgres=# GRANT pg_read_all_settings TO joule;
         """)
         loop.close()
         exit(1)
