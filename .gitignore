@@ -20,3 +20,5 @@ docs/_build
 .pytest_cache
 joule/scratch.py
 .eggs
+tests/e2e/pki/*.crt
+tests/e2e/pki/ca.srl
