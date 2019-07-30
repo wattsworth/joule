@@ -15,7 +15,6 @@ from typing import Optional, List
 import csv
 from joule import utilities
 from aiohttp.test_utils import unused_port
-
 from joule import errors
 
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), 'local_postgres_templates')
@@ -32,7 +31,10 @@ if typing.TYPE_CHECKING:
 @click.option("-d", "--dsn", help="DSN connection string for live restore")
 @click.option("-m", "--map", help="map file of source to destination streams")
 @click.option("-b", "--pgctl-binary", help="override default pg_ctl location")
-def admin_ingest(config, file, dsn, map, pgctl_binary):
+@click.option("-y", "--yes", help="do not ask for confirmation", is_flag=True)
+@click.option('-s', "--start", help="timestamp or descriptive string")
+@click.option('-e', "--end", help="timestamp or descriptive string")
+def admin_ingest(config, file, dsn, map, pgctl_binary, yes, start, end):
     # expensive imports so only execute if the function is called
     from joule.services import load_config
     import sqlalchemy
@@ -42,18 +44,48 @@ def admin_ingest(config, file, dsn, map, pgctl_binary):
     parser = configparser.ConfigParser()
     loop = asyncio.get_event_loop()
 
+    # make sure the time bounds make sense
+    if start is not None:
+        try:
+            start = utilities.human_to_timestamp(start)
+        except ValueError:
+            raise errors.ApiError("invalid start time: [%s]" % start)
+    if end is not None:
+        try:
+            end = utilities.human_to_timestamp(end)
+        except ValueError:
+            raise errors.ApiError("invalid end time: [%s]" % end)
+    if (start is not None) and (end is not None) and ((end - start) <= 0):
+        raise click.ClickException("Error: start [%s] must be before end [%s]" % (
+            utilities.timestamp_to_human(start),
+            utilities.timestamp_to_human(end)))
+
     # parse the map file if specified
     stream_map = None
     if map is not None:
         stream_map = []
         try:
             with open(map, newline='') as csvfile:
-                reader = csv.reader(csvfile, delimiter=' ', quotechar='|')
+                reader = csv.reader(csvfile, delimiter=',', quotechar='|', skipinitialspace=True)
                 for row in reader:
-                    if len(row) == 0 or row[0] == '#':
+                    if len(row) == 0:  # ignore blank lines
+                        continue
+                    if len(row) == 1 and len(row[0]) == 0: # line with only whitespace
+                        continue
+                    if row[0][0] == '#':  # ignore comments
                         continue
                     if len(row) != 2:
-                        raise errors.ConfigurationError("invalid map format")
+                        raise errors.ConfigurationError("""invalid map format. Refer to template below:
+    
+     # this line is a comment
+     # only paths in this file will be copied
+     # source and destination paths are separated by a ','
+     
+     /source/path, /destination/path
+     /source/path2, /destination/path2
+     #..etc
+     
+     """)
                     stream_map.append(row)
         except FileNotFoundError:
             raise click.ClickException("Cannot find map file at [%s]" % map)
@@ -138,7 +170,8 @@ def admin_ingest(config, file, dsn, map, pgctl_binary):
     try:
         loop.run_until_complete(run(src_db, dest_db,
                                     src_datastore, dest_datastore,
-                                    stream_map))
+                                    stream_map, yes,
+                                    start, end))
     except errors.ConfigurationError as e:
         print("Logs written to [%s]" % pg_log_name)
         raise click.ClickException(str(e))
@@ -240,7 +273,10 @@ async def run(src_db: 'Session',
               dest_db: 'Session',
               src_datastore: 'TimescaleStore',
               dest_datastore: 'TimescaleStore',
-              stream_map: Optional[List]):
+              stream_map: Optional[List],
+              confirmed: bool,
+              start: Optional[int],
+              end: Optional[int]):
     from joule.models import Stream, folder, stream
     from joule.services import parse_pipe_config
 
@@ -261,7 +297,7 @@ async def run(src_db: 'Session',
         source = folder.find_stream_by_path(item[0], src_db)
         if source is None:
             raise errors.ConfigurationError("source stream [%s] does not exist" % item[0])
-        src_intervals = await src_datastore.intervals(source, None, None)
+        src_intervals = await src_datastore.intervals(source, start, end)
         # get or create the destination stream
         dest = folder.find_stream_by_path(item[1], dest_db)
         if dest is None:
@@ -285,7 +321,7 @@ async def run(src_db: 'Session',
                 raise errors.ConfigurationError(
                     "source stream [%s] is not compatible with destination stream [%s]" % (item[0], item[1]))
 
-            dest_intervals = await dest_datastore.intervals(dest, None, None)
+            dest_intervals = await dest_datastore.intervals(dest, start, end)
 
         # figure out the time bounds to copy
         if dest_intervals is None:
@@ -314,19 +350,23 @@ async def run(src_db: 'Session',
         click.echo("No data needs to be copied")
         return
 
-    if not click.confirm("Start data copy?"):
+    if not confirmed and not click.confirm("Start data copy?"):
         click.echo("cancelled")
         return
 
     dest_db.commit()
     # execute the copy
     for item in copy_maps:
-        await copy(item, src_datastore, dest_datastore)
+        await copy(item, src_datastore, dest_datastore, src_db, dest_db)
 
 
 async def copy(copy_map: 'CopyMap',
                src_datastore: 'TimescaleStore',
-               dest_datastore: 'TimescaleStore'):
+               dest_datastore: 'TimescaleStore',
+               src_db: 'Session',
+               dest_db: 'Session'):
+    from joule.models import annotation, Annotation
+
     # compute the duration of data to copy
     duration = 0
     for interval in copy_map.intervals:
@@ -339,6 +379,26 @@ async def copy(copy_map: 'CopyMap',
             await copy_interval(interval[0], interval[1] + 1, bar,
                                 copy_map.source, copy_map.dest,
                                 src_datastore, dest_datastore)
+            start_dt = utilities.timestamp_to_datetime(interval[0])
+            end_dt = utilities.timestamp_to_datetime(interval[1])
+            # remove existing annotations (if any)
+            dest_db.query(Annotation). \
+                filter(Annotation.stream == copy_map.dest). \
+                filter(Annotation.start >= start_dt). \
+                filter(Annotation.start < end_dt). \
+                delete()
+            # retrieve source annotations that start in this interval
+            items: List[Annotation] = src_db.query(Annotation). \
+                filter(Annotation.stream == copy_map.source). \
+                filter(Annotation.start >= start_dt). \
+                filter(Annotation.start < end_dt)
+            # copy them over to the destination
+            for item in items:
+                item_copy = annotation.from_json(item.to_json())
+                item_copy.id = None
+                item_copy.stream = copy_map.dest
+                dest_db.add(item_copy)
+            dest_db.commit()
 
 
 async def copy_interval(start: int, end: int, bar,
@@ -363,6 +423,7 @@ async def copy_interval(start: int, end: int, bar,
     await src_datastore.extract(src_stream, start, end, writer)
     await pipe.close()
     await insert_task
+
     bar.update(end - last_ts)
 
 
