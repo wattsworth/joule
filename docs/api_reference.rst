@@ -314,6 +314,31 @@ Data Actions
         >>> await node.data_intervals("/parent/my_folder/stream") # no stream data
         []
 
+.. _sec-node-annotation-actions:
+
+Annotation Actions
+''''''''''''''''''
+
+.. function:: Node.annotation_create(annotation: Annotation,  stream: Union[int, str, Stream]) -> Annotation
+
+    Add an annotation. Create a new :class:`joule.api.Annotation` object locally and associate it with a data stream.
+    The stream may be specified by path, ID, or a :class:`joule.api.Stream` object
+
+.. function:: Node.annotation_delete(annotation: Union[int, Annotation]) -> None
+
+    Remove an annotation. The annotation may be specified by ID or an
+    :class:`joule.api.Annotation` object object.
+
+.. function:: Node.annotation_update(annotation: Annotation) -> Annotation
+
+    Update an annotation with new title or content. The time ranges (start,end) may not be changed
+
+.. function:: Node.annotation_get(stream: Union['Stream', str, int], start: Optional[int], end: Optional[int]) -> List[Annotation]:
+
+    Retrieve annotations for a particular stream. Specify timestamps to only retrieve annotations over
+    a particular interval. The stream may be specified by path, ID, or a :class:`joule.api.Stream` object
+
+
 .. _sec-node-module-actions:
 
 Module Actions
@@ -453,7 +478,7 @@ Models
 .. autoclass:: joule.api.ModuleStatistics
     :members:
 
-.. autoclass:: joule.api.Proxy
+.. autoclass:: joule.api.Annotation
     :members:
 
 Errors

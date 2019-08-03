@@ -9,13 +9,16 @@ if TYPE_CHECKING:
 
 class Annotation:
     """
-    API Annotation model.
+    API Annotation model. See :ref:`sec-node-annotation-actions` for details on using the API to
+    manipulate annotations. Annotations are associated with streams and may either coverage a range
+    of data or a single event. If **end** is ``None`` the annotation marks an event, otherwise
+    it marks a range.
 
     Parameters:
-       title: (string)
-       content: (string) optional
-       start: (int) Unix microsecond timestamp
-       end: (int) specify for range annotation, omit for event annotation
+       title (string): annotation title
+       content (string): additional description (optional)
+       start (int): Unix microsecond timestamp
+       end (int): specify for range annotation, omit for event annotation
     """
 
     def __init__(self, title: str,

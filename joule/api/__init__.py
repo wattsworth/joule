@@ -6,4 +6,5 @@ from joule.api.stream import (Stream,
                               Element)
 from joule.api.module import (Module,
                               ModuleStatistics)
+from joule.api.annotation import Annotation
 from joule.api.proxy import Proxy
