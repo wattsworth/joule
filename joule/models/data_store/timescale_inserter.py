@@ -69,6 +69,8 @@ class Inserter:
                 # check for interval breaks
                 if pipe.end_of_interval and last_ts is not None:
                     await psql_helpers.close_interval(self.conn, self.stream, last_ts)
+                    if self.decimator is not None:
+                        self.decimator.close_interval()
                 ticks += 1
                 if ticks % self.cleanup_interval == 0:
                     await self.cleanup()
@@ -108,7 +110,6 @@ class Decimator:
         self.factor = factor
         self.layout = stream.decimated_layout
         self.buffer = []
-        self.last_ts = None
         self.path_created = False
         self.child: Decimator = None
         self.debug = debug
@@ -139,6 +140,11 @@ class Decimator:
                                  format='binary',
                                  source=psql_bytes)
         await self.child.process(conn, decim_data)
+
+    def close_interval(self):
+        self.buffer = []
+        if self.child is not None:
+            self.child.close_interval()
 
     def _process(self, sarray: np.ndarray) -> np.ndarray:
 

@@ -64,6 +64,7 @@ async def _add_lumen(node: BaseNode, host):
     if req_credentials == "user":
         click.echo("Log into the Lumen server using your e-mail and password")
 
+
 async def _add_node(node: BaseNode, host):
     result = await node.master_add("joule", host)
     click.echo("Access to [%s] granted to Joule Node [%s]" % (node.name, result.name))
@@ -75,5 +76,6 @@ async def _add_user(node: BaseNode, name):
     click.echo("")
     click.echo("Key:\t%s" % result.key)
     click.echo("")
-    click.echo("Run [joule node add] with the above values on the user's machine")
+    click.echo("Run the following command to install the key on the user's machine")
+    click.echo("\t$> joule node add %s %s %s" % (node.name, result.key, node.url))
     click.echo("* IP address may differ based on network setup")

@@ -3,8 +3,20 @@ from joule.errors import ApiError
 
 
 class ConnectionInfo:
+    """
+    Encapsulates database connection information
+    """
 
     def __init__(self, username: str, password: str, port: int, database: str, host: str):
+        """
+        Attributes:
+            username (str): database username
+            password (str): database password
+            port (int): database port
+            database (str): database namne
+            host (str): hostname
+
+        """
         self.username = username
         self.password = password
         self.port = port
@@ -12,6 +24,11 @@ class ConnectionInfo:
         self.host = host
 
     def to_json(self) -> Dict:
+        """
+        Convert connection parameters to a dictionary of attributes appropriate
+        for transmission as JSON
+
+        """
         return {
             "username": self.username,
             "password": self.password,
@@ -21,6 +38,11 @@ class ConnectionInfo:
         }
 
     def to_dsn(self) -> str:
+        """
+        Convert connection parameters to a DSN string used by SQLAlchemy and other
+        database engines.
+
+        """
         return "postgresql://%s:%s@%s:%s/%s" % (self.username, self.password,
                                                 self.host, self.port, self.database)
 

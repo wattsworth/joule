@@ -455,8 +455,19 @@ Follower Actions
 
    Remove the specified follower, does not invalidate the associated API key
 
+Database Actions
+''''''''''''''''
 
+.. function:: Node.db_connect() -> sqlalchemy.engine.Engine:
 
+    Create a connection to the node database. Note the node's pg_hba.conf
+    must allow remote connections to the database.
+
+.. function:: Node.db_connection_info() -> joule.utilities.ConnectionInfo
+
+    Connection information necessary to connect to the node database. This
+    is useful if the IP address or domain name must be changed before connecting
+    to the databse. Returns a :class:`joule.utilities.ConnectionInfo` object.
 
 Models
 ++++++
@@ -493,6 +504,21 @@ Utilities
 +++++++++
 
 .. automodule:: joule.utilities
-    :members: time_now, timestamp_to_human, human_to_timestamp, yesno
+    :members: ConnectionInfo, time_now, timestamp_to_human, human_to_timestamp, yesno
+
+
+.. class:: joule.utilities.ConnectionInfo()
+
+    Returned by :meth:`joule.api.db_connection_info`
+
+    Parameters:
+        :username (str): database username
+        :password (str): database password
+        :port (int): database port
+        :database (str): database namne
+        :host (str): hostname
+
+    Methods:
+
 
 

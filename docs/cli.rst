@@ -284,4 +284,78 @@ Arguments
     -s, --start: timestamp or descriptive string, if omitted start reading at the beginning of SOURCE
     -e, --end: timestamp or descriptive string, if omitted read to the end of SOURCE
 
+admin
++++++
+
+The following commands require super user (sudo) permission and only operate on the
+local node. They should only be run when the joule service (jouled) is stopped.
+
+initialize
+''''''''''
+
+prepare a system to run the joule service (jouled)
+
+Usage
+    joule admin initialize ~ --dsn DSN_STRING
+
+Arguments
+    --dsn: connection string to PostgreSQL database
+
+authorize
+'''''''''
+
+authorize the current user access to the local node
+
+Usage
+    joule admin authorize ~ [-c]
+
+Arguments
+    -c, --config: configuration file default is ``/etc/joule/main.conf``
+
+erase
+'''''
+
+remove all data from the node
+
+Usage
+    joule admin erase ~ [-c] [-l] [--yes]
+
+Arguments
+    -c, --config: configuration file default is ``/etc/joule/main.conf``
+    -l, --links: remove master/follower relationships, default removes only data
+    --yes: force, do not prompt for confirmation
+
+backup
+''''''
+
+archive all node data into a single file
+
+Usage
+    joule admin backup ~ [-c] [-f]
+
+Arguments
+    -c, --config: configuration file default is ``/etc/joule/main.conf``
+    -f, --file: backup file name default is ``joule_backup.tar``
+
+
+ingest
+''''''
+
+bulk copy data into the local node
+
+Usage
+    joule admin ingest ~ [-c] [-f] [-d|-f] [-m] [-y] [-s] [-e]
+
+Arguments
+    -c, --config: configuration file default is ``/etc/joule/main.conf``
+    -f, --file: copy data from backup file, default is ``joule_backup.tar``
+    -d, --dsn: live copy data from another node, may not be specified with -f
+    -m, --map: map file relating source streams to destination streams
+    -y, --yes: force, do not prompt for confirmation
+    -s, --start: timestamp or descriptive string, if omitted copy from start of source
+    -e, --end: timestamp or descriptive string, if omitted copy to the end of source
+
+
+
+
 
