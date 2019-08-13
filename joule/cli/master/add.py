@@ -77,5 +77,5 @@ async def _add_user(node: BaseNode, name):
     click.echo("Key:\t%s" % result.key)
     click.echo("")
     click.echo("Run the following command to install the key on the user's machine")
-    click.echo("\t$> joule node add %s %s %s" % (node.name, result.key, node.url))
+    click.echo("\t$> joule node add %s %s %s" % (node.name, node.url, result.key))
     click.echo("* IP address may differ based on network setup")

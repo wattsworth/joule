@@ -4,6 +4,8 @@ import shutil
 import subprocess
 from typing import Tuple
 from OpenSSL import crypto
+from jinja2 import Environment, FileSystemLoader
+
 import secrets
 
 
@@ -38,17 +40,15 @@ def admin_initialize(dsn):  # pragma: no cover
     _make_joule_directory("/etc/joule")
     # check if main.conf exists
     if not os.path.isfile("/etc/joule/main.conf"):
-        conf_template = pkg_resources.resource_filename(
-            "joule", "resources/templates/main.conf")
-        with open(conf_template, 'r') as template:
-            with open("/etc/joule/main.conf", 'w') as conf:
-                line = template.readline()
-                while line:
-                    if "REPLACE_WITH_DSN" in line:
-                        conf.write("Database = %s\n" % dsn)
-                    else:
-                        conf.write(line)
-                    line = template.readline()
+        template_path = pkg_resources.resource_filename(
+            "joule", "resources/templates")
+        # From https://stackoverflow.com/questions/11857530
+        env = Environment(loader=FileSystemLoader(template_path))
+        template = env.get_template('main.conf.jinja2')
+        file_contents = template.render(name='node_%s' % secrets.token_hex(2),
+                                        dsn=dsn)
+        with open("/etc/joule/main.conf", 'w') as conf:
+            conf.write(file_contents)
 
     # set ownership to joule user
     shutil.chown("/etc/joule/main.conf", user="root", group="joule")

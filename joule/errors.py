@@ -45,3 +45,10 @@ class StreamNotFound(ApiError):
     Requested stream does not exist
     """
     pass
+
+
+class EmptyPipeError(ApiError):
+    """
+    Attempt to read from an empty pipe
+    """
+    pass
