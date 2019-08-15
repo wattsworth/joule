@@ -70,7 +70,7 @@ def admin_ingest(config, file, dsn, map, pgctl_binary, yes, start, end):
                 for row in reader:
                     if len(row) == 0:  # ignore blank lines
                         continue
-                    if len(row) == 1 and len(row[0]) == 0: # line with only whitespace
+                    if len(row) == 1 and len(row[0]) == 0:  # line with only whitespace
                         continue
                     if row[0][0] == '#':  # ignore comments
                         continue
@@ -202,24 +202,33 @@ def start_postgres(archive, backup_path, pgctl_binary, log) -> str:
     os.mkdir(base_path, mode=0o700)
     os.mkdir(wal_path, mode=0o700)
 
-    # extract the base
+    # extract the container
     args = ["--extract"]
-    args += ["--directory", base_path]
+    args += ["--directory", backup_path]
     args += ["--file", archive]
     cmd = ["tar"] + args
     subprocess.call(cmd)
 
-    # extract the wal (and remove from base)
+    # extract the base
+    args = ["--extract"]
+    args += ["--directory", base_path]
+    args += ["--file", os.path.join(backup_path, "base.tar")]
+    cmd = ["tar"] + args
+    subprocess.call(cmd)
+
+    # extract the wal
     args = ["--extract"]
     args += ["--directory", wal_path]
-    args += ["--remove-files"]
-    args += ["--file", os.path.join(base_path, 'pg_wal.tar')]
+    args += ["--file", os.path.join(backup_path, "pg_wal.tar")]
     cmd = ["tar"] + args
+    subprocess.call(cmd)
+
     subprocess.call(cmd, stderr=log)
-    os.remove(os.path.join(base_path, "pg_wal.tar"))
+    os.remove(os.path.join(backup_path, "base.tar"))
+    os.remove(os.path.join(backup_path, "pg_wal.tar"))
 
     # read the info file for database name and user
-    with open(os.path.join(backup_path, "base", "info.json"), 'r') as f:
+    with open(os.path.join(backup_path, "info.json"), 'r') as f:
         db_info = json.load(f)
 
     # create the config files

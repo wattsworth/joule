@@ -5,7 +5,7 @@ from joule.controllers import (
     folder_controller,
     data_controller,
     module_controller,
-    interface_controller,
+    app_controller,
     proxy_controller,
     master_controller,
     follower_controller,
@@ -39,10 +39,8 @@ routes = [
     web.get('/modules.json', module_controller.index),
     web.get('/module.json', module_controller.info),
     web.get('/module/logs.json', module_controller.logs),
-    # --- interface routes ---
-    web.get('/interface/{id}', interface_controller.proxy),
-    web.get('/interface/{id}/{path:.*}', interface_controller.proxy),
-    web.post('/interface/{id}/{path:.*}', interface_controller.proxy),
+    # --- app auth route ---
+    web.get('/app', app_controller.proxy),
     # --- proxy routes ---
     web.get('/proxies.json', proxy_controller.index),
     web.get('/proxy.json', proxy_controller.info),

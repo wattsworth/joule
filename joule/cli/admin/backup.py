@@ -75,16 +75,20 @@ def admin_backup(config, file):
         # allow read access to wal
         os.chmod(os.path.join(backup_path, "pg_wal.tar"), 0o644)
         # combine backup into a single archive
-        args = ["--append"]
+        #args = ["--append"]
+        args = ["--create"]
+        args += ["--file", file]
+        #args += ["--remove-files"]
         args += ["--directory", backup_path]
-        args += ["--file", os.path.join(backup_path, "base.tar")]
-        args += ["--remove-files"]
         args += ["pg_wal.tar"]
         args += ["info.json"]
+        args += ["base.tar"]
         cmd = ["tar"] + args
+        print(" ".join(cmd))
         subprocess.call(cmd)
+        print("did it!")
 
         # rename the tarball and move it
-        os.rename(os.path.join(backup_path, "base.tar"), file)
+        #os.rename(os.path.join(backup_path, "base.tar"), file)
         # remove the temporary directory
     click.echo("OK")
