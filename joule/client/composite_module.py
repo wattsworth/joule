@@ -28,16 +28,14 @@ class CompositeModule(base_module.BaseModule):
 
         assert False, "implement in child class"  # pragma: no cover
 
-    def run_as_task(self, parsed_args, app, loop):
+    async def run_as_task(self, parsed_args, app, loop) -> asyncio.Task:
         try:
-            coro = self._build_pipes(parsed_args)
-            (pipes_in, pipes_out) = loop.run_until_complete(coro)
+            (pipes_in, pipes_out) = await self._build_pipes(parsed_args)
         except errors.ApiError as e:
             logging.error(str(e))
             return loop.create_task(asyncio.sleep(0))
-        coro = self.setup(parsed_args,
-                          pipes_in,
-                          pipes_out,
-                          loop)
-        tasks = loop.run_until_complete(coro)
+        tasks = await self.setup(parsed_args,
+                                 pipes_in,
+                                 pipes_out,
+                                 loop)
         return asyncio.gather(*tasks)

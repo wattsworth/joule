@@ -1,5 +1,6 @@
-from typing import List, Callable, Dict
+from typing import List, Callable, Dict, Optional
 import asyncio
+import yarl
 import logging
 from sqlalchemy import orm
 
@@ -27,11 +28,11 @@ class Supervisor:
         self.REMOTE_HANDLER_RESTART_INTERVAL = 5
 
     @property
-    def workers(self):
+    def workers(self) -> List[Worker]:
         return self._workers
 
     @property
-    def proxies(self):
+    def proxies(self) -> List[Proxy]:
         return self._proxies
 
     async def start(self, loop: Loop):
@@ -85,7 +86,7 @@ class Supervisor:
                 return w.interface_socket
         return None
 
-    def get_proxy_url(self, uuid):
+    def get_proxy_url(self, uuid) -> Optional[yarl.URL]:
         for p in self._proxies:
             if p.uuid == uuid:
                 return p.url

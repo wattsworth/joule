@@ -132,7 +132,11 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
     proxies = []
     if 'Proxies' in my_configs:
         for name in my_configs['Proxies']:
-            url = yarl.URL(my_configs['Proxies'][name])
+            url_str = my_configs['Proxies'][name]
+            # make sure proxy url ends with /
+            if url_str[-1] != '/':
+                url_str += '/'
+            url = yarl.URL(url_str)
             proxies.append(Proxy(name, uuid, url))
             uuid += 1
 

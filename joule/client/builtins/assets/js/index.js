@@ -28,16 +28,6 @@ $(function () {
         })
         update_id = setInterval(loadData, update_rate*1000);
     })
-    let sock = new WebSocket("ws://"+window.location.host+"/joule/app/m3/ws");
-
-    sock.onopen = function (event) {
-        console.log("open!");
-        sock.send("from the client");
-    };
-    sock.onmessage = function (e) {
-        console.log('Server: ' + e.data);
-        sock.close();
-    };
 });
 
 function loadData() {

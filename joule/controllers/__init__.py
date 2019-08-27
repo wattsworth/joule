@@ -39,8 +39,10 @@ routes = [
     web.get('/modules.json', module_controller.index),
     web.get('/module.json', module_controller.info),
     web.get('/module/logs.json', module_controller.logs),
-    # --- app auth route ---
-    web.get('/app', app_controller.proxy),
+    # --- app routes ---
+    web.get('/app/auth', app_controller.auth),
+    web.get('/app.json', app_controller.index),
+
     # --- proxy routes ---
     web.get('/proxies.json', proxy_controller.index),
     web.get('/proxy.json', proxy_controller.info),

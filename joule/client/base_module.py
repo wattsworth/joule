@@ -13,7 +13,7 @@ from joule.api import node
 from joule import api
 from joule.client import helpers
 # import directly so it can be mocked easily in unit tests
-from joule.errors import ConfigurationError, ApiError
+from joule.errors import ConfigurationError
 from joule.models import pipes
 
 Pipes = Dict[str, 'pipes.Pipe']
@@ -34,7 +34,7 @@ class BaseModule:
         self.runner = None
         self.node = None
 
-    def run_as_task(self, parsed_args, app: web.Application, loop):
+    async def run_as_task(self, parsed_args, app: web.Application, loop) -> asyncio.Task:
         assert False, "implement in child class"  # pragma: no cover
 
     def custom_args(self, parser: argparse.ArgumentParser):
@@ -76,6 +76,35 @@ class BaseModule:
         """
         # override in client for alternate shutdown strategy
         self.stop_requested = True
+
+    def create_dev_app(self, loop: asyncio.AbstractEventLoop) -> web.Application:
+        parser = argparse.ArgumentParser()
+        self._build_args(parser)
+        # must specify module config in JOULE_MODULE_CONFIG environment variable
+        if 'JOULE_MODULE_CONFIG' not in os.environ:
+            raise ConfigurationError("JOULE_MODULE_CONFIG not set, must specify config file")
+        module_config_file = os.environ['JOULE_MODULE_CONFIG']
+        if not os.path.isfile(module_config_file):
+            raise ConfigurationError("JOULE_MODULE_CONFIG is not a module config file")
+
+        module_args = helpers.load_args_from_file(module_config_file)
+        parsed_args = parser.parse_args(module_args)
+        self.node = api.get_node(parsed_args.node)
+
+        self.stop_requested = False
+        my_app = self._create_app()
+
+        async def on_startup(app):
+            app['task'] = await self.run_as_task(parsed_args, app, loop)
+
+        my_app.on_startup.append(on_startup)
+
+        async def on_shutdown(app):
+            self.stop()
+            await app['task']
+
+        my_app.on_shutdown.append(on_shutdown)
+        return my_app
 
     def start(self, parsed_args: argparse.Namespace = None):
         """
@@ -119,7 +148,8 @@ class BaseModule:
         if self.runner is not None:
             app = self.runner.app
         try:
-            task = self.run_as_task(parsed_args, app, loop)
+            task = loop.run_until_complete(
+                self.run_as_task(parsed_args, app, loop))
         except ConfigurationError as e:
             log.error("ERROR: " + str(e))
             self._cleanup(loop)
@@ -251,6 +281,12 @@ class BaseModule:
 
         """
         return []  # override in child to implement a web interface
+
+    def _create_app(self) -> web.Application:
+        routes = self.routes()
+        app = web.Application()
+        app.add_routes(routes)
+        return app
 
     async def _start_interface(self, args) -> Optional[web.AppRunner]:
         routes = self.routes()

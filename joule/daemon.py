@@ -300,7 +300,7 @@ def main(argv=None):
         Error initializing database, ensure user 'joule' has sufficient permissions:
         From a shell run
         $> sudo -u postgres psql
-        postgres=# ALTER ROLE joule WITH CREATEROLE;
+        postgres=# ALTER ROLE joule WITH CREATEROLE REPLICATION;
         postgres=# GRANT ALL PRIVILEGES ON DATABASE joule TO joule WITH GRANT OPTION;
         postgres=# GRANT pg_read_all_settings TO joule;
         """)

@@ -1,4 +1,3 @@
-
 import argparse
 import sys
 import os
@@ -19,7 +18,7 @@ def module_args():
     # build a dummy parser to look for module_config
     temp_parser = argparse.ArgumentParser()
     temp_parser.add_argument("--module_config", default="unset")
-    arg_list = sys.argv[1:]   # ignore the program name
+    arg_list = sys.argv[1:]  # ignore the program name
     stdout = sys.stdout
     sys.stdout = open(os.devnull, 'w')
     try:
@@ -32,6 +31,11 @@ def module_args():
         sys.stdout.close()
         sys.stdout = stdout
     return arg_list
+
+
+def load_args_from_file(path):
+    args = ["--module_config", path]
+    return args+_append_args(path)
 
 
 def _append_args(module_config_file):

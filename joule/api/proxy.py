@@ -14,27 +14,21 @@ class Proxy:
        id (int): unique numeric ID assigned by Joule server
        name (str): proxy name
        target_url (str): URL to proxy
-       proxied_url (str): Joule URL for proxy
     """
 
     def __init__(self, id: int, name: str,
-                 proxied_url: str,
                  target_url: str):
         self.id = id
         self.name = name
-        self.proxied_url = proxied_url
         self.target_url = target_url
 
     def __repr__(self):
-        return "<joule.api.Proxy id=%r name=%r proxied_url=%r target_url=%r>" % (
-            self.id, self.name, self.proxied_url, self.target_url)
+        return "<joule.api.Proxy id=%r name=%r target_url=%r>" % (
+            self.id, self.name, self.target_url)
 
 
-def from_json(json: dict, host_url: str) -> Proxy:
-    host_url = yarl.URL(host_url)
-    proxied_url = host_url.parent / ("interface/p%d" % json['id'])
-    return Proxy(id=json['id'], name=json['name'],
-                 proxied_url=str(proxied_url), target_url=json['url'])
+def from_json(json: dict) -> Proxy:
+    return Proxy(id=json['id'], name=json['name'], target_url=json['url'])
 
 
 async def proxy_get(session: BaseSession,
@@ -55,4 +49,4 @@ async def proxy_get(session: BaseSession,
 
 async def proxy_list(session: BaseSession) -> List[Proxy]:
     resp = await session.get("/proxies.json")
-    return [from_json(item, session.url) for item in resp]
+    return [from_json(item) for item in resp]

@@ -17,10 +17,10 @@ def authorize(exemptions=None):
         # OK, exempt request
         if [request.method, request.path] in exemptions:
             return await handler(request)
-        # Anything over the UNIX socket is ok
-        # Check if the remote field is empty:
+        # Remote is empty for Unix Socket connections
         if request.remote == "":
-            return await handler(request)
+            if 'X-AUTH-REQUIRED' not in request.headers:
+                return await handler(request)
         # Missing Key
         if 'X-API-KEY' not in request.headers:
             raise HTTPForbidden()

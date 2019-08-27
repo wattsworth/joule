@@ -3,7 +3,6 @@ import aiohttp
 from aiohttp import web
 import aiohttp_jinja2
 import jinja2
-import statistics
 import os
 import random
 import numpy as np
@@ -25,6 +24,7 @@ class Visualizer(FilterModule):  # pragma: no cover
         loader = jinja2.FileSystemLoader(TEMPLATES_DIR)
         aiohttp_jinja2.setup(app, loader=loader)
         app["title"] = parsed_args.title
+
         self.elements = []
         dom_id = 0  # DOM id for javascript manipulation
         for pipe in inputs.values():
@@ -54,7 +54,7 @@ class Visualizer(FilterModule):  # pragma: no cover
             while True:
                 self._update_mock_data()
                 await asyncio.sleep(1)
-        while True:
+        while not self.stop_requested:
             offset = 0
             for pipe in inputs.values():
                 data = await pipe.read()
@@ -80,14 +80,13 @@ class Visualizer(FilterModule):  # pragma: no cover
                         self.elements[i + offset]['max'] = max((data_max, global_max))
                 offset += len(pipe.stream.elements)
 
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.5)
 
     def routes(self):
         return [
             web.get('/', self.index),
             web.get('/data.json', self.data),
             web.post('/reset.json', self.reset),
-            web.get('/ws', self.websocket_handler),
             web.static('/assets/css', CSS_DIR),
             web.static('/assets/js', JS_DIR),
         ]
@@ -100,32 +99,13 @@ class Visualizer(FilterModule):  # pragma: no cover
         return web.json_response(data=self.elements)
 
     async def reset(self, request):
+
         # clear the max and min values
         for element in self.elements:
             element['min'] = "&mdash;"
             element['max'] = "&mdash;"
 
         return web.json_response(data=self.elements)
-
-    async def websocket_handler(self, request):
-
-        ws = web.WebSocketResponse()
-        await ws.prepare(request)
-        print("here!")
-        async for msg in ws:
-            if msg.type == aiohttp.WSMsgType.TEXT:
-                if msg.data == 'close':
-                    await ws.close()
-                else:
-                    print("got data [%s]" % msg.data)
-                    await ws.send_str(msg.data + '/answer')
-            elif msg.type == aiohttp.WSMsgType.ERROR:
-                print('ws connection closed with exception %s' %
-                      ws.exception())
-
-        print('websocket connection closed')
-
-        return ws
 
     def _update_mock_data(self):
         for element in self.elements:
@@ -144,7 +124,13 @@ class Visualizer(FilterModule):  # pragma: no cover
                 'max': '--',
                 'id': x
             })
+
         return elements
+
+
+def create_app(loop: asyncio.AbstractEventLoop):
+    r = Visualizer()
+    return r.create_dev_app(loop)
 
 
 def main():  # pragma: no cover

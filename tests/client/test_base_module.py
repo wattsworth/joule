@@ -19,9 +19,9 @@ warnings.simplefilter('always')
 
 class SimpleModule(BaseModule):
 
-    def run_as_task(self, parsed_args, app, loop):
+    async def run_as_task(self, parsed_args, app, loop):
         self.completed = False
-        return asyncio.ensure_future(self.stub(parsed_args.stop_on_request))
+        return loop.create_task(self.stub(parsed_args.stop_on_request))
 
     # generates warnings because the pipe variable is none
     def routes(self):
@@ -40,8 +40,8 @@ class SimpleModule(BaseModule):
 
 
 class NetworkedModule(BaseModule):
-    def run_as_task(self, parsed_args, app, loop):
-        return asyncio.ensure_future(self._build_pipes(parsed_args))
+    async def run_as_task(self, parsed_args, app, loop):
+        return loop.create_task(self._build_pipes(parsed_args))
 
 
 class TestBaseModule(helpers.AsyncTestCase):
