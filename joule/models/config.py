@@ -14,13 +14,11 @@ DEFAULT_CONFIG = {
             "Name": "joule_node",
             "ModuleDirectory": "/etc/joule/module_configs",
             "StreamDirectory": "/etc/joule/stream_configs",
-            "IPAddress": "127.0.0.1",
-            "Port": 8088,
+            "SocketDirectory": "/tmp/joule",
             "Database": "joule@localhost:5438/joule",
             "InsertPeriod": 5,
             "CleanupPeriod": 60,
             "MaxLogLines": 100,
-            "NilmdbUrl": '',
         },
     "Proxies": {}
 }
@@ -41,13 +39,15 @@ class JouleConfig:
                  name: str,
                  module_directory: str,
                  stream_directory: str,
-                 ip_address: str,
-                 port: int,
+                 ip_address: Optional[str],
+                 port: Optional[int],
+                 socket_directory: str,
                  database: str,
                  insert_period: int,
                  cleanup_period: int,
                  max_log_lines: int,
                  nilmdb_url: Optional[str],
+
                  proxies: List[Proxy],
                  security: Optional[SecurityConfig]):
         self.name = name
@@ -62,3 +62,4 @@ class JouleConfig:
         self.nilmdb_url = nilmdb_url
         self.proxies = proxies
         self.security = security
+        self.socket_directory = socket_directory

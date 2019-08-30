@@ -20,6 +20,7 @@ async def add(request: web.Request):  # pragma: no cover
     local_name: str = request.app["name"]
     local_port: int = request.app["port"]
     local_scheme: str = request.app["scheme"]
+    local_uri: str = request.app["base_uri"]
     if request.content_type != 'application/json':
         return web.Response(text='content-type must be application/json', status=400)
     body = await request.json()
@@ -69,10 +70,10 @@ async def add(request: web.Request):  # pragma: no cover
             # post this key to the master
             if master_type == 'joule':
                 coro = _send_node_key(my_master.key, identifier, local_port,
-                                      local_name, local_scheme, request.app["cafile"])
+                                      local_name, local_scheme, local_uri, request.app["cafile"])
             else:
                 coro = _send_lumen_key(my_master.key, identifier, local_port,
-                                       local_name, local_scheme, request.app["cafile"],
+                                       local_name, local_scheme, local_uri, request.app["cafile"],
                                        body['lumen_params'])
             try:
                 name = await coro
@@ -102,6 +103,7 @@ async def _send_node_key(key: str,
                          local_port: int,
                          local_name: str,
                          local_scheme: str,
+                         local_uri: str,
                          cafile: str) -> str:  # pragma: no cover
     # if the identifier is an IP address or a domain name, turn it into a URL
     if not identifier.startswith("http"):
@@ -115,6 +117,7 @@ async def _send_node_key(key: str,
     params = {'key': key,
               'port': local_port,
               'name': local_name,
+              'base_uri': local_uri,
               'scheme': local_scheme}
     if cafile != "":
         params["name_is_host"] = 1
@@ -128,11 +131,12 @@ async def _send_lumen_key(key: str,
                           local_port: int,
                           local_name: str,
                           local_scheme: str,
+                          local_uri: str,
                           cafile: str,
                           lumen_params: Dict) -> str:  # pragma: no cover
     # if the identifier is an IP address or a domain name, turn it into a URL
     if not identifier.startswith("http"):
-        url = await detect_url(identifier + "/api")
+        url = await detect_url(identifier + "/lumen")
         if url is None:
             raise errors.ApiError("cannot connect to [%s] on port 80 or 443" % identifier)
     else:
@@ -143,6 +147,7 @@ async def _send_lumen_key(key: str,
     params = {'api_key': key,
               'port': local_port,
               'name': local_name,
+              'base_uri': local_uri,
               'scheme': local_scheme}
     if lumen_params is not None:
         params = {**params, **lumen_params}

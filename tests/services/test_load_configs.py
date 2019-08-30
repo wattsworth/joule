@@ -12,13 +12,14 @@ class TestLoadConfigs(unittest.TestCase):
 
     def test_loads_default_config(self):
         my_config = load_config.run(verify=False)
-        self.assertEqual(my_config.ip_address, config.DEFAULT_CONFIG['Main']['IPAddress'])
+        self.assertEqual(my_config.socket_directory, config.DEFAULT_CONFIG['Main']['SocketDirectory'])
 
     def test_customizes_config(self):
         parser = configparser.ConfigParser()
         parser.read_string("""
             [Main]
             IPAddress = 8.8.8.8
+            Port = 8080
             Database = new_db
             InsertPeriod = 20
         """)
@@ -31,16 +32,19 @@ class TestLoadConfigs(unittest.TestCase):
         db_url = postgresql.url()
         with tempfile.TemporaryDirectory() as module_dir:
             with tempfile.TemporaryDirectory() as stream_dir:
-                parser = configparser.ConfigParser()
-                parser.read_string("""
-                            [Main]
-                            ModuleDirectory=%s
-                            StreamDirectory=%s
-                            Database=%s
-                        """ % (module_dir, stream_dir, db_url[13:]))
-                my_config = load_config.run(custom_values=parser)
-                self.assertEqual(my_config.stream_directory, stream_dir)
-                self.assertEqual(my_config.module_directory, module_dir)
+                with tempfile.TemporaryDirectory() as socket_dir:
+
+                    parser = configparser.ConfigParser()
+                    parser.read_string("""
+                                [Main]
+                                ModuleDirectory=%s
+                                StreamDirectory=%s
+                                SocketDirectory=%s
+                                Database=%s
+                            """ % (module_dir, stream_dir, socket_dir, db_url[13:]))
+                    my_config = load_config.run(custom_values=parser)
+                    self.assertEqual(my_config.stream_directory, stream_dir)
+                    self.assertEqual(my_config.module_directory, module_dir)
         postgresql.stop()
 
     def test_loads_proxies(self):
@@ -58,4 +62,3 @@ class TestLoadConfigs(unittest.TestCase):
         self.assertEqual(my_config.proxies[1].url, yarl.URL("https://othersite.com"))
         self.assertEqual(my_config.proxies[1].uuid, 1)
         self.assertEqual(my_config.proxies[1].name, "site two")
-

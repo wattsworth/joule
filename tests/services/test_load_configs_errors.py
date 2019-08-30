@@ -28,14 +28,16 @@ class TestLoadConfigErrors(unittest.TestCase):
     def test_error_if_missing_database_configuration(self):
         with tempfile.TemporaryDirectory() as module_dir:
             with tempfile.TemporaryDirectory() as stream_dir:
-                parser = configparser.ConfigParser()
-                parser.read_string("""
-                            [Main]
-                            ModuleDirectory=%s
-                            StreamDirectory=%s
-                        """ % (module_dir, stream_dir))
-                with self.assertRaisesRegex(ConfigurationError, "database"):
-                    load_config.run(custom_values=parser)
+                with tempfile.TemporaryDirectory() as sock_dir:
+                    parser = configparser.ConfigParser()
+                    parser.read_string("""
+                                [Main]
+                                ModuleDirectory=%s
+                                StreamDirectory=%s
+                                SocketDirectory=%s
+                            """ % (module_dir, stream_dir, sock_dir))
+                    with self.assertRaisesRegex(ConfigurationError, "database"):
+                        load_config.run(custom_values=parser)
 
     def test_error_on_bad_ip_address(self):
         parser = configparser.ConfigParser()
@@ -54,6 +56,7 @@ class TestLoadConfigErrors(unittest.TestCase):
         for port in bad_ports:
             parser.read_string("""
                 [Main]
+                IpAddress=127.0.0.1
                 Port=%s
             """ % port)
             with self.assertRaisesRegex(ConfigurationError, "Port"):
@@ -95,15 +98,17 @@ class TestLoadConfigErrors(unittest.TestCase):
     def test_errors_if_nilmdb_not_available(self):
         with tempfile.TemporaryDirectory() as module_dir:
             with tempfile.TemporaryDirectory() as stream_dir:
-                parser = configparser.ConfigParser()
-                parser.read_string("""
-                                   [Main]
-                                   ModuleDirectory=%s
-                                   StreamDirectory=%s
-                                   NilmdbUrl=http://127.0.0.1:234/bad_nilmdb
-                               """ % (module_dir, stream_dir))
-                with self.assertRaisesRegex(ConfigurationError, "NilmDB"):
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    load_config.run(custom_values=parser)
-                    loop.close()
+                with tempfile.TemporaryDirectory() as sock_dir:
+                    parser = configparser.ConfigParser()
+                    parser.read_string("""
+                                       [Main]
+                                       ModuleDirectory=%s
+                                       StreamDirectory=%s
+                                       SocketDirectory=%s
+                                       NilmdbUrl=http://127.0.0.1:234/bad_nilmdb
+                                   """ % (module_dir, stream_dir, sock_dir))
+                    with self.assertRaisesRegex(ConfigurationError, "NilmDB"):
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                        load_config.run(custom_values=parser)
+                        loop.close()

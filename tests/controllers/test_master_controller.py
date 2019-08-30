@@ -21,6 +21,7 @@ class TestMasterController(AioHTTPTestCase):
         app["name"] = "test"
         app["port"] = 443
         app["scheme"] = "http"
+        app["base_uri"] = "/"
 
         # create a master user to grant access
         self.grantor = Master(name="grantor", key="grantor_key",

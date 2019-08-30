@@ -55,19 +55,42 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
     if not os.path.isdir(stream_directory) and verify:
         raise ConfigurationError(
             "StreamDirectory [%s] does not exist" % stream_directory)
+
+    # Specify IPAddress and Port to listen on network interface
     # IPAddress
-    ip_address = main_config['IPAddress']
-    try:
-        ipaddress.ip_address(ip_address)
-    except ValueError as e:
-        raise ConfigurationError("IPAddress is invalid") from e
-    # Port
-    try:
-        port = int(main_config['Port'])
-        if port < 0 or port > 65535:
-            raise ValueError()
-    except ValueError as e:
-        raise ConfigurationError("Port must be between 0 - 65535") from e
+    if 'IPAddress' in main_config:
+        ip_address = main_config['IPAddress']
+        try:
+            ipaddress.ip_address(ip_address)
+        except ValueError as e:
+            raise ConfigurationError("IPAddress is invalid") from e
+        # Port
+        try:
+            port = int(main_config['Port'])
+            if port < 0 or port > 65535:
+                raise ValueError()
+        except ValueError as e:
+            raise ConfigurationError("Port must be between 0 - 65535") from e
+    else:
+        port = None
+        ip_address = None
+
+    # SocketDirectory
+    socket_directory = main_config['SocketDirectory']
+    if not os.path.isdir(socket_directory) and verify:
+        try:
+            os.mkdir(socket_directory)
+            # make sure the ownership is correct
+            os.chmod(socket_directory, 0o700)
+        except FileExistsError:
+            raise ConfigurationError("SocketDirectory [%s] is a file" % socket_directory)
+        except PermissionError:
+            raise ConfigurationError("Cannot create SocketDirectory at [%s]" % socket_directory)
+        raise ConfigurationError(
+            "SocketDirectory [%s] does not exist" % socket_directory)
+    if not os.access(socket_directory, os.W_OK) and verify:
+        raise ConfigurationError(
+            "SocketDirectory [%s] is not writable" % socket_directory)
 
     # Nilmdb URL
     if 'NilmdbUrl' in main_config and main_config['NilmdbUrl'] != '':
@@ -146,6 +169,7 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
         stream_directory=stream_directory,
         ip_address=ip_address,
         port=port,
+        socket_directory=socket_directory,
         database=database,
         insert_period=insert_period,
         cleanup_period=cleanup_period,

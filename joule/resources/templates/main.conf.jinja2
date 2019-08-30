@@ -10,10 +10,16 @@ StreamDirectory = /etc/joule/stream_configs
 
 # Listen on address
 # set to 0.0.0.0 to listen on all interfaces
-IPAddress = 0.0.0.0
+# omit to only listen on UNIX socket
+# IPAddress = 0.0.0.0
 
 # Listen on port
-Port = 8088
+# required if IPAddress is specified
+# Port = 8088
+
+# UNIX Socket directory (must be writable by joule user)
+SocketDirectory = /tmp/joule
+
 
 # PostgreSQL database connection
 # DSN format

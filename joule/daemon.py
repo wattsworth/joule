@@ -36,8 +36,6 @@ async_log.setLevel(logging.WARNING)
 Loop = asyncio.AbstractEventLoop
 faulthandler.enable()
 
-WORKING_DIRECTORY = '/tmp/joule'
-
 
 class Daemon(object):
 
@@ -53,23 +51,17 @@ class Daemon(object):
 
     def initialize(self, loop: Loop):
 
-        # check the working directory, create if necessary
-        if not os.path.isdir(WORKING_DIRECTORY):
-            os.mkdir(WORKING_DIRECTORY)
-        # make sure the ownership is correct
-        os.chmod(WORKING_DIRECTORY, 0o700)
-
         # make sure this is the only copy of jouled running
-        pid_file = os.path.join(WORKING_DIRECTORY, 'pid')
+        pid_file = os.path.join(self.config.socket_directory, 'pid')
         if os.path.exists(pid_file):
             with open(pid_file, 'r') as f:
                 pid = int(f.readline())
                 if psutil.pid_exists(pid):
                     log.error("jouled is already running with pid %d" % pid)
                     sys.exit(1)
-        # clear out the working directory
-        for file_name in os.listdir(WORKING_DIRECTORY):
-            path = os.path.join(WORKING_DIRECTORY, file_name)
+        # clear out the socket directory
+        for file_name in os.listdir(self.config.socket_directory):
+            path = os.path.join(self.config.socket_directory, file_name)
             os.unlink(path)
         # write our pid
         with open(pid_file, 'w') as f:
@@ -198,9 +190,19 @@ class Daemon(object):
         app['supervisor'] = self.supervisor
         app['data-store'] = self.data_store
         app['db'] = self.db
-        # used to tell master's how to contact this node
-        app['port'] = self.config.port
+        # used to tell master's this node's info
+
+        # if the API is proxied the scheme
+        # will be retrieved from the X-Api-Base-Uri header
+        app['base_uri'] = ""
+
+        # if the API is proxied the port
+        # will be retrieved from the X-Api-Port header
         app['name'] = self.config.name
+        app['port'] = self.config.port
+
+        # note, if the API is proxied the scheme
+        # will be retrieved from the X-Api-Scheme header
         if self.ssl_context is None:
             app['scheme'] = 'http'
         else:
@@ -213,13 +215,15 @@ class Daemon(object):
         runner = web.AppRunner(app)
 
         await runner.setup()
-        site = web.TCPSite(runner, self.config.ip_address,
-                           self.config.port,
-                           ssl_context=self.ssl_context)
-        sock_file = os.path.join(WORKING_DIRECTORY, 'api')
+        if self.config.ip_address is not None:
+            site = web.TCPSite(runner, self.config.ip_address,
+                               self.config.port,
+                               ssl_context=self.ssl_context)
+            await site.start()
+
+        sock_file = os.path.join(self.config.socket_directory, 'api')
         sock_site = web.UnixSite(runner, sock_file)
         await sock_site.start()
-        await site.start()
         os.chmod(sock_file, 0o600)
 
         # sleep and check for stop condition
@@ -311,9 +315,9 @@ def main(argv=None):
     loop.run_until_complete(daemon.run(loop))
     loop.close()
 
-    # clear out the working directory
-    for file_name in os.listdir(WORKING_DIRECTORY):
-        path = os.path.join(WORKING_DIRECTORY, file_name)
+    # clear out the socket directory
+    for file_name in os.listdir(my_config.socket_directory):
+        path = os.path.join(my_config.socket_directory, file_name)
         os.unlink(path)
 
     exit(0)

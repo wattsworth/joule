@@ -19,6 +19,14 @@ def authorize(exemptions=None):
             return await handler(request)
         # Remote is empty for Unix Socket connections
         if request.remote == "":
+            # set the app port and scheme based off headers if present
+            if 'X-API-PORT' in request.headers:
+                request.app["port"] = request.headers['X-API-PORT']
+            if 'X-API-SCHEME' in request.headers:
+                request.app["scheme"] = request.headers['X-API-SCHEME']
+            if 'X-API-BASE-URI' in request.headers:
+                request.app["base_uri"] = request.headers['X-API-BASE-URI']
+            # skip authorization unless requested
             if 'X-AUTH-REQUIRED' not in request.headers:
                 return await handler(request)
         # Missing Key
