@@ -19,6 +19,7 @@ from tests import helpers
 
 warnings.simplefilter('always')
 
+
 class TestDataCopyWithNilmDb(FakeJouleTestCase):
 
     def _start_nilmdb(self, msgs):
@@ -27,7 +28,6 @@ class TestDataCopyWithNilmDb(FakeJouleTestCase):
         self.nilmdb_proc.start()
         ready = False
         time.sleep(0.01)
-        url = "http://localhost:%d" % port
 
         while not ready:
             for conn in psutil.net_connections():
@@ -36,7 +36,7 @@ class TestDataCopyWithNilmDb(FakeJouleTestCase):
                     break
             else:
                 time.sleep(0.01)
-        return "http://localhost:%d" % port
+        return "http://127.0.0.1:%d" % port
 
     def _stop_nilmdb(self):
         if self.nilmdb_proc is None:
@@ -62,6 +62,7 @@ class TestDataCopyWithNilmDb(FakeJouleTestCase):
         loop.run_forever()
 
     def test_copies_data_to_nilmdb(self):
+
         source_server = FakeJoule()
         nilmdb_msgs = multiprocessing.Queue()
         dest_url = self._start_nilmdb(nilmdb_msgs)
@@ -80,7 +81,7 @@ class TestDataCopyWithNilmDb(FakeJouleTestCase):
                                input='y\n', catch_exceptions=True)
         _print_result_on_error(result)
         # expect data transfer call
-        nilmdb_call = nilmdb_msgs.get_nowait()
+        nilmdb_call = nilmdb_msgs.get()
         self.assertEqual('stream_insert', nilmdb_call['action'])
         data = nilmdb_call['data']
         np.testing.assert_array_equal(src_data, data)
@@ -107,16 +108,16 @@ class TestDataCopyWithNilmDb(FakeJouleTestCase):
                                       '-d', dest_url, '/test/source', '/test/destination'], catch_exceptions=False)
         _print_result_on_error(result)
         # expect a stream create call
-        nilmdb_call = nilmdb_msgs.get_nowait()
+        nilmdb_call = nilmdb_msgs.get()
         self.assertEqual('stream_create', nilmdb_call['action'])
         self.assertEqual({'path': '/test/destination', 'layout': 'float32_3'}, nilmdb_call['params'])
         # expect a metadata call
-        nilmdb_call = nilmdb_msgs.get_nowait()
+        nilmdb_call = nilmdb_msgs.get()
         self.assertEqual('set_metadata', nilmdb_call['action'])
         self.assertEqual('/test/destination', nilmdb_call['params']['path'])
         self.assertEqual('config_key__', list(json.loads(nilmdb_call['params']['data']).keys())[0])
         # expect data transfer call
-        nilmdb_call = nilmdb_msgs.get_nowait()
+        nilmdb_call = nilmdb_msgs.get()
         self.assertEqual('stream_insert', nilmdb_call['action'])
         data = nilmdb_call['data']
         np.testing.assert_array_equal(src_data, data)

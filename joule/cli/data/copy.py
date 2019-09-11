@@ -118,6 +118,7 @@ async def _run(config, start, end, destination_node, source_url, source, destina
                 await _copy_interval(interval[0], interval[1], bar)
 
     async def _copy_interval(istart, iend, bar):
+
         if nilmdb_source:
             src_params = {'path': source, 'binary': 1,
                           'start': istart, 'end': iend}
@@ -191,6 +192,11 @@ async def _run(config, start, end, destination_node, source_url, source, destina
     # data read/write
     except aiohttp.ClientError as e:  # pragma: no cover
         raise click.ClickException("Error: %s" % str(e))
+    finally:
+        if not nilmdb_dest:
+            await dest_node.close()
+        if not nilmdb_source:
+            await source_node.close()
 
 
 async def _get_intervals(server: Union[BaseNode, str], my_stream: Stream, path: str,
@@ -338,6 +344,7 @@ async def _send_nilmdb_data(url, params, generator, dtype, session):
 async def _validate_nilmdb_url(url):
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as resp:
+
             body = await resp.text()
             if 'NilmDB' not in body:
                 raise errors.ApiError("[%s] is not a Nilmdb server" % url)

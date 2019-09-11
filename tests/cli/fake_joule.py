@@ -364,20 +364,19 @@ class FakeJouleTestCase(helpers.AsyncTestCase):
         self.server_proc.start()
         ready = False
         time.sleep(0.01)
+        self.conf_dir = tempfile.TemporaryDirectory()
         while not ready:
             for conn in psutil.net_connections():
                 if conn.laddr.port == port:
                     ready = True
                     break
             else:
-                time.sleep(0.01)
-
+                time.sleep(0.1)
         # create a .joule config directory with key info
-        self.conf_dir = tempfile.TemporaryDirectory()
         with open(os.path.join(self.conf_dir.name, "nodes.json"), 'w') as f:
             f.write(json.dumps([{"name": "fake_joule",
                                  "key": key,
-                                 "url": "http://localhost:%d" % port}]))
+                                 "url": "http://127.0.0.1:%d" % port}]))
         with open(os.path.join(self.conf_dir.name, "default_node.txt"), 'w') as f:
             f.write("fake_joule")
         os.environ["JOULE_USER_CONFIG_DIR"] = self.conf_dir.name
@@ -390,7 +389,7 @@ class FakeJouleTestCase(helpers.AsyncTestCase):
         self.msgs.join_thread()
 
         self.outbound_msgs.put("stop")
-
+        self.outbound_msgs.close()
         while self.server_proc.is_alive():
             time.sleep(0.01)
         self.outbound_msgs.close()

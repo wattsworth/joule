@@ -7,7 +7,8 @@ from joule import api, errors
 
 @click.command(name="authorize")
 @click.option("-c", "--config", help="main configuration file", default="/etc/joule/main.conf")
-def admin_authorize(config):
+@click.option("-u", "--url", help="joule API URL")
+def admin_authorize(config, url):
     # expensive imports so only execute if the function is called
     from joule.services import load_config
     from joule.models import (Base, master)
@@ -59,20 +60,28 @@ def admin_authorize(config):
         my_master.name = username
         db.add(my_master)
 
-    # add the key data to nodes.json
-    if config.security is not None and config.security.cafile != "":
-        addr = config.name
-    elif config.ip_address != "0.0.0.0":
-        addr = config.ip_address
+    # if a url is specified use it
+    if url is not None:
+        joule_url = url
+    # if the Joule server is not hosting a TCP server use the
+    # default proxy address
+    elif config.ip_address is None:
+        joule_url = "https://localhost/joule"
+    # otherwise use the the server information in the config file
     else:
-        addr = "127.0.0.1"
+        if config.security is not None and config.security.cafile != "":
+            addr = config.name
+        elif config.ip_address != "0.0.0.0":
+            addr = config.ip_address
+        else:
+            addr = "127.0.0.1"
 
-    if config.security is None:
-        scheme = "http"
-    else:
-        scheme = "https"
-    location = "%s://%s:%d" % (scheme, addr, config.port)
-    my_node = api.create_tcp_node(location, my_master.key, config.name)
+        if config.security is None:
+            scheme = "http"
+        else:
+            scheme = "https"
+        joule_url = "%s://%s:%d" % (scheme, addr, config.port)
+    my_node = api.create_tcp_node(joule_url, my_master.key, config.name)
     api.save_node(my_node)
 
     db.commit()
