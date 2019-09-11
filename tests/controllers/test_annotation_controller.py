@@ -39,8 +39,8 @@ class TestAnnotationController(AioHTTPTestCase):
     async def test_annotation_list(self):
         # 1.) retreive all annotations
         resp = await self.client.request("GET", "/annotations.json",
-                                         params=[("stream_id", self.stream1.id),
-                                                 ("stream_id", self.stream2.id)])
+                                         params=[("stream_id", str(self.stream1.id)),
+                                                 ("stream_id", str(self.stream2.id))])
         all_annotations_json = await resp.json()
         self.assertEqual(len(all_annotations_json), 10)
         for annotation in all_annotations_json:

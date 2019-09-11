@@ -21,4 +21,4 @@ docs/_build
 joule/scratch.py
 .eggs
 tests/e2e/pki/*.crt
-tests/e2e/pki/ca.srl
+tests/e2e/pki/*.srl

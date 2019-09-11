@@ -11,7 +11,7 @@ cd -
 #docker build ../.. -f Dockerfile -t jdonnal/joule:testing  >> /dev/null
 docker-compose up --build --abort-on-container-exit 
 
-#CMD=/src/test/e2e/bootstrap_inner.py
+#CMD=/src/test/e2e/main_node.py
 #CMD=/src/test/e2e/raw_jouled.sh
 #docker run --rm jdonnal/joule:testing $CMD
 #EXIT_CODE=$?

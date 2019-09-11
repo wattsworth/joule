@@ -8,6 +8,7 @@ import sys
 import subprocess
 import time
 import shlex
+import socket
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from joule.models import Base, master
@@ -29,6 +30,7 @@ def run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL):
 
 
 def main():
+
     prep_system()
     config_file = os.path.join(JOULE_CONF_DIR, "main.conf")
     subprocess.run(("joule admin erase --yes --config %s" % config_file).split(" "))

@@ -86,8 +86,7 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
             raise ConfigurationError("SocketDirectory [%s] is a file" % socket_directory)
         except PermissionError:
             raise ConfigurationError("Cannot create SocketDirectory at [%s]" % socket_directory)
-        raise ConfigurationError(
-            "SocketDirectory [%s] does not exist" % socket_directory)
+
     if not os.access(socket_directory, os.W_OK) and verify:
         raise ConfigurationError(
             "SocketDirectory [%s] is not writable" % socket_directory)

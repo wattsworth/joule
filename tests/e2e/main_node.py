@@ -4,6 +4,7 @@
 Run through each scenario in scenarios
 """
 import os
+import socket
 import sys
 import subprocess
 import shlex
@@ -29,6 +30,7 @@ def run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL):
 
 
 def main():
+
     prep_system()
     for entry in os.scandir(SCENARIO_DIR):
         if not (entry.name.startswith('.') and entry.is_dir()):
@@ -42,6 +44,7 @@ def main():
                     shutil.rmtree("/etc/joule/")
             os.symlink(entry.path, "/etc/joule")
             os.symlink(SECURITY_DIR, "/etc/joule/security")
+
             # clear the existing database
             subprocess.run("joule admin erase --yes".split(" "))
             # get API permissions
