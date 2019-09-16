@@ -38,7 +38,9 @@ def main():
     # get API permissions
     os.environ["LOGNAME"] = "e2e"
     os.environ["JOULE_USER_CONFIG_DIR"] = "/tmp/joule_user"
-    subprocess.run(("joule admin authorize --config %s" % config_file).split(" "))
+    with open(os.devnull, 'w') as devnull:
+        subprocess.run(("joule admin authorize --config %s" % config_file).split(" "),
+                       stdout=devnull)
 
     jouled = subprocess.Popen(["jouled", "--config",
                                config_file],
@@ -46,7 +48,9 @@ def main():
                               stderr=subprocess.STDOUT,
                               universal_newlines=True)
     time.sleep(2)
-    subprocess.run("joule master add joule node1.joule".split(" "))
+    with open(os.devnull, 'w') as devnull:
+        subprocess.run("joule master add joule node1.joule".split(" "),
+                       stderr=devnull, stdout=devnull)
     stdout, _ = jouled.communicate()
     for line in stdout.rstrip().split('\n'):
         print("> %s" % line)

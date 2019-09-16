@@ -100,7 +100,7 @@ class TestDataMethods(asynctest.TestCase):
             try:
                 data = await data_in.read()
                 if first_ts is None:
-                    first_ts = data['timestamp'][1]
+                    first_ts = data['timestamp'][0]
                 last_ts = data['timestamp'][-1]
                 data_in.consume(len(data))
                 await data_out.write(data)

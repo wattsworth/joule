@@ -2,9 +2,7 @@ FROM ubuntu:latest
 
 MAINTAINER John Donnal <donnal@usna.edu>
 
-
-RUN apt-get update
-RUN apt-get install python3 python3-pip language-pack-en postgresql-client -y
+RUN apt-get update && apt-get install python3 python3-pip language-pack-en postgresql-client -y
 
 ADD requirements.txt /tmp
 WORKDIR tmp

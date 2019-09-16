@@ -6,6 +6,7 @@ import unittest
 from joule import api
 import folder, stream, module, data
 
+
 async def setup():
     node = api.Node()
     """
@@ -33,12 +34,14 @@ def main():
     result = runner.run(suite)
     if result.wasSuccessful():
         print("OK")
+        return 0
     else:
         print("FAIL")
         output.seek(0)
         print(output.read())
+        return -1
 
 
 if __name__ == '__main__':
     time.sleep(1)
-    main()
+    exit(main())

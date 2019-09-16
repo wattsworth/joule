@@ -34,7 +34,7 @@ BEGIN
 
   IF base_count = -1 THEN
     RAISE notice 'counting from base stream';
-    EXECUTE format('SELECT COUNT(*) FROM data.stream%s WHERE time >= $1 AND time < $2', stream_id::text)
+    EXECUTE format('SELECT COUNT(*) FROM data.stream%s WHERE time >= $1 AND time <= $2', stream_id::text)
       USING start_ts, end_ts
       INTO base_count;
   END IF;
