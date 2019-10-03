@@ -399,10 +399,10 @@ class Worker:
         cmd = shlex.split(self.module.exec_cmd)
         output_args = {}
         for c in self.output_connections:
-            output_args[c.name] = {'fd': c.child_fd, 'stream': c.stream.to_json()}
+            output_args[c.name] = {'fd': c.child_fd, 'id': c.stream.id, 'layout': c.stream.layout}
         input_args = {}
         for c in self.input_connections:
-            input_args[c.name] = {'fd': c.child_fd, 'stream': c.stream.to_json()}
+            input_args[c.name] = {'fd': c.child_fd, 'id': c.stream.id, 'layout': c.stream.layout}
         cmd += ["--pipes", json.dumps(json.dumps(
             {'outputs': output_args, 'inputs': input_args}))]
         # add a socket if the module has a web interface

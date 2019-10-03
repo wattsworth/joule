@@ -30,6 +30,7 @@ class TestPipeHelpers(FakeJouleTestCase):
         async def runner():
             pipes_in, pipes_out = await build_network_pipes({'input': '/test/source:uint8[x,y,z]'},
                                                             {},
+                                                            {},
                                                             my_node,
                                                             0, 100,
                                                             force=True)
@@ -62,6 +63,7 @@ class TestPipeHelpers(FakeJouleTestCase):
 
         async def runner():
             pipes_in, pipes_out = await build_network_pipes({'input': '/test/source:uint8[x,y,z]'},
+                                                            {},
                                                             {},
                                                             my_node,
                                                             None, None, True)
@@ -97,6 +99,7 @@ class TestPipeHelpers(FakeJouleTestCase):
         async def runner():
             pipes_in, pipes_out = await build_network_pipes({},
                                                             {'output': '/test/dest:uint8[e0,e1,e2]'},
+                                                            {},
                                                             my_node,
                                                             10, 100, force=True)
             await pipes_out['output'].write(blk1)
@@ -136,6 +139,7 @@ class TestPipeHelpers(FakeJouleTestCase):
                 with self.assertRaises(SystemExit):
                     await build_network_pipes({},
                                               {'output': '/test/dest:uint8[e0,e1,e2]'},
+                                              {},
                                               my_node,
                                               1472500708000000, 1476475108000000,
                                               force=False)
@@ -150,6 +154,7 @@ class TestPipeHelpers(FakeJouleTestCase):
                 with self.assertRaises(SystemExit):
                     await build_network_pipes({},
                                               {'output': '/test/dest:uint8[e0,e1,e2]'},
+                                              {},
                                               my_node,
                                               1472500708000000, None,
                                               force=False)
@@ -164,6 +169,7 @@ class TestPipeHelpers(FakeJouleTestCase):
                 with self.assertRaises(SystemExit):
                     await build_network_pipes({},
                                               {'output': '/test/dest:uint8[e0,e1,e2]'},
+                                              {},
                                               my_node,
                                               None, 1476475108000000,
                                               force=False)
@@ -195,6 +201,7 @@ class TestPipeHelpers(FakeJouleTestCase):
                 await my_node.stream_get("/test/dest")
             pipes_in, pipes_out = await build_network_pipes({},
                                                             {'output': '/test/dest:uint8[e0,e1,e2]'},
+                                                            {},
                                                             my_node,
                                                             None, None)
             await pipes_out['output'].close()
@@ -221,6 +228,7 @@ class TestPipeHelpers(FakeJouleTestCase):
         with self.assertRaises(ConfigurationError):
             loop.run_until_complete(build_network_pipes({'input': '/test/source'},
                                                         {},
+                                                        {},
                                                         my_node,
                                                         10, 20,
                                                         force=True))
@@ -239,14 +247,18 @@ class TestPipeHelpers(FakeJouleTestCase):
         with self.assertRaises(ConfigurationError) as e:
             with self.assertLogs(level='INFO'):
                 loop.run_until_complete(build_network_pipes({'input': '/test/source:uint8[x,y]'},
-                                                            {}, my_node,
+                                                            {},
+                                                            {},
+                                                            my_node,
                                                             10, 20, force=True))
         self.assertIn('uint8_3', str(e.exception))
 
         # errors if live stream is requested but unavailable
         with self.assertRaises(ApiError) as e:
             loop.run_until_complete(build_network_pipes({'input': '/test/source:uint8[x,y,z]'},
-                                                        {}, my_node, None, None))
+                                                        {},
+                                                        {},
+                                                        my_node, None, None))
         self.assertIn('not being produced', str(e.exception))
         loop.run_until_complete(my_node.close())
         self.stop_server()
@@ -264,6 +276,7 @@ class TestPipeHelpers(FakeJouleTestCase):
         with self.assertRaises(ConfigurationError) as e:
             loop.run_until_complete(build_network_pipes({},
                                                         {'output': '/test/dest:float32[x,y,z]'},
+                                                        {},
                                                         my_node, None, None))
         self.assertIn('uint8_3', str(e.exception))
 
@@ -271,6 +284,7 @@ class TestPipeHelpers(FakeJouleTestCase):
         with self.assertRaises(ApiError) as e:
             loop.run_until_complete(build_network_pipes({},
                                                         {'output': '/test/source:uint8[e0,e1,e2]'},
+                                                        {},
                                                         my_node, None, None))
         loop.run_until_complete(my_node.close())
         self.assertIn('already being produced', str(e.exception))

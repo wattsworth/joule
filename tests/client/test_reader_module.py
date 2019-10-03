@@ -54,7 +54,7 @@ class TestReaderModule(helpers.AsyncTestCase):
         loop = asyncio.get_event_loop()
         rf = pipes.reader_factory(r, loop)
         pipe = pipes.InputPipe(name="output", stream=self.stream, reader_factory=rf)
-        pipe_arg = json.dumps(json.dumps({"outputs": {'output': {'fd': w, 'stream': self.stream.to_json()}},
+        pipe_arg = json.dumps(json.dumps({"outputs": {'output': {'fd': w, 'id': None, 'layout': self.stream.layout}},
                                           "inputs": {}}))
         data = helpers.create_data(self.stream.layout)
         args = argparse.Namespace(pipes=pipe_arg, socket="unset",
@@ -65,6 +65,7 @@ class TestReaderModule(helpers.AsyncTestCase):
         loop = asyncio.new_event_loop()
         loop.set_debug(True)
         asyncio.set_event_loop(loop)
+
         module.start(args)
         asyncio.set_event_loop(self.loop)
         # check the output
@@ -94,10 +95,11 @@ class TestReaderModule(helpers.AsyncTestCase):
             self.assertEqual(ts, data['timestamp'][i])
             np.testing.assert_array_almost_equal(rx_data, data['data'][i])
 
-    def test_reader_requires_output(self):
+    def test_reader_requires_single_output(self):
         module = SimpleReader()
         data = helpers.create_data(self.stream.layout, length=10)
-        pipe_arg = json.dumps(json.dumps({"outputs": {'badname': {'fd': 0, 'stream': self.stream.to_json()}},
+        pipe_arg = json.dumps(json.dumps({"outputs": {'first': {'fd': 0, 'id': None, 'layout': self.stream.layout},
+                                                      'second': {'fd': 1, 'id': None, 'layout': self.stream.layout}},
                                           "inputs": {}}))
         args = argparse.Namespace(pipes=pipe_arg,
                                   module_config="unset",
@@ -169,4 +171,3 @@ class TestReaderModule(helpers.AsyncTestCase):
         getter.join()
         if os.path.exists(socket_path):
             os.unlink(socket_path)
-

@@ -113,7 +113,7 @@ class TestBaseModule(helpers.AsyncTestCase):
     def test_builds_network_pipes(self):
         built_pipes = False
 
-        async def mock_builder(inputs, outputs, node, start_time, end_time, force):
+        async def mock_builder(inputs, outputs, streams, node, start_time, end_time, force):
             nonlocal built_pipes
             built_pipes = True
             self.assertEqual(len(inputs), 2)
@@ -150,7 +150,9 @@ class TestBaseModule(helpers.AsyncTestCase):
                 args = argparse.Namespace(socket='none', pipes='unset',
                                           api_socket='dummyval', node="",
                                           start_time='1 hour ago', end_time=None, force=True,
-                                          module_config=f.name, url='http://localhost:8088')
+                                          module_config=f.name,
+                                          stream_configs='unset',
+                                          url='http://localhost:8088')
                 module.start(args)
                 self.assertTrue(built_pipes)
 

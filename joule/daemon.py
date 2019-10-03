@@ -181,9 +181,11 @@ class Daemon(object):
         inserter_task_grp = asyncio.gather(*inserter_tasks, loop=loop)
 
         # start the API server
-        middlewares = [joule.middleware.authorize(
-            exemptions=joule.controllers.insecure_routes),
-            joule.middleware.sql_rollback]
+        middlewares = [
+            joule.middleware.sql_rollback,
+            joule.middleware.authorize(
+                exemptions=joule.controllers.insecure_routes),
+            ]
         app = web.Application(middlewares=middlewares)
 
         app['module-connection-info'] = self.module_connection_info

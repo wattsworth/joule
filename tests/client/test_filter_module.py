@@ -5,6 +5,10 @@ import json
 import numpy as np
 from aiohttp import web
 
+from unittest import mock
+import asynctest
+from joule.api import BaseNode
+
 from joule.client import FilterModule
 from joule.models import Stream, Element, pipes
 from tests import helpers
@@ -50,8 +54,9 @@ class TestFilterModule(helpers.AsyncTestCase):
         wf = pipes.writer_factory(w, loop)
         to_filter = pipes.OutputPipe(name="to_filter", stream=self.input, writer_factory=wf)
 
-        pipe_arg = json.dumps(json.dumps({"outputs": {'from_filter': {'fd': w_module, 'stream': self.output.to_json()}},
-                                          "inputs": {'to_filter': {'fd': r_module, 'stream': self.input.to_json()}}}))
+        pipe_arg = json.dumps(
+            json.dumps({"outputs": {'from_filter': {'fd': w_module, 'id': 2, 'layout': self.output.layout}},
+                        "inputs": {'to_filter': {'fd': r_module, 'id': 3, 'layout': self.input.layout}}}))
         data = helpers.create_data(self.input.layout)
         self.loop.run_until_complete(to_filter.write(data))
         self.loop.run_until_complete(to_filter.close())
@@ -62,12 +67,28 @@ class TestFilterModule(helpers.AsyncTestCase):
         loop = asyncio.new_event_loop()
         loop.set_debug(True)
         asyncio.set_event_loop(loop)
-        module.start(args)
+
+        class MockNode(BaseNode):
+            def __init__(self):
+                self.session = mock.Mock()
+                self.session.close = asynctest.CoroutineMock()
+                pass
+
+            @property
+            def loop(self):
+                return asyncio.get_event_loop()
+
+        with mock.patch('joule.client.base_module.node') as mock_node_pkg:
+            node = MockNode()
+            node.stream_get = asynctest.CoroutineMock(return_value=self.output)
+            mock_node_pkg.UnixNode = mock.Mock(return_value=node)
+            module.start(args)
+
         asyncio.set_event_loop(self.loop)
         # check the output
         received_data = self.loop.run_until_complete(from_filter.read())
         np.testing.assert_array_equal(data['timestamp'], received_data['timestamp'])
-        np.testing.assert_array_almost_equal(data['data']*2, received_data['data'])
+        np.testing.assert_array_almost_equal(data['data'] * 2, received_data['data'])
         self.loop.run_until_complete(from_filter.close())
         if not loop.is_closed():
             loop.close()

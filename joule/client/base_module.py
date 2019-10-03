@@ -14,7 +14,7 @@ from joule import api
 from joule.client import helpers
 # import directly so it can be mocked easily in unit tests
 from joule.errors import ConfigurationError
-from joule.models import pipes
+from joule.models import pipes, stream
 
 Pipes = Dict[str, 'pipes.Pipe']
 Loop = asyncio.AbstractEventLoop
@@ -250,11 +250,14 @@ class BaseModule:
                 for name, path in module_config['Outputs'].items():
                     outputs[name] = path
 
+            configured_streams = {}
+            if parsed_args.stream_configs != "unset":
+                configured_streams = helpers.read_stream_configs(parsed_args.stream_configs)
             pipes_in, pipes_out = await build_network_pipes(
-                inputs, outputs, self.node, start, end, parsed_args.force)
+                inputs, outputs, configured_streams, self.node, start, end, parsed_args.force)
         else:
             # run the module within joule
-            (pipes_in, pipes_out) = helpers.build_fd_pipes(pipe_args, self.node.loop)
+            (pipes_in, pipes_out) = await helpers.build_fd_pipes(pipe_args, self.node)
         # keep track of the pipes so they can be closed
         self.pipes = list(pipes_in.values()) + list(pipes_out.values())
         return pipes_in, pipes_out

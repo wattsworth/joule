@@ -3,11 +3,15 @@ import argparse
 import asyncio
 import json
 import numpy as np
+from unittest import mock
+import asynctest
 
 from .test_filter_module import SimpleFilter
 from .test_reader_module import SimpleReader
 from joule.client import CompositeModule
+from joule.api import BaseNode, Stream
 from joule.models import Stream, Element, pipes
+from joule import api
 from tests import helpers
 import warnings
 
@@ -40,10 +44,10 @@ class TestCompositeModule(helpers.AsyncTestCase):
     def test_runs_composited_modules(self):
         module = SimpleComposite()
         (r, w) = os.pipe()
-        loop = asyncio.get_event_loop()
-        rf = pipes.reader_factory(r, loop)
+        # module_loop = asyncio.get_event_loop()
+        rf = pipes.reader_factory(r, self.loop)
         pipe = pipes.InputPipe(name="output", stream=self.stream, reader_factory=rf)
-        pipe_arg = json.dumps(json.dumps({"outputs": {'output': {'fd': w, 'stream': self.stream.to_json()}},
+        pipe_arg = json.dumps(json.dumps({"outputs": {'output': {'fd': w, 'id': None, 'layout': self.stream.layout}},
                                           "inputs": {}}))
         data = helpers.create_data(self.stream.layout)
         args = argparse.Namespace(pipes=pipe_arg, socket="unset",
@@ -51,18 +55,14 @@ class TestCompositeModule(helpers.AsyncTestCase):
                                   url='http://localhost:8080',
                                   mock_data=data)
         # run the composite module
-        loop = asyncio.new_event_loop()
-        loop.set_debug(True)
-        asyncio.set_event_loop(loop)
-        module.start(args)
         asyncio.set_event_loop(self.loop)
+        module.start(args)
         # check the output
         received_data = self.loop.run_until_complete(pipe.read())
         np.testing.assert_array_equal(data['timestamp'], received_data['timestamp'])
         np.testing.assert_array_almost_equal(data['data'] * 2, received_data['data'])
         self.loop.run_until_complete(pipe.close())
-        if not loop.is_closed():
-            loop.close()
+
 
     def test_handles_bad_pipe_configs(self):
         args = argparse.Namespace(pipes="invalid config", socket="unset",

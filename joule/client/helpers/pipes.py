@@ -1,4 +1,4 @@
-from typing import Tuple, Dict, Optional
+from typing import Tuple, Dict, Optional, List
 import asyncio
 import click
 import json
@@ -15,7 +15,7 @@ Loop = asyncio.AbstractEventLoop
 log = logging.getLogger('joule')
 
 
-def build_fd_pipes(pipe_args: str, loop: Loop) -> Tuple[Pipes, Pipes]:
+async def build_fd_pipes(pipe_args: str, node: BaseNode) -> Tuple[Pipes, Pipes]:
     try:
         pipe_json = json.loads(json.loads(pipe_args))
         # if debugging, pycharm escapes the outer JSON
@@ -27,20 +27,32 @@ def build_fd_pipes(pipe_args: str, loop: Loop) -> Tuple[Pipes, Pipes]:
     pipes_out = {}
     pipes_in = {}
     for name, arg in dest_args.items():
-        wf = pipes.writer_factory(arg['fd'], loop)
-        pipes_out[name] = pipes.OutputPipe(stream=stream.from_json(arg['stream']),
+        wf = pipes.writer_factory(arg['fd'], node.loop)
+        dest_stream = None
+        if arg['id'] is not None:  # used in testing when no API is available
+            dest_stream = await node.stream_get(arg['id'])
+        pipes_out[name] = pipes.OutputPipe(stream=dest_stream,
+                                           layout=arg['layout'],
                                            writer_factory=wf)
 
     for name, arg in src_args.items():
-        rf = pipes.reader_factory(arg['fd'], loop)
-        pipes_in[name] = pipes.InputPipe(stream=stream.from_json(arg['stream']),
+        rf = pipes.reader_factory(arg['fd'], node.loop)
+        src_stream = None
+        if arg['id'] is not None:  # used in testing when no API is available
+            src_stream = await node.stream_get(arg['id'])
+        pipes_in[name] = pipes.InputPipe(stream=src_stream,
+                                         layout=arg['layout'],
                                          reader_factory=rf)
 
     return pipes_in, pipes_out
 
 
-async def build_network_pipes(inputs: Dict[str, str], outputs: Dict[str, str],
-                              my_node: BaseNode, start_time: Optional[int], end_time: Optional[int],
+async def build_network_pipes(inputs: Dict[str, str],
+                              outputs: Dict[str, str],
+                              configured_streams: Dict[str, stream.Stream],
+                              my_node: BaseNode,
+                              start_time: Optional[int],
+                              end_time: Optional[int],
                               force=False):
     if not force:
         _display_warning(outputs.values(), start_time, end_time)
@@ -49,7 +61,7 @@ async def build_network_pipes(inputs: Dict[str, str], outputs: Dict[str, str],
     pipes_out = {}
     try:
         for name in inputs:
-            my_stream = await _parse_stream(my_node, inputs[name])
+            my_stream = await _parse_stream(my_node, inputs[name], configured_streams)
             if start_time is None and end_time is None:
                 # subscribe to live data
                 pipes_in[name] = await my_node.data_subscribe(my_stream)
@@ -59,7 +71,7 @@ async def build_network_pipes(inputs: Dict[str, str], outputs: Dict[str, str],
                                                          end_time)
 
         for name in outputs:
-            my_stream = await _parse_stream(my_node, outputs[name])
+            my_stream = await _parse_stream(my_node, outputs[name], configured_streams)
             pipes_out[name] = await my_node.data_write(my_stream,
                                                        start_time,
                                                        end_time)
@@ -91,12 +103,28 @@ def _display_warning(paths, start_time, end_time):
             exit(1)
 
 
-async def _parse_stream(node: BaseNode, pipe_config) -> stream.Stream:
+async def _parse_stream(node: BaseNode, pipe_config, configured_streams: Dict[str, stream.Stream]) -> stream.Stream:
     (path, name, inline_config) = parse_pipe_config(pipe_config)
-    if inline_config == "":
-        raise errors.ConfigurationError(
-            "[%s] is invalid: must specify an inline configuration for standalone execution" % pipe_config)
-    (datatype, element_names) = parse_inline_config(inline_config)
+    configured_stream = None
+    # inline config exists
+    if inline_config != "":
+        (datatype, element_names) = parse_inline_config(inline_config)
+        # make sure inline config agrees with stream config if present
+        if path in configured_streams.keys():
+            configured_stream = configured_streams[path]
+            if datatype != configured_stream.datatype or \
+                    len(configured_stream.elements) != len(element_names):
+                raise errors.ConfigurationError("Invalid configuration: [%s] inline format does not match config file" %
+                                                name)
+    # no inline config
+    else:
+        if path not in configured_streams.keys():
+            raise errors.ConfigurationError(
+                "[%s] is invalid: must configure inline or stream configuration file" % pipe_config)
+        configured_stream = configured_streams[path]
+        datatype = configured_stream.datatype
+        element_names = map(lambda elem: elem.name, configured_stream.elements)
+
     datatype = datatype.name.lower()  # API models are plain text attributes
     # use API to get or create the stream on the Joule node
     try:
@@ -109,18 +137,20 @@ async def _parse_stream(node: BaseNode, pipe_config) -> stream.Stream:
                                              datatype, len(element_names)))
     except errors.ApiError as e:
         if '404' in str(e):
-            # create the stream
-            new_stream = stream.Stream()
-            new_stream.name = name
-            new_stream.decimate = True
-            new_stream.datatype = datatype
-            for i in range(len(element_names)):
-                e = stream.Element()
-                e.name = element_names[i]
-                e.index = i
-                new_stream.elements.append(e)
+            if configured_stream is None:
+                # create the stream
+                configured_stream = stream.Stream()
+                configured_stream.name = name
+                configured_stream.decimate = True
+                configured_stream.datatype = datatype
+                for i in range(len(element_names)):
+                    e = stream.Element()
+                    e.name = element_names[i]
+                    e.index = i
+                    configured_stream.elements.append(e)
+
             log.info("creating output stream [%s%s]" % (path, name))
-            remote_stream = await node.stream_create(new_stream,
+            remote_stream = await node.stream_create(configured_stream,
                                                      path)
         else:
             raise e

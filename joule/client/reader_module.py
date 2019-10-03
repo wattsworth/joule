@@ -64,10 +64,10 @@ class ReaderModule(BaseModule):
             except errors.ApiError as e:
                 logging.error(str(e))
                 return loop.create_task(asyncio.sleep(0))
-            if 'output' not in pipes_out:
-                logging.error("Reader Module must a have a single output called 'output'")
+            if len(pipes_out.keys()) != 1:
+                logging.error("Reader module must have a single output")
                 return loop.create_task(asyncio.sleep(0))
-            output = pipes_out['output']
+            output = list(pipes_out.values())[0]
         await self.setup(parsed_args, app, output)
         return loop.create_task(self.run(parsed_args, output))
 

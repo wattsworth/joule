@@ -243,14 +243,14 @@ class TestWorker(unittest.TestCase):
         my_pipes = json.loads(args.pipes)
         socket_name = args.socket
         # verify inputs and outputs are in the config
-        value = self.streams[0].to_json()
-        self.assertEqual(my_pipes['inputs']['input1']['stream'], value)
-        value = self.streams[1].to_json()
-        self.assertEqual(my_pipes['inputs']['input2']['stream'], value)
-        value = self.streams[2].to_json()
-        self.assertEqual(my_pipes['outputs']['output1']['stream'], value)
-        value = self.streams[3].to_json()
-        self.assertEqual(my_pipes['outputs']['output2']['stream'], value)
+        value = self.streams[0].id
+        self.assertEqual(my_pipes['inputs']['input1']['id'], value)
+        value = self.streams[1].id
+        self.assertEqual(my_pipes['inputs']['input2']['id'], value)
+        value = self.streams[2].id
+        self.assertEqual(my_pipes['outputs']['output1']['id'], value)
+        value = self.streams[3].id
+        self.assertEqual(my_pipes['outputs']['output2']['id'], value)
         self.assertEqual(socket_name, self.worker.interface_name)
         self.assertEqual(args.arg1, "value1")
         self.assertEqual(args.arg2, "value2")
