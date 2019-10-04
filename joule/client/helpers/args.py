@@ -8,6 +8,7 @@ from typing import Tuple, Dict
 
 from joule.errors import ConfigurationError
 from joule.models import stream
+from joule.api import stream as api_stream
 from joule.services.helpers import load_configs
 
 """ helpers for handling module arguments
@@ -71,9 +72,11 @@ def read_stream_configs(file_path: str) -> Dict[str, stream.Stream]:
     for file_path, data in configs.items():
         try:
             s = stream.from_config(data)
+            # convert to an API object
+            api_s = api_stream.from_json(s.to_json())
             stream_path = _create_path(data)
 
-            streams[stream_path] = s
+            streams[stream_path] = api_s
         except KeyError as e:
             raise ConfigurationError("Invalid stream [%s]: [Main] missing %s" %
                                      (file_path, e.args[0]))

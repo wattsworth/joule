@@ -1,12 +1,10 @@
 import asyncio
 import numpy as np
 import random
-import time
-import datetime
 import logging
 import asyncpg
 
-from joule.models import Stream, pipes, stream
+from joule.models import Stream, pipes
 import joule.utilities
 from joule.models.data_store import psql_helpers
 
@@ -16,9 +14,9 @@ log = logging.getLogger('joule')
 
 class Inserter:
 
-    def __init__(self, conn: asyncpg.Connection, stream: Stream, insert_period: float,
+    def __init__(self, pool: asyncpg.pool.Pool, stream: Stream, insert_period: float,
                  cleanup_period: float):
-        self.conn = conn
+        self.pool = pool
         self.stream = stream
         # round cleanup_period to a multiple of insert_period
         if insert_period == 0 or cleanup_period < insert_period:
@@ -34,7 +32,8 @@ class Inserter:
 
         # lazy stream creation
         try:
-            await psql_helpers.create_stream_table(self.conn, self.stream)
+            async with self.pool.acquire() as conn:
+                await psql_helpers.create_stream_table(conn, self.stream)
         except asyncio.CancelledError:
             return
 
@@ -48,43 +47,43 @@ class Inserter:
                 await asyncio.sleep(self.insert_period)
                 data = await pipe.read()
                 # there might be an interval break and no new data
-                if len(data) > 0:
-                    if first_insert:
-                        first_insert = False
-                        await psql_helpers.close_interval(self.conn, self.stream, data['timestamp'][0] - 1)
-                    last_ts = data['timestamp'][-1]
-                    # lazy initialization of decimator
-                    if self.stream.decimate and self.decimator is None:
-                        self.decimator = Decimator(self.stream, 1, 4)
-                    psql_bytes = psql_helpers.data_to_bytes(data)
-                    await self.conn.copy_to_table("stream%d" % self.stream.id,
-                                                  schema_name='data',
-                                                  format='binary',
-                                                  source=psql_bytes)
-                    # this was successful so consume the data
-                    pipe.consume(len(data))
-                    # decimate the data
-                    if self.decimator is not None:
-                        await self.decimator.process(self.conn, data)
-                # check for interval breaks
-                if pipe.end_of_interval and last_ts is not None:
-                    await psql_helpers.close_interval(self.conn, self.stream, last_ts)
-                    if self.decimator is not None:
-                        self.decimator.close_interval()
-                ticks += 1
-                if ticks % self.cleanup_interval == 0:
-                    await self.cleanup()
+                async with self.pool.acquire() as conn:
+                    if len(data) > 0:
+                        if first_insert:
+                            first_insert = False
+                            await psql_helpers.close_interval(conn, self.stream, data['timestamp'][0] - 1)
+                        last_ts = data['timestamp'][-1]
+                        # lazy initialization of decimator
+                        if self.stream.decimate and self.decimator is None:
+                            self.decimator = Decimator(self.stream, 1, 4)
+                        psql_bytes = psql_helpers.data_to_bytes(data)
+                        await conn.copy_to_table("stream%d" % self.stream.id,
+                                                 schema_name='data',
+                                                 format='binary',
+                                                 source=psql_bytes)
+                        # this was successful so consume the data
+                        pipe.consume(len(data))
+                        # decimate the data
+                        if self.decimator is not None:
+                            await self.decimator.process(conn, data)
+                    # check for interval breaks
+                    if pipe.end_of_interval and last_ts is not None:
+                        await psql_helpers.close_interval(conn, self.stream, last_ts)
+                        if self.decimator is not None:
+                            self.decimator.close_interval()
+                    ticks += 1
+                    if ticks % self.cleanup_interval == 0:
+                        await self.cleanup(conn)
 
         except (pipes.EmptyPipe, asyncio.CancelledError):
             pass
-        await self.conn.close()
 
-    async def cleanup(self):
+    async def cleanup(self, conn: asyncpg.Connection):
         if self.stream.keep_us == Stream.KEEP_ALL:
             return
-        tables = await psql_helpers.get_table_names(self.conn, self.stream, with_schema=False)
+        tables = await psql_helpers.get_table_names(conn, self.stream, with_schema=False)
         # ts is milliseconds UNIX timestamp
-        keep_s = self.stream.keep_us//1e6
+        keep_s = self.stream.keep_us // 1e6
         for table in tables:
             if 'interval' in table:
                 # drop all boundaries before the cutoff
@@ -93,7 +92,7 @@ class Inserter:
                 query = "DELETE FROM data.%s WHERE time < '%s'" % (table, cutoff)
             else:
                 query = "SELECT drop_chunks(interval '%d seconds', '%s', 'data')" % (keep_s, table)
-            await self.conn.execute(query)
+            await conn.execute(query)
 
 
 class Decimator:

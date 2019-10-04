@@ -105,27 +105,28 @@ def _display_warning(paths, start_time, end_time):
 
 async def _parse_stream(node: BaseNode, pipe_config, configured_streams: Dict[str, stream.Stream]) -> stream.Stream:
     (path, name, inline_config) = parse_pipe_config(pipe_config)
+    full_path = "/".join([path, name])
     configured_stream = None
     # inline config exists
     if inline_config != "":
         (datatype, element_names) = parse_inline_config(inline_config)
+        datatype = datatype.name.lower()  # API models are plain text attributes
         # make sure inline config agrees with stream config if present
         if path in configured_streams.keys():
             configured_stream = configured_streams[path]
-            if datatype != configured_stream.datatype or \
+            if datatype != configured_stream.datatype.lower() or \
                     len(configured_stream.elements) != len(element_names):
                 raise errors.ConfigurationError("Invalid configuration: [%s] inline format does not match config file" %
                                                 name)
     # no inline config
     else:
-        if path not in configured_streams.keys():
+        if full_path not in configured_streams.keys():
             raise errors.ConfigurationError(
                 "[%s] is invalid: must configure inline or stream configuration file" % pipe_config)
-        configured_stream = configured_streams[path]
+        configured_stream = configured_streams[full_path]
         datatype = configured_stream.datatype
-        element_names = map(lambda elem: elem.name, configured_stream.elements)
+        element_names = list(map(lambda elem: elem.name, configured_stream.elements))
 
-    datatype = datatype.name.lower()  # API models are plain text attributes
     # use API to get or create the stream on the Joule node
     try:
         remote_stream = await node.stream_get(path + '/' + name)

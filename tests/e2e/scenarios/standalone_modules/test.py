@@ -9,7 +9,6 @@ from joule import api
 from joule.api.stream import Stream, Element
 from joule.models.pipes import EmptyPipe
 
-
 NILMDB_URL = "http://nilmdb"
 
 
@@ -31,10 +30,11 @@ async def _run(loop: asyncio.AbstractEventLoop):
     time.sleep(4)  # let procs run
     stop_standalone_procs(procs)
     time.sleep(4)  # close sockets
+
+    await check_streams(node)
     await check_modules(node)
     await check_data(node)
     await check_logs(node)
-
     await node.close()
     return
 
@@ -50,7 +50,6 @@ def start_standalone_procs1():
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE,
                          universal_newlines=True)
-
     assert p1a.stderr.find("plus3") != -1
 
     # proc2 tries to read from /bad/path but fails
@@ -101,7 +100,8 @@ def build_standalone_args(proc_dir):
     base_dir = scenario_dir + "standalone_modules/" + proc_dir + "/"
     return ["/joule/tests/e2e/module_scripts/adder.py",
             "3",
-            "--module_config", base_dir + "module.conf"]
+            "--module_config", base_dir + "module.conf",
+            "--stream_configs", base_dir + "stream_configs"]
 
 
 def stop_standalone_procs(procs):
@@ -118,6 +118,17 @@ async def check_modules(node: api.BaseNode):
     """
     modules = await node.module_list()
     assert (len(modules) == 2)
+
+
+async def check_streams(node: api.BaseNode):
+    """
+    Test: check streams created by standalone modules
+    Goal:
+        /counting/plus3 should have customized display_type and keep settings
+    """
+    plus3 = await node.stream_get("/counting/plus3")
+    assert (plus3.keep_us == (5 * 24 * 60 * 60 * 1e6))  # keep=5d
+    assert (plus3.elements[0].display_type == "DISCRETE")
 
 
 async def check_data(node: api.BaseNode):

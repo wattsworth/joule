@@ -52,9 +52,7 @@ class TimescaleStore(DataStore):
         if insert_period is None:
             insert_period = self.insert_period
 
-        conn: asyncpg.Connection = await asyncpg.connect(self.dsn)
-
-        inserter = Inserter(conn, stream,
+        inserter = Inserter(self.pool, stream,
                             insert_period, self.cleanup_period)
         return loop.create_task(inserter.run(pipe))
 
@@ -109,7 +107,7 @@ class TimescaleStore(DataStore):
 
                     decimation_level = int(4 ** np.ceil(np.log(desired_decimation) /
                                                         np.log(self.decimation_factor)))
-                    #print("count=%d, max_rows=%d,desired_decim=%d,decim_level=%d" % (
+                    # print("count=%d, max_rows=%d,desired_decim=%d,decim_level=%d" % (
                     #    count, max_rows, desired_decimation, decimation_level))
                 else:
                     # create an empty array with the right data type
@@ -146,7 +144,7 @@ class TimescaleStore(DataStore):
                 try:
                     await conn.execute(query)
                 except asyncpg.UndefinedTableError:
-                    return # no data to remove
+                    return  # no data to remove
                 except asyncpg.exceptions.RaiseError as err:
                     print("psql: ", err)
                     return

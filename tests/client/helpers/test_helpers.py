@@ -1,7 +1,14 @@
 import sys
 import tempfile
+import os
+import pdb
 
-from joule.client.helpers.args import module_args, validate_time_bounds, read_module_config
+from joule.client.helpers.args import (
+    module_args,
+    validate_time_bounds,
+    read_module_config,
+    read_stream_configs)
+from joule.api import Element
 from joule.errors import ConfigurationError
 from tests.helpers import AsyncTestCase
 
@@ -49,6 +56,43 @@ class TestNilmdbStore(AsyncTestCase):
         with self.assertRaises(ConfigurationError):
             validate_time_bounds("1 hour ago", "2 hours ago")
 
+    def test_read_stream_configs(self):
+        with tempfile.TemporaryDirectory() as dirname:
+            with open(os.path.join(dirname, "stream1.conf"), 'w') as f:
+                f.write(
+                    """
+                    [Main]
+                    name = plus3
+                    path = /counting
+                    datatype = int32
+                    keep = 5d
+                    decimate = yes
+                    
+                    [Element1]
+                    name         = Plus3
+                    display_type = discrete
+                    """
+                )
+            with open(os.path.join(dirname, "stream2.conf"), 'w') as f:
+                f.write(
+                    """
+                    [Main]
+                    name = plus5
+                    path = /counting/deeper
+                    datatype = int32
+                    keep = all
+                    decimate = yes
+
+                    [Element1]
+                    name         = Plus5
+                    display_type = continuous
+                    """
+                )
+            streams = read_stream_configs(dirname)
+            self.assertEqual(streams['/counting/deeper/plus5'].elements[0].display_type, "CONTINUOUS")
+            self.assertEqual(streams['/counting/plus3'].keep_us, 5 * 24 * 60 * 60 * 1e6)
+            self.assertEqual(len(streams.keys()), 2)
+
     def test_read_module_config(self):
         # read the module config file
         with tempfile.NamedTemporaryFile() as f:
@@ -83,6 +127,3 @@ class TestNilmdbStore(AsyncTestCase):
                     """))
                 f.flush()
                 read_module_config(f.name)
-
-
-

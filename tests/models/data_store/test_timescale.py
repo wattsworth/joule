@@ -65,6 +65,7 @@ class TestTimescale(asynctest.TestCase):
             await conn.execute("GRANT ALL ON SCHEMA data TO public")
 
             self.store = TimescaleStore(self.db_url, 0, 60, self.loop)
+            await self.store.initialize([])
             # make a sample stream with data
             self.test_stream = Stream(id=100, name="stream1", datatype=Stream.DATATYPE.FLOAT32,
                                       keep_us=Stream.KEEP_ALL, decimate=True,
@@ -77,7 +78,7 @@ class TestTimescale(asynctest.TestCase):
             runner = await task
             await runner
             await conn.close()
-            await self.store.initialize([])
+            #await self.store.initialize([])
             await test()
             # simulate the nose2 test output
             sys.stdout.write('o')

@@ -46,7 +46,7 @@ def main():
             tests.append((entry.name, entry.path))
 
     # override to run only particular test(s)
-    # tests = [("api_tests", "/joule/tests/e2e/scenarios/api_tests")]
+    # tests = [("standalone", "/joule/tests/e2e/scenarios/standalone_modules")]
 
     for (test_name, test_path) in tests:
         if os.path.exists("/etc/joule/"):

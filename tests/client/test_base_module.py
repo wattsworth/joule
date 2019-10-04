@@ -105,10 +105,6 @@ class TestBaseModule(helpers.AsyncTestCase):
         if not loop.is_closed():
             loop.close()
 
-    @unittest.skip("TODO")
-    def test_creates_node_object(self):
-        pass
-
     # builds network pipes if pipe arg is 'unset'
     def test_builds_network_pipes(self):
         built_pipes = False
@@ -124,7 +120,6 @@ class TestBaseModule(helpers.AsyncTestCase):
 
         module_mock = mock.Mock()
         module_mock.build_network_pipes = mock_builder
-        #joule.utilities.pipe_builders
         with mock.patch.dict(sys.modules,
                              {'joule.client.helpers.pipes': module_mock}):
             with tempfile.NamedTemporaryFile() as f:
