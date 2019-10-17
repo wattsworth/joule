@@ -194,7 +194,7 @@ class Daemon(object):
         app['db'] = self.db
         # used to tell master's this node's info
 
-        # if the API is proxied the scheme
+        # if the API is proxied the base_uri
         # will be retrieved from the X-Api-Base-Uri header
         app['base_uri'] = ""
 
