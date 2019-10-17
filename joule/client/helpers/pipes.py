@@ -118,37 +118,36 @@ async def _parse_stream(node: BaseNode, pipe_config, configured_streams: Dict[st
                     len(configured_stream.elements) != len(element_names):
                 raise errors.ConfigurationError("Invalid configuration: [%s] inline format does not match config file" %
                                                 name)
+        # otherwise create a stream object from the inline config
+        configured_stream = stream.Stream()
+        configured_stream.name = name
+        configured_stream.decimate = True
+        configured_stream.datatype = datatype
+        for i in range(len(element_names)):
+            e = stream.Element()
+            e.name = element_names[i]
+            e.index = i
+            configured_stream.elements.append(e)
     # no inline config
-    else:
-        if full_path not in configured_streams.keys():
-            raise errors.ConfigurationError(
-                "[%s] is invalid: must configure inline or stream configuration file" % pipe_config)
+    elif full_path in configured_streams.keys():
         configured_stream = configured_streams[full_path]
-        datatype = configured_stream.datatype
-        element_names = list(map(lambda elem: elem.name, configured_stream.elements))
 
     # use API to get or create the stream on the Joule node
     try:
         remote_stream = await node.stream_get(path + '/' + name)
-        # make sure the layout agrees
-        if remote_stream.datatype != datatype or \
-                len(remote_stream.elements) != len(element_names):
-            raise errors.ConfigurationError("Invalid stream configuration: [%s] has layout: %s not %s_%d" %
-                                            (remote_stream.name, remote_stream.layout,
-                                             datatype, len(element_names)))
+        if configured_stream is not None:
+            # make sure the provided config matches the existing stream
+            if remote_stream.datatype != configured_stream.datatype or \
+                    len(remote_stream.elements) != len(configured_stream.elements):
+                raise errors.ConfigurationError("Invalid stream configuration: [%s] has layout: %s not %s_%d" %
+                                                (remote_stream.name, remote_stream.layout,
+                                                 configured_stream.datatype,
+                                                 len(configured_stream.elements)))
     except errors.ApiError as e:
         if '404' in str(e):
             if configured_stream is None:
-                # create the stream
-                configured_stream = stream.Stream()
-                configured_stream.name = name
-                configured_stream.decimate = True
-                configured_stream.datatype = datatype
-                for i in range(len(element_names)):
-                    e = stream.Element()
-                    e.name = element_names[i]
-                    e.index = i
-                    configured_stream.elements.append(e)
+                raise errors.ConfigurationError(
+                    "[%s] is invalid: must configure inline or stream configuration file" % pipe_config)
 
             log.info("creating output stream [%s%s]" % (path, name))
             remote_stream = await node.stream_create(configured_stream,

@@ -107,9 +107,9 @@ async def _send_node_key(key: str,
                          cafile: str) -> str:  # pragma: no cover
     # if the identifier is an IP address or a domain name, turn it into a URL
     if not identifier.startswith("http"):
-        url = await detect_url(identifier, 8088)
+        url = await detect_url(identifier, 443)
         if url is None:
-            raise errors.ApiError("cannot connect to [%s] on port 8088" % identifier)
+            raise errors.ApiError("cannot connect to [%s] on port 443" % identifier)
     else:
         url = identifier
 

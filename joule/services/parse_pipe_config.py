@@ -34,7 +34,7 @@ def run(pipe_config: str, db: Session) -> Stream:
             if len(inline_config) > 0:
                 _validate_config_match(existing_stream, datatype, element_names)
             return existing_stream
-    else: # make sure the remote node is a follower
+    else:  # make sure the remote node is a follower
         if db.query(Follower).filter_by(name=node_name).one_or_none() is None:
             raise ConfigurationError("Remote node [%s] is not a follower" % node_name)
 
@@ -57,7 +57,7 @@ def run(pipe_config: str, db: Session) -> Stream:
         my_folder.streams.append(my_stream)
         db.add(my_stream)
     else:
-        my_stream.set_remote(node_name, path+'/'+my_stream.name)
+        my_stream.set_remote(node_name, path + '/' + my_stream.name)
     return my_stream
 
 

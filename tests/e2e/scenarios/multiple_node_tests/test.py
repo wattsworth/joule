@@ -1,19 +1,8 @@
 #!/usr/bin/env python3
 import time
 import io
-
 import unittest
-from joule import api
 import basic
-
-
-async def setup():
-    """
-    node1:
-    /main/folder/added:int32[x]
-    node2:
-    /main/folder/base:int32[x]
-    """
 
 
 def main():
