@@ -18,7 +18,7 @@ async def add(request: web.Request):  # pragma: no cover
     Called by a Joule node to allow *this* node to control it
     Parameters:
         key(str): the API key to use
-        location(str): (optional) specify the URL of the follower
+        base_uri(str): (optional) specify the URL of the follower
         port(int): specify the port Joule is using on the follower
 
     """
@@ -32,10 +32,11 @@ async def add(request: web.Request):  # pragma: no cover
         key = body["key"]
         port = body["port"]
         scheme = body["scheme"]
+        base_uri = body["base_uri"]
         if "name_is_host" in body:
-            location = scheme+"://" + body["name"] + ":" + str(port)
+            location = scheme+"://" + body["name"] + ":" + str(port) + base_uri
         else:
-            location = scheme+"://" + request.remote + ":" + str(port)
+            location = scheme+"://" + request.remote + ":" + str(port) + base_uri
         try:
             node = TcpNode("new_follower", location, key, cafile)
             info = await node.info()

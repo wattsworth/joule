@@ -34,6 +34,12 @@ async def check_modules(node: api.BaseNode):
     assert (len(modules) == 4)  # normal1,normal2,filter,broken
     for module in modules:
         if module.name in ['Normal1', 'Normal2', 'CAdder']:
+            if module.statistics.pid is None:
+                logs = await node.module_logs(module.name)
+                print(module.name)
+                for line in logs:
+                    print(line)
+
             assert module.statistics.pid is not None, module.name
         elif module.name == 'Broken':
             pass

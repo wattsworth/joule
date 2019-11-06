@@ -67,6 +67,8 @@ class OutputPipe(Pipe):
     async def close_interval(self):
         if self.closed:
             raise PipeError("Pipe is closed")
+        if self.writer is None:
+            return  # nothing has been written yet so nothing to close
         if self._caching:
             await self.flush_cache()
         self.writer.write(interval_token(self.layout).tostring())
@@ -75,6 +77,8 @@ class OutputPipe(Pipe):
     def close_interval_nowait(self):
         if self.closed:
             raise PipeError("Pipe is closed")
+        if self.writer is None:
+            return  # nothing has been written yet so nothing to close
         if self._cache_index > 0:
             log.warning("dumping %d rows of cached data due on %s" % (self._cache_index, self.name))
             self._cache = np.empty(len(self._cache), self.dtype)

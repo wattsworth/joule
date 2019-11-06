@@ -14,10 +14,9 @@ def authorize(exemptions=None):
     @middleware
     async def _authorize(request, handler):
         db: Session = request.app["db"]
-        # OK, exempt request
-        if [request.method, request.path] in exemptions:
-            return await handler(request)
-        # Remote is empty for Unix Socket connections
+
+        # Remote is empty for Unix Socket connections,
+        # populate app with values from reverse proxy if present
         if request.remote == "":
             # set the app port and scheme based off headers if present
             if 'X-API-PORT' in request.headers:
@@ -26,14 +25,26 @@ def authorize(exemptions=None):
                 request.app["scheme"] = request.headers['X-API-SCHEME']
             if 'X-API-BASE-URI' in request.headers:
                 request.app["base_uri"] = request.headers['X-API-BASE-URI']
-            # skip authorization unless requested
-            if 'X-AUTH-REQUIRED' not in request.headers:
+            if 'X-FORWARDED-FOR' in request.headers:
+                request.app["remote_ip"] = request.headers['X-FORWADED-FOR']
+            # OK, skip authorization unless requested (ie this is from a reverse proxy)
+            if (('X-AUTH-REQUIRED' not in request.headers) or
+               ([request.method, request.path] in exemptions)):
                 return await handler(request)
-        # Missing Key
+        # This is not coming through a proxy, populate with locally "true" values
+        else:
+            request.app["base_uri"] = "/"
+            request.app["remote_ip"] = request.remote
+            # scheme and port are populated already (by the daemon)
+
+        # OK, exempt request
+        if [request.method, request.path] in exemptions:
+            return await handler(request)
+        # ERROR: Missing Key
         if 'X-API-KEY' not in request.headers:
             raise HTTPForbidden()
         key = request.headers['X-API-KEY']
-        # Invalid Key
+        # ERROR: Invalid Key
         if (db.query(Master).
                 filter(Master.key == key).
                 count() != 1):
