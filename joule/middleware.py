@@ -33,7 +33,7 @@ def authorize(exemptions=None):
                 return await handler(request)
         # This is not coming through a proxy, populate with locally "true" values
         else:
-            request.app["base_uri"] = "/"
+            request.app["base_uri"] = ""
             request.app["remote_ip"] = request.remote
             # scheme and port are populated already (by the daemon)
 
