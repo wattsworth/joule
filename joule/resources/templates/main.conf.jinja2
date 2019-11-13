@@ -11,11 +11,19 @@ StreamDirectory = /etc/joule/stream_configs
 # Listen on address
 # set to 0.0.0.0 to listen on all interfaces
 # omit to only listen on UNIX socket
+{% if bind is not none %}
+IPAddress = {{ bind }}
+{% else %}
 # IPAddress = 127.0.0.1
+{% endif %}
 
 # Listen on port
 # required if IPAddress is specified
+{% if port is not none %}
+Port = {{ port }}
+{% else %}
 # Port = 8088
+{% endif %}
 
 # UNIX Socket directory (must be writable by joule user)
 SocketDirectory = /tmp/joule
@@ -27,7 +35,11 @@ SocketDirectory = /tmp/joule
 Database = {{dsn}}
 
 # Use NilmDB backend (optional)
+{% if nilmdb is not none %}
+NilmdbUrl = {{ nilmdb }}
+{% else %}
 # NilmdbUrl = http://localhost/nilmdb
+{% endif %}
 
 # How often to flush stream data to database
 InsertPeriod = 5

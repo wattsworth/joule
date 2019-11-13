@@ -11,8 +11,17 @@ import secrets
 
 @click.command(name="initialize")
 @click.option("--dsn", help="PostgreSQL DSN", required=True)
-def admin_initialize(dsn):  # pragma: no cover
+@click.option("--bind", help="IP address (0.0.0.0 for all)")
+@click.option("--port", help="TCP port (default is 8080)")
+@click.option("--nilmdb", help="NilmDB URL")
+def admin_initialize(dsn, bind, port, nilmdb):  # pragma: no cover
     import pkg_resources
+
+    # check arguments
+    if bind is None and port is not None:
+        raise click.ClickException("Must specify bind address with port")
+    if bind is not None and port is None:
+        port = "8080"
     click.echo("1. creating joule user ", nl=False)
     proc = subprocess.run("useradd -r -G dialout joule".split(" "), stderr=subprocess.PIPE)
     if proc.returncode == 0:
@@ -44,8 +53,14 @@ def admin_initialize(dsn):  # pragma: no cover
             "joule", "resources/templates")
         # From https://stackoverflow.com/questions/11857530
         env = Environment(loader=FileSystemLoader(template_path))
+        env.trim_blocks = True
+        env.lstrip_blocks = True
+        env.keep_trailing_newline = True
         template = env.get_template('main.conf.jinja2')
         file_contents = template.render(name='node_%s' % secrets.token_hex(2),
+                                        bind=bind,
+                                        port=port,
+                                        nilmdb=nilmdb,
                                         dsn=dsn)
         with open("/etc/joule/main.conf", 'w') as conf:
             conf.write(file_contents)
