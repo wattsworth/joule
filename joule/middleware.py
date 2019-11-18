@@ -26,7 +26,7 @@ def authorize(exemptions=None):
             if 'X-API-BASE-URI' in request.headers:
                 request.app["base_uri"] = request.headers['X-API-BASE-URI']
             if 'X-FORWARDED-FOR' in request.headers:
-                request.app["remote_ip"] = request.headers['X-FORWADED-FOR']
+                request.app["remote_ip"] = request.headers['X-FORWARDED-FOR']
             # OK, skip authorization unless requested (ie this is from a reverse proxy)
             if (('X-AUTH-REQUIRED' not in request.headers) or
                ([request.method, request.path] in exemptions)):
