@@ -294,7 +294,7 @@ def main(argv=None):
     # connections to abstract namespace sockets
     # https://github.com/joyent/libuv/issues/1486
 
-    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+    #asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
     loop = asyncio.get_event_loop()
     loop.set_debug(True)
