@@ -21,7 +21,18 @@ def node_info(config):
         loop.close()
 
 
+# https://stackoverflow.com/questions/1094841
+def sizeof_fmt(num, suffix='B'):
+    for unit in ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi']:
+        if abs(num) < 1024.0:
+            return "%3.1f%s%s" % (num, unit, suffix)
+        num /= 1024.0
+    return "%.1f%s%s" % (num, 'Yi', suffix)
+
+
 async def _run(node):
     info = await node.info()
-    click.echo("Server Version: %s" % info.version)
-    click.echo("Status: online")
+    click.echo("Server Version:   \t%s" % info.version)
+    click.echo("Database Location:\t%s" % info.path)
+    click.echo("Database Size:    \t%s" % sizeof_fmt(info.size_db))
+    click.echo("Space Available:  \t%s" % sizeof_fmt(info.size_free))

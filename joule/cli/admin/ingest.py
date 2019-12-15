@@ -4,10 +4,10 @@ import configparser
 import json
 import jinja2
 import os
-import tempfile
 import time
 import asyncio
 import typing
+import pdb
 import uuid
 import sqlalchemy.exc
 from tabulate import tabulate
@@ -15,34 +15,38 @@ from typing import Optional, List
 import csv
 from joule import utilities
 from aiohttp.test_utils import unused_port
-from joule import errors
+from joule import errors, api
 
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), 'local_postgres_templates')
 
 if typing.TYPE_CHECKING:
     import sqlalchemy
     from sqlalchemy.orm import Session
-    from joule.models import Base, Stream, folder, TimescaleStore
+    from joule.models import Base, Stream, folder, DataStore, TimescaleStore, NilmdbStore
 
 
 @click.command(name="ingest")
 @click.option("-c", "--config", help="main configuration file", default="/etc/joule/main.conf")
-@click.option("-f", "--file", help="backup file to restore", default="joule_backup.tar")
-@click.option("-d", "--dsn", help="DSN connection string for live restore")
+@click.option("-b", "--backup", help="backup to ingest")
+@click.option("-n", "--node", help="node to ingest")
 @click.option("-m", "--map", help="map file of source to destination streams")
-@click.option("-b", "--pgctl-binary", help="override default pg_ctl location")
+@click.option("-p", "--pgctl-binary", help="override default pg_ctl location")
 @click.option("-y", "--yes", help="do not ask for confirmation", is_flag=True)
 @click.option('-s', "--start", help="timestamp or descriptive string")
 @click.option('-e', "--end", help="timestamp or descriptive string")
-def admin_ingest(config, file, dsn, map, pgctl_binary, yes, start, end):
+def admin_ingest(config, backup, node, map, pgctl_binary, yes, start, end):
     # expensive imports so only execute if the function is called
     from joule.services import load_config
     import sqlalchemy
     from sqlalchemy.orm import Session
-    from joule.models import Base, TimescaleStore
+    from joule.models import Base, TimescaleStore, NilmdbStore
 
     parser = configparser.ConfigParser()
     loop = asyncio.get_event_loop()
+    # make sure either a backup or a node is specified
+    if (((backup is None) and (node is None)) or
+            ((backup is not None) and (node is not None))):
+        raise click.ClickException("Specify either a backup or a node to ingest data from")
 
     # make sure the time bounds make sense
     if start is not None:
@@ -110,7 +114,10 @@ def admin_ingest(config, file, dsn, map, pgctl_binary, yes, start, end):
 
     Base.metadata.create_all(dest_engine)
     dest_db = Session(bind=dest_engine)
-    dest_datastore = TimescaleStore(joule_config.database, 0, 0, loop)
+    if joule_config.nilmdb_url is not None:
+        dest_datastore = NilmdbStore(joule_config.nilmdb_url, 0, 0, loop)
+    else:
+        dest_datastore = TimescaleStore(joule_config.database, 0, 0, loop)
 
     # demote priveleges
     if "SUDO_GID" in os.environ:
@@ -133,24 +140,36 @@ def admin_ingest(config, file, dsn, map, pgctl_binary, yes, start, end):
         except (FileNotFoundError, IndexError):
             raise click.ClickException("cannot autodetect pg_ctl location, specify with -b")
 
-    # determine if this is a file restore or live restore
-    if dsn is not None:
+    # determine if the source is a backup or a node
+    if node is not None:
         live_restore = True
-        # to appease type checker
-        backup_dir = None
-        backup_path = ""
+        src_dsn = loop.run_until_complete(get_dsn(node))
+        # check whether the source uses nilmdb
+        click.echo("WARNING: Nilmdb sources are not supported yet")
+        src_datastore = TimescaleStore(src_dsn, 0, 0, loop)
+        nilmdb_proc = None
     else:
-        if not os.path.isfile(file):
-            raise click.ClickException("backup file [%s] does not exist" % file)
-        backup_dir = tempfile.TemporaryDirectory(dir="./")
-        backup_path = backup_dir.name
-        dsn = start_postgres(file, backup_path, pgctl_binary, pg_log)
+        if not os.path.isdir(backup):
+            raise click.ClickException("backup [%s] does not exist" % folder)
+        src_dsn = start_src_db(backup, pgctl_binary, pg_log)
+        # check whether the source uses nilmdb
+        nilmdb_path = os.path.join(backup, 'nilmdb')
+        nilmdb_proc = None
+        if os.path.exists(nilmdb_path):
+            port = unused_port()
+            nilmdb_proc = start_src_nilmdb(nilmdb_path, port, pg_log)
+            click.echo("waiting for nilmdb to initialize...")
+            time.sleep(2)
+            src_datastore = NilmdbStore('http://127.0.0.1:%d' % port, 0, 0, loop)
+        else:
+            src_datastore = TimescaleStore(src_dsn, 0, 0, loop)
+
         live_restore = False
 
-    src_engine = sqlalchemy.create_engine(dsn)
+    src_engine = sqlalchemy.create_engine(src_dsn)
 
     num_tries = 0
-    max_tries = 3
+    max_tries = 1
     while True:
         try:
             Base.metadata.create_all(src_engine)
@@ -160,12 +179,11 @@ def admin_ingest(config, file, dsn, map, pgctl_binary, yes, start, end):
                 raise click.ClickException(str(e))  # this should work immediately
             num_tries += 1
             click.echo("... attempting to connect to source database (%d/%d)" % (num_tries, max_tries))
-            time.sleep(5)
+            time.sleep(2)
             if num_tries >= max_tries:
                 raise click.ClickException("cannot connect to source database, log saved in [%s]" % pg_log_name)
 
     src_db = Session(bind=src_engine)
-    src_datastore = TimescaleStore(dsn, 0, 0, loop)
 
     try:
         loop.run_until_complete(run(src_db, dest_db,
@@ -179,54 +197,38 @@ def admin_ingest(config, file, dsn, map, pgctl_binary, yes, start, end):
         # close connections
         dest_db.close()
         src_db.close()
+        loop.run_until_complete(dest_datastore.close())
+        loop.run_until_complete(src_datastore.close())
         # clean up database if not a live_restore
         if not live_restore:
-            args = ["-D", os.path.join(backup_path, "base")]
+            args = ["-D", os.path.join(backup)]
             args += ["stop"]
             cmd = [pgctl_binary] + args
             subprocess.call(cmd, stderr=pg_log, stdout=pg_log)
-            # remove the database files
-            backup_dir.cleanup()
+            sock_path = os.path.join(backup, 'sock')
+            sockets = os.listdir(sock_path)
+            for s in sockets:
+                os.remove(os.path.join(sock_path, s))
+            os.rmdir(sock_path)
+            if nilmdb_proc is not None:
+                nilmdb_proc.terminate()
+                nilmdb_proc.communicate()
 
     pg_log.close()
     os.remove(pg_log_name)
+    click.echo("OK")
 
 
-def start_postgres(archive, backup_path, pgctl_binary, log) -> str:
-    # uncompress the archive
-    click.echo("extracting database files")
+async def get_dsn(node_name) -> str:
+    node = api.get_node(node_name)
+    conn_info = await node.db_connection_info()
+    await node.close()
+    return conn_info.to_dsn()
 
+
+def start_src_db(backup_path, pgctl_binary, log) -> str:
+    # make sure file permissions are correct
     os.chmod(backup_path, 0o700)
-    base_path = os.path.join(backup_path, "base")
-    wal_path = os.path.join(backup_path, "wal")
-    os.mkdir(base_path, mode=0o700)
-    os.mkdir(wal_path, mode=0o700)
-
-    # extract the container
-    args = ["--extract"]
-    args += ["--directory", backup_path]
-    args += ["--file", archive]
-    cmd = ["tar"] + args
-    subprocess.call(cmd)
-
-    # extract the base
-    args = ["--extract"]
-    args += ["--directory", base_path]
-    args += ["--file", os.path.join(backup_path, "base.tar")]
-    cmd = ["tar"] + args
-    subprocess.call(cmd)
-
-    # extract the wal
-    args = ["--extract"]
-    args += ["--directory", wal_path]
-    args += ["--file", os.path.join(backup_path, "pg_wal.tar")]
-    cmd = ["tar"] + args
-    subprocess.call(cmd)
-
-    subprocess.call(cmd, stderr=log)
-    os.remove(os.path.join(backup_path, "base.tar"))
-    os.remove(os.path.join(backup_path, "pg_wal.tar"))
-
     # read the info file for database name and user
     with open(os.path.join(backup_path, "info.json"), 'r') as f:
         db_info = json.load(f)
@@ -236,30 +238,41 @@ def start_postgres(archive, backup_path, pgctl_binary, log) -> str:
 
     template = env.get_template("postgresql.conf.jinja2")
     sock_path = os.path.join(backup_path, "sock")
+
+    # remove sockets if they exist (from a previous use of this backup)
+    if os.path.isdir(sock_path):
+        click.confirm("It looks like another ingest either failed or is still running, continue anyway?", abort=True)
+        sockets = os.listdir(sock_path)
+        for s in sockets:
+            os.remove(os.path.join(sock_path, s))
+        os.rmdir(sock_path)
+        if os.path.exists(os.path.join(backup_path, 'postmaster.pid')):
+            os.remove(os.path.join(backup_path, 'postmaster.pid'))
     os.mkdir(sock_path)
     db_port = unused_port()
     output = template.render(port=db_port, sock_dir=os.path.abspath(sock_path))
-    with open(os.path.join(base_path, "postgresql.conf"), "w") as f:
+    with open(os.path.join(backup_path, "postgresql.conf"), "w") as f:
         f.write(output)
 
     template = env.get_template("pg_hba.conf.jinja2")
     output = template.render(user=db_info["user"])
-    with open(os.path.join(base_path, "pg_hba.conf"), "w") as f:
+    with open(os.path.join(backup_path, "pg_hba.conf"), "w") as f:
         f.write(output)
 
     template = env.get_template("pg_ident.conf.jinja2")
     output = template.render()
-    with open(os.path.join(base_path, "pg_ident.conf"), "w") as f:
+    with open(os.path.join(backup_path, "pg_ident.conf"), "w") as f:
         f.write(output)
 
     template = env.get_template("recovery.conf.jinja2")
-    output = template.render(wal_path=os.path.abspath(wal_path))
-    with open(os.path.join(base_path, "recovery.conf"), "w") as f:
+    wal_dir = os.path.join(os.path.abspath(backup_path), 'pg_wal')
+    output = template.render(wal_path=wal_dir)
+    with open(os.path.join(backup_path, "recovery.conf"), "w") as f:
         f.write(output)
 
     # start postgres
 
-    args = ["-D", base_path]
+    args = ["-D", backup_path]
     args += ["start"]
     cmd = [pgctl_binary] + args
     try:
@@ -268,8 +281,9 @@ def start_postgres(archive, backup_path, pgctl_binary, log) -> str:
         raise click.ClickException(
             "Cannot find pg_ctl, expected [%s] to exist. Specify location with -b" % pgctl_binary)
 
-    click.echo("waiting for database to initialize")
+    click.echo("waiting for postgres to initialize")
     time.sleep(2)
+
     # connect to the database
     return "postgresql://%s:%s@localhost:%d/%s" % (
         db_info["user"],
@@ -278,10 +292,18 @@ def start_postgres(archive, backup_path, pgctl_binary, log) -> str:
         db_info["database"])
 
 
+def start_src_nilmdb(database_path, port, log) -> subprocess.Popen:
+    args = ["--address", "127.0.0.1"]
+    args += ["--port", "%s" % port]
+    args += ["--database", database_path]
+    cmd = ['nilmdb-server'] + args
+    return subprocess.Popen(cmd, stderr=log, stdout=log)
+
+
 async def run(src_db: 'Session',
               dest_db: 'Session',
-              src_datastore: 'TimescaleStore',
-              dest_datastore: 'TimescaleStore',
+              src_datastore: 'DataStore',
+              dest_datastore: 'DataStore',
               stream_map: Optional[List],
               confirmed: bool,
               start: Optional[int],
@@ -370,8 +392,8 @@ async def run(src_db: 'Session',
 
 
 async def copy(copy_map: 'CopyMap',
-               src_datastore: 'TimescaleStore',
-               dest_datastore: 'TimescaleStore',
+               src_datastore: 'DataStore',
+               dest_datastore: 'DataStore',
                src_db: 'Session',
                dest_db: 'Session'):
     from joule.models import annotation, Annotation
@@ -412,9 +434,9 @@ async def copy(copy_map: 'CopyMap',
 
 async def copy_interval(start: int, end: int, bar,
                         src_stream: 'Stream', dest_stream: 'Stream',
-                        src_datastore: 'TimescaleStore', dest_datastore: 'TimescaleStore'):
+                        src_datastore: 'DataStore', dest_datastore: 'DataStore'):
     from joule.models import pipes, Stream
-    pipe = pipes.LocalPipe(src_stream.layout, write_limit=4)
+    pipe = pipes.LocalPipe(src_stream.layout, write_limit=4, debug=False)
     dest_stream.keep_us = Stream.KEEP_ALL  # do not delete any data
     insert_task = await dest_datastore.spawn_inserter(dest_stream,
                                                       pipe, asyncio.get_event_loop())
@@ -425,7 +447,7 @@ async def copy_interval(start: int, end: int, bar,
         nonlocal last_ts
         cur_ts = data['timestamp'][-1]
         await pipe.write(data)
-        # await asyncio.sleep(0.01)
+        #await asyncio.sleep(0.01)
         bar.update(cur_ts - last_ts)
         last_ts = cur_ts
 

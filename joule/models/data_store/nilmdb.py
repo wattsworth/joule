@@ -202,6 +202,8 @@ class NilmdbStore(DataStore):
         async with self._get_client() as session:
             # first determine the intervals
             intervals = await self._intervals_by_path(path, start, end)
+            i = 0
+            num_intervals = len(intervals)
             # now extract each interval
             for interval in intervals:
                 params["start"] = interval[0]
@@ -218,7 +220,9 @@ class NilmdbStore(DataStore):
                         except pipes.EmptyPipe:
                             break
                 # insert the interval token to indicate a break
-                await callback(pipes.interval_token(layout), layout, decimation_factor)
+                i += 1
+                if i < num_intervals:
+                    await callback(pipes.interval_token(layout), layout, decimation_factor)
 
     async def _intervals_by_path(self, path: str, start: Optional[int],
                                  end: Optional[int]) -> List[Interval]:

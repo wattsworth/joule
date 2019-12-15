@@ -71,7 +71,10 @@ class BaseNode:
 
     async def info(self) -> NodeInfo:
         resp = await self.session.get("/version.json")
-        return NodeInfo(version=resp["version"], name=resp["name"])
+        db_info = await self.session.get("/dbinfo")
+        return NodeInfo(version=resp["version"], name=resp["name"], path=db_info['path'],
+                        size_other=db_info["other"], size_reserved=db_info["reserved"],
+                        size_free=db_info["free"], size_db=db_info["size"])
 
     # Folder actions
 

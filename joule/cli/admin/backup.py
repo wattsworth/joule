@@ -3,16 +3,18 @@ import subprocess
 import configparser
 import dsnparse
 import os
-import tempfile
 import json
-
+import asyncio
+import shutil
+from datetime import datetime
 from joule import errors
+import aiohttp
 
 
 @click.command(name="backup")
 @click.option("-c", "--config", help="main configuration file", default="/etc/joule/main.conf")
-@click.option("-f", "--file", help="backup file name", default="joule_backup.tar")
-def admin_backup(config, file):
+@click.option("-f", "--folder", help="backup folder name", default="joule_backup_NODE_DATE")
+def admin_backup(config, folder):
     # expensive imports so only execute if the function is called
     from joule.services import load_config
 
@@ -36,59 +38,63 @@ def admin_backup(config, file):
     if "SUDO_UID" in os.environ:
         os.setuid(int(os.environ["SUDO_UID"]))
 
-    if not file.endswith("tar"):
-        file += ".tar"
+    if folder == "joule_backup_NODE_DATE":
+        folder = "joule_backup_%s_%s" % (config.name, datetime.now().strftime("%Y%m%d_%H%M"))
 
-    if os.path.isfile(file):
-        raise click.ClickException("file [%s] already exists" % file)
+    if os.path.exists(folder):
+        raise click.ClickException("Requested folder [%s] already exists" % folder)
 
-    click.echo("Writing database to [%s]" % file)
-    with tempfile.TemporaryDirectory(dir="./") as backup_path:
+    os.mkdir(folder)
 
-        # parse the dsn string
-        parts = dsnparse.parse(config.database)
+    # parse the dsn string
+    parts = dsnparse.parse(config.database)
 
-        # backup the database
-        args = ["--format", "tar"]
-        args += ["--checkpoint", "fast"]
-        args += ["--pgdata", backup_path]
-        args += ["--wal-method", "stream"]
-        args += ["--progress"]
-        args += ["--host", parts.host]
-        args += ["--port", "%s" % parts.port]
-        args += ["--username", parts.user]
-        args += ["--label", "joule_backup"]
-        cmd = ["pg_basebackup"] + args
-        pg_proc_env = os.environ.copy()
-        pg_proc_env["PGPASSWORD"] = parts.password
-        subprocess.call(cmd, env=pg_proc_env)
+    # backup the database
+    args = ["--format", "plain"]
+    args += ["--checkpoint", "fast"]
+    args += ["--pgdata", folder]
+    args += ["--wal-method", "stream"]
+    args += ["--progress"]
+    args += ["--host", parts.host]
+    args += ["--port", "%s" % parts.port]
+    args += ["--username", parts.user]
+    args += ["--label", "joule_backup"]
+    cmd = ["pg_basebackup"] + args
+    pg_proc_env = os.environ.copy()
+    pg_proc_env["PGPASSWORD"] = parts.password
+    click.echo("Copying up postgres database...")
+    subprocess.call(cmd, env=pg_proc_env)
 
-        # add the database name and user
-        db_info = {
-            "database": parts.database,
-            "user": parts.user,
-            "password": parts.secret
-        }
-        with open(os.path.join(backup_path, "info.json"), 'w') as f:
-            f.write(json.dumps(db_info, indent=2))
+    # add the database name and user
+    db_info = {
+        "database": parts.database,
+        "user": parts.user,
+        "password": parts.secret,
+        "nilmdb": config.nilmdb_url is not None
+    }
+    with open(os.path.join(folder, "info.json"), 'w') as f:
+        f.write(json.dumps(db_info, indent=2))
 
-        # allow read access to wal
-        os.chmod(os.path.join(backup_path, "pg_wal.tar"), 0o644)
-        # combine backup into a single archive
-        #args = ["--append"]
-        args = ["--create"]
-        args += ["--file", file]
-        #args += ["--remove-files"]
-        args += ["--directory", backup_path]
-        args += ["pg_wal.tar"]
-        args += ["info.json"]
-        args += ["base.tar"]
-        cmd = ["tar"] + args
-        print(" ".join(cmd))
-        subprocess.call(cmd)
-        print("did it!")
+    if config.nilmdb_url is None:
+        click.echo("OK")
+        return
 
-        # rename the tarball and move it
-        #os.rename(os.path.join(backup_path, "base.tar"), file)
-        # remove the temporary directory
-    click.echo("OK")
+    click.echo("Copying nilmdb database...")
+    # retrieve the nilmdb data folder
+    loop = asyncio.get_event_loop()
+    nilmdb_folder = loop.run_until_complete(get_nilmdb_dir(config.nilmdb_url))
+    nilmdb_backup = os.path.join(folder, "nilmdb")
+    shutil.copytree(nilmdb_folder, nilmdb_backup, ignore=print_progress)
+    click.echo("\nOK")
+
+
+def print_progress(dir, contents):
+    print('.', end="")
+    return []
+
+
+async def get_nilmdb_dir(url):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url + "/dbinfo") as resp:
+            data = await resp.json()
+            return data['path']
