@@ -303,8 +303,8 @@ class TestTimescale(asynctest.TestCase):
         # two intervals of data
         intervals = await self.store.intervals(self.test_stream, start=None, end=None)
         ts = self.test_data['timestamp']
-        expected = [[ts[0], ts[249]],
-                    [ts[500], ts[-1]]]
+        expected = [[ts[0], ts[249]+1],
+                    [ts[500], ts[-1]+1]]
         self.assertEqual(intervals, expected)
 
     async def _test_destroy(self):
@@ -331,9 +331,9 @@ class TestTimescale(asynctest.TestCase):
         # XXXX|XXXXX|XXXXX
         await _insert_boundary(conn, ts[99] + 1)
         await _insert_boundary(conn, ts[199] + 1)
-        expected = [[ts[0], ts[99]],
-                    [ts[100], ts[199]],
-                    [ts[200], ts[-1]]]
+        expected = [[ts[0], ts[99]+1],
+                    [ts[100], ts[199]+1],
+                    [ts[200], ts[-1]+1]]
         intervals = await self.store.intervals(self.test_stream, None, None)
         self.assertEqual(expected, intervals)
 
@@ -357,10 +357,10 @@ class TestTimescale(asynctest.TestCase):
         # |XXXX||XXXXX|XXX|X|
         await _insert_boundary(conn, ts[780] + 1)
         intervals = await self.store.intervals(self.test_stream, None, None)
-        expected = [[ts[0], ts[99]],
-                    [ts[100], ts[199]],
-                    [ts[200], ts[780]],
-                    [ts[781], ts[-1]]]
+        expected = [[ts[0], ts[99]+1],
+                    [ts[100], ts[199]+1],
+                    [ts[200], ts[780]+1],
+                    [ts[781], ts[-1]+1]]
         self.assertEqual(expected, intervals)
         await conn.close()
 

@@ -4,8 +4,9 @@ import aiohttp
 from .base_session import BaseSession
 from joule import errors
 
-#import logging
-#logging.basicConfig(filename='/home/vagrant/app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
+
+# import logging
+# logging.basicConfig(filename='/home/vagrant/app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
 
 class TcpSession(BaseSession):
 
@@ -38,7 +39,7 @@ class TcpSession(BaseSession):
     async def _request(self, method, path, data=None, json=None, params=None):
         session = await self.get_session()
         try:
-            #logging.warning("requesting: "+self.url+path)
+            # logging.warning("requesting: "+self.url+path)
             async with session.request(method,
                                        self.url + path,
                                        data=data,
@@ -55,7 +56,7 @@ class TcpSession(BaseSession):
                     else:
                         return None
                 try:
-                    #logging.warning("\trequest is done")
+                    # logging.warning("\trequest is done")
                     return await resp.json()
                 except ValueError:
                     raise errors.ApiError("Invalid node response (not json)")

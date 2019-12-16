@@ -119,8 +119,7 @@ class TestNilmdbStore(asynctest.TestCase):
             if chunk is not None:
                 rcvd_rows += len(chunk)
                 last_row = chunk[-1]
-        self.assertEqual(last_row, pipes.interval_token(self.stream1.layout))
-        self.assertEqual(nrows, rcvd_rows - 1)  # ignore the interval token
+        self.assertEqual(nrows, rcvd_rows)
 
         # should return *decimated* data when max_rows!=None
         self.fake_nilmdb.extract_calls = []  # reset
@@ -137,8 +136,7 @@ class TestNilmdbStore(asynctest.TestCase):
             if chunk is not None:
                 rcvd_rows += len(chunk)
                 last_row = chunk[-1]
-        self.assertEqual(last_row, pipes.interval_token(self.stream1.decimated_layout))
-        self.assertEqual(nrows // 16, rcvd_rows - 1)
+        self.assertEqual(nrows // 16, rcvd_rows)
 
         # should raise exception if data is not decimated enough
         with self.assertRaises(InsufficientDecimationError):
@@ -160,8 +158,7 @@ class TestNilmdbStore(asynctest.TestCase):
             if chunk is not None:
                 rcvd_rows += len(chunk)
                 last_row = chunk[-1]
-        self.assertEqual(last_row, pipes.interval_token(self.stream1.decimated_layout))
-        self.assertEqual(nrows // 64, rcvd_rows - 1)
+        self.assertEqual(nrows // 64, rcvd_rows)
 
         # if max_rows and decimation_level specified, error if
         # too much data

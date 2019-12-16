@@ -75,7 +75,8 @@ class TimescaleStore(DataStore):
                     prev_ts = await conn.fetchval(query)
                     utc_start_ts = int(cur_start.replace(tzinfo=datetime.timezone.utc).timestamp() * 1e6)
                     utc_end_ts = int(prev_ts.replace(tzinfo=datetime.timezone.utc).timestamp() * 1e6)
-                    intervals.append([utc_start_ts, utc_end_ts])
+                    # intervals are [..) with extra us on the end
+                    intervals.append([utc_start_ts, utc_end_ts+1])
                     cur_start = None
                 query = "SELECT time FROM data.stream%d WHERE time >= '%s'" % (stream.id, boundary)
                 if i < (len(boundaries) - 1):
@@ -202,12 +203,20 @@ class TimescaleStore(DataStore):
         async with self.pool.acquire() as conn:
             dbsize = await conn.fetchval("select pg_database_size(current_database())")  # in bytes
             path = await conn.fetchval("show data_directory")
-            usage = shutil.disk_usage(path)  # usage in bytes
-            return DbInfo(path=path,
-                          size=dbsize,
-                          other=max(usage.used - dbsize, 0),
-                          reserved=max(usage.total - usage.used - usage.free, 0),
-                          free=usage.free)
+            try:
+                usage = shutil.disk_usage(path)  # usage in bytes
+                return DbInfo(path=path,
+                              size=dbsize,
+                              other=max(usage.used - dbsize, 0),
+                              reserved=max(usage.total - usage.used - usage.free, 0),
+                              free=usage.free)
+            except FileNotFoundError:
+                # this occurs if the database is remote
+                return DbInfo(path="--remote-database--",
+                              size=-1,
+                              other=-1,
+                              reserved=-1,
+                              free=-1)
 
 
 async def _extract_data(conn: asyncpg.Connection, stream: Stream, callback,

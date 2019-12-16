@@ -49,6 +49,7 @@ class FakeJoule:
             [
                 web.get('/', self.info),
                 web.get('/version.json', self.stub_get),
+                web.get('/dbinfo', self.dbinfo),
                 web.get('/streams.json', self.stub_get),
                 web.get('/stream.json', self.stream_info),
                 web.post('/stream.json', self.create_stream),
@@ -86,6 +87,8 @@ class FakeJoule:
         self.stub_annotation = False
         self.first_lumen_user = True
         self.response = ""
+        # need this because node info cmd makes two requests
+        self.dbinfo_response = "--fill-in--"
         self.http_code = 200
         self.streams: Dict[str, MockDbEntry] = {}
         self.msgs = None
@@ -160,6 +163,10 @@ class FakeJoule:
 
     async def info(self, request: web.Request):
         return web.Response(text="Joule server")
+
+    async def dbinfo(self, request: web.Request):
+        return web.Response(text=self.dbinfo_response, status=self.http_code,
+                            content_type='application/json')
 
     async def stub_get(self, request: web.Request):
         return web.Response(text=self.response, status=self.http_code,

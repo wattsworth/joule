@@ -5,6 +5,8 @@ from .fake_joule import FakeJoule, FakeJouleTestCase
 from joule.cli import main
 
 VERSION_JSON = os.path.join(os.path.dirname(__file__), 'version.json')
+DBINFO_JSON = os.path.join(os.path.dirname(__file__), 'dbinfo.json')
+
 warnings.simplefilter('always')
 
 
@@ -14,6 +16,8 @@ class TestInfo(FakeJouleTestCase):
         server = FakeJoule()
         with open(VERSION_JSON, 'r') as f:
             server.response = f.read()
+        with open(DBINFO_JSON, 'r') as f:
+            server.dbinfo_response = f.read()
         self.start_server(server)
         runner = CliRunner()
         result = runner.invoke(main, ['node', 'info'])

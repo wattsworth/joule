@@ -34,5 +34,6 @@ async def _run(node):
     info = await node.info()
     click.echo("Server Version:   \t%s" % info.version)
     click.echo("Database Location:\t%s" % info.path)
-    click.echo("Database Size:    \t%s" % sizeof_fmt(info.size_db))
-    click.echo("Space Available:  \t%s" % sizeof_fmt(info.size_free))
+    if info.path != "--remote-database--":
+        click.echo("Database Size:    \t%s" % sizeof_fmt(info.size_db))
+        click.echo("Space Available:  \t%s" % sizeof_fmt(info.size_free))

@@ -7,7 +7,6 @@ import os
 import time
 import asyncio
 import typing
-import pdb
 import uuid
 import sqlalchemy.exc
 from tabulate import tabulate
@@ -150,7 +149,7 @@ def admin_ingest(config, backup, node, map, pgctl_binary, yes, start, end):
         nilmdb_proc = None
     else:
         if not os.path.isdir(backup):
-            raise click.ClickException("backup [%s] does not exist" % folder)
+            raise click.ClickException("backup [%s] does not exist" % backup)
         src_dsn = start_src_db(backup, pgctl_binary, pg_log)
         # check whether the source uses nilmdb
         nilmdb_path = os.path.join(backup, 'nilmdb')
@@ -161,6 +160,8 @@ def admin_ingest(config, backup, node, map, pgctl_binary, yes, start, end):
             click.echo("waiting for nilmdb to initialize...")
             time.sleep(2)
             src_datastore = NilmdbStore('http://127.0.0.1:%d' % port, 0, 0, loop)
+            if joule_config.nilmdb_url is None:
+                click.echo("Note: re-copying from NilmDB to Timescale may result in --nothing to copy-- messages")
         else:
             src_datastore = TimescaleStore(src_dsn, 0, 0, loop)
 
@@ -353,7 +354,6 @@ async def run(src_db: 'Session',
                     "source stream [%s] is not compatible with destination stream [%s]" % (item[0], item[1]))
 
             dest_intervals = await dest_datastore.intervals(dest, start, end)
-
         # figure out the time bounds to copy
         if dest_intervals is None:
             copy_intervals = src_intervals
@@ -391,13 +391,17 @@ async def run(src_db: 'Session',
         await copy(item, src_datastore, dest_datastore, src_db, dest_db)
 
 
+num_rows = 0
+
+
 async def copy(copy_map: 'CopyMap',
                src_datastore: 'DataStore',
                dest_datastore: 'DataStore',
                src_db: 'Session',
                dest_db: 'Session'):
     from joule.models import annotation, Annotation
-
+    global num_rows
+    num_rows = 0
     # compute the duration of data to copy
     duration = 0
     for interval in copy_map.intervals:
@@ -407,7 +411,7 @@ async def copy(copy_map: 'CopyMap',
             label='[%s] --> [%s]' % (copy_map.source_path, copy_map.dest_path),
             length=duration) as bar:
         for interval in copy_map.intervals:
-            await copy_interval(interval[0], interval[1] + 1, bar,
+            await copy_interval(interval[0], interval[1], bar,
                                 copy_map.source, copy_map.dest,
                                 src_datastore, dest_datastore)
             start_dt = utilities.timestamp_to_datetime(interval[0])
@@ -430,6 +434,10 @@ async def copy(copy_map: 'CopyMap',
                 item_copy.stream = copy_map.dest
                 dest_db.add(item_copy)
             dest_db.commit()
+    if num_rows == 0:
+        print("[%s]\t--nothing to copy--" % copy_map.dest_path)
+    else:
+        print("[%s]\t copied %d rows" % (copy_map.dest_path, num_rows))
 
 
 async def copy_interval(start: int, end: int, bar,
@@ -445,9 +453,11 @@ async def copy_interval(start: int, end: int, bar,
 
     async def writer(data, layout, decimated):
         nonlocal last_ts
+        global num_rows
+        num_rows += (len(data))
         cur_ts = data['timestamp'][-1]
         await pipe.write(data)
-        #await asyncio.sleep(0.01)
+        # await asyncio.sleep(0.01)
         bar.update(cur_ts - last_ts)
         last_ts = cur_ts
 
