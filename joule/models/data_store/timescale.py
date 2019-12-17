@@ -15,7 +15,6 @@ from joule.models.data_store.data_store import DataStore, StreamInfo, DbInfo
 
 Loop = asyncio.AbstractEventLoop
 
-SQL_DIR = os.path.join(os.path.dirname(__file__), 'sql')
 
 
 class TimescaleStore(DataStore):
@@ -32,17 +31,7 @@ class TimescaleStore(DataStore):
         self.extract_block_size = 50000
 
     async def initialize(self, streams: List[Stream]) -> None:
-        conn: asyncpg.Connection = await asyncpg.connect(self.dsn)
         self.pool = await asyncpg.create_pool(self.dsn, command_timeout=60)
-        # await conn.execute("CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;")
-        await conn.execute("CREATE SCHEMA IF NOT EXISTS data")
-        # load custom functions
-        for file in os.listdir(SQL_DIR):
-            file_path = os.path.join(SQL_DIR, file)
-            with open(file_path, 'r') as f:
-                await conn.execute(f.read())
-
-        await conn.close()
 
     async def close(self):
         await self.pool.close()

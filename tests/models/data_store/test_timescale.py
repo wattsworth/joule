@@ -17,6 +17,8 @@ from joule.errors import DataError
 from tests import helpers
 from tests.models.pipes.reader import QueueReader
 
+SQL_DIR = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'joule', 'sql')
+
 
 class TestTimescale(asynctest.TestCase):
     use_default_loop = False
@@ -35,9 +37,15 @@ class TestTimescale(asynctest.TestCase):
         self.postgresql = testing.postgresql.Postgresql(base_dir=self.psql_dir.name)
 
         self.db_url = self.postgresql.url()
-        #self.db_url = "postgresql://joule:joule@127.0.0.1:5432/joule"
+        # self.db_url = "postgresql://joule:joule@127.0.0.1:5432/joule"
         conn: asyncpg.Connection = await asyncpg.connect(self.db_url)
         await conn.execute("CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE ")
+        # load custom functions
+        for file in os.listdir(SQL_DIR):
+            file_path = os.path.join(SQL_DIR, file)
+            with open(file_path, 'r') as f:
+                await conn.execute(f.read())
+        #await conn.execute("GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO joule_module;")
         # await conn.execute("DROP SCHEMA IF EXISTS data CASCADE")
         # await conn.execute("CREATE SCHEMA data")
         # await conn.execute("GRANT ALL ON SCHEMA data TO public")
@@ -78,7 +86,7 @@ class TestTimescale(asynctest.TestCase):
             runner = await task
             await runner
             await conn.close()
-            #await self.store.initialize([])
+            # await self.store.initialize([])
             await test()
             # simulate the nose2 test output
             sys.stdout.write('o')
@@ -303,8 +311,8 @@ class TestTimescale(asynctest.TestCase):
         # two intervals of data
         intervals = await self.store.intervals(self.test_stream, start=None, end=None)
         ts = self.test_data['timestamp']
-        expected = [[ts[0], ts[249]+1],
-                    [ts[500], ts[-1]+1]]
+        expected = [[ts[0], ts[249] + 1],
+                    [ts[500], ts[-1] + 1]]
         self.assertEqual(intervals, expected)
 
     async def _test_destroy(self):
@@ -331,9 +339,9 @@ class TestTimescale(asynctest.TestCase):
         # XXXX|XXXXX|XXXXX
         await _insert_boundary(conn, ts[99] + 1)
         await _insert_boundary(conn, ts[199] + 1)
-        expected = [[ts[0], ts[99]+1],
-                    [ts[100], ts[199]+1],
-                    [ts[200], ts[-1]+1]]
+        expected = [[ts[0], ts[99] + 1],
+                    [ts[100], ts[199] + 1],
+                    [ts[200], ts[-1] + 1]]
         intervals = await self.store.intervals(self.test_stream, None, None)
         self.assertEqual(expected, intervals)
 
@@ -357,10 +365,10 @@ class TestTimescale(asynctest.TestCase):
         # |XXXX||XXXXX|XXX|X|
         await _insert_boundary(conn, ts[780] + 1)
         intervals = await self.store.intervals(self.test_stream, None, None)
-        expected = [[ts[0], ts[99]+1],
-                    [ts[100], ts[199]+1],
-                    [ts[200], ts[780]+1],
-                    [ts[781], ts[-1]+1]]
+        expected = [[ts[0], ts[99] + 1],
+                    [ts[100], ts[199] + 1],
+                    [ts[200], ts[780] + 1],
+                    [ts[781], ts[-1] + 1]]
         self.assertEqual(expected, intervals)
         await conn.close()
 
@@ -393,7 +401,7 @@ class TestTimescale(asynctest.TestCase):
         self.assertEqual(info.end, self.test_data['timestamp'][-1])
         self.assertEqual(info.total_time, info.end - info.start)
         # rows are approximate
-        self.assertLess(abs(len(self.test_data)-info.rows), len(self.test_data)*0.1)
+        self.assertLess(abs(len(self.test_data) - info.rows), len(self.test_data) * 0.1)
         self.assertGreater(info.bytes, 0)
 
         # check stream2
@@ -401,7 +409,7 @@ class TestTimescale(asynctest.TestCase):
         self.assertEqual(info.start, test_data['timestamp'][0])
         self.assertEqual(info.end, test_data['timestamp'][-1])
         self.assertEqual(info.total_time, info.end - info.start)
-        self.assertLess(abs(len(test_data)-info.rows), len(test_data)*0.1)
+        self.assertLess(abs(len(test_data) - info.rows), len(test_data) * 0.1)
         self.assertGreater(info.bytes, 0)
 
         # check the empty stream

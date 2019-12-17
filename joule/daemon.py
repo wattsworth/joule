@@ -9,7 +9,7 @@ import signal
 import secrets
 from aiohttp import web
 import faulthandler
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from typing import List
@@ -36,6 +36,7 @@ async_log.setLevel(logging.WARNING)
 Loop = asyncio.AbstractEventLoop
 faulthandler.enable()
 
+SQL_DIR = os.path.join(os.path.dirname(__file__), 'sql')
 
 class Daemon(object):
 
@@ -114,7 +115,12 @@ class Daemon(object):
             conn.execute("GRANT SELECT ON ALL TABLES IN SCHEMA data TO joule_module;")
             # test out pg_read_all_settings command
             conn.execute("show data_directory")
-
+            # load custom functions
+            for file in os.listdir(SQL_DIR):
+                file_path = os.path.join(SQL_DIR, file)
+                with open(file_path, 'r') as f:
+                    conn.execute(text(f.read()))
+            conn.execute("GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO joule_module;")
         Base.metadata.create_all(engine)
         self.db = Session(bind=engine)
 
