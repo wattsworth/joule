@@ -47,6 +47,9 @@ class LocalPipe(Pipe):
         self._cache = None
 
     async def read(self, flatten=False):
+        if self._failed:
+            await self.close()
+            raise PipeError('pipe failed')
         self.interval_break = False
         # if the queue is empty and we have old data, just return the old data
         if self.queue.empty() and len(self.read_buffer) > 0:
@@ -75,6 +78,8 @@ class LocalPipe(Pipe):
         [1, 2, 3]
 
         """
+        if self._failed:
+            raise PipeError('pipe failed')
         # if the queue is empty and we have old data, just return the old data
         if self.queue.empty() and len(self.read_buffer) > 0:
             return self._format_data(self.read_buffer, flatten)
@@ -128,6 +133,9 @@ class LocalPipe(Pipe):
         self.read_buffer = self.read_buffer[num_rows:]
 
     async def write(self, data: np.ndarray):
+        if self._failed:
+            await self.close()
+            raise PipeError('pipe failed')
         if self.closed:
             raise PipeError("Cannot write to a closed pipe")
         if not self._validate_data(data):
@@ -145,7 +153,6 @@ class LocalPipe(Pipe):
             await self._write(sarray)
 
     async def _write(self, sarray):
-
         # send data to subscribers
         for pipe in self.subscribers:
             await pipe.write(sarray)
@@ -161,6 +168,8 @@ class LocalPipe(Pipe):
             print("[%s:write] queueing block with [%d] rows" % (self.name, len(sarray)))
 
     def write_nowait(self, data):
+        if self._failed:
+            raise PipeError('pipe failed')
         if self.closed:
             raise PipeError("Cannot write to a closed pipe")
         if not self._validate_data(data):
@@ -195,6 +204,8 @@ class LocalPipe(Pipe):
             self._cache = np.empty(len(self._cache), self.dtype)
 
     async def close_interval(self):
+        if self._failed:
+            raise PipeError('pipe failed')
         if self.closed:
             raise PipeError("Cannot write to a closed pipe")
         if self.debug:
@@ -209,6 +220,8 @@ class LocalPipe(Pipe):
         unit testing
 
         """
+        if self._failed:
+            raise PipeError('pipe failed')
         if self.debug:
             print("[%s:write] closing interval" % self.name)
         self.queue.put_nowait(None)
@@ -224,12 +237,16 @@ class LocalPipe(Pipe):
             self._cache_index = 0
 
     async def close(self):
-        self.closed = True
-        if self.close_cb is not None:
-            await self.close_cb()
+        if self.closed:
+            return
+        if self._caching:
+            await self.flush_cache()
         # close any subscribers
         for pipe in self.subscribers:
             await pipe.close()
+        self.closed = True
+        if self.close_cb is not None:
+            await self.close_cb()
 
     def close_nowait(self):
         """

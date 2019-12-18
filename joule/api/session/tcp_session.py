@@ -36,7 +36,7 @@ class TcpSession(BaseSession):
                 headers={"X-API-KEY": self.key})
         return self._session
 
-    async def _request(self, method, path, data=None, json=None, params=None):
+    async def _request(self, method, path, data=None, json=None, params=None, chunked=None):
         session = await self.get_session()
         try:
             # logging.warning("requesting: "+self.url+path)
@@ -45,6 +45,7 @@ class TcpSession(BaseSession):
                                        data=data,
                                        params=params,
                                        json=json,
+                                       chunked=chunked,
                                        ssl=self.ssl_context) as resp:
                 if resp.status != 200:
                     msg = await resp.text()

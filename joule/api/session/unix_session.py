@@ -20,7 +20,7 @@ class UnixSession(BaseSession):
                 timeout=aiohttp.ClientTimeout(total=None))
         return self._session
 
-    async def _request(self, method, path, data=None, json=None, params=None):
+    async def _request(self, method, path, data=None, json=None, params=None, chunked=None):
         session = await self.get_session()
         try:
             async with session.request(method,

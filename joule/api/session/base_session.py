@@ -15,9 +15,9 @@ class BaseSession:
     async def get(self, path, params=None):
         return await self._request("GET", path, params=params)
 
-    async def post(self, path, json=None, params=None, data=None):
+    async def post(self, path, json=None, params=None, data=None, chunked=None):
         return await self._request("POST", path, json=json,
-                                   params=params, data=data)
+                                   params=params, data=data, chunked=chunked)
 
     async def put(self, path, json):
         return await self._request("PUT", path, json=json)
@@ -25,7 +25,7 @@ class BaseSession:
     async def delete(self, path, params):
         return await self._request("DELETE", path, params=params)
 
-    async def _request(self, method, path, data=None, json=None, params=None):
+    async def _request(self, method, path, data=None, json=None, params=None, chunked=None):
         raise errors.ApiError("Implement in child class")
 
     async def close(self):

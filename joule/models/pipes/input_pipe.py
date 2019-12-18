@@ -38,7 +38,7 @@ class InputPipe(Pipe):
             raise PipeError("Cannot read from a closed pipe")
         rowbytes = self.dtype.itemsize
         max_rows = self.BUFFER_SIZE - (
-                   self.last_index + len(self.unprocessed_np_buffer) % rowbytes)
+                self.last_index + len(self.unprocessed_np_buffer) % rowbytes)
 
         if max_rows == 0:
             # buffer is full, this must be consumed before a new read
@@ -123,7 +123,10 @@ class InputPipe(Pipe):
         if self._reader_close is not None:
             self._reader_close()
             self._reader_close = None
+        if self.closed:  # don't execute cb more than once
+            return
         self.closed = True
         if self.close_cb is not None:
             # used to close socket pipes
             await self.close_cb()
+            self.close_cb = None

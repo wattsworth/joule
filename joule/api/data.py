@@ -72,7 +72,7 @@ async def data_write(session: BaseSession,
         await task
 
     pipe = LocalPipe(dest_stream.layout, name=dest_stream.name,
-                     stream=dest_stream, close_cb=close)
+                     stream=dest_stream, close_cb=close, debug=False)
     task = loop.create_task(_send_data(session, dest_stream, pipe))
     return pipe
 
@@ -242,6 +242,7 @@ async def _historic_reader(session: BaseSession,
 async def _send_data(session: BaseSession,
                      stream: Stream,
                      pipe: Pipe):
+    # TODO is this necssary?
     output_complete = False
 
     async def _data_sender():
@@ -258,10 +259,11 @@ async def _send_data(session: BaseSession,
             pass
         output_complete = True
 
-    while not output_complete:
-        try:
-            await session.post("/data",
-                               params={"id": stream.id},
-                               data=_data_sender())
-        except errors.ApiError as e:  # pragma: no cover
-            log.info("Error submitting data to joule [%s], retrying" % str(e))
+    try:
+        result = await session.post("/data",
+                                    params={"id": stream.id},
+                                    data=_data_sender(),
+                                    chunked=True)
+    except Exception as e:
+        pipe.fail()
+        raise e

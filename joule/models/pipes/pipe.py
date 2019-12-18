@@ -45,6 +45,7 @@ class Pipe:
         self.closed = False
         self.decimation_level = 1
         self.subscribers: List['Pipe'] = []
+        self._failed = False
 
     def __repr__(self):
         return '<joule.models.Pipe name=%r direction=%r layout=%r>' % (
@@ -111,6 +112,9 @@ class Pipe:
         if self.direction == Pipe.DIRECTION.OUTPUT:
             raise PipeError("cannot consume from an output pipe")
         raise PipeError("abstract method must be implemented by child")
+
+    def fail(self):
+        self._failed = True
 
     @property
     def end_of_interval(self):
