@@ -408,6 +408,11 @@ class Worker:
         # add a socket if the module has a web interface
         if self.module.is_app:
             cmd += ["--socket", self.interface_name]
+            # remove the socket file if it exists
+            if os.path.isfile(self.interface_name):
+                log.warning("forcibly removing app socket [%s]" % self.interface_name)
+                os.unlink(self.interface_name)
+
         # API access
         cmd += ["--api-socket", API_SOCKET]
         for (arg, value) in self.module.arguments.items():
@@ -423,6 +428,9 @@ class Worker:
             await c.disconnect()
         self.output_connections = []
         self.input_connections = []
+        # remove the socket file if it exists
+        if self.interface_socket is not None and os.path.isfile(self.interface_socket):
+            os.unlink(self.interface_socket)
 
     def _verify_monotonic_timestamps(self, data, last_ts: int, name: str):
         if len(data) == 0:

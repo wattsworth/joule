@@ -320,6 +320,8 @@ def main(argv=None):
         exit(1)
 
     loop.add_signal_handler(signal.SIGINT, daemon.stop)
+    loop.add_signal_handler(signal.SIGTERM, daemon.stop)
+
     loop.run_until_complete(daemon.run(loop))
     loop.close()
 
@@ -327,7 +329,6 @@ def main(argv=None):
     for file_name in os.listdir(my_config.socket_directory):
         path = os.path.join(my_config.socket_directory, file_name)
         os.unlink(path)
-
     exit(0)
 
 

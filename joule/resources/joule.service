@@ -1,6 +1,6 @@
 [Unit]
 Description = "Joule Daemon"
-After = syslog.target apache2.service
+After = syslog.target
 
 [Service]
 Type = simple
