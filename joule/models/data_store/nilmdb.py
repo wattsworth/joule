@@ -150,6 +150,8 @@ class NilmdbStore(DataStore):
         for s in streams:
             base_info_list = [info for (path, info) in info_dict.items() if path == compute_path(s)]
             if len(base_info_list) == 0:
+                # thie stream has no data records, just make up an empty result
+                streams_info[s.id] = StreamInfo(None, None, 0, 0, 0)
                 continue
             stream_info: StreamInfo = base_info_list[0]
             if stream_info.rows != 0:

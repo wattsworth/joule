@@ -66,6 +66,8 @@ async def update(request):
     if my_annotation is None:
         return web.Response(text="annotation does not exist", status=404)
     my_annotation.update_attributes(body)
+    if my_annotation.title is None or my_annotation.title == '':
+        return web.Response(text="annotation title is reqiured")
     db.commit()
     return web.json_response(my_annotation.to_json())
 
@@ -87,6 +89,8 @@ async def create(request):
 
     try:
         my_annotation = from_json(body)
+        if my_annotation.title is None or my_annotation.title == '':
+            raise ApiError("title is reqiured")
     except ApiError as e:
         return web.Response(text=str(e), status=400)
 
