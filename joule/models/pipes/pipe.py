@@ -99,6 +99,53 @@ class Pipe:
 
         raise PipeError("abstract method must be implemented by child")
 
+    async def read_all(self, flatten=False, maxrows=1e5, error_on_overflow=False) -> np.ndarray:
+        """
+                Read stream data. By default this method returns a structured
+                array with ``timestamp`` and ``data`` fields. The pipe is automatically closed.
+                This method is a coroutine.
+
+                Args:
+                    flatten: return an unstructured array (flat 2D matrix) with timestamps in the first column
+                    maxrows: the maximum number of rows to read from the pipe
+                    error_on_overflow: raise a PipeError exception if pipe is not empty after reading maxrows
+
+                Returns:
+                    numpy.ndarray
+
+                >>> data = await pipe.read_all(flatten=True)
+                [1, 2, 3]
+        """
+        if self.direction == Pipe.DIRECTION.OUTPUT:
+            raise PipeError("cannot read from an output pipe")
+
+        data = None
+        while True:
+            try:
+                new_data = await self.read(flatten)
+                self.consume(len(new_data))
+            except PipeError:
+                break
+            if data is None:
+                data = new_data
+                if len(data) > maxrows:
+                    await self.close()
+                    if error_on_overflow:
+                        raise PipeError("More than [%d] rows, increase maxrows or disable error_on_overflow" % maxrows)
+                    return data[:maxrows]
+            else:
+                if len(data) + len(new_data) > maxrows:
+                    await self.close()
+                    if error_on_overflow:
+                        raise PipeError("More than [%d] rows, increase maxrows or disable error_on_overflow" % maxrows)
+                    remaining_rows = maxrows - len(data)
+                    data = np.hstack((data, new_data[:remaining_rows]))
+                    break
+                data = np.hstack((data, new_data))
+        if data is None:
+            raise PipeError("No data in pipe")
+        return data
+
     def consume(self, num_rows):
         """
         Flush data from the read buffer. The next call to :meth:`read` will
