@@ -139,9 +139,15 @@ class Pipe:
                     if error_on_overflow:
                         raise PipeError("More than [%d] rows, increase maxrows or disable error_on_overflow" % maxrows)
                     remaining_rows = maxrows - len(data)
-                    data = np.hstack((data, new_data[:remaining_rows]))
+                    if flatten:
+                        data = np.vstack((data, new_data[:remaining_rows]))
+                    else:
+                        data = np.hstack((data, new_data[:remaining_rows]))
                     break
-                data = np.hstack((data, new_data))
+                if flatten:
+                    data = np.vstack((data, new_data))
+                else:
+                    data = np.hstack((data, new_data))
         if data is None:
             raise PipeError("No data in pipe")
         return data
