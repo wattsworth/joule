@@ -450,16 +450,17 @@ async def copy_interval(start: int, end: int, bar,
                                                       pipe, asyncio.get_event_loop())
 
     last_ts = start
-
     async def writer(data, layout, decimated):
         nonlocal last_ts
         global num_rows
+
         num_rows += (len(data))
-        cur_ts = data['timestamp'][-1]
-        await pipe.write(data)
-        # await asyncio.sleep(0.01)
-        bar.update(cur_ts - last_ts)
-        last_ts = cur_ts
+        if len(data) > 0:
+            cur_ts = data['timestamp'][-1]
+            await pipe.write(data)
+            # await asyncio.sleep(0.01)
+            bar.update(cur_ts - last_ts)
+            last_ts = cur_ts
 
     await src_datastore.extract(src_stream, start, end, writer)
     await pipe.close()
