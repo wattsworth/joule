@@ -333,4 +333,4 @@ async def stream_annotation_delete(session: BaseSession,
     else:
         raise errors.ApiError("Invalid source datatype. Must be Stream, Path, or ID")
 
-    await session.delete("/stream/annotation.json", params=data)
+    await session.delete("/stream/annotations.json", params=data)

@@ -63,6 +63,7 @@ class OutputPipe(Pipe):
         # send data out
         self.writer.write(sdata.tostring())
         await self.writer.drain()
+        await asyncio.sleep(0)
 
     async def close_interval(self):
         if self.closed:

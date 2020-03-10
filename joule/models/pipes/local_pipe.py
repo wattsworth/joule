@@ -164,6 +164,7 @@ class LocalPipe(Pipe):
             # wait until a slot is available
             await self.queue.put(sarray)
         self.queued_rows += len(sarray)
+        await asyncio.sleep(0)
         if self.debug:
             print("[%s:write] queueing block with [%d] rows" % (self.name, len(sarray)))
 
