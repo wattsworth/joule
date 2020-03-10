@@ -7,7 +7,7 @@ def build_stream(name, inline_config: str) -> Stream:
     s = Stream()
     s.name = name
     (datatype, names) = parse_inline_config(inline_config)
-    s.datatype = datatype
+    s.datatype = datatype.name.lower(),
     i = 0
     for name in names:
         e = Element()
