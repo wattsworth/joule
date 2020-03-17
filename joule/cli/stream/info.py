@@ -12,13 +12,14 @@ from joule.cli.config import pass_config
 
 
 @click.command(name="info")
+@click.option('-e', "--elements", help="show element information", is_flag=True)
 @click.argument("path")
 @pass_config
-def cli_info(config, path):
+def cli_info(config, elements, path):
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(
-            _run(config.node, path))
+            _run(config.node, path, elements))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
@@ -27,7 +28,7 @@ def cli_info(config, path):
         loop.close()
 
 
-async def _run(node, path):
+async def _run(node, path, show_elements):
     my_stream = await node.stream_get(path)
     # display stream information
     click.echo()
@@ -45,18 +46,19 @@ async def _run(node, path):
     click.echo("\tRows:         %d" % my_info.rows)
     click.echo()
     # display element information
-    elem_data = []
-    for element in my_stream.elements:
-        elem_data.append([element.name,
-                          _optional_field(element.units),
-                          element.display_type.lower(),
-                          _display_bounds(element.default_max,
-                                          element.default_min)
-                          ])
-    # display element information
-    click.echo(tabulate(elem_data, headers=["Name", "Units", "Display", "Min,Max"],
-                        stralign="center",
-                        tablefmt="fancy_grid"))
+    if show_elements:
+        elem_data = []
+        for element in my_stream.elements:
+            elem_data.append([element.name,
+                              _optional_field(element.units),
+                              element.display_type.lower(),
+                              _display_bounds(element.default_max,
+                                              element.default_min)
+                              ])
+        # display element information
+        click.echo(tabulate(elem_data, headers=["Name", "Units", "Display", "Min,Max"],
+                            stralign="center",
+                            tablefmt="fancy_grid"))
 
 
 def _display_decimate(decimate: bool) -> str:

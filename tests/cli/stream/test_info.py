@@ -17,7 +17,37 @@ warnings.simplefilter('always')
 
 class TestStreamInfo(FakeJouleTestCase):
 
-    def test_shows_stream_info(self):
+    def test_shows_extended_stream_info(self):
+        server = FakeJoule()
+        with open(STREAM_INFO, 'r') as f:
+            server.response = f.read()
+        server.stub_stream_info = True  # use the response text
+        self.start_server(server)
+        runner = CliRunner()
+        result = runner.invoke(main, ['stream', 'info', '-e', '/folder_1/random'])
+        self.assertEqual(result.exit_code, 0)
+        # make sure the items are populated correctly
+        output = result.output.split('\n')
+        row_line = [x for x in output if 'Rows' in x][0]
+        self.assertTrue("73820" in row_line)
+        start_line = [x for x in output if 'Start' in x][0]
+
+        # note: hour depends on client's timezone
+
+        self.assertIsNotNone(re.search(r'2018-07-11 \d\d:50:44',
+                                       start_line))
+        end_line = [x for x in output if 'End' in x][0]
+        self.assertIsNotNone(re.search(r'2018-07-25 \d\d:52:56',
+                                       end_line))
+        for element_name in ['x', 'y', 'z']:
+            for line in output:
+                if element_name in line:
+                    break
+            else:
+                self.fail("element name %s not in output" % element_name)
+        self.stop_server()
+
+    def test_shows_basic_stream_info(self):
         server = FakeJoule()
         with open(STREAM_INFO, 'r') as f:
             server.response = f.read()
@@ -39,12 +69,10 @@ class TestStreamInfo(FakeJouleTestCase):
         end_line = [x for x in output if 'End' in x][0]
         self.assertIsNotNone(re.search(r'2018-07-25 \d\d:52:56',
                                        end_line))
-        for element_name in ['x', 'y', 'z']:
-            for line in output:
-                if element_name in line:
-                    break
-            else:
-                self.fail("element name %s not in output" % element_name)
+        # no table of rows
+        for line in output:
+            if 'Min,Max' in line:
+                self.fail("it looks like the elements are still included in the display")
         self.stop_server()
 
     def test_handles_different_stream_configurations(self):

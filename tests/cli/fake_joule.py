@@ -71,7 +71,7 @@ class FakeJoule:
                 web.put('/annotation.json', self.update_annotation),
                 web.post('/annotation.json', self.create_annotation),
                 web.delete('/annotation.json', self.delete_annotation),
-                web.delete('/stream/annotation.json', self.delete_all_annotations)
+                web.delete('/stream/annotations.json', self.delete_all_annotations)
             ])
         self.stub_stream_info = False
         self.stub_stream_move = False

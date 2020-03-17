@@ -3,17 +3,18 @@ import asyncio
 
 from joule import errors
 from joule.cli.config import Config, pass_config
+from joule.api import BaseNode
 
 
-@click.command(name="move")
-@click.argument("source")
-@click.argument("destination")
+@click.command(name="rename")
+@click.argument("stream")
+@click.argument("name")
 @pass_config
-def cli_move(config: Config, source, destination):
+def cli_rename(config: Config, stream, name):
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(
-            config.node.stream_move(source, destination))
+            _run(config.node, stream, name))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
@@ -21,3 +22,9 @@ def cli_move(config: Config, source, destination):
             config.close_node())
         loop.close()
     click.echo("OK")
+
+
+async def _run(node: BaseNode, stream_path: str, name: str):
+    stream = await node.stream_get(stream_path)
+    stream.name = name
+    await node.stream_update(stream)
