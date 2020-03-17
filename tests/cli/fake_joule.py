@@ -53,6 +53,7 @@ class FakeJoule:
                 web.get('/streams.json', self.stub_get),
                 web.get('/stream.json', self.stream_info),
                 web.post('/stream.json', self.create_stream),
+                web.put('/stream.json', self.update_stream),
                 web.put('/stream/move.json', self.move_stream),
                 web.delete('/stream.json', self.delete_stream),
                 web.post('/data', self.data_write),
@@ -64,6 +65,8 @@ class FakeJoule:
                 web.get('/module/logs.json', self.stub_get),
                 web.put('/folder/move.json', self.move_folder),
                 web.delete('/folder.json', self.delete_folder),
+                web.get("/folder.json", self.folder_info),
+                web.put("/folder.json", self.update_folder),
                 web.get('/masters.json', self.stub_get),
                 web.post('/master.json', self.create_master),
                 web.delete('/master.json', self.delete_master),
@@ -82,8 +85,11 @@ class FakeJoule:
         self.stub_data_write = False
         self.stub_folder_move = False
         self.stub_folder_destroy = False
+        self.stub_folder_info = False
+        self.stub_folder_update = False
         self.stub_data_intervals = False
         self.stub_master = False
+        self.stub_stream_update = False
         self.stub_annotation = False
         self.first_lumen_user = True
         self.response = ""
@@ -148,6 +154,14 @@ class FakeJoule:
         self.streams[path + '/' + new_stream.name] = MockDbEntry(new_stream, StreamInfo(None, None, None))
         return web.json_response(data=new_stream.to_json())
 
+    async def update_stream(self, request: web.Request):
+        if self.stub_stream_update:
+            return web.Response(text=self.response, status=self.http_code)
+        body = await request.json()
+        # so we can check that the message was received
+        self.msgs.put(dict(body['stream']))
+        return web.json_response(data={"stub": "value"})
+
     async def delete_stream(self, request: web.Request):
         if self.stub_stream_destroy:
             return web.Response(text=self.response, status=self.http_code)
@@ -184,6 +198,13 @@ class FakeJoule:
         stream_json = mock_entry.stream.to_json()
         stream_json['data_info'] = mock_entry.info.to_json()
         return web.json_response(stream_json)
+
+    async def folder_info(self, request: web.Request):
+        if self.stub_folder_info:
+            return web.Response(text=self.response, status=self.http_code,
+                                content_type='application/json')
+        # this endpoint must be stubbed
+        return web.Response(text="NOT IMPLEMENTED", status=500)
 
     async def data_delete(self, request: web.Request):
         if self.stub_data_delete:
@@ -273,6 +294,14 @@ class FakeJoule:
         destination = body['dest_path']
         # so we can check that the message was received
         self.msgs.put((path, destination))
+        return web.json_response(data={"stub": "value"})
+
+    async def update_folder(self, request: web.Request):
+        if self.stub_folder_update:
+            return web.Response(text=self.response, status=self.http_code)
+        body = await request.json()
+        # so we can check that the message was received
+        self.msgs.put(dict(body['folder']))
         return web.json_response(data={"stub": "value"})
 
     async def create_master(self, request: web.Request):
