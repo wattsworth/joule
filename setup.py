@@ -68,7 +68,8 @@ setup(
             'joule-file-reader = joule.client.builtins.file_reader:main',
             'joule-mean-filter = joule.client.builtins.mean_filter:main',
             'joule-median-filter = joule.client.builtins.median_filter:main',
-            'joule-visualizer-filter = joule.client.builtins.visualizer:main'
+            'joule-visualizer-filter = joule.client.builtins.visualizer:main',
+            'joule-merge-filter = joule.client.builtins.merge_filter:main'
         ]
     },
     #options={
