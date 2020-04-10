@@ -57,7 +57,7 @@ setup(
                    'requests'],
     test_suite='tests',
     namespace_packages=[],
-    packages=find_packages(exclude=["tests.*"]),
+    packages=find_packages(exclude=["tests","tests.*"]),
     include_package_data=True,
 
     entry_points={
