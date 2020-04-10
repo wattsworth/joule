@@ -36,6 +36,7 @@ class LocalPipe(Pipe):
         self.closed = False
         self.read_buffer = np.empty((0,), dtype=self.dtype)
         self.close_cb = close_cb
+        self._reread = False
         # initialize buffer and queue
         self.queue = asyncio.Queue(loop=loop, maxsize=write_limit)
         self.queued_rows = 0
@@ -51,6 +52,14 @@ class LocalPipe(Pipe):
             await self.close()
             raise PipeError('pipe failed')
         self.interval_break = False
+
+        # if reread is set just return the old data
+        if self._reread:
+            self._reread = False
+            if len(self.read_buffer) == 0:
+                raise PipeError("No data left to reread")
+            return self._format_data(self.read_buffer, flatten)
+
         # if the queue is empty and we have old data, just return the old data
         if self.queue.empty() and len(self.read_buffer) > 0:
             return self._format_data(self.read_buffer, flatten)
@@ -80,9 +89,18 @@ class LocalPipe(Pipe):
         """
         if self._failed:
             raise PipeError('pipe failed')
+
+        # if reread is set just return the old data
+        if self._reread:
+            self._reread = False
+            if len(self.read_buffer) == 0:
+                raise PipeError("No data left to reread")
+            return self._format_data(self.read_buffer, flatten)
+
         # if the queue is empty and we have old data, just return the old data
         if self.queue.empty() and len(self.read_buffer) > 0:
             return self._format_data(self.read_buffer, flatten)
+
         # if the buffer is empty and the queue is empty and the pipe is closed
         if self.queue.empty() and len(self.read_buffer) == 0 and self.closed:
             raise EmptyPipe()
@@ -115,6 +133,11 @@ class LocalPipe(Pipe):
         if self.debug:
             print("[%s:read] returning %d rows" % (self.name, len(self.read_buffer)))
         return self._format_data(self.read_buffer, flatten)
+
+    def reread_last(self):
+        if len(self.read_buffer) == 0:
+            raise PipeError("No data left to reread")
+        self._reread = True
 
     @property
     def end_of_interval(self):

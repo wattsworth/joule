@@ -1,6 +1,6 @@
 import numpy as np
 import os
-import stat
+import pdb
 import configparser
 import asyncio
 import unittest
@@ -8,10 +8,15 @@ import testing.postgresql
 import psycopg2
 from sqlalchemy import create_engine, pool
 from sqlalchemy.orm import Session
+from collections import deque
+from typing import Optional
 
-from joule.models import Stream, Element, Base
+from joule.models import Stream, Element, Base, Pipe
+from joule.models.pipes.errors import PipeError
+from joule.errors import EmptyPipeError
 
-def create_data(layout:str,
+
+def create_data(layout: str,
                 length=100,
                 step=1000,  # in us
                 start=1476152086000000):  # 10 Oct 2016 10:15PM
@@ -42,7 +47,7 @@ def create_stream(name, layout, id=0) -> Stream:
 
     return Stream(name=name, datatype=datatype, id=id,
                   elements=[Element(name="e%d" % j, index=j,
-                            display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(lcount)])
+                                    display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(lcount)])
 
 
 def to_chunks(data, chunk_size):
@@ -83,6 +88,7 @@ def mock_stream_info(streams):
             if stream[0] == path:
                 return [stream]
         return []
+
     return stream_info
 
 
@@ -101,21 +107,20 @@ class AsyncTestCase(unittest.TestCase):
             self.loop.close()
         asyncio.set_event_loop(None)
 
-
         # close any remaining pipes, uvloop tends to leave
         # pipes after the loop is closed
         for str_fd in set(os.listdir('/proc/self/fd/')):
             fd = int(str_fd)
             try:
                 fstat = os.fstat(fd)
-                #if stat.S_ISFIFO(fstat.st_mode):
+                # if stat.S_ISFIFO(fstat.st_mode):
                 #    os.close(fd)
             except OSError:
                 pass
 
         import psutil
         proc = psutil.Process()
-        #print("[%d] fds" % proc.num_fds())
+        # print("[%d] fds" % proc.num_fds())
 
 
 Postgresql = testing.postgresql.PostgresqlFactory(cache_initialized_db=True)
@@ -124,7 +129,7 @@ Postgresql = testing.postgresql.PostgresqlFactory(cache_initialized_db=True)
 class DbTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.postgresql = Postgresql() #testing.postgresql.Postgresql()
+        self.postgresql = Postgresql()  # testing.postgresql.Postgresql()
         db_url = self.postgresql.url()
         conn = psycopg2.connect(db_url)
         cur = conn.cursor()
@@ -139,3 +144,72 @@ class DbTestCase(unittest.TestCase):
         self.db.close()
         self.postgresql.stop()
 
+
+class TestingPipe(Pipe):
+    # reads come out in the same blocks as the writes
+
+    def __init__(self, layout: str, name: str = None, stream=None):
+        super().__init__(name=name, layout=layout, stream=stream)
+        self.data_blocks: deque = deque()
+        self.last_block: Optional[np.ndarray] = None
+        self.interval_break = False
+        self._reread = False
+
+    async def write(self, data):
+        sarray = self._apply_dtype(data)
+        self.data_blocks.append(sarray)
+
+    def write_nowait(self, data):
+        sarray = self._apply_dtype(data)
+        self.data_blocks.append(sarray)
+
+    def close_interval_no_wait(self):
+        self.data_blocks.append(None)
+
+    async def close_interval(self):
+        self.data_blocks.append(None)
+
+    def consume(self, rows):
+        if self.last_block is None:
+            raise Exception("Nothing to consume")
+        if rows > len(self.last_block):
+            raise Exception("Cannot consume %d rows, only %d available" % (
+                rows, len(self.last_block)))
+        if rows == len(self.last_block):
+            self.last_block = None
+        else:
+            self.last_block = self.last_block[rows:]
+
+    def reread_last(self):
+        self._reread = True
+
+    @property
+    def end_of_interval(self):
+        return self.interval_break
+
+    async def read(self, flatten=False):
+        if flatten:
+            raise Exception("Not Implemented")
+        if self._reread:
+            self._reread = False
+            if self.last_block is None or len(self.last_block)==0:
+                raise PipeError("No data left to reread")
+            return self.last_block
+
+        if len(self.data_blocks) == 0 and self.last_block is None:
+            raise EmptyPipeError()
+        if len(self.data_blocks) != 0:
+            block = self.data_blocks.popleft()
+            if len(self.data_blocks) == 0:
+                self.interval_break = True
+            elif self.data_blocks[0] is None:
+                self.data_blocks.popleft()
+                self.interval_break = True
+            else:
+                self.interval_break = False
+
+            if self.last_block is not None:
+                self.last_block = np.hstack((self.last_block, block))
+            else:
+                self.last_block = block
+        return self.last_block

@@ -99,6 +99,17 @@ class Pipe:
 
         raise PipeError("abstract method must be implemented by child")
 
+    def reread_last(self):
+        """
+        The next read will return only unconsumed data from the previous read
+        and no new data from the source. The end_of_interval flag is maintained.
+
+        """
+        if self.direction == Pipe.DIRECTION.OUTPUT:
+            raise PipeError("cannot read from an output pipe")
+
+        raise PipeError("Not Implemented")
+
     async def read_all(self, flatten=False, maxrows=1e5, error_on_overflow=False) -> np.ndarray:
         """
                 Read stream data. By default this method returns a structured
@@ -239,6 +250,14 @@ class Pipe:
             return self.stream.layout
         else:
             raise ValueError("pipe has no layout")
+
+    @property
+    def width(self) -> int:
+        shape = self.dtype['data'].shape
+        if len(shape) == 0:
+            return 1
+        else:
+            return shape[0]
 
     @property
     def dtype(self) -> np.dtype:

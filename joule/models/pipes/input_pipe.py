@@ -20,6 +20,7 @@ class InputPipe(Pipe):
         self.byte_buffer = b''
         self.unprocessed_np_buffer = b''
         self.interval_break = False
+        self._reread = False
         # tunable constant
         self.BUFFER_SIZE = buffer_size
         """Note: The StreamReader.read coroutine hangs even if the write
@@ -42,6 +43,13 @@ class InputPipe(Pipe):
 
         if max_rows == 0:
             # buffer is full, this must be consumed before a new read
+            return self._format_data(self.buffer[:self.last_index], flatten)
+
+        # if reread is set just return the old data
+        if self._reread:
+            self._reread = False
+            if self.last_index == 0:
+                raise PipeError("No data left to reread")
             return self._format_data(self.buffer[:self.last_index], flatten)
 
         nbytes = 0  # make sure we get more than 0 bytes from the read
@@ -103,6 +111,11 @@ class InputPipe(Pipe):
 
         self.last_index += len(data)
         return self._format_data(self.buffer[:self.last_index], flatten)
+
+    def reread_last(self):
+        if len(self.read_buffer) == 0:
+            raise PipeError("No data left to reread")
+        self._reread = True
 
     def consume(self, num_rows):
         if num_rows == 0:

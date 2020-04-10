@@ -1,13 +1,10 @@
 from joule.client import FilterModule
-from joule import utilities
 import textwrap
 import numpy as np
-import asyncio
 from typing import Dict, List
 from joule import Pipe
 from joule.errors import ApiError
 from scipy.interpolate import interp1d
-import pdb
 
 ARGS_DESC = """
 ---
@@ -90,6 +87,8 @@ class MergeFilter(FilterModule):
 
     async def run(self, parsed_args, inputs: Dict[str, Pipe], outputs):
         master_name = parsed_args.master
+
+        # ---- VERIFY PARAMETERS and STREAM FORMATS -----
         if master_name not in inputs:
             raise Exception("the specified master [%s] is not in the inputs" % parsed_args.master)
         master = inputs[master_name]
@@ -97,76 +96,108 @@ class MergeFilter(FilterModule):
         if len(outputs) != 1:
             raise Exception("must specify one output stream")
         output = list(outputs.values())[0]
-        await align_streams(master, slaves)
+        input_width = np.sum([slave.width for slave in slaves])+master.width
+        if input_width != output.width:
+            raise Exception("output must have %d elements" % input_width)
+        # ---- END VERIFY ------
+
+        if not await align_streams(master, slaves):
+            return
         while not self.stop_requested:
             try:
                 master_data = await master.read()
+                # allocate the output array (we won't have any *more* data than this)
+                output_data = np.empty(len(master_data), dtype=output.dtype)
+                # put in the master data and the timestamps
+                output_data['timestamp'] = master_data['timestamp']
+                output_data['data'][:, :master.width] = make2d(master_data['data'])
+                valid_rows = len(output_data)
+                offset = master.width
+                for slave in slaves:
+                    valid_rows = min(await get_data(slave, output_data, offset),
+                                     valid_rows)
+                    offset += slave.width
 
-                slave_datas = [await slave.read() for slave in slaves]
-            except ApiError:
-                await output.close()
-                break
-            # allocate the output array (we won't have any *more* data than this)
-            output_data = np.empty(len(master_data), dtype=output.dtype)
-            # put in the master data and the timestamps
-            output_data['timestamp'] = master_data['timestamp']
-            output_data['data'][:, :num_cols(master_data)] = master_data['data']
+                # write the output
+                await output.write(output_data[:valid_rows])
 
-            total_rows = len(output_data)
-            offset_col = num_cols(master_data)
-            for data in slave_datas:
-                rows = resample(output_data, offset_col, data)
-                offset_col += num_cols(data)
-                total_rows = min((rows, total_rows))
-            # consume the used data and check for interval breaks
-            interval_break = False
-            master.consume(total_rows)
-            if master.end_of_interval:
-                interval_break = True
-            for slave in slaves:
-                slave.consume(total_rows)
-                if slave.end_of_interval:
+                # consume the used data and check for interval breaks
+                interval_break = False
+                master.consume(valid_rows)
+                if master.end_of_interval:
                     interval_break = True
-            if interval_break:
-                await align_streams(master, slaves)
+                for slave in slaves:
+                    if slave.end_of_interval:
+                        interval_break = True
+                if interval_break:
+                    await output.close_interval()
+                    if not await align_streams(master, slaves):
+                        break
 
-            # write the output
-            await output.write(output_data[:total_rows])
+
+            except ApiError:
+                break
+        await output.close()
 
 
-def num_cols(arr: np.ndarray) -> int:
-    return np.atleast_2d(arr['data']).shape[1]
+def make2d(arr: np.ndarray) -> np.ndarray:
+    if len(arr.shape) == 1:
+        return arr[:, None]
+    else:
+        return arr
 
 
 async def align_streams(master: Pipe, slaves: List[Pipe]):
     # we need a previous sample of every slave
-    slave_datas = [await slave.read() for slave in slaves]
-    master_data = await master.read()
-    # get the maximum slave start time (we can't interpolate before this)
-    latest_slave_start = np.max([data['timestamp'][0] for data in slave_datas])
-    # find the closest ts in master that is larger than latest_slave_start
-    start_ts = master_data['timestamp'][master_data['timestamp'] >= latest_slave_start][0]
-    i = 0
-    for data in slave_datas:
-        # find the closest ts in slaves that is smaller than latest_slave_start
-        idx = np.argmax(data['timestamp'][data['timestamp'] <= start_ts])
-        # consume up to this point
-        slaves[i].consume(idx)
-        i += 1
-    # consume the master before start_ts
-    too_early = master_data['timestamp'][master_data['timestamp'] < start_ts]
-    master.consume(len(too_early))
+    try:
+        slave_datas = [await slave.read() for slave in slaves]
+        master_data = await master.read()
+
+        # get the maximum slave start time (we can't interpolate before this)
+        latest_slave_start = np.max([data['timestamp'][0] for data in slave_datas])
+        # make sure all streams have some data larger than the latest_slave_start
+        while master_data['timestamp'][-1] < latest_slave_start:
+            master.consume(len(master_data))
+            master_data = await master.read()
+        for i in range(len(slaves)):
+            while slave_datas[i]['timestamp'][-1] < latest_slave_start:
+                slaves[i].consume(len(slave_datas[i]))
+                slave_datas[i] = await slaves[i].read()
+        # find the closest ts in master that is larger than latest_slave_start
+        start_ts = master_data['timestamp'][master_data['timestamp'] >= latest_slave_start][0]
+        i = 0
+        for data in slave_datas:
+            # find the closest ts in slaves that is smaller than latest_slave_start
+            idx = np.argmax(data['timestamp'][data['timestamp'] <= start_ts])
+            # consume up to this point
+            slaves[i].consume(idx)
+            i += 1
+        # consume the master before start_ts
+        too_early = master_data['timestamp'][master_data['timestamp'] < start_ts]
+        master.consume(len(too_early))
+
+        # to preserve any interval breaks, reread the same data again
+        master.reread_last()
+        for slave in slaves:
+            slave.reread_last()
+    except ApiError:
+        return False
+    return True
 
 
-def resample(output: np.ndarray, offset_col: int, input: np.ndarray) -> int:
-    ts = output['timestamp']
-    max_ts = input['timestamp'][-1]
-    f = interp1d(input['timestamp'], input['data'], axis=0, fill_value='extrapolate')
+async def get_data(source_pipe: Pipe, dest: np.ndarray, offset: int) -> float:
+    source = await source_pipe.read()
+    ts = dest['timestamp']
+    max_ts = source['timestamp'][-1]
+    f = interp1d(source['timestamp'], source['data'], axis=0, fill_value='extrapolate')
     resampled_data = f(ts[ts <= max_ts])
-    if len(resampled_data.shape) == 1:
-        resampled_data = resampled_data[:, None]
-    output['data'][:, offset_col:offset_col+num_cols(input)] = resampled_data
-    return len(ts[ts <= max_ts])
+    dest['data'][:len(resampled_data), offset:offset + source_pipe.width] = make2d(resampled_data)
+    last_valid_ts = ts[len(resampled_data)-1]
+    # consume the slave up to last_valid_ts
+    source_rows = len(source['timestamp'][source['timestamp'] <= last_valid_ts])
+    source_pipe.consume(source_rows)
+    dest_rows = np.argwhere(ts == last_valid_ts)[0][0]+1
+    return dest_rows
 
 
 def main():  # pragma: no cover

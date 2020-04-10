@@ -13,7 +13,7 @@ from joule.api import node
 from joule import api
 from joule.client import helpers
 # import directly so it can be mocked easily in unit tests
-from joule.errors import ConfigurationError
+from joule.errors import ConfigurationError, EmptyPipeError
 from joule.models import pipes, stream
 
 Pipes = Dict[str, 'pipes.Pipe']
@@ -165,7 +165,7 @@ class BaseModule:
         loop.add_signal_handler(signal.SIGTERM, stop_task)
         try:
             loop.run_until_complete(task)
-        except (asyncio.CancelledError, pipes.EmptyPipe):
+        except (asyncio.CancelledError, pipes.EmptyPipe, EmptyPipeError):
             pass
         self._cleanup(loop)
 
