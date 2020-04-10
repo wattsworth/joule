@@ -113,7 +113,7 @@ class InputPipe(Pipe):
         return self._format_data(self.buffer[:self.last_index], flatten)
 
     def reread_last(self):
-        if len(self.read_buffer) == 0:
+        if self.last_index == 0:
             raise PipeError("No data left to reread")
         self._reread = True
 
