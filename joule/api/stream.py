@@ -316,8 +316,8 @@ async def stream_move(session: BaseSession,
 
 async def stream_annotation_delete(session: BaseSession,
                                    stream: Union[Stream, str, int],
-                                   start: Optional[int],
-                                   end: Optional[int]):
+                                   start: Optional[int] = None,
+                                   end: Optional[int] = None):
     data = {}
     if start is not None:
         data["start"] = start

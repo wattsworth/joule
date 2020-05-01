@@ -130,8 +130,8 @@ class BaseNode:
 
     async def stream_annotation_delete(self,
                                        stream: Union[Stream, str, int],
-                                       start: Optional[int],
-                                       end: Optional[int]):
+                                       start: Optional[int] = None,
+                                       end: Optional[int] = None):
         return await stream_annotation_delete(self.session, stream, start, end)
 
     # Data actions

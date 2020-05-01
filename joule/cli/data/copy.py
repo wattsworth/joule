@@ -205,6 +205,10 @@ async def _get_intervals(server: Union[BaseNode, str], my_stream: Stream, path: 
     if is_nilmdb:
         intervals = []
         params = {"path": path}
+        if start is not None:
+            params['start'] = start
+        if end is not None:
+            params['end'] = end
         url = "{server}/stream/intervals".format(server=server)
         async with aiohttp.ClientSession() as session:
             async with session.get(url, params=params) as resp:
@@ -290,7 +294,7 @@ async def _create_nilmdb_stream(server: str, path: str, template: Stream):
 
 async def _retrieve_nilmdb_stream(server: str, path: str) -> Tuple[Optional[Stream], Optional[StreamInfo]]:
     url = "{server}/stream/get_metadata".format(server=server)
-    params = {"path": path, "key": json.dumps(['config_key__'])}
+    params = {"path": path, "key": 'config_key__'}
     async with aiohttp.ClientSession() as session:
         async with session.get(url, params=params) as resp:
             if resp.status == 404:

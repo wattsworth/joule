@@ -151,8 +151,11 @@ def from_config(config: configparser.ConfigParser) -> Element:
 
 
 def from_nilmdb_metadata(config: Dict) -> Element:
+    display_type = Element.DISPLAYTYPE.CONTINUOUS
+    if config['discrete']:
+        display_type = Element.DISPLAYTYPE.EVENT
     return Element(name=config['name'],
-                   display_type=Element.DISPLAYTYPE.CONTINUOUS,
+                   display_type=display_type,
                    units=config['units'],
                    plottable=config['plottable'],
                    offset=config['offset'],
