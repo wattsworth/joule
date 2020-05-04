@@ -1,5 +1,5 @@
 import click
-from typing import List, Tuple, Optional, Union
+from typing import Dict, List, Tuple, Optional, Union
 from operator import attrgetter
 import aiohttp
 import asyncio
@@ -8,7 +8,8 @@ import numpy as np
 import datetime
 
 from joule.cli.config import pass_config
-from joule.api import get_node, BaseNode
+from joule.api import get_node, BaseNode, Annotation
+from joule.api.annotation import from_json as annotation_from_json
 from joule.models import stream, Stream, pipes, StreamInfo
 from joule.utilities import interval_difference, human_to_timestamp
 from joule import errors
@@ -101,9 +102,6 @@ async def _run(config, start, end, destination_node, source_url, source, destina
     src_intervals = await _get_intervals(source_node, src_stream, source, start, end, is_nilmdb=nilmdb_source)
     dest_intervals = await _get_intervals(dest_node, dest_stream, destination, start, end, is_nilmdb=nilmdb_dest)
     new_intervals = interval_difference(src_intervals, dest_intervals)
-    if len(new_intervals) == 0:
-        click.echo("Nothing to copy")
-        return
 
     async def _copy(intervals):
         # compute the duration of data to copy
@@ -116,6 +114,38 @@ async def _run(config, start, end, destination_node, source_url, source, destina
                 length=duration) as bar:
             for interval in intervals:
                 await _copy_interval(interval[0], interval[1], bar)
+                await _copy_annotations(interval[0], interval[1])
+
+    async def _copy_annotations(istart, iend):
+        if nilmdb_source:
+            src_annotations = await _get_nilmdb_annotations(source_node, source, istart, iend)
+        else:
+            src_annotations = await source_node.annotation_get(src_stream.id, start=istart, end=iend)
+
+        if nilmdb_dest:
+            dest_annotations = await _get_nilmdb_annotations(dest_node, destination, istart, iend)
+            new_annotations = [a for a in src_annotations if a not in dest_annotations]
+            if len(new_annotations) > 0:
+                # create ID's for the new annotations
+                if len(dest_annotations)>0:
+                    id_val = max([a.id for a in dest_annotations])+1
+                else:
+                    id_val = 0
+                for a in new_annotations:
+                    a.id = id_val
+                    id_val += 1
+                await _create_nilmdb_annotations(dest_node, destination, new_annotations+dest_annotations)
+        else:
+            dest_annotations = await dest_node.annotation_get(dest_stream.id, start=istart, end=iend)
+            new_annotations = [a for a in src_annotations if a not in dest_annotations]
+            for annotation in new_annotations:
+                await dest_node.annotation_create(annotation, dest_stream.id)
+
+    if len(new_intervals) == 0:
+        click.echo("Nothing to copy, syncing annotations")
+        for interval in src_intervals:
+            await _copy_annotations(interval[0], interval[1])
+        return
 
     async def _copy_interval(istart, iend, bar):
 
@@ -352,3 +382,51 @@ async def _validate_nilmdb_url(url):
             body = await resp.text()
             if 'NilmDB' not in body:
                 raise errors.ApiError("[%s] is not a Nilmdb server" % url)
+
+# save retrieved annotations so we don't make extra network requests
+# there is no interval retrieval mechanism for NilmDB annotations
+cached_nilmdb_annotations: Dict[str, List[Annotation]] = {}
+
+
+async def _get_nilmdb_annotations(server: str, path: str, istart: int, iend: int) -> List[Annotation]:
+    url = "{server}/stream/get_metadata".format(server=server)
+    params = {"path": path, "key": '__annotations'}
+    global cached_nilmdb_annotations
+    if path in cached_nilmdb_annotations:
+        annotations = cached_nilmdb_annotations[path]
+        return [a for a in annotations if istart <= a.start <= iend]
+
+    annotations = []
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, params=params) as resp:
+            if resp.status == 404:
+                return []
+            if not resp.status == 200:
+                raise errors.ApiError("[%s]: %s" % (server, resp.text))
+            try:
+                metadata = await resp.json()
+                if metadata['__annotations'] is not None:
+                    annotation_data = json.loads(metadata['__annotations'])
+                    for item in annotation_data:
+                        item['stream_id'] = None
+                        annotations.append(annotation_from_json(item))
+            except (KeyError, ValueError):
+                # missing or corrupt annotation data
+                pass
+    cached_nilmdb_annotations[path] = annotations
+    # only return annotations within the requested interval
+    return [a for a in annotations if istart <= a.start <= iend]
+
+
+async def _create_nilmdb_annotations(server: str, path: str, annotations: List[Annotation]) -> None:
+    # create the JSON data
+    annotation_json = [a.to_json() for a in annotations]
+    data = {"__annotations": json.dumps(annotation_json)}
+    url = "{server}/stream/update_metadata".format(server=server)
+    data = {"path": path,
+            "data": json.dumps(data)}
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, data=data) as resp:
+            if not resp.status == 200:
+                raise click.ClickException("cannot create metadata for [%s] on [%s]" % (path, server))
+

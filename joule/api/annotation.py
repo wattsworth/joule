@@ -32,6 +32,26 @@ class Annotation:
         self.start = start
         self.end = end
 
+    def __eq__(self, other: 'Annotation'):
+        if self.title != other.title:
+            return False
+        if self.content != other.content:
+            return False
+        if self.start != other.start:
+            return False
+        if self.end != other.end:
+            return False
+        return True
+
+    def to_json(self):
+        return {
+            'title': self.title,
+            'start': self.start,
+            'end': self.end,
+            'content': self.content,
+            'id': self.id
+        }
+
 
 def from_json(json) -> Annotation:
     annotation = Annotation(title=json['title'],
