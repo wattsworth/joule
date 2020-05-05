@@ -102,6 +102,7 @@ async def _run(config, start, end, destination_node, source_url, source, destina
     src_intervals = await _get_intervals(source_node, src_stream, source, start, end, is_nilmdb=nilmdb_source)
     dest_intervals = await _get_intervals(dest_node, dest_stream, destination, start, end, is_nilmdb=nilmdb_dest)
     new_intervals = interval_difference(src_intervals, dest_intervals)
+    existing_intervals = interval_difference(src_intervals, new_intervals)
 
     async def _copy(intervals):
         # compute the duration of data to copy
@@ -215,6 +216,9 @@ async def _run(config, start, end, destination_node, source_url, source, destina
                             raise errors.ApiError("Error writing to destination: %s" % msg)
 
     try:
+        # copy over any new annotations from existing intervals
+        for interval in existing_intervals:
+            await _copy_annotations(interval[0], interval[1])
         await _copy(new_intervals)
         click.echo("OK")
     # this should be caught by the stream info requests
