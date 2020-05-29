@@ -60,8 +60,8 @@ class TestDataCopy(FakeJouleTestCase):
                                       '/test/source', '/test/destination'])
         _print_result_on_error(result)
         self.assertEqual(result.exit_code, 0)
-        # data write was never called
-        self.assertTrue(self.msgs.empty())
+        # only the annotations get was called (twice for each interval: src and dest)
+        self.assertTrue(self.msgs.qsize(), len(intervals)*2)
         self.stop_server()
 
     def test_creates_stream_if_necessary(self):

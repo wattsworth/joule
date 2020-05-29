@@ -333,7 +333,11 @@ class FakeJoule:
 
     async def get_annotations(self, request: web.Request):
         self.msgs.put(dict(request.query))
-        return web.Response(text=self.response, status=self.http_code,
+
+        resp = self.response
+        if resp == "":
+            resp = "[]" # so a call to get_annotations returns an empty list
+        return web.Response(text=resp, status=self.http_code,
                             content_type='application/json')
 
     async def update_annotation(self, request: web.Request):
