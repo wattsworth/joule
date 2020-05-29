@@ -215,6 +215,13 @@ Stream Actions
         <joule.api.StreamInfo start=1551730769556442 end=1551751402742424
          rows=61440, total_time=20633185982>
 
+
+.. function:: Node.stream_annotation_delete(stream: Union[Stream, str, int], start: Optional[int] = None,
+        end: Optional[int] = None) -> None:
+
+    Remove annotations from this stream. If start and/or end is specified only remove annotations within this range.
+    If a bound is not specified it defaults to the extreme (min/max) timestamp in the stream.
+
 .. _sec-node-data-actions:
 
 Data Actions
@@ -324,19 +331,41 @@ Annotation Actions
     Add an annotation. Create a new :class:`joule.api.Annotation` object locally and associate it with a data stream.
     The stream may be specified by path, ID, or a :class:`joule.api.Stream` object
 
+    Example:
+        >>> from joule import utilities
+        >>> event_note = Annotation(title='Event Annotation',
+                               start=utilities.human_to_timestamp('now'))
+        >>> await node.annotation_create(event_note, '/path/to/stream')
+        >>> range_note = Annotation(title='Range Annotation',
+                               start=utilities.human_to_timestamp('1 minute ago'),
+                               end=utilities.human_to_timestamp('now'))
+        >>> await node.annotation_create(range_note, '/path/to/stream')
+
+
 .. function:: Node.annotation_delete(annotation: Union[int, Annotation]) -> None
 
-    Remove an annotation. The annotation may be specified by ID or an
-    :class:`joule.api.Annotation` object object.
+    Remove an annotation. The annotation may be specified by ID or
+    :class:`joule.api.Annotation` object.
+
+    Example:
+        >>> await node.annotation_delete(5) # assuming 5 is a valid annotation ID
 
 .. function:: Node.annotation_update(annotation: Annotation) -> Annotation
 
     Update an annotation with new title or content. The time ranges (start,end) may not be changed
 
+    Example:
+        >>> await node.annotation_update(annotation) # assuming annotation already exists on the stream
+
 .. function:: Node.annotation_get(stream: Union['Stream', str, int], start: Optional[int], end: Optional[int]) -> List[Annotation]:
 
     Retrieve annotations for a particular stream. Specify timestamps to only retrieve annotations over
     a particular interval. The stream may be specified by path, ID, or a :class:`joule.api.Stream` object
+
+    Example:
+        >>> annotations = await node.annotation_get("/path/to/stream")
+        >>> print(annotations[0].name)
+        "Demo Annotation"
 
 
 .. _sec-node-module-actions:
@@ -495,9 +524,18 @@ Models
 Errors
 ++++++
 
+.. autoclass:: joule.errors.ApiError
+.. autoclass:: joule.errors.StreamNotFound
+.. autoclass:: joule.errors.EmptyPipeError
+
+.. note::
+
+    The following errors are not expected in typical usage:
+
 .. autoclass:: joule.errors.SubscriptionError
 .. autoclass:: joule.errors.ConfigurationError
-.. autoclass:: joule.errors.ApiError
+.. autoclass:: joule.errors.DataError
+.. autoclass:: joule.errors.DecimationError
 
 
 Utilities
