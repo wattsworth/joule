@@ -168,7 +168,7 @@ class FakeNilmdb:
         resp.enable_chunked_encoding()
         await resp.prepare(request)
         for chunk in helpers.to_chunks(data, 300):
-            await resp.write(chunk.tostring())
+            await resp.write(chunk.tobytes())
         return resp
 
     async def stream_intervals(self, request: web.Request):

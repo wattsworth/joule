@@ -235,7 +235,7 @@ class FakeJoule:
                                            'joule-decimation': str(decimation_level)})
         resp.enable_chunked_encoding()
         await resp.prepare(request)
-        await resp.write(mock_entry.data.tostring())
+        await resp.write(mock_entry.data.tobytes())
         return resp
 
     async def data_write(self, request: web.Request):

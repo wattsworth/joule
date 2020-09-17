@@ -323,7 +323,7 @@ def interval_token(layout):
 
 def find_interval_token(raw: bytes, layout):
     token = interval_token(layout)[0]
-    token_bytes = token.tostring()
+    token_bytes = token.tobytes()
     index = raw.find(token_bytes)
     if index == -1:
         return None
