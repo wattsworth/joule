@@ -146,6 +146,11 @@ async def _run(config, start, end, destination_node, source_url, source, destina
         click.echo("Nothing to copy, syncing annotations")
         for interval in src_intervals:
             await _copy_annotations(interval[0], interval[1])
+        # clean up
+        if not nilmdb_dest:
+            await dest_node.close()
+        if not nilmdb_source:
+            await source_node.close()
         return
 
     async def _copy_interval(istart, iend, bar):
@@ -169,6 +174,13 @@ async def _run(config, start, end, destination_node, source_url, source, destina
                                    ssl=src_ssl) as src_response:
                 if src_response.status != 200:
                     msg = await src_response.text()
+                    if msg == 'this stream has no data':
+                        # This is not an error because a previous copy may have been interrupted
+                        # This will cause the destination to have an interval gap where the source has no data
+                        # Example:   source:  |**     *******|
+                        #            dest:    |** |  |*******|
+                        #                          ^--- looks like missing data but there's nothing in the source
+                        return  # ignore empty intervals
                     raise click.ClickException("Error reading from source: %s" % msg)
 
                 pipe = pipes.InputPipe(stream=dest_stream, reader=src_response.content)

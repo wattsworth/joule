@@ -52,23 +52,25 @@ class InputPipe(Pipe):
                 raise PipeError("No data left to reread")
             return self._format_data(self.buffer[:self.last_index], flatten)
 
-        nbytes = 0  # make sure we get more than 0 bytes from the read
+        # make sure we get at least one full row of data from read (depends on datatype)
         raw = b''
-        while nbytes == 0:
+        while True:
+            new_data = b''
             if self.reader.at_eof():
                 if (len(self.unprocessed_np_buffer) == 0 and
                         self.last_index == 0):
                     raise EmptyPipe()
                 break
             try:
-                raw = await asyncio.wait_for(self.reader.read(max_rows * rowbytes),
+                new_data = await asyncio.wait_for(self.reader.read(max_rows * rowbytes),
                                              self.TIMEOUT_INTERVAL)
             except asyncio.TimeoutError:
                 pass
-
-            nbytes = len(raw)
-            if nbytes == 0:
+            raw += new_data
+            if len(raw) < self.dtype.itemsize:
                 await asyncio.sleep(0.1)
+            else:
+                break
         # extra_bytes: number of leftover bytes after % rowbytes
         # byte_buffer: the extra_bytes from the last read
         # unprocessed_np_buffer: data leftover from an interval break in the previous read

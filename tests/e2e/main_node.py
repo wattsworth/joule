@@ -101,7 +101,7 @@ def main():
             # parse the main.conf file and enable nilmdb
             configs = configparser.ConfigParser()
             configs.read("/etc/joule/main.conf")
-            configs["Main"]["NilmdbUrl"] = "http://nilmdb:8000"
+            configs["Main"]["NilmdbUrl"] = "http://nilmdb"
             (f, path) = tempfile.mkstemp()
             configs.write(os.fdopen(f, mode='w'))
             main_conf = path
