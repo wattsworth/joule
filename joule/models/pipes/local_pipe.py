@@ -51,7 +51,6 @@ class LocalPipe(Pipe):
         if self._failed:
             await self.close()
             raise PipeError('pipe failed')
-        self.interval_break = False
 
         # if reread is set just return the old data
         if self._reread:
@@ -59,6 +58,8 @@ class LocalPipe(Pipe):
             if len(self.read_buffer) == 0:
                 raise PipeError("No data left to reread")
             return self._format_data(self.read_buffer, flatten)
+
+        self.interval_break = False
 
         # if the queue is empty and we have old data, just return the old data
         if self.queue.empty() and len(self.read_buffer) > 0:

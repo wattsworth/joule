@@ -6,6 +6,7 @@ import numpy.matlib
 import argparse
 import pdb
 
+import unittest
 from tests import helpers
 from joule.client.builtins.merge_filter import MergeFilter
 
@@ -323,6 +324,60 @@ class TestMergeFilter(helpers.AsyncTestCase):
                                                       'slave1': slave1},
                                               outputs={'output': output}))
         loop.close()
+
+    def test_different_arrival_rates(self):
+        # merges multiple streams each arriving with different chunk sizes
+
+        # All streams have the same data at the same rate, but they arrive
+        # in different chunks. Expect all elements in the merged output to be the same
+        VISUALIZE = False
+        ts = np.arange(0, 1000)
+        values = np.random.randn(1000, 1)
+        data = np.hstack((ts[:, None], values))
+
+        master = helpers.TestingPipe("float32_1", name="master")
+        slave1 = helpers.TestingPipe("float32_1", name="slave1")
+        slave2 = helpers.TestingPipe("float32_1", name="slave2")
+        # seed the input data
+        for block in np.split(data, [200, 354, 700]):
+            master.write_nowait(block)
+        for block in np.split(data, [155, 600, 652, 900]):
+            slave1.write_nowait(block)
+        for block in np.split(data, [100, 300, 600]):
+            slave2.write_nowait(block)
+        # run filter in an event loop
+        loop = asyncio.new_event_loop()
+        my_filter = MergeFilter()
+        args = argparse.Namespace(master="master", pipes="unset")
+        output = helpers.TestingPipe("float32_3", name="output")
+        loop.run_until_complete(my_filter.run(args,
+                                              inputs={'master': master,
+                                                      'slave1': slave1,
+                                                      'slave2': slave2},
+                                              outputs={'output': output}))
+        # put together the data_blocks (should not be any interval breaks)
+        # remove the interval close at the end
+        output.data_blocks.pop()
+        for blk in output.data_blocks:
+            self.assertIsNotNone(blk)
+        result = np.hstack(output.data_blocks)
+        # all elements should match the data
+        np.testing.assert_array_almost_equal(result['data'][:, 0][:, None], values)
+        np.testing.assert_array_almost_equal(result['data'][:, 1][:, None], values)
+        np.testing.assert_array_almost_equal(result['data'][:, 2][:, None], values)
+
+        if VISUALIZE:
+            from matplotlib import pyplot as plt
+            f, (ax1, ax2) = plt.subplots(2, 1, sharey=True)
+            ax1.plot(result['timestamp'], result['data'][:, 0], linewidth=4)
+            ax1.plot(result['timestamp'], result['data'][:, 1], linewidth=1)
+            ax1.set_title('Slave 1 vs Master')
+
+            ax2.plot(result['timestamp'], result['data'][:, 0], linewidth=4)
+            ax2.plot(result['timestamp'], result['data'][:, 2], linewidth=1)
+            ax2.set_title('Slave 2 vs Master')
+
+            plt.show()
 
     def test_static_cases(self):
         # merges streams with several different data rates

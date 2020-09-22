@@ -96,7 +96,7 @@ class MergeFilter(FilterModule):
         if len(outputs) != 1:
             raise Exception("must specify one output stream")
         output = list(outputs.values())[0]
-        input_width = np.sum([slave.width for slave in slaves])+master.width
+        input_width = np.sum([slave.width for slave in slaves]) + master.width
         if input_width != output.width:
             raise Exception("output must have %d elements" % input_width)
         # ---- END VERIFY ------
@@ -117,6 +117,9 @@ class MergeFilter(FilterModule):
                     valid_rows = min(await get_data(slave, output_data, offset),
                                      valid_rows)
                     offset += slave.width
+                # consume the right amount from each slave based on the last valid timestamp
+                for slave in slaves:
+                    await consume_data(slave, output_data['timestamp'][valid_rows - 1])
 
                 # write the output
                 await output.write(output_data[:valid_rows])
@@ -124,6 +127,12 @@ class MergeFilter(FilterModule):
                 # consume the used data and check for interval breaks
                 interval_break = False
                 master.consume(valid_rows)
+
+                # stay within the same interval until all streams catch up
+                if master.end_of_interval and len(master_data) > valid_rows:
+                    master.reread_last()
+                    master.interval_break = False
+
                 if master.end_of_interval:
                     interval_break = True
                 for slave in slaves:
@@ -192,12 +201,21 @@ async def get_data(source_pipe: Pipe, dest: np.ndarray, offset: int) -> float:
     f = interp1d(source['timestamp'], source['data'], axis=0, fill_value='extrapolate')
     resampled_data = f(ts[ts <= max_ts])
     dest['data'][:len(resampled_data), offset:offset + source_pipe.width] = make2d(resampled_data)
-    last_valid_ts = ts[len(resampled_data)-1]
-    # consume the slave up to last_valid_ts
-    source_rows = len(source['timestamp'][source['timestamp'] <= last_valid_ts])
-    source_pipe.consume(source_rows)
-    dest_rows = np.argwhere(ts == last_valid_ts)[0][0]+1
+    last_valid_ts = ts[len(resampled_data) - 1]
+    dest_rows = np.argwhere(ts == last_valid_ts)[0][0] + 1
     return dest_rows
+
+
+async def consume_data(source_pipe: Pipe, ts: int) -> None:
+    # return
+    source_pipe.reread_last()
+    source = await source_pipe.read()
+    used_rows = len(source['timestamp'][source['timestamp'] <= ts])
+    source_pipe.consume(used_rows)
+    # stay within the same interval until all streams catch up
+    if source_pipe.end_of_interval and used_rows < len(source):
+        source_pipe.reread_last()
+        source_pipe.interval_break = False
 
 
 def main():  # pragma: no cover
