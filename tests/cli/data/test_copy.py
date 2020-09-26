@@ -3,8 +3,9 @@ import warnings
 import numpy as np
 import logging
 import asyncio
+import unittest
 
-from ..fake_joule import FakeJoule, FakeJouleTestCase
+from ..fake_joule import FakeJoule, FakeJouleTestCase, MockDbEntry
 from joule.cli import main
 from joule.models import Stream, Element, StreamInfo, pipes
 from tests import helpers
@@ -40,6 +41,36 @@ class TestDataCopy(FakeJouleTestCase):
         # self.assertEqual(len(mock_entry.intervals), 3)
         self.stop_server()
 
+    @unittest.skip('fakejoule does not handle time bound queries so this test is not useful')
+    def test_copies_new_data(self):
+        server = FakeJoule()
+        # create the source and destination streams
+        src_data = create_source_data(server)  # helpers.create_data(src.layout)
+        # dest has half the data
+        dest = Stream(id=1, name="dest", keep_us=100, datatype=Stream.DATATYPE.FLOAT32)
+        dest.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in
+                         range(3)]
+        # destination is missing first interval but this won't be copied with the --new flag
+        dest_interval = server.streams['/test/source'].intervals[1]
+        dest_data = np.copy(src_data[dest_interval[0]:dest_interval[1]])
+        server.add_stream('/test/destination', dest,
+                          StreamInfo(int(dest_interval[0]), int(dest_interval[1]), len(dest_data)),
+                          dest_data, [dest_interval])
+        self.start_server(server)
+        runner = CliRunner()
+        result = runner.invoke(main, ['data', 'copy', '--new', '/test/source', '/test/destination'])
+        print(result.output)
+        _print_result_on_error(result)
+        self.assertEqual(result.exit_code, 0)
+        while self.msgs.empty():
+            time.sleep(0.1)
+            print("waiting...")
+        while not self.msgs.empty():
+            msg = self.msgs.get()
+            if type(msg) is MockDbEntry:
+                print(msg)
+        self.stop_server()
+
     def test_does_not_copy_existing_data(self):
         server = FakeJoule()
         # create the source and destination streams
@@ -61,7 +92,7 @@ class TestDataCopy(FakeJouleTestCase):
         _print_result_on_error(result)
         self.assertEqual(result.exit_code, 0)
         # only the annotations get was called (twice for each interval: src and dest)
-        self.assertTrue(self.msgs.qsize(), len(intervals)*2)
+        self.assertTrue(self.msgs.qsize(), len(intervals) * 2)
         self.stop_server()
 
     def test_creates_stream_if_necessary(self):

@@ -11,7 +11,7 @@ from joule.cli.config import pass_config
 from joule.api import get_node, BaseNode, Annotation
 from joule.api.annotation import from_json as annotation_from_json
 from joule.models import stream, Stream, pipes, StreamInfo
-from joule.utilities import interval_difference, human_to_timestamp
+from joule.utilities import interval_difference, human_to_timestamp, timestamp_to_human
 from joule import errors
 
 Interval = Tuple[int, int]
@@ -20,15 +20,16 @@ Interval = Tuple[int, int]
 @click.command(name="copy")
 @click.option('-s', "--start", help="timestamp or descriptive string")
 @click.option('-e', "--end", help="timestamp or descriptive string")
+@click.option('-n', '--new', help="copy starts at the last timestamp of the destination", is_flag=True)
 @click.option('-d', '--destination-node', help="node name or Nilmdb URL")
 @click.option('--source-url', help="copy from a Nilmdb URL")
 @click.argument("source")
 @click.argument("destination")
 @pass_config
-def data_copy(config, start, end, destination_node, source_url, source, destination):
+def data_copy(config, start, end, new, destination_node, source_url, source, destination):
     loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(_run(config, start, end, destination_node,
+        loop.run_until_complete(_run(config, start, end, new, destination_node,
                                      source_url, source, destination))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
@@ -38,7 +39,7 @@ def data_copy(config, start, end, destination_node, source_url, source, destinat
         loop.close()
 
 
-async def _run(config, start, end, destination_node, source_url, source, destination):
+async def _run(config, start, end, new, destination_node, source_url, source, destination):
     # determine if the source node is NilmDB or Joule
     if source_url is None:
         source_node = config.node
@@ -83,6 +84,10 @@ async def _run(config, start, end, destination_node, source_url, source, destina
             not click.confirm("WARNING: Element configurations do not match. Continue?")):
         click.echo("Cancelled")
         return
+    # if new is set start and end may not be specified
+    if new and start is not None:
+        raise click.ClickException("Error: either specify 'new' or a starting timestamp, not both")
+
     # make sure the time bounds make sense
     if start is not None:
         try:
@@ -98,6 +103,12 @@ async def _run(config, start, end, destination_node, source_url, source, destina
         raise click.ClickException("Error: start [%s] must be before end [%s]" % (
             datetime.datetime.fromtimestamp(start / 1e6),
             datetime.datetime.fromtimestamp(end / 1e6)))
+    if new:
+        # pull all the destination intervals and use the end of the last one as the 'end' for the copy
+        dest_intervals = await _get_intervals(dest_node, dest_stream, destination, None, None, is_nilmdb=nilmdb_dest)
+        if len(dest_intervals) > 0:
+            start = dest_intervals[-1][-1]
+        print("Starting copy at [%s]" % timestamp_to_human(start))
     # compute the target intervals (source - dest)
     src_intervals = await _get_intervals(source_node, src_stream, source, start, end, is_nilmdb=nilmdb_source)
     dest_intervals = await _get_intervals(dest_node, dest_stream, destination, start, end, is_nilmdb=nilmdb_dest)
@@ -128,14 +139,14 @@ async def _run(config, start, end, destination_node, source_url, source, destina
             new_annotations = [a for a in src_annotations if a not in dest_annotations]
             if len(new_annotations) > 0:
                 # create ID's for the new annotations
-                if len(dest_annotations)>0:
-                    id_val = max([a.id for a in dest_annotations])+1
+                if len(dest_annotations) > 0:
+                    id_val = max([a.id for a in dest_annotations]) + 1
                 else:
                     id_val = 0
                 for a in new_annotations:
                     a.id = id_val
                     id_val += 1
-                await _create_nilmdb_annotations(dest_node, destination, new_annotations+dest_annotations)
+                await _create_nilmdb_annotations(dest_node, destination, new_annotations + dest_annotations)
         else:
             dest_annotations = await dest_node.annotation_get(dest_stream.id, start=istart, end=iend)
             new_annotations = [a for a in src_annotations if a not in dest_annotations]
@@ -143,9 +154,12 @@ async def _run(config, start, end, destination_node, source_url, source, destina
                 await dest_node.annotation_create(annotation, dest_stream.id)
 
     if len(new_intervals) == 0:
-        click.echo("Nothing to copy, syncing annotations")
-        for interval in src_intervals:
-            await _copy_annotations(interval[0], interval[1])
+        if len(src_intervals) > 0:
+            click.echo("Nothing to copy, syncing annotations")
+            for interval in src_intervals:
+                await _copy_annotations(interval[0], interval[1])
+        else:
+            click.echo("Nothing to copy")
         # clean up
         if not nilmdb_dest:
             await dest_node.close()
@@ -154,7 +168,7 @@ async def _run(config, start, end, destination_node, source_url, source, destina
         return
 
     async def _copy_interval(istart, iend, bar):
-
+        print("[%s] -> [%s]" % (timestamp_to_human(istart), timestamp_to_human(iend)))
         if nilmdb_source:
             src_params = {'path': source, 'binary': 1,
                           'start': istart, 'end': iend}
@@ -394,10 +408,10 @@ async def _send_nilmdb_data(url, params, generator, dtype, session):
 async def _validate_nilmdb_url(url):
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as resp:
-
             body = await resp.text()
             if 'NilmDB' not in body:
                 raise errors.ApiError("[%s] is not a Nilmdb server" % url)
+
 
 # save retrieved annotations so we don't make extra network requests
 # there is no interval retrieval mechanism for NilmDB annotations
@@ -445,4 +459,3 @@ async def _create_nilmdb_annotations(server: str, path: str, annotations: List[A
         async with session.post(url, data=data) as resp:
             if not resp.status == 200:
                 raise click.ClickException("cannot create metadata for [%s] on [%s]" % (path, server))
-
