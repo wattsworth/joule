@@ -132,6 +132,9 @@ class MockStore(DataStore):
     async def dbinfo(self) -> DbInfo:
         return DbInfo('/file/path', 0, 0, 0, 0)
 
+    async def consolidate(self, stream: 'Stream', start: Optional[int], end: Optional[int], max_gap: int) -> int:
+        return 0
+
     def close(self):
         pass
 

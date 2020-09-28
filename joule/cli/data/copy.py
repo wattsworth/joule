@@ -168,7 +168,7 @@ async def _run(config, start, end, new, destination_node, source_url, source, de
         return
 
     async def _copy_interval(istart, iend, bar):
-        print("[%s] -> [%s]" % (timestamp_to_human(istart), timestamp_to_human(iend)))
+        #print("[%s] -> [%s]" % (timestamp_to_human(istart), timestamp_to_human(iend)))
         if nilmdb_source:
             src_params = {'path': source, 'binary': 1,
                           'start': istart, 'end': iend}

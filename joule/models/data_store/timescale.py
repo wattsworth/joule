@@ -6,15 +6,13 @@ import asyncpg
 import asyncpg.exceptions
 import datetime
 import shutil
-import os
-
+from joule.utilities import interval_tools, timestamp_to_datetime
 from joule.models.data_store.timescale_inserter import Inserter
 from joule.models.data_store import psql_helpers
 from joule.models import Stream, pipes
 from joule.models.data_store.data_store import DataStore, StreamInfo, DbInfo
 
 Loop = asyncio.AbstractEventLoop
-
 
 
 class TimescaleStore(DataStore):
@@ -49,6 +47,25 @@ class TimescaleStore(DataStore):
                      data: np.ndarray, start: int, end: int):
         pass
 
+    async def consolidate(self, stream: 'Stream', start: int, end: int, max_gap: int) -> int:
+        # remove interval gaps less than or equal to max_gap duration (in us)
+        intervals = await self.intervals(stream, start, end)
+        if len(intervals) == 0:
+            return  # no data, nothing to do
+        duration = [intervals[0][0], intervals[-1][1]]
+
+        gaps = interval_tools.interval_difference([duration], intervals)
+
+        if len(gaps) == 0:
+            return  # no interval breaks, nothing to do
+        small_gaps = [gap for gap in gaps if (gap[1] - gap[0]) <= max_gap]
+        boundaries = [gap[0] for gap in small_gaps]
+        str_datetimes = ["'%s'" % str(timestamp_to_datetime(ts)) for ts in boundaries]
+        query = "DELETE FROM data.stream%d_intervals WHERE time IN (%s)" % (stream.id, ",".join(str_datetimes))
+        async with self.pool.acquire() as conn:
+            await conn.execute(query)
+        return len(small_gaps)
+
     async def intervals(self, stream: 'Stream', start: Optional[int], end: Optional[int]):
         # find the intervals
         # for each interval find the nearest data
@@ -65,7 +82,7 @@ class TimescaleStore(DataStore):
                     utc_start_ts = int(cur_start.replace(tzinfo=datetime.timezone.utc).timestamp() * 1e6)
                     utc_end_ts = int(prev_ts.replace(tzinfo=datetime.timezone.utc).timestamp() * 1e6)
                     # intervals are [..) with extra us on the end
-                    intervals.append([utc_start_ts, utc_end_ts+1])
+                    intervals.append([utc_start_ts, utc_end_ts + 1])
                     cur_start = None
                 query = "SELECT time FROM data.stream%d WHERE time >= '%s'" % (stream.id, boundary)
                 if i < (len(boundaries) - 1):

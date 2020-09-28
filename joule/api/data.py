@@ -98,6 +98,30 @@ async def data_intervals(session: BaseSession,
     return await session.get("/data/intervals.json", params=data)
 
 
+async def data_consolidate(session: BaseSession,
+                           stream: Union[Stream, str, int],
+                           start_time: Optional[int] = None,
+                           end_time: Optional[int] = None,
+                           max_gap: int = 2e6
+                           ) -> List:
+    data = {}
+    if type(stream) is Stream:
+        data["id"] = stream.id
+    elif type(stream) is int:
+        data["id"] = stream
+    elif type(stream) is str:
+        data["path"] = stream
+    else:
+        raise errors.ApiError("Invalid stream datatype. Must be Stream, Path, or ID")
+    if start_time is not None:
+        data['start'] = int(start_time)
+    if end_time is not None:
+        data['end'] = int(end_time)
+    data['max_gap'] = int(max_gap)
+    resp = await session.post("/data/consolidate.json", params=data)
+    return resp['num_consolidated']
+
+
 async def data_read(session: BaseSession,
                     loop: asyncio.AbstractEventLoop,
                     stream: Union[Stream, str, int],

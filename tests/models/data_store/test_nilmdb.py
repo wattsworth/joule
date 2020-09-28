@@ -25,7 +25,6 @@ class TestNilmdbStore(asynctest.TestCase):
         # use a 0 insert period for test execution
         self.store = NilmdbStore(url, 0, 60, self.loop)
 
-
         # make a couple example streams
         # stream1 int8_3
         self.stream1 = Stream(id=1, name="stream1", datatype=Stream.DATATYPE.INT8,
@@ -218,14 +217,17 @@ class TestNilmdbStore(asynctest.TestCase):
 
     async def test_intervals(self):
         await self.store.initialize([])
-        intervals = [[1, 2], [2, 3], [3, 4]]
+        actual_intervals = [[1, 5],
+                            [10, 15], [15, 18], [18, 20],
+                            [30, 31], [31, 40]]
+        consolidated_intervals = [[1, 5], [10, 20], [30, 40]]
         self.fake_nilmdb.streams['/joule/1'] = FakeStream(
             layout=self.stream1.layout, start=100, end=1000,
-            intervals=intervals)
+            intervals=actual_intervals)
         rcvd_intervals = await self.store.intervals(self.stream1,
                                                     start=None,
                                                     end=None)
-        self.assertEqual(intervals, rcvd_intervals)
+        self.assertEqual(consolidated_intervals, rcvd_intervals)
 
         # handles empty intervals
         self.fake_nilmdb.streams['/joule/1'].intervals = None

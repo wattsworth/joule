@@ -271,3 +271,45 @@ async def remove(request: web.Request):
 
     await data_store.remove(stream, start, end)
     return web.Response(text="ok")
+
+
+async def consolidate(request):
+    db: Session = request.app["db"]
+    data_store: DataStore = request.app["data-store"]
+    # find the requested stream
+    if 'path' in request.query:
+        stream = folder.find_stream_by_path(request.query['path'], db)
+    elif 'id' in request.query:
+        stream = db.query(Stream).get(request.query["id"])
+    else:
+        return web.Response(text="specify an id or a path", status=400)
+    if stream is None:
+        return web.Response(text="stream does not exist", status=404)
+
+    # parse time bounds
+    start = None
+    end = None
+    try:
+        if 'start' in request.query:
+            start = int(request.query['start'])
+        if 'end' in request.query:
+            end = int(request.query['end'])
+    except ValueError:
+        return web.Response(text="[start] and [end] must be integers", status=400)
+
+    # make sure bounds make sense
+    if ((start is not None and end is not None) and
+            (start >= end)):
+        return web.Response(text="[start] must be < [end]", status=400)
+
+    # parse the max_gap parameter
+    if 'max_gap' not in request.query:
+        return web.Response(text="specify max_gap as us integer", status=400)
+    try:
+        max_gap = int(request.query['max_gap'])
+        if max_gap <= 0:
+            raise ValueError()
+    except ValueError:
+        return web.Response(text="max_gap must be postive integer", status=400)
+    num_removed = await data_store.consolidate(stream, start, end, max_gap)
+    return web.json_response(data={"num_consolidated": num_removed})

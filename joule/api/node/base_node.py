@@ -32,7 +32,8 @@ from joule.api.data import (data_write,
                             data_read,
                             data_subscribe,
                             data_delete,
-                            data_intervals)
+                            data_intervals,
+                            data_consolidate)
 
 from joule.api.proxy import (proxy_list,
                              proxy_get,
@@ -153,6 +154,13 @@ class BaseNode:
                              start: Optional[int] = None,
                              end: Optional[int] = None) -> List:
         return await data_intervals(self.session, stream, start, end)
+
+    async def data_consolidate(self,
+                               stream: Union[Stream, str, int],
+                               max_gap: int,
+                               start: Optional[int] = None,
+                               end: Optional[int] = None) -> List:
+        return await data_consolidate(self.session, stream, start, end, max_gap)
 
     async def data_write(self, stream: Union[Stream, str, int],
                          start: Optional[int] = None,

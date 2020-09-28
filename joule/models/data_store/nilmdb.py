@@ -5,6 +5,7 @@ import asyncio
 import re
 import numpy as np
 from typing import List, Dict, Optional, Callable, Coroutine
+from joule.utilities import interval_tools, timestamp_to_datetime
 from joule.models import Stream, pipes
 from joule.models.data_store.data_store import DataStore, StreamInfo, DbInfo, Interval
 from joule.models.data_store import errors
@@ -52,7 +53,7 @@ class NilmdbStore(DataStore):
                   "binary": '1'}
         async with self._get_client() as session:
             async with session.put(url, params=params,
-                                   data=data.tostring()) as resp:
+                                   data=data.tobytes()) as resp:
                 if resp.status != 200:
                     if resp.status == 400:
                         error = await resp.json()
@@ -129,6 +130,40 @@ class NilmdbStore(DataStore):
                 return []
             else:
                 raise e
+
+    async def consolidate(self, stream: 'Stream', start: int, end: int, max_gap: int) -> int:
+        # remove interval gaps less than or equal to max_gap duration (in us)
+        intervals = await self.intervals(stream, start, end)
+        if len(intervals) == 0:
+            return  # no data, nothing to do
+        duration = [intervals[0][0], intervals[-1][1]]
+
+        gaps = interval_tools.interval_difference([duration], intervals)
+
+        if len(gaps) == 0:
+            return  # no interval breaks, nothing to do
+        small_gaps = [gap for gap in gaps if (gap[1] - gap[0]) <= max_gap]
+        # spawn an inserter to close each gap
+
+        info = await self._path_info()
+        all_paths = info.keys()
+        base_path = compute_path(stream)
+        regex = re.compile(r"%s~decim-(\d)+$" % base_path)
+        decim_paths = list(filter(regex.match, all_paths))
+        insert_url = "{server}/stream/insert".format(server=self.server)
+        for path in [base_path, *decim_paths]:
+            for gap in small_gaps:
+                async with self._get_client() as session:
+                    params = {"start": "%d" % gap[0],
+                              "end": "%d" % gap[1],
+                              "path": path,
+                              "binary": '1'}
+                    async with session.put(insert_url, params=params,
+                                           data=None) as resp:
+                        if resp.status != 200:  # pragma: no cover
+                            error = await resp.text()
+                            raise errors.DataError("NilmDB(d) error: %s" % error)
+        return len(small_gaps)
 
     # TODO: remove path lookup, iterate until the stream decimation isn't found
     async def remove(self, stream, start: Optional[int] = None,
@@ -243,7 +278,8 @@ class NilmdbStore(DataStore):
                     return []
                 for line in text.strip().split("\n"):
                     intervals.append(json.loads(line))
-        return intervals
+
+        return consolidate_intervals(intervals)
 
     async def _remove_by_path(self, path: str, start: Optional[int], end: Optional[int]):
         """remove data from streams"""
@@ -313,3 +349,20 @@ def bytes_per_row(layout: str) -> int:
             raise ValueError("bad layout %s" % layout)
     except (ValueError, IndexError):
         raise ValueError("bad layout: %s" % layout)
+
+
+def consolidate_intervals(intervals):
+    # consolidate intervals that touch
+    consolidated_intervals = []
+    if len(intervals) <= 1:
+        return intervals
+    prev_interval = intervals[0]
+    for i in range(1, len(intervals)):
+        if intervals[i][0] == prev_interval[1]:
+            # extend prev_interval
+            prev_interval[1] = intervals[i][1]
+        else:
+            consolidated_intervals.append(prev_interval)
+            prev_interval = intervals[i]
+    consolidated_intervals.append(prev_interval)
+    return consolidated_intervals

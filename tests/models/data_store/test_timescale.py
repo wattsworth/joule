@@ -45,7 +45,7 @@ class TestTimescale(asynctest.TestCase):
             file_path = os.path.join(SQL_DIR, file)
             with open(file_path, 'r') as f:
                 await conn.execute(f.read())
-        #await conn.execute("GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO joule_module;")
+        # await conn.execute("GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO joule_module;")
         # await conn.execute("DROP SCHEMA IF EXISTS data CASCADE")
         # await conn.execute("CREATE SCHEMA data")
         # await conn.execute("GRANT ALL ON SCHEMA data TO public")
@@ -65,7 +65,9 @@ class TestTimescale(asynctest.TestCase):
                  self._test_remove,
                  self._test_destroy,
                  self._test_row_count,
-                 self._test_actions_on_empty_streams]
+                 self._test_actions_on_empty_streams,
+                 self._test_consolidate,
+                 self._test_consolidate_with_time_bounds]
         for test in tests:
             conn: asyncpg.Connection = await asyncpg.connect(self.db_url)
             await conn.execute("DROP SCHEMA IF EXISTS data CASCADE")
@@ -371,6 +373,85 @@ class TestTimescale(asynctest.TestCase):
                     [ts[781], ts[-1] + 1]]
         self.assertEqual(expected, intervals)
         await conn.close()
+
+    async def _test_consolidate(self):
+        # intervals less than max_gap us apart are consolidated
+        # data: 100 samples spaced at 1000us
+        test_stream = Stream(id=1, name="stream1", datatype=Stream.DATATYPE.FLOAT32, keep_us=Stream.KEEP_ALL,
+                             decimate=True, elements=[Element(name="e%d" % x) for x in range(3)])
+        pipe = pipes.LocalPipe(test_stream.layout)
+        nrows = 955
+        orig_data = helpers.create_data(layout=test_stream.layout, length=nrows)
+        chunks = [orig_data[:300], orig_data[305:400], orig_data[402:700], orig_data[800:]]
+        # data: |++++++|  |+++++++++|    |++++++|    |++++|
+        #               ^--5000 us    ^--2000 us   ^---0.1 sec (retained)
+        chunks = [orig_data[:300], orig_data[305:400], orig_data[402:700], orig_data[800:850], orig_data[852:]]
+        # data: |++++++|  |+++++++++|    |++++++|    |++++|  |++++|
+        #               ^--5000 us    ^--2000 us   |        ^--- 2000 us
+        #                                          `---0.1 sec (retained)
+        task = await self.store.spawn_inserter(test_stream, pipe, self.loop)
+        for chunk in chunks:
+            await pipe.write(chunk)
+            await pipe.close_interval()
+        await pipe.close()
+        await task
+
+        # extract data
+        extracted_data = []
+
+        rx_chunks = []
+
+        async def callback(rx_data, layout, factor):
+            if rx_data[0] != pipes.interval_token(layout):
+                rx_chunks.append(rx_data)
+
+        await self.store.consolidate(test_stream, start=None, end=None, max_gap=6e3)
+        await self.store.extract(test_stream, start=None, end=None, callback=callback)
+
+        # should only be two intervals left (the first two are consolidated)
+        np.testing.assert_array_equal(rx_chunks[0], np.hstack(chunks[:3]))
+        np.testing.assert_array_equal(rx_chunks[1], np.hstack(chunks[3:]))
+        self.assertEqual(len(rx_chunks), 2)
+
+    async def _test_consolidate_with_time_bounds(self):
+        # intervals less than max_gap us apart between start and end are consolidated
+        # data: 100 samples spaced at 1000us
+        test_stream = Stream(id=1, name="stream1", datatype=Stream.DATATYPE.FLOAT32, keep_us=Stream.KEEP_ALL,
+                             decimate=True, elements=[Element(name="e%d" % x) for x in range(3)])
+        pipe = pipes.LocalPipe(test_stream.layout)
+        nrows = 955
+        orig_data = helpers.create_data(layout=test_stream.layout, length=nrows)
+        chunks = [orig_data[:300], orig_data[305:400], orig_data[402:700], orig_data[800:850],orig_data[852:]]
+        # data: |++++++|  |+++++++++|    |++++++|    |++++|  |++++|
+        #               ^--(retained) ^--2000 us   |        ^--- 2000 us (retained)
+        #                                          `---0.1 sec (retained)
+        task = await self.store.spawn_inserter(test_stream, pipe, self.loop)
+        for chunk in chunks:
+            await pipe.write(chunk)
+            await pipe.close_interval()
+        await pipe.close()
+        await task
+
+        # extract data
+        extracted_data = []
+
+        rx_chunks = []
+
+        async def callback(rx_data, layout, factor):
+            if rx_data[0] != pipes.interval_token(layout):
+                rx_chunks.append(rx_data)
+
+        await self.store.consolidate(test_stream, start=chunks[1][3]['timestamp'],
+                                     end=chunks[3][3]['timestamp'], max_gap=6e3)
+        await self.store.extract(test_stream, start=None, end=None, callback=callback)
+
+        # should only be four intervals left (the inner short intervals are consolidated)
+        np.testing.assert_array_equal(rx_chunks[0], chunks[0])
+        np.testing.assert_array_equal(rx_chunks[1], np.hstack(chunks[1:3]))
+        np.testing.assert_array_equal(rx_chunks[2], chunks[3])
+        np.testing.assert_array_equal(rx_chunks[3], chunks[4])
+
+        self.assertEqual(len(rx_chunks), 4)
 
     async def _test_db_info(self):
         db_info = await self.store.dbinfo()

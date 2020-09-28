@@ -68,6 +68,10 @@ class DataStore(ABC):  # pragma: no cover
         pass
 
     @abstractmethod
+    async def consolidate(self, stream: 'Stream', start: Optional[int], end: Optional[int], max_gap: int) -> int:
+        pass
+
+    @abstractmethod
     async def spawn_inserter(self, stream: 'Stream', pipe: pipes.Pipe,
                              loop: Loop, insert_period=None) -> asyncio.Task:
         pass
