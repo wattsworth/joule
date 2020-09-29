@@ -147,22 +147,19 @@ class NilmdbStore(DataStore):
 
         info = await self._path_info()
         all_paths = info.keys()
-        base_path = compute_path(stream)
-        regex = re.compile(r"%s~decim-(\d)+$" % base_path)
-        decim_paths = list(filter(regex.match, all_paths))
+        path = compute_path(stream)
         insert_url = "{server}/stream/insert".format(server=self.server)
-        for path in [base_path, *decim_paths]:
-            for gap in small_gaps:
-                async with self._get_client() as session:
-                    params = {"start": "%d" % gap[0],
-                              "end": "%d" % gap[1],
-                              "path": path,
-                              "binary": '1'}
-                    async with session.put(insert_url, params=params,
-                                           data=None) as resp:
-                        if resp.status != 200:  # pragma: no cover
-                            error = await resp.text()
-                            raise errors.DataError("NilmDB(d) error: %s" % error)
+        for gap in small_gaps:
+            async with self._get_client() as session:
+                params = {"start": "%d" % gap[0],
+                          "end": "%d" % gap[1],
+                          "path": path,
+                          "binary": '1'}
+                async with session.put(insert_url, params=params,
+                                       data=None) as resp:
+                    if resp.status != 200:  # pragma: no cover
+                        error = await resp.text()
+                        raise errors.DataError("NilmDB(d) error: %s" % error)
         return len(small_gaps)
 
     # TODO: remove path lookup, iterate until the stream decimation isn't found
@@ -237,8 +234,12 @@ class NilmdbStore(DataStore):
         if r is not None:
             decimation_factor = int(r[1])
         async with self._get_client() as session:
-            # first determine the intervals
-            intervals = await self._intervals_by_path(path, start, end)
+            # first determine the intervals, use the base path for this
+            if path.find("~decim") == -1:
+                base_path = path
+            else:
+                base_path = path[:path.find("~decim")]
+            intervals = await self._intervals_by_path(base_path, start, end)
             i = 0
             num_intervals = len(intervals)
             # now extract each interval
@@ -264,6 +265,7 @@ class NilmdbStore(DataStore):
     async def _intervals_by_path(self, path: str, start: Optional[int],
                                  end: Optional[int]) -> List[Interval]:
         url = "{server}/stream/intervals".format(server=self.server)
+        base_path = path
         params = {"path": path}
         if start is not None:
             params["start"] = start
