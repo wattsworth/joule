@@ -34,3 +34,4 @@ cchardet==2.1.4
 aiodns==2.0.0
 pyopenssl==19.0.0
 dsnparse==0.1.12
+h5py==2.10.0
