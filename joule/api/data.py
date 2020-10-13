@@ -169,7 +169,8 @@ async def data_subscribe(session: BaseSession,
         raise errors.ApiError(
             "Stream [%s] is not being produced, specify time bounds for historic execution" % src_stream.name)
     # replace the stub stream (from config file) with actual stream
-    pipe = LocalPipe(src_stream.layout, name=src_stream.name, loop=loop, stream=src_stream)
+    # do not let the buffer grow beyond 5 server chunks
+    pipe = LocalPipe(src_stream.layout, name=src_stream.name, loop=loop, stream=src_stream, write_limit=5)
     pipe.stream = src_stream
 
     task = loop.create_task(_live_reader(session,
