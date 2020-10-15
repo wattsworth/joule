@@ -135,7 +135,8 @@ async def _run(config, start, end, new, destination_node, source_url, source, de
             src_annotations = await source_node.annotation_get(src_stream.id, start=istart, end=iend)
 
         if nilmdb_dest:
-            dest_annotations = await _get_nilmdb_annotations(dest_node, destination, istart, iend)
+            # get *all* the destination annotations, otherwise we'll loose annotations outside this interval
+            dest_annotations = await _get_nilmdb_annotations(dest_node, destination)
             new_annotations = [a for a in src_annotations if a not in dest_annotations]
             if len(new_annotations) > 0:
                 # create ID's for the new annotations
@@ -418,12 +419,14 @@ async def _validate_nilmdb_url(url):
 cached_nilmdb_annotations: Dict[str, List[Annotation]] = {}
 
 
-async def _get_nilmdb_annotations(server: str, path: str, istart: int, iend: int) -> List[Annotation]:
+async def _get_nilmdb_annotations(server: str, path: str, istart: Optional[int] = None, iend: Optional[int] = None) -> List[Annotation]:
     url = "{server}/stream/get_metadata".format(server=server)
     params = {"path": path, "key": '__annotations'}
     global cached_nilmdb_annotations
     if path in cached_nilmdb_annotations:
         annotations = cached_nilmdb_annotations[path]
+        if istart is None or iend is None:
+            return annotations
         return [a for a in annotations if istart <= a.start <= iend]
 
     annotations = []
@@ -445,6 +448,8 @@ async def _get_nilmdb_annotations(server: str, path: str, istart: int, iend: int
                 pass
     cached_nilmdb_annotations[path] = annotations
     # only return annotations within the requested interval
+    if istart is None or iend is None:
+        return annotations
     return [a for a in annotations if istart <= a.start <= iend]
 
 
