@@ -49,7 +49,7 @@ def cmd(config, start, end, live, max_rows, show_bounds, mark_intervals, element
         raise click.ClickException("cannot do both show bounds and select elements")
     if elements is not None:
         try:
-            element_indices = [0] + [int(e) + 1 for e in elements.split(',')]
+            element_indices = [int(e) for e in elements.split(',')]
         except ValueError:
             raise click.ClickException("specify elements as a comma separated like 1,4,8")
     else:
@@ -78,18 +78,18 @@ def cmd(config, start, end, live, max_rows, show_bounds, mark_intervals, element
                     data = await asyncio.wait_for(pipe.read(flatten=True), 1)
                     pipe.consume(len(data))
                     if element_indices is not None:
-                        data_width = len(element_indices)
+                        data_width = len(element_indices)+1
                     else:
                         data_width = pipe.width+1
                     if hdf is not None:
                         if dataset is None:
                             dataset = hdf.create_dataset(pipe.name, (len(data), data_width),
-                                                         maxshape=(None, data_width),
+                                                         maxshape=(None, data_width),dtype='f8',
                                                          compression='gzip')
                             stream_obj = await config.node.stream_get(stream)
                             elements = stream_obj.elements
                             if element_indices is not None:
-                                selected_elements = [elements[idx-1] for idx in element_indices[1:]]
+                                selected_elements = [elements[idx] for idx in element_indices]
                             else:
                                 selected_elements = elements
                             element_json = {}
@@ -103,7 +103,8 @@ def cmd(config, start, end, live, max_rows, show_bounds, mark_intervals, element
                             dataset.attrs['elements'] = json.dumps([e.name for e in selected_elements])
                             dataset.attrs['element_info'] =json.dumps(element_json)
                             if element_indices is not None:
-                                dataset[...] = data[:, element_indices]
+                                target_indices = [0] + [idx+1 for idx in element_indices]
+                                dataset[...] = data[:, target_indices]
                             else:
                                 dataset[...] = data
                         else:
@@ -115,7 +116,7 @@ def cmd(config, start, end, live, max_rows, show_bounds, mark_intervals, element
                                 dataset[cur_size:, :] = data
                         continue
 
-                    ts = data[:, 1]
+                    ts = data[:, 0]
                     data = data[:, 1:]
                 except asyncio.TimeoutError:
                     # check periodically for Ctrl-C (SIGTERM) even if server is slow

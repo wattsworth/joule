@@ -232,13 +232,14 @@ copy
 copy data between streams
 
 Usage
-    joule data copy ~ [-s] [-e] [-U] SOURCE DESTINATION
+    joule data copy ~ [-s] [-e] [-n] [-d] [--source-url] SOURCE DESTINATION
 
 Arguments
     -s, --start: timestamp or descriptive string, if omitted start copying at the beginning of SOURCE
     -e, --end: timestamp or descriptive string, if omitted copy to the end of SOURCE
-    -U, --dest-url: destination URL if different than source (specify source URL with top level -u flag)
-
+    -n, --new:  copy starts at the last timestamp of the destination
+    -d: destination node name or Nilmdb URL if different than source
+    --source-url: copy from a Nilmdb URL (specify a Joule node with top level -n flag)
 
 read
 ''''
@@ -246,7 +247,7 @@ read
 extract data from a stream
 
 Usage
-    joule data read ~ [-s] [-e] [-r|-d] [-b] [-m] PATH
+    joule data read ~ [-s] [-e] [-r|-d] [-b] [-m] [-i] [-f] PATH
 
 Arguments
     -s, --start: timestamp or descriptive string, if omitted start reading at the beginning
@@ -255,6 +256,9 @@ Arguments
     -d: specify a particular decimation level, may not be used with -r, default is 1
     -b: include min/max limits for each row of decimated data
     -m: include [# interval break] tags in the output to indicate broken data intervals
+    -f, --file: filename to write data to rather than stdout (written in hdf5 format)
+    -i: indices of elements to read, separate multiple elements with ``,`` The first element is index 0
+
     PATH: path of stream to read
 
 Example
@@ -283,6 +287,19 @@ Usage
 Arguments
     -s, --start: timestamp or descriptive string, if omitted start reading at the beginning of SOURCE
     -e, --end: timestamp or descriptive string, if omitted read to the end of SOURCE
+
+consolidate
+'''''''''''
+
+merge data intervals with short gaps
+
+Usage
+    joule data consolidate ~ [-s] [-e] [--max-gap] STREAM
+
+Arguments
+    -s, --start:     timestamp or descriptive string, if omitted start at the beginning of STREAM
+    -e, --end:       timestamp or descriptive string, if omitted run to the end of STREAM
+    -m, --max-gap:   remove intervals shorter than this (in us). Default is 2 seconds
 
 admin
 +++++

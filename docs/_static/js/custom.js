@@ -46,7 +46,10 @@ $(function(){
             }
             let keys = line.split(':');
             let arg = keys[0];
+            if(arg=='')
+                return;
             let description = keys[1];
+
             html+="<div class='arg-div'><div class='arg-dt'>"+arg+"</div><div class='arg-dd'>"+description+"</div></div>";
         });
         $(this).html(html);

@@ -19,8 +19,10 @@ help:
 %: Makefile
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
+#livehtml:
+#	sphinx-autobuild --host 0.0.0.0 $(SOURCEDIR) $(BUILDDIR)/html -z ../joule -i *___ -E
 livehtml:
-	sphinx-autobuild -H 0.0.0.0 $(SOURCEDIR) $(BUILDDIR)/html -z ../joule -i *___ -E
+	sphinx-autobuild "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) --watch ../joule $(O)
 
 deploy: html
 	rsync -r --delete $(BUILDDIR)/html/ portal.wattsworth.net:/var/www/docs/joule 
