@@ -72,7 +72,7 @@ async def data_write(session: BaseSession,
         await task
 
     pipe = LocalPipe(dest_stream.layout, name=dest_stream.name,
-                     stream=dest_stream, close_cb=close, debug=False)
+                     stream=dest_stream, close_cb=close, debug=False, write_limit=5)
     task = loop.create_task(_send_data(session, dest_stream, pipe))
     return pipe
 
@@ -136,7 +136,7 @@ async def data_read(session: BaseSession,
                 stream, stream.layout, src_stream.layout))
 
     # replace the stub stream (from config file) with actual stream
-    pipe = LocalPipe(src_stream.layout, name=src_stream.name, loop=loop, stream=src_stream)
+    pipe = LocalPipe(src_stream.layout, name=src_stream.name, loop=loop, stream=src_stream, write_limit=5)
     pipe.stream = src_stream
     task = loop.create_task(_historic_reader(session,
                                              src_stream,

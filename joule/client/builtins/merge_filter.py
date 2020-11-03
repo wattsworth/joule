@@ -3,7 +3,7 @@ import textwrap
 import numpy as np
 from typing import Dict, List
 from joule import Pipe
-from joule.errors import ApiError
+from joule.errors import ApiError, EmptyPipeError
 from scipy.interpolate import interp1d
 
 ARGS_DESC = """
@@ -142,10 +142,11 @@ class MergeFilter(FilterModule):
                     await output.close_interval()
                     if not await align_streams(master, slaves):
                         break
-
-
-            except ApiError:
+            except EmptyPipeError:
                 break
+            except Exception as e:
+                await output.close()
+                raise e
         await output.close()
 
 
