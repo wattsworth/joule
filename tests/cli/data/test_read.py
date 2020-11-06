@@ -40,7 +40,7 @@ class TestDataRead(FakeJouleTestCase):
         for x in range(len(src_data)):
             row = src_data[x]
             expected = "%d %s" % (row['timestamp'], ' '.join('%f' % x for x in row['data']))
-            self.assertTrue(expected in output[x+1])
+            self.assertTrue(expected in output[x + 1])
 
         self.stop_server()
 
@@ -74,7 +74,65 @@ class TestDataRead(FakeJouleTestCase):
                 expected = '# interval break'
             else:
                 expected = "%d %s" % (row['timestamp'], ' '.join('%f' % x for x in row['data']))
-            self.assertTrue(expected in output[x+1])
+            # import pdb; pdb.set_trace()
+            self.assertTrue(expected in output[x + 1])
+
+        # create a new event loop for the next run
+        loop = asyncio.new_event_loop()
+        loop.set_debug(True)
+        asyncio.set_event_loop(loop)
+
+        # do not mark the intervals and hide the bounds
+        runner = CliRunner()
+
+        result = runner.invoke(main, ['data', 'read', '/test/source',
+                                      '--start', '0', '--end', '1 hour ago',
+                                      '--max-rows', '28'])
+        self.assertEqual(result.exit_code, 0)
+        output = result.output.split('\n')
+        offset = 0
+        for x in range(len(src_data)):
+            row = src_data[x]
+            if row == pipes.interval_token(src.decimated_layout):
+                offset = 1
+                continue
+            else:
+                expected = "%d %s" % (row['timestamp'], ' '.join('%f' % x for x in row['data'][:3]))
+            self.assertTrue(expected in output[x - offset + 1])
+
+        self.stop_server()
+
+    def test_reads_selected_elements_of_decimated_data(self):
+        server = FakeJoule()
+        # create the source stream
+        src = Stream(id=0, name="source", keep_us=100, datatype=Stream.DATATYPE.FLOAT32)
+        src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
+        # source has 200 rows of data between [0, 200] in two intervals
+        src_data = np.hstack((helpers.create_data(src.decimated_layout, start=0, length=100, step=1),
+                              pipes.interval_token(src.decimated_layout),
+                              helpers.create_data(src.decimated_layout, start=100, length=100, step=1)))
+
+        src_info = StreamInfo(int(src_data['timestamp'][0]), int(src_data['timestamp'][-1]), len(src_data))
+        server.add_stream('/test/source', src, src_info, src_data)
+        self.start_server(server)
+
+        # mark the intervals and show the bounds
+        runner = CliRunner()
+        result = runner.invoke(main, ['data', 'read', '/test/source',
+                                      '--start', '0', '--end', '1 hour ago',
+                                      '--max-rows', '28', '--mark-intervals',
+                                      '--show-bounds', '-i', '0,2'])
+        _print_result_on_error(result)
+        self.assertEqual(result.exit_code, 0)
+        output = result.output.split('\n')
+        for x in range(len(src_data)):
+            row = src_data[x]
+            if row == pipes.interval_token(src.decimated_layout):
+                expected = '# interval break'
+            else:
+                data = row['data'][[0, 2, 3, 5, 6, 8]]
+                expected = "%d %s" % (row['timestamp'], ' '.join('%f' % x for x in data))
+            self.assertTrue(expected in output[x + 1])
 
         # create a new event loop for the next run
         loop = asyncio.new_event_loop()
@@ -183,7 +241,6 @@ class TestDataRead(FakeJouleTestCase):
 
         self.stop_server()
 
-
     def test_when_server_returns_error_code(self):
         server = FakeJoule()
         # create the source stream
@@ -206,7 +263,6 @@ class TestDataRead(FakeJouleTestCase):
         with self.assertLogs(level=logging.ERROR):
             runner.invoke(main, ['data', 'read', '/test/source', '--start', 'now'])
 
-
         self.stop_server()
 
     def test_handles_bad_parameters(self):
@@ -217,6 +273,7 @@ class TestDataRead(FakeJouleTestCase):
         result = runner.invoke(main, ['data', 'read', '/test/source', '--end', 'invalid'])
         self.assertIn('end time', result.output)
         self.assertEqual(result.exit_code, 1)
+
 
 def _print_result_on_error(result):
     if result.exit_code != 0:
