@@ -6,6 +6,7 @@ import logging
 import asyncio
 import tempfile
 import h5py
+import unittest
 
 from ..fake_joule import FakeJoule, FakeJouleTestCase
 from joule.cli import main
@@ -187,7 +188,7 @@ class TestDataRead(FakeJouleTestCase):
     def test_reads_selected_elements_to_file(self):
         server = FakeJoule()
         # create the source stream
-        src = Stream(id=0, name="source", keep_us=100, datatype=Stream.DATATYPE.FLOAT32)
+        src = Stream(id=0, name="source", keep_us=100, datatype=Stream.DATATYPE.UINT16)
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         # source has 100 rows of data between [0, 100]
         src_data = helpers.create_data(src.layout)
@@ -206,9 +207,12 @@ class TestDataRead(FakeJouleTestCase):
             _print_result_on_error(result)
             self.assertEqual(result.exit_code, 0)
             h5_file = h5py.File(data_file.name, 'r')
-            output = h5_file['source']
-            flattened_data = np.hstack((src_data['timestamp'][:, None], src_data['data'][:, [0, 2]]))
-            np.testing.assert_array_almost_equal(flattened_data, output)
+            self.assertEqual(src_data['data'].dtype, h5_file['data'].dtype)
+            self.assertEqual(h5_file['timestamp'].dtype, np.dtype('i8'))
+
+            np.testing.assert_array_almost_equal(h5_file['data'], src_data['data'][:, [0, 2]])
+            np.testing.assert_array_almost_equal(h5_file['timestamp'], src_data['timestamp'][:, None])
+
             h5_file.close()
 
         self.stop_server()
@@ -234,9 +238,9 @@ class TestDataRead(FakeJouleTestCase):
             _print_result_on_error(result)
             self.assertEqual(result.exit_code, 0)
             h5_file = h5py.File(data_file.name, 'r')
-            output = h5_file['source']
-            flattened_data = np.hstack((src_data['timestamp'][:, None], src_data['data']))
-            np.testing.assert_array_almost_equal(flattened_data, output)
+            np.testing.assert_array_almost_equal(src_data['timestamp'][:, None], h5_file['timestamp'])
+            np.testing.assert_array_equal(src_data['data'], h5_file['data'])
+
             h5_file.close()
 
         self.stop_server()

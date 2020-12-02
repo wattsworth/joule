@@ -66,7 +66,8 @@ def cmd(config, start, end, live, max_rows, show_bounds, mark_intervals, element
         nonlocal element_indices
         nonlocal hdf_file
         nonlocal start, end
-        hdf_dataset = None
+        hdf_data = None
+        hdf_timestamps = None
         # progress bar for writing to a file
         bar_ctx = None
         bar = None
@@ -74,6 +75,8 @@ def cmd(config, start, end, live, max_rows, show_bounds, mark_intervals, element
         # get the stream object from the API
         stream_obj = await config.node.stream_get(stream)
         stream_info = await config.node.stream_info(stream)
+        if stream_info.rows == 0:
+            raise click.ClickException("This stream has no data")
         if live:
             pipe = await config.node.data_subscribe(stream)
         else:
@@ -94,42 +97,48 @@ def cmd(config, start, end, live, max_rows, show_bounds, mark_intervals, element
             while not stop_requested:
                 # get new data from the pipe
                 try:
-                    data = await asyncio.wait_for(pipe.read(flatten=True), 1)
-                    pipe.consume(len(data))
+                    # read structured data
+                    sdata = await asyncio.wait_for(pipe.read(), 1)
+                    pipe.consume(len(sdata))
                 except asyncio.TimeoutError:
                     # check periodically for Ctrl-C (SIGTERM) even if server is slow
                     continue
                 # ===== Write to HDF File ======
                 if write_to_file:
-                    data_width = len(element_indices) + 1
-                    target_indices = [0] + [idx + 1 for idx in element_indices]
+                    data_width = len(element_indices)
+                    target_indices = element_indices #[0] + [idx + 1 for idx in element_indices]
                     if hdf_file is None:
                         # create dataset and populate it with current data
-                        hdf_dataset, hdf_file = _create_hdf_dataset(config, stream_obj, stream, element_indices,
-                                                                    file, pipe.name, initial_size=len(data),
-                                                                    width=data_width)
-                        hdf_dataset[...] = data[:, target_indices]
+                        hdf_data, hdf_timestamps, hdf_file = _create_hdf_dataset(config, stream_obj, stream,
+                                                                                 element_indices,
+                                                                                 file, pipe, data_width,
+                                                                                 initial_size=len(sdata),
+                                                                                 )
+                        hdf_data[...] = sdata['data'][:, target_indices]
+                        hdf_timestamps[...] = sdata['timestamp'][:, None]
                         bar_ctx = click.progressbar(length=total_time, label='reading data')
-                        #print("total_time: %d" % total_time)
+                        # print("total_time: %d" % total_time)
                         bar = bar_ctx.__enter__()
-                        chunk_duration = data[-1, 0] - data[0, 0]
+                        chunk_duration = sdata['timestamp'][-1] - sdata['timestamp'][0]
                         bar.update(chunk_duration)
-                        #print(chunk_duration)
+                        # print(chunk_duration)
                         cum_time += chunk_duration
                     else:
                         # expand dataset, append new data
-                        cur_size = len(hdf_dataset)
-                        chunk_duration = data[-1, 0] - hdf_dataset[-1, 0]
+                        cur_size = len(hdf_data)
+                        chunk_duration = sdata['timestamp'][-1] - sdata['timestamp'][0]
                         cum_time += chunk_duration
-                        #print("[%d-%d ==> %d]" % (data[-1, 0], hdf_dataset[-1, 0], cum_time))
+                        # print("[%d-%d ==> %d]" % (data[-1, 0], hdf_dataset[-1, 0], cum_time))
                         bar.update(chunk_duration)
-                        hdf_dataset.resize((cur_size + len(data), data_width))
-                        hdf_dataset[cur_size:, :] = data[:, target_indices]
+                        hdf_data.resize((cur_size + len(sdata), data_width))
+                        hdf_data[cur_size:, :] = sdata['data'][:, target_indices]
+                        hdf_timestamps.resize((cur_size + len(sdata), 1))
+                        hdf_timestamps[cur_size:] = sdata['timestamp'][:,None]
                         # update with the new chunk of time
                 # ===== Write to stdout (Terminal) ======
                 else:
-                    ts = data[:, 0]
-                    data = data[:, 1:]
+                    ts = sdata['timestamp']
+                    data = sdata['data']
                     if pipe.decimated:
                         if show_bounds:
                             # add the bound info
@@ -154,11 +163,12 @@ def cmd(config, start, end, live, max_rows, show_bounds, mark_intervals, element
             pass
         await pipe.close()
         if bar_ctx is not None:
-            bar.update(end-hdf_dataset[-1, 0])
+            bar.update(end - hdf_timestamps[-1])
             bar_ctx.__exit__(None, None, None)
-        if hdf_dataset is not None:
+        if hdf_data is not None:
             hdf_file.close()
-
+        if hdf_timestamps is not None:
+            hdf_file.close()
 
     try:
         loop.run_until_complete(_run())
@@ -175,14 +185,17 @@ def handler(signum, frame):
     stop_requested = True
 
 
-def _create_hdf_dataset(config, stream, path, element_indices, file, name, initial_size, width):
-    hdf = h5py.File(file, "w")
+def _create_hdf_dataset(config, stream, path, element_indices, file, pipe, data_width, initial_size):
+    hdf_root = h5py.File(file, "w")
     # note this could be optimized to store data in the correct datatype
     # right now everything is stored as a double which is probably excessive precision
     # but is needed for the timestamps
-    hdf_dataset = hdf.create_dataset(name, (initial_size, width),
-                                     maxshape=(None, width), dtype='f8',
-                                     compression='gzip')
+    hdf_data = hdf_root.create_dataset('data', (initial_size, data_width),
+                                       maxshape=(None, data_width), dtype=pipe.dtype[1].base,
+                                       compression='gzip')
+    hdf_timestamps = hdf_root.create_dataset('timestamp', (initial_size, 1),
+                                             maxshape=(None, 1), dtype='i8',
+                                             compression='gzip')
     elements = stream.elements
     if element_indices is not None:
         selected_elements = [elements[idx] for idx in element_indices]
@@ -193,9 +206,9 @@ def _create_hdf_dataset(config, stream, path, element_indices, file, name, initi
         element_json[e.name] = {'units': e.units,
                                 'offset': e.offset,
                                 'scale_factor': e.scale_factor}
-    hdf_dataset.attrs['node_name'] = config.node.name
-    hdf_dataset.attrs['node_url'] = config.node.url
-    hdf_dataset.attrs['path'] = path
-    hdf_dataset.attrs['elements'] = json.dumps([e.name for e in selected_elements])
-    hdf_dataset.attrs['element_info'] = json.dumps(element_json)
-    return hdf_dataset, hdf
+    hdf_root.attrs['node_name'] = config.node.name
+    hdf_root.attrs['node_url'] = config.node.url
+    hdf_root.attrs['path'] = path
+    hdf_root.attrs['elements'] = json.dumps([e.name for e in selected_elements])
+    hdf_root.attrs['element_info'] = json.dumps(element_json)
+    return hdf_data, hdf_timestamps, hdf_root
