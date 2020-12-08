@@ -70,7 +70,7 @@ class Inserter:
                                       "path": self.path,
                                       "binary": '1'}
                             async with session.put(self.insert_url, params=params,
-                                                   data=data.tostring()) as resp:
+                                                   data=data.tobytes()) as resp:
                                 if resp.status != 200:
                                     error = await resp.text()
                                     if cleaner_task is not None:
@@ -190,7 +190,7 @@ class NilmdbDecimator:
                               "path": self.path,
                               "binary": '1'}
                     async with session.put(self.insert_url, params=params,
-                                           data=decim_data.tostring()) as resp:
+                                           data=decim_data.tobytes()) as resp:
                         if resp.status != 200:  # pragma: no cover
                             error = await resp.text()
                             raise errors.DataError("NilmDB(d) error: %s" % error)

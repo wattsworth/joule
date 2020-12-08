@@ -37,7 +37,7 @@ def create_data(layout: str,
 
     sarray['timestamp'] = ts
     # Need the squeeze in case sarray['data'] is 1 dimensional
-    sarray['data'] = np.squeeze(data)
+    sarray['data'] = data
     return sarray
 
 
@@ -67,7 +67,7 @@ def parse_layout(layout):
         atype = '<f' + str(int(ltype[5:]) // 8)
     else:
         raise ValueError("bad layout")
-    dtype = np.dtype([('timestamp', '<i8'), ('data', atype, lcount)])
+    dtype = np.dtype([('timestamp', '<i8'), ('data', atype, (lcount,))])
     return ltype, lcount, dtype
 
 

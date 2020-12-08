@@ -33,17 +33,13 @@ def data_to_bytes(data: np.ndarray) -> io.BytesIO:
     pgcopy['num_fields'] = n_elem + 1
     pgcopy['time_length'] = 8
     pgcopy['time'] = data['timestamp'] - postgres_ts_offset
-    if n_elem == 1:
-        pgcopy['elem0_length'] = elem_length
-        pgcopy['elem0'] = data['data']
-    else:
-        for i in range(n_elem):
-            pgcopy['elem%d_length' % i] = elem_length
-            pgcopy['elem%d' % i] = data['data'][:, i]
+    for i in range(n_elem):
+        pgcopy['elem%d_length' % i] = elem_length
+        pgcopy['elem%d' % i] = data['data'][:, i]
     cpy = io.BytesIO()
     # signature, flag field and and header extension (both empty)
     cpy.write(pack('!11sii', b'PGCOPY\n\377\r\n\0', 0, 0))
-    cpy.write(pgcopy.tostring())
+    cpy.write(pgcopy.tobytes())
     cpy.write(pack('!h', -1))
     cpy.seek(0)
     return cpy
@@ -78,11 +74,8 @@ def bytes_to_data(buffer: io.BytesIO, dtype: np.dtype) -> np.ndarray:
     tuple_data = np.frombuffer(buffer.read(nbytes - 21), pgcopy_dtype)
     rx_data = np.empty(nrows, dtype)
     rx_data['timestamp'] = tuple_data['time'] + postgres_ts_offset
-    if n_elem == 1:
-        rx_data['data'] = tuple_data['elem0']
-    else:
-        for i in range(n_elem):
-            rx_data['data'][:, i] = tuple_data['elem%d' % i]
+    for i in range(n_elem):
+        rx_data['data'][:, i] = tuple_data['elem%d' % i]
     # reader the footer
     footer = pack('!h', -1)
     rx_footer = buffer.read()

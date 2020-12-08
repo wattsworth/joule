@@ -93,7 +93,6 @@ def cmd(config, start, end, live, max_rows, show_bounds, mark_intervals, element
         if element_indices is None:
             element_indices = list(range(len(stream_obj.elements)))
         try:
-            cum_time = 0
             while not stop_requested:
                 # get new data from the pipe
                 try:
@@ -122,12 +121,10 @@ def cmd(config, start, end, live, max_rows, show_bounds, mark_intervals, element
                         chunk_duration = sdata['timestamp'][-1] - sdata['timestamp'][0]
                         bar.update(chunk_duration)
                         # print(chunk_duration)
-                        cum_time += chunk_duration
                     else:
                         # expand dataset, append new data
                         cur_size = len(hdf_data)
                         chunk_duration = sdata['timestamp'][-1] - sdata['timestamp'][0]
-                        cum_time += chunk_duration
                         # print("[%d-%d ==> %d]" % (data[-1, 0], hdf_dataset[-1, 0], cum_time))
                         bar.update(chunk_duration)
                         hdf_data.resize((cur_size + len(sdata), data_width))
@@ -201,14 +198,10 @@ def _create_hdf_dataset(config, stream, path, element_indices, file, pipe, data_
         selected_elements = [elements[idx] for idx in element_indices]
     else:
         selected_elements = elements
-    element_json = {}
-    for e in selected_elements:
-        element_json[e.name] = {'units': e.units,
-                                'offset': e.offset,
-                                'scale_factor': e.scale_factor}
+    element_json = [e.to_json() for e in selected_elements]
     hdf_root.attrs['node_name'] = config.node.name
     hdf_root.attrs['node_url'] = config.node.url
     hdf_root.attrs['path'] = path
     hdf_root.attrs['elements'] = json.dumps([e.name for e in selected_elements])
-    hdf_root.attrs['element_info'] = json.dumps(element_json)
+    hdf_root.attrs['element_json'] = json.dumps(element_json)
     return hdf_data, hdf_timestamps, hdf_root

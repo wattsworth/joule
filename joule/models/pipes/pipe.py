@@ -285,7 +285,7 @@ class Pipe:
             try:
                 sarray['timestamp'] = data[:, 0]
                 # Need the squeeze in case sarray['data'] is 1 dimensional
-                sarray['data'] = np.squeeze(data[:, 1:])
+                sarray['data'] = data[:, 1:]
                 return sarray
             except (IndexError, ValueError):
                 raise PipeError("wrong number of fields for this data type")
@@ -352,6 +352,6 @@ def compute_dtype(layout: str) -> np.dtype:
             atype = '<f' + str(int(ltype[5:]) // 8)
         else:
             raise ValueError()
-        return np.dtype([('timestamp', '<i8'), ('data', atype, lcount)])
+        return np.dtype([('timestamp', '<i8'), ('data', atype, (lcount,))])
     except (IndexError, ValueError):
         raise ValueError("bad layout: [%s]" % layout)

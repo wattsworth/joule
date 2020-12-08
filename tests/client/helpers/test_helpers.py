@@ -8,12 +8,11 @@ from joule.client.helpers.args import (
     validate_time_bounds,
     read_module_config,
     read_stream_configs)
-from joule.api import Element
 from joule.errors import ConfigurationError
-from tests.helpers import AsyncTestCase
+import unittest
 
 
-class TestNilmdbStore(AsyncTestCase):
+class TestNilmdbStore(unittest.TestCase):
 
     def test_module_args(self):
         # if the module config is not specified, return args

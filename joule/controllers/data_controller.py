@@ -71,7 +71,7 @@ async def _read(request: web.Request, json):
                                                'joule-decimation': str(factor)})
             resp.enable_chunked_encoding()
             await resp.prepare(request)
-        await resp.write(data.tostring())
+        await resp.write(data.tobytes())
 
     # --- JSON Handler ---
 
@@ -165,9 +165,9 @@ async def _subscribe(request: web.Request, json: bool):
                 return resp
             pipe.consume(len(data))
             if len(data) > 0:
-                await resp.write(data.tostring())
+                await resp.write(data.tobytes())
             if pipe.end_of_interval:
-                await resp.write(pipes.interval_token(stream.layout).tostring())
+                await resp.write(pipes.interval_token(stream.layout).tobytes())
     except asyncio.CancelledError as e:
         unsubscribe()
         # propogate the CancelledError up

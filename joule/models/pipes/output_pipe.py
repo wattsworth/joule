@@ -61,7 +61,7 @@ class OutputPipe(Pipe):
             await pipe.write(sdata)
 
         # send data out
-        self.writer.write(sdata.tostring())
+        self.writer.write(sdata.tobytes())
         await self.writer.drain()
         await asyncio.sleep(0)
 
@@ -72,7 +72,7 @@ class OutputPipe(Pipe):
             return  # nothing has been written yet so nothing to close
         if self._caching:
             await self.flush_cache()
-        self.writer.write(interval_token(self.layout).tostring())
+        self.writer.write(interval_token(self.layout).tobytes())
         await self.writer.drain()
 
     def close_interval_nowait(self):
@@ -84,7 +84,7 @@ class OutputPipe(Pipe):
             log.warning("dumping %d rows of cached data due on %s" % (self._cache_index, self.name))
             self._cache = np.empty(len(self._cache), self.dtype)
             self._cache_index = 0
-        self.writer.write(interval_token(self.layout).tostring())
+        self.writer.write(interval_token(self.layout).tobytes())
 
     async def close(self):
         if self.closed:

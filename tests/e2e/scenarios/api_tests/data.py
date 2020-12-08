@@ -21,7 +21,7 @@ class TestDataMethods(asynctest.TestCase):
                 data = await stream.read()
                 # check the data
                 expected = np.arange(0, len(data) * 10, 10)
-                np.testing.assert_array_equal(data['data'], expected)
+                np.testing.assert_array_equal(data['data'], expected[:, None])
                 if stream.end_of_interval:
                     num_intervals += 1
                 stream.consume(len(data))
@@ -56,7 +56,7 @@ class TestDataMethods(asynctest.TestCase):
         stream.consume(len(data))
         np.testing.assert_array_almost_equal(
             np.ones((len(data) - 1)) * 10,
-            np.diff(data['data']))
+            np.diff(data['data'],axis=0).squeeze())
 
         await stream.close()
 

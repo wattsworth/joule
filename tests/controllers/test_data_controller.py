@@ -128,7 +128,7 @@ class TestDataController(AioHTTPTestCase):
         data = helpers.create_data(stream.layout)
         resp: aiohttp.ClientResponse = await \
             self.client.post("/data", params={"path": "/folder1/stream1"},
-                             data=data.tostring())
+                             data=data.tobytes())
         self.assertEqual(resp.status, 200)
         self.assertTrue(store.inserted_data)
 
@@ -137,7 +137,7 @@ class TestDataController(AioHTTPTestCase):
         data = helpers.create_data(stream.layout)
         resp: aiohttp.ClientResponse = await \
             self.client.post("/data", params={"id": stream.id},
-                             data=data.tostring())
+                             data=data.tobytes())
         self.assertEqual(resp.status, 200)
         self.assertTrue(store.inserted_data)
 

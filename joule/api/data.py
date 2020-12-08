@@ -276,9 +276,9 @@ async def _send_data(session: BaseSession,
             while True:
                 data = await pipe.read()
                 if len(data) > 0:
-                    yield data.tostring()
+                    yield data.tobytes()
                 if pipe.end_of_interval:
-                    yield interval_token(stream.layout).tostring()
+                    yield interval_token(stream.layout).tobytes()
                 pipe.consume(len(data))
         except EmptyPipe:
             pass

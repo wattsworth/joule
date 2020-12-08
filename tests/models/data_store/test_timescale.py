@@ -115,7 +115,7 @@ class TestTimescale(asynctest.TestCase):
                 data = helpers.create_data(layout=test_stream.layout, length=nrows)
                 task = await self.store.spawn_inserter(test_stream, pipe, self.loop)
                 for chunk in helpers.to_chunks(data, 300):
-                    await source.put(chunk.tostring())
+                    await source.put(chunk.tobytes())
                 await task
 
                 # make sure the correct tables have been created

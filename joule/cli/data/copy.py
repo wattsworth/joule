@@ -209,7 +209,7 @@ async def _run(config, start, end, new, destination_node, source_url, source, de
                             pipe.consume(len(data))
                             if len(data) > 0:
                                 cur_ts = data[-1]['timestamp']
-                                yield data.tostring()
+                                yield data.tobytes()
                                 # total time extents of this chunk
                                 bar.update(cur_ts - last_ts)
                                 last_ts = cur_ts
