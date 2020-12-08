@@ -68,7 +68,8 @@ def ingest(config, stream_path, file):
                     len(stream_obj.elements), hdf_data.shape[1]
                 ))
             # check if there is existing data in this time period
-            if start < stream_info.end and end > stream_info.start:
+            if stream_info.rows > 0 and (
+                    start < stream_info.end and end > stream_info.start):
                 # confirm overwrite
                 if not click.confirm("This will remove existing data between %s- %s" % (
                         timestamp_to_human(start),
