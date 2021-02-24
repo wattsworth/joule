@@ -53,7 +53,7 @@ class ReaderModule(BaseModule):
         """
         assert False, "implement in child class"  # pragma: no cover
 
-    async def run_as_task(self, parsed_args, app, loop):
+    async def run_as_task(self, parsed_args, app):
         # check if we should use stdout (no fd's and no configs)
         if (parsed_args.pipes == "unset" and
                 parsed_args.module_config == "unset"):
@@ -63,13 +63,13 @@ class ReaderModule(BaseModule):
                 (pipes_in, pipes_out) = await self._build_pipes(parsed_args)
             except errors.ApiError as e:
                 logging.error(str(e))
-                return loop.create_task(asyncio.sleep(0))
+                return asyncio.create_task(asyncio.sleep(0))
             if len(pipes_out.keys()) != 1:
                 logging.error("Reader module must have a single output")
-                return loop.create_task(asyncio.sleep(0))
+                return asyncio.create_task(asyncio.sleep(0))
             output = list(pipes_out.values())[0]
         await self.setup(parsed_args, app, output)
-        return loop.create_task(self.run(parsed_args, output))
+        return asyncio.create_task(self.run(parsed_args, output))
 
 
 class StdoutPipe:

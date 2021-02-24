@@ -25,13 +25,13 @@ services:
      logging:
        driver: none
   timescale:
-    image: timescale/timescaledb:latest-pg10
+    image: timescale/timescaledb:latest-pg12
     environment:
       POSTGRES_PASSWORD: password
     logging:
       driver: none
   timescale_follower:
-    image: timescale/timescaledb:latest-pg10
+    image: timescale/timescaledb:latest-pg12
     environment:
       POSTGRES_PASSWORD: password
     logging:

@@ -60,10 +60,9 @@ from joule.utilities import ConnectionInfo
 class BaseNode:
 
     def __init__(self, name: str,
-                 session: BaseSession, loop: AbstractEventLoop):
+                 session: BaseSession):
         self.name = name
         self.session = session
-        self.loop = loop
         # configured in child implementations
         self.url = "<unset>"
 
@@ -142,12 +141,12 @@ class BaseNode:
                         start: Optional[int] = None,
                         end: Optional[int] = None,
                         max_rows: Optional[int] = None) -> Pipe:
-        return await data_read(self.session, self.loop, stream, start, end,
+        return await data_read(self.session, stream, start, end,
                                max_rows)
 
     async def data_subscribe(self,
                              stream: Union[Stream, str, int]) -> Pipe:
-        return await data_subscribe(self.session, self.loop, stream)
+        return await data_subscribe(self.session, stream)
 
     async def data_intervals(self,
                              stream: Union[Stream, str, int],
@@ -165,7 +164,7 @@ class BaseNode:
     async def data_write(self, stream: Union[Stream, str, int],
                          start: Optional[int] = None,
                          end: Optional[int] = None) -> Pipe:
-        return await data_write(self.session, self.loop, stream, start, end)
+        return await data_write(self.session, stream, start, end)
 
     async def data_delete(self, stream: Union[Stream, str, int],
                           start: Optional[int] = None,

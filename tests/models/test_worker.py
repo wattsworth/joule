@@ -120,8 +120,7 @@ class TestWorker(unittest.TestCase):
 
     def test_spawns_child_process(self):
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.worker.run(self.supervisor.subscribe,
-                                                loop, restart=False))
+        loop.run_until_complete(self.worker.run(self.supervisor.subscribe, restart=False))
         self.assertEqual(self.worker.process.returncode, 0)
 
     def test_restarts_child(self):
@@ -129,15 +128,14 @@ class TestWorker(unittest.TestCase):
         self.worker.RESTART_INTERVAL = 0.2
 
         # subscribe to the module outputs
-        output1 = pipes.LocalPipe(layout=self.streams[2].layout, loop=loop)
+        output1 = pipes.LocalPipe(layout=self.streams[2].layout)
         self.worker.subscribe(self.streams[2], output1)
 
         with self.check_fd_leakage():
             with self.assertLogs(logging.getLogger('joule'), logging.WARNING):
                 loop.run_until_complete(asyncio.gather(
                     loop.create_task(self._stop_worker(loop)),
-                    loop.create_task(self.worker.run(self.supervisor.subscribe,
-                                                     loop, restart=True))
+                    loop.create_task(self.worker.run(self.supervisor.subscribe, restart=True))
                 ))
         self.assertEqual(self.worker.process.returncode, 0)
         self.assertEqual(len(output1.read_nowait()), 0)
@@ -168,8 +166,7 @@ class TestWorker(unittest.TestCase):
         with self.check_fd_leakage():
             loop.run_until_complete(asyncio.gather(
                 loop.create_task(get_statistics()),
-                loop.create_task(self.worker.run(self.supervisor.subscribe,
-                                                 loop, restart=False))
+                loop.create_task(self.worker.run(self.supervisor.subscribe, restart=False))
             ))
 
     def test_restarts_and_stops_child_by_request(self):
@@ -179,15 +176,14 @@ class TestWorker(unittest.TestCase):
         self.module.exec_cmd = "python3 " + MODULE_STOP_ON_SIGTERM
 
         # calling stop before run doesn't matter
-        loop.run_until_complete(self.worker.stop(loop))
+        loop.run_until_complete(self.worker.stop())
 
         with self.assertLogs(level="WARNING") as logs:
             with self.check_fd_leakage():
                 loop.run_until_complete(asyncio.gather(
                     loop.create_task(self._stop_worker(loop)),
                     loop.create_task(self._restart_worker(loop)),
-                    loop.create_task(self.worker.run(self.supervisor.subscribe,
-                                                     loop, restart=True))
+                    loop.create_task(self.worker.run(self.supervisor.subscribe, restart=True))
                 ))
         # check to make sure it was killed by SIGTERM
         self.assertEqual(self.worker.process.returncode, -1 * signal.SIGTERM)
@@ -200,7 +196,7 @@ class TestWorker(unittest.TestCase):
                 num_starts += 1
         self.assertEqual(num_starts, 2)
         # can call stop multiple times
-        loop.run_until_complete(self.worker.stop(loop))
+        loop.run_until_complete(self.worker.stop())
 
     def test_terminates_child(self):
         # send SIGKILL to terminate bad children
@@ -213,8 +209,7 @@ class TestWorker(unittest.TestCase):
             with self.check_fd_leakage():
                 loop.run_until_complete(asyncio.gather(
                     loop.create_task(self._stop_worker(loop)),
-                    loop.create_task(self.worker.run(self.supervisor.subscribe,
-                                                     loop, restart=False))
+                    loop.create_task(self.worker.run(self.supervisor.subscribe, restart=False))
                 ))
         # check to make sure it was killed by SIGKILL
         self.assertEqual(self.worker.process.returncode, -1 * signal.SIGKILL)
@@ -226,8 +221,7 @@ class TestWorker(unittest.TestCase):
                                  'arg2': "value2"}
         self.module.is_app = True
         self.worker.log = Mock()
-        loop.run_until_complete(self.worker.run(self.supervisor.subscribe,
-                                                loop, restart=False))
+        loop.run_until_complete(self.worker.run(self.supervisor.subscribe, restart=False))
         self.assertEqual(self.worker.process.returncode, 0)
         # expect to get a pipes argument that is a json string
         parser = argparse.ArgumentParser()
@@ -259,8 +253,7 @@ class TestWorker(unittest.TestCase):
         loop = asyncio.get_event_loop()
         self.module.description = "test"
         self.module.exec_cmd = "python3 " + MODULE_LOG_AND_EXIT
-        loop.run_until_complete(self.worker.run(self.supervisor.subscribe,
-                                                loop, restart=False))
+        loop.run_until_complete(self.worker.run(self.supervisor.subscribe, restart=False))
         self.assertEqual(self.worker.process.returncode, 0)
         # log should have a starting entry
         self.assertRegex(self.worker.logs[0], 'starting')
@@ -274,8 +267,7 @@ class TestWorker(unittest.TestCase):
         loop = asyncio.get_event_loop()
 
         with self.assertLogs(level="ERROR"):
-            loop.run_until_complete(self.worker.run(self.supervisor.subscribe,
-                                                    loop, restart=False))
+            loop.run_until_complete(self.worker.run(self.supervisor.subscribe, restart=False))
         for entry in self.worker.logs:
             if "inputs are not available" in entry:
                 break
@@ -287,8 +279,7 @@ class TestWorker(unittest.TestCase):
         loop = asyncio.get_event_loop()
         with self.assertLogs(level="ERROR"):
             with self.check_fd_leakage():
-                loop.run_until_complete(self.worker.run(self.supervisor.subscribe,
-                                                        loop, restart=False))
+                loop.run_until_complete(self.worker.run(self.supervisor.subscribe, restart=False))
         for entry in self.worker.logs:
             if "cannot start module" in entry:
                 break
@@ -301,8 +292,7 @@ class TestWorker(unittest.TestCase):
         with self.check_fd_leakage():
             loop.run_until_complete(asyncio.gather(
                 loop.create_task(self._stop_worker(loop)),
-                loop.create_task(self.worker.run(self.supervisor.subscribe,
-                                                 loop, restart=False))
+                loop.create_task(self.worker.run(self.supervisor.subscribe, restart=False))
             ))
         logs = self.worker.logs
         self.assertEqual(len(logs), LOG_SIZE)
@@ -344,8 +334,8 @@ class TestWorker(unittest.TestCase):
             await asyncio.sleep(2)
 
         # subscribe to the module outputs
-        output1 = pipes.LocalPipe(layout=self.streams[2].layout, loop=loop, name="output1", debug=False)
-        output2 = pipes.LocalPipe(layout=self.streams[3].layout, loop=loop, name="output2", debug=False)
+        output1 = pipes.LocalPipe(layout=self.streams[2].layout, name="output1", debug=False)
+        output2 = pipes.LocalPipe(layout=self.streams[3].layout, name="output2", debug=False)
 
         # create a slow subscriber that times out
         class SlowPipe(pipes.Pipe):
@@ -371,7 +361,7 @@ class TestWorker(unittest.TestCase):
         self.worker.subscribe(self.streams[2], output1)
         with self.assertLogs() as log:
             loop.run_until_complete(asyncio.gather(
-                self.worker.run(self.supervisor.subscribe, loop, restart=False),
+                self.worker.run(self.supervisor.subscribe, restart=False),
                 mock_producers()))
         log_dump = '\n'.join(log.output)
         self.assertIn("subscriber write error", log_dump)
@@ -402,11 +392,11 @@ class TestWorker(unittest.TestCase):
 
     async def _stop_worker(self, loop: asyncio.AbstractEventLoop, delay=0.5):
         await asyncio.sleep(delay)
-        await self.worker.stop(loop)
+        await self.worker.stop()
 
     async def _restart_worker(self, loop: asyncio.AbstractEventLoop, delay=0.2):
         await asyncio.sleep(delay)
-        await self.worker.restart(loop)
+        await self.worker.restart()
 
     @contextmanager
     def check_fd_leakage(self):

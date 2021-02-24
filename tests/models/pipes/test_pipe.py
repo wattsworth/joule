@@ -106,7 +106,7 @@ class TestPipe(helpers.AsyncTestCase):
                 _ = pipe._apply_dtype(data)
 
     def test_subscribe(self):
-        LAYOUT="uint8_4"
+        LAYOUT = "uint8_4"
         # cannot subscribe to input pipes
         input_pipe = Pipe(layout=LAYOUT, direction=Pipe.DIRECTION.INPUT)
         output_pipe = Pipe(layout=LAYOUT, direction=Pipe.DIRECTION.OUTPUT)
@@ -126,13 +126,13 @@ class TestPipe(helpers.AsyncTestCase):
         loop = asyncio.get_event_loop()
 
         # raises exception if the pipe is empty
-        my_pipe = LocalPipe(LAYOUT, loop=loop, name="pipe")
+        my_pipe = LocalPipe(LAYOUT, name="pipe")
         my_pipe.close_nowait()
         with self.assertRaises(PipeError):
             loop.run_until_complete(my_pipe.read_all(flatten=True))
 
         # read_all empties pipe and closes it, regardless of intervals
-        my_pipe = LocalPipe(LAYOUT, loop=loop, name="pipe")
+        my_pipe = LocalPipe(LAYOUT, name="pipe")
         test_data1 = helpers.create_data(LAYOUT, length=LENGTH)
         test_data2 = helpers.create_data(LAYOUT, length=LENGTH)
         my_pipe.write_nowait(test_data1)
@@ -147,7 +147,7 @@ class TestPipe(helpers.AsyncTestCase):
 
         # read_all only add maxrows to the pipe
         # (less than one read)
-        my_pipe = LocalPipe(LAYOUT, loop=loop, name="pipe")
+        my_pipe = LocalPipe(LAYOUT, name="pipe")
         test_data1 = helpers.create_data(LAYOUT, length=LENGTH)
         test_data2 = helpers.create_data(LAYOUT, length=LENGTH)
         my_pipe.write_nowait(test_data1)
@@ -159,13 +159,13 @@ class TestPipe(helpers.AsyncTestCase):
         np.testing.assert_array_equal(actual_data, expected_data)
         self.assertTrue(my_pipe.closed)
         # (more than one read)
-        my_pipe = LocalPipe(LAYOUT, loop=loop, name="pipe")
+        my_pipe = LocalPipe(LAYOUT, name="pipe")
         test_data1 = helpers.create_data(LAYOUT, length=LENGTH)
         test_data2 = helpers.create_data(LAYOUT, length=LENGTH)
         my_pipe.write_nowait(test_data1)
         my_pipe.close_interval_nowait()
         my_pipe.write_nowait(test_data2)
-        actual_data = loop.run_until_complete(my_pipe.read_all(maxrows=LENGTH+101, flatten=True))
+        actual_data = loop.run_until_complete(my_pipe.read_all(maxrows=LENGTH + 101, flatten=True))
         expected_data = np.hstack((test_data1, test_data2[:101]))
         expected_data = np.c_[expected_data['timestamp'][:, None], expected_data['data']]
         np.testing.assert_array_equal(expected_data, actual_data)
@@ -173,18 +173,18 @@ class TestPipe(helpers.AsyncTestCase):
 
         # read_all raises an exception if the pipe has more than maxrows
         # (less than one read)
-        my_pipe = LocalPipe(LAYOUT, loop=loop, name="pipe")
+        my_pipe = LocalPipe(LAYOUT, name="pipe")
         test_data1 = helpers.create_data(LAYOUT, length=LENGTH)
         test_data2 = helpers.create_data(LAYOUT, length=LENGTH)
         my_pipe.write_nowait(test_data1)
         my_pipe.close_interval_nowait()
         my_pipe.write_nowait(test_data2)
         with self.assertRaises(PipeError):
-            loop.run_until_complete(my_pipe.read_all(maxrows=LENGTH+101,
+            loop.run_until_complete(my_pipe.read_all(maxrows=LENGTH + 101,
                                                      error_on_overflow=True, flatten=True))
         self.assertTrue(my_pipe.closed)
         # (more than one read)
-        my_pipe = LocalPipe(LAYOUT, loop=loop, name="pipe")
+        my_pipe = LocalPipe(LAYOUT, name="pipe")
         test_data1 = helpers.create_data(LAYOUT, length=LENGTH)
         test_data2 = helpers.create_data(LAYOUT, length=LENGTH)
         my_pipe.write_nowait(test_data1)
@@ -192,7 +192,7 @@ class TestPipe(helpers.AsyncTestCase):
         my_pipe.write_nowait(test_data2)
         my_pipe.close_nowait()
         with self.assertRaises(PipeError):
-            loop.run_until_complete(my_pipe.read_all(maxrows=LENGTH+101,
+            loop.run_until_complete(my_pipe.read_all(maxrows=LENGTH + 101,
                                                      error_on_overflow=True, flatten=True))
         self.assertTrue(my_pipe.closed)
 
@@ -202,13 +202,13 @@ class TestPipe(helpers.AsyncTestCase):
         loop = asyncio.get_event_loop()
 
         # raises exception if the pipe is empty
-        my_pipe = LocalPipe(LAYOUT, loop=loop, name="pipe")
+        my_pipe = LocalPipe(LAYOUT, name="pipe")
         my_pipe.close_nowait()
         with self.assertRaises(PipeError):
             loop.run_until_complete(my_pipe.read_all())
 
         # read_all empties pipe and closes it, regardless of intervals
-        my_pipe = LocalPipe(LAYOUT, loop=loop, name="pipe")
+        my_pipe = LocalPipe(LAYOUT, name="pipe")
         test_data1 = helpers.create_data(LAYOUT, length=LENGTH)
         test_data2 = helpers.create_data(LAYOUT, length=LENGTH)
         my_pipe.write_nowait(test_data1)
@@ -222,7 +222,7 @@ class TestPipe(helpers.AsyncTestCase):
 
         # read_all only add maxrows to the pipe
         # (less than one read)
-        my_pipe = LocalPipe(LAYOUT, loop=loop, name="pipe")
+        my_pipe = LocalPipe(LAYOUT, name="pipe")
         test_data1 = helpers.create_data(LAYOUT, length=LENGTH)
         test_data2 = helpers.create_data(LAYOUT, length=LENGTH)
         my_pipe.write_nowait(test_data1)
@@ -233,30 +233,30 @@ class TestPipe(helpers.AsyncTestCase):
         np.testing.assert_array_equal(actual_data, expected_data)
         self.assertTrue(my_pipe.closed)
         # (more than one read)
-        my_pipe = LocalPipe(LAYOUT, loop=loop, name="pipe")
+        my_pipe = LocalPipe(LAYOUT, name="pipe")
         test_data1 = helpers.create_data(LAYOUT, length=LENGTH)
         test_data2 = helpers.create_data(LAYOUT, length=LENGTH)
         my_pipe.write_nowait(test_data1)
         my_pipe.close_interval_nowait()
         my_pipe.write_nowait(test_data2)
-        actual_data = loop.run_until_complete(my_pipe.read_all(maxrows=LENGTH+101))
+        actual_data = loop.run_until_complete(my_pipe.read_all(maxrows=LENGTH + 101))
         expected_data = np.hstack((test_data1, test_data2[:101]))
         np.testing.assert_array_equal(expected_data, actual_data)
         self.assertTrue(my_pipe.closed)
 
         # read_all raises an exception if the pipe has more than maxrows
         # (less than one read)
-        my_pipe = LocalPipe(LAYOUT, loop=loop, name="pipe")
+        my_pipe = LocalPipe(LAYOUT, name="pipe")
         test_data1 = helpers.create_data(LAYOUT, length=LENGTH)
         test_data2 = helpers.create_data(LAYOUT, length=LENGTH)
         my_pipe.write_nowait(test_data1)
         my_pipe.close_interval_nowait()
         my_pipe.write_nowait(test_data2)
         with self.assertRaises(PipeError):
-            loop.run_until_complete(my_pipe.read_all(maxrows=LENGTH+101, error_on_overflow=True))
+            loop.run_until_complete(my_pipe.read_all(maxrows=LENGTH + 101, error_on_overflow=True))
         self.assertTrue(my_pipe.closed)
         # (more than one read)
-        my_pipe = LocalPipe(LAYOUT, loop=loop, name="pipe")
+        my_pipe = LocalPipe(LAYOUT, name="pipe")
         test_data1 = helpers.create_data(LAYOUT, length=LENGTH)
         test_data2 = helpers.create_data(LAYOUT, length=LENGTH)
         my_pipe.write_nowait(test_data1)
@@ -264,5 +264,5 @@ class TestPipe(helpers.AsyncTestCase):
         my_pipe.write_nowait(test_data2)
         my_pipe.close_nowait()
         with self.assertRaises(PipeError):
-            loop.run_until_complete(my_pipe.read_all(maxrows=LENGTH+101, error_on_overflow=True))
+            loop.run_until_complete(my_pipe.read_all(maxrows=LENGTH + 101, error_on_overflow=True))
         self.assertTrue(my_pipe.closed)

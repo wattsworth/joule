@@ -47,11 +47,11 @@ class TestFilterModule(helpers.AsyncTestCase):
         module = SimpleFilter()
         (r, w_module) = os.pipe()
         loop = asyncio.get_event_loop()
-        rf = pipes.reader_factory(r, loop)
+        rf = pipes.reader_factory(r)
         from_filter = pipes.InputPipe(name="from_filter", stream=self.output, reader_factory=rf)
         (r_module, w) = os.pipe()
         loop = asyncio.get_event_loop()
-        wf = pipes.writer_factory(w, loop)
+        wf = pipes.writer_factory(w)
         to_filter = pipes.OutputPipe(name="to_filter", stream=self.input, writer_factory=wf)
 
         pipe_arg = json.dumps(

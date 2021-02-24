@@ -21,11 +21,11 @@ warnings.simplefilter('always')
 class SimpleComposite(CompositeModule):
     # runs the simple reader and simple filter
     # as a composite module
-    async def setup(self, parsed_args, inputs, outputs, loop):
+    async def setup(self, parsed_args, inputs, outputs):
         reader_module = SimpleReader()
         filter_module = SimpleFilter()
 
-        pipe = pipes.LocalPipe("float32_3", loop)
+        pipe = pipes.LocalPipe("float32_3")
         reader_task = reader_module.run(parsed_args, pipe)
         filter_task = filter_module.run(parsed_args, {'to_filter': pipe},
                                         {'from_filter': outputs['output']})
@@ -45,7 +45,7 @@ class TestCompositeModule(helpers.AsyncTestCase):
         module = SimpleComposite()
         (r, w) = os.pipe()
         module_loop = asyncio.new_event_loop()
-        rf = pipes.reader_factory(r, self.loop)
+        rf = pipes.reader_factory(r)
         pipe = pipes.InputPipe(name="output", stream=self.stream, reader_factory=rf)
         pipe_arg = json.dumps(json.dumps({"outputs": {'output': {'fd': w, 'id': None, 'layout': self.stream.layout}},
                                           "inputs": {}}))

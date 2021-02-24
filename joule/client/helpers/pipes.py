@@ -27,7 +27,7 @@ async def build_fd_pipes(pipe_args: str, node: BaseNode) -> Tuple[Pipes, Pipes]:
     pipes_out = {}
     pipes_in = {}
     for name, arg in dest_args.items():
-        wf = pipes.writer_factory(arg['fd'], node.loop)
+        wf = pipes.writer_factory(arg['fd'])
         dest_stream = None
         if arg['id'] is not None:  # used in testing when no API is available
             dest_stream = await node.stream_get(arg['id'])
@@ -36,7 +36,7 @@ async def build_fd_pipes(pipe_args: str, node: BaseNode) -> Tuple[Pipes, Pipes]:
                                            writer_factory=wf)
 
     for name, arg in src_args.items():
-        rf = pipes.reader_factory(arg['fd'], node.loop)
+        rf = pipes.reader_factory(arg['fd'])
         src_stream = None
         if arg['id'] is not None:  # used in testing when no API is available
             src_stream = await node.stream_get(arg['id'])

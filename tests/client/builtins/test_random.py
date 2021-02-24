@@ -16,7 +16,7 @@ class TestRandomReader(helpers.AsyncTestCase):
 
         my_reader = RandomReader()
         loop = asyncio.get_event_loop()
-        pipe = LocalPipe("float32_%d" % WIDTH, loop, name="output")
+        pipe = LocalPipe("float32_%d" % WIDTH, name="output")
         args = argparse.Namespace(width=WIDTH, rate=RATE, pipes="unset")
 
         loop.call_later(0.1, my_reader.stop)

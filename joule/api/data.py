@@ -42,7 +42,6 @@ async def data_delete(session: BaseSession,
 
 
 async def data_write(session: BaseSession,
-                     loop: asyncio.AbstractEventLoop,
                      stream: Union[Stream, str, int],
                      start_time: Optional[int] = None,
                      end_time: Optional[int] = None,
@@ -73,7 +72,7 @@ async def data_write(session: BaseSession,
 
     pipe = LocalPipe(dest_stream.layout, name=dest_stream.name,
                      stream=dest_stream, close_cb=close, debug=False, write_limit=5)
-    task = loop.create_task(_send_data(session, dest_stream, pipe))
+    task = asyncio.create_task(_send_data(session, dest_stream, pipe))
     return pipe
 
 
@@ -123,7 +122,6 @@ async def data_consolidate(session: BaseSession,
 
 
 async def data_read(session: BaseSession,
-                    loop: asyncio.AbstractEventLoop,
                     stream: Union[Stream, str, int],
                     start: Optional[int] = None,
                     end: Optional[int] = None,
@@ -136,9 +134,9 @@ async def data_read(session: BaseSession,
                 stream, stream.layout, src_stream.layout))
 
     # replace the stub stream (from config file) with actual stream
-    pipe = LocalPipe(src_stream.layout, name=src_stream.name, loop=loop, stream=src_stream, write_limit=5)
+    pipe = LocalPipe(src_stream.layout, name=src_stream.name, stream=src_stream, write_limit=5)
     pipe.stream = src_stream
-    task = loop.create_task(_historic_reader(session,
+    task = asyncio.create_task(_historic_reader(session,
                                              src_stream,
                                              pipe,
                                              start, end, max_rows))
@@ -155,7 +153,6 @@ async def data_read(session: BaseSession,
 
 
 async def data_subscribe(session: BaseSession,
-                         loop: asyncio.AbstractEventLoop,
                          stream: Union[Stream, str, int]) -> Pipe:
     # make sure the input is compatible
     src_stream = await stream_get(session, stream)
@@ -170,10 +167,10 @@ async def data_subscribe(session: BaseSession,
             "Stream [%s] is not being produced, specify time bounds for historic execution" % src_stream.name)
     # replace the stub stream (from config file) with actual stream
     # do not let the buffer grow beyond 5 server chunks
-    pipe = LocalPipe(src_stream.layout, name=src_stream.name, loop=loop, stream=src_stream, write_limit=5)
+    pipe = LocalPipe(src_stream.layout, name=src_stream.name, stream=src_stream, write_limit=5)
     pipe.stream = src_stream
 
-    task = loop.create_task(_live_reader(session,
+    task = asyncio.create_task(_live_reader(session,
                                          src_stream,
                                          pipe))
 

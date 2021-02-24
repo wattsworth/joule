@@ -17,18 +17,15 @@ class LocalPipe(Pipe):
                layout: ``datatype_width``, for example ``float32_3`` for a three element stream
                  must. See Stream.layout
            Keyword Args:
-               loop: specify a an event loop, otherwise the default one is used
                name: useful for debugging with multiple pipes
                close_cb: callback coroutine executed when pipe closes
                debug: enable to log pipe usage events
     """
 
-    def __init__(self, layout: str, loop: Loop = None, name: str = None,
-                 close_cb = None, debug: bool = False, stream=None, write_limit=0):
+    def __init__(self, layout: str, name: str = None,
+                 close_cb=None, debug: bool = False, stream=None, write_limit=0):
 
         super().__init__(name=name, layout=layout, stream=stream)
-        if loop is None:
-            loop = asyncio.get_event_loop()
         # tunable constants
         self.TIMEOUT_INTERVAL = 0.5
         self.debug = debug
@@ -38,7 +35,7 @@ class LocalPipe(Pipe):
         self.close_cb = close_cb
         self._reread = False
         # initialize buffer and queue
-        self.queue = asyncio.Queue(loop=loop, maxsize=write_limit)
+        self.queue = asyncio.Queue(maxsize=write_limit)
         self.queued_rows = 0
         self.last_index = 0
         self.direction = Pipe.DIRECTION.TWOWAY
@@ -284,4 +281,3 @@ class LocalPipe(Pipe):
         if self.close_cb is not None:
             raise PipeError("close_cb cannot be executed, use async")
         self.closed = True
-

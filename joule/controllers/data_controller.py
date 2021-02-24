@@ -142,7 +142,7 @@ async def _subscribe(request: web.Request, json: bool):
         return web.Response(text="stream does not exist", status=404)
     pipe = pipes.LocalPipe(stream.layout)
     try:
-        unsubscribe = supervisor.subscribe(stream, pipe, asyncio.get_event_loop())
+        unsubscribe = supervisor.subscribe(stream, pipe)
     except SubscriptionError:
         return web.Response(text="stream is not being produced", status=400)
     resp = web.StreamResponse(status=200,
@@ -225,10 +225,9 @@ async def write(request: web.Request):
     db.commit()
 
     pipe = pipes.InputPipe(name="inbound", stream=stream, reader=request.content)
-    loop = asyncio.get_event_loop()
 
     try:
-        task = await data_store.spawn_inserter(stream, pipe, loop, insert_period=0)
+        task = await data_store.spawn_inserter(stream, pipe, insert_period=0)
         await task
     except DataError as e:
         return web.Response(text=str(e), status=400)

@@ -2,7 +2,6 @@ from joule import LocalPipe
 import unittest
 import asyncio
 import numpy as np
-import numpy.matlib
 import argparse
 import pdb
 
@@ -48,10 +47,10 @@ class TestMergeFilter(helpers.AsyncTestCase):
             master_data = np.vstack((inputs[0], np.ones((master_width, len(inputs[0]))))).T
             slave1_data = np.vstack((inputs[1], 2 * np.ones((3, len(inputs[1]))))).T
             slave2_data = np.vstack((inputs[2], 3 * np.ones((1, len(inputs[2]))))).T
-            master = LocalPipe("float32_%d" % master_width, loop, name="master")
-            slave1 = LocalPipe("float32_3", loop, name="slave1")
-            slave2 = LocalPipe("float32_1", loop, name="slave2")
-            output = LocalPipe("float32_%d" % (master_width + 4), loop, name="output")
+            master = LocalPipe("float32_%d" % master_width, name="master")
+            slave1 = LocalPipe("float32_3", name="slave1")
+            slave2 = LocalPipe("float32_1", name="slave2")
+            output = LocalPipe("float32_%d" % (master_width + 4), name="output")
             args = argparse.Namespace(master="master", pipes="unset")
             # seed the input data
             master.write_nowait(master_data)

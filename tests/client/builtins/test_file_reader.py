@@ -22,7 +22,7 @@ class TestFileReader(helpers.AsyncTestCase):
                 f.write("%d %s\n" % (row['timestamp'], ' '.join(repr(x) for x in row['data'])))
         my_reader = FileReader()
         loop = asyncio.get_event_loop()
-        pipe = LocalPipe("float32_8", loop, name="output")
+        pipe = LocalPipe("float32_8", name="output")
         args = argparse.Namespace(file=path, delimiter=" ",
                                   timestamp=False)
         loop.run_until_complete(my_reader.run(args, pipe))
@@ -40,7 +40,7 @@ class TestFileReader(helpers.AsyncTestCase):
                 f.write("%s\n" % ' '.join(repr(x) for x in row['data']))
         my_reader = FileReader()
         loop = asyncio.get_event_loop()
-        pipe = LocalPipe("float32_8", loop, name="output")
+        pipe = LocalPipe("float32_8", name="output")
         args = argparse.Namespace(file=path, delimiter=" ",
                                   timestamp=True)
         loop.run_until_complete(my_reader.run(args, pipe))
@@ -62,7 +62,7 @@ class TestFileReader(helpers.AsyncTestCase):
                 f.write("%d %s\n" % (row['timestamp'], ' '.join(repr(x) for x in row['data'])))
         my_reader = FileReader()
         loop = asyncio.get_event_loop()
-        pipe = LocalPipe("float32_8", loop, name="output")
+        pipe = LocalPipe("float32_8", name="output")
         args = argparse.Namespace(file=path, delimiter=" ",
                                   timestamp=False)
         my_reader.stop()

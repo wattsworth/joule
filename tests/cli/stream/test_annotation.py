@@ -83,8 +83,8 @@ class TestStreamAnnotation(FakeJouleTestCase):
         runner = CliRunner()
         result = runner.invoke(main, ['stream', 'annotations', '/my/stream',
                                       '--delete',
-                                      '--start', '28 Jun 2019 16:00',
-                                      '--end', '29 Jun 2019 16:00'])
+                                      '--start', '28 Jun 2019 16:00 EDT',
+                                      '--end', '29 Jun 2019 16:00 EDT'])
         self._assert_no_error(result)
         query_params = self.msgs.get()
         self.assertEqual(query_params["stream_path"], "/my/stream")

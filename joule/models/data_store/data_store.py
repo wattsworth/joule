@@ -72,8 +72,7 @@ class DataStore(ABC):  # pragma: no cover
         pass
 
     @abstractmethod
-    async def spawn_inserter(self, stream: 'Stream', pipe: pipes.Pipe,
-                             loop: Loop, insert_period=None) -> asyncio.Task:
+    async def spawn_inserter(self, stream: 'Stream', pipe: pipes.Pipe, insert_period=None) -> asyncio.Task:
         pass
 
     @abstractmethod

@@ -7,14 +7,11 @@ from joule.api.session import TcpSession
 
 
 class TcpNode(BaseNode):
-    def __init__(self, name: str, url: str, key: str, cafile: str = "",
-                 loop: Optional[AbstractEventLoop] = None):
+    def __init__(self, name: str, url: str, key: str, cafile: str = ""):
         session = TcpSession(url, key, cafile)
         self._url = url
         self._key = key
-        if loop is None:
-            loop = get_event_loop()
-        super().__init__(name, session, loop)
+        super().__init__(name, session)
         self.url = url
 
     def __repr__(self):

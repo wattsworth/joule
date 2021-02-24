@@ -18,12 +18,11 @@ Loop = asyncio.AbstractEventLoop
 class TimescaleStore(DataStore):
 
     def __init__(self, dsn: str, insert_period: float,
-                 cleanup_period: float, loop: Loop):
+                 cleanup_period: float):
         self.dsn = dsn
         self.decimation_factor = 4
         self.insert_period = insert_period
         self.cleanup_period = cleanup_period
-        self.loop = loop
         self.pool = None
         # tunable constants
         self.extract_block_size = 50000
@@ -34,14 +33,13 @@ class TimescaleStore(DataStore):
     async def close(self):
         await self.pool.close()
 
-    async def spawn_inserter(self, stream: 'Stream', pipe: pipes.Pipe,
-                             loop: Loop, insert_period=None) -> asyncio.Task:
+    async def spawn_inserter(self, stream: 'Stream', pipe: pipes.Pipe, insert_period=None) -> asyncio.Task:
         if insert_period is None:
             insert_period = self.insert_period
 
         inserter = Inserter(self.pool, stream,
                             insert_period, self.cleanup_period)
-        return loop.create_task(inserter.run(pipe))
+        return asyncio.create_task(inserter.run(pipe))
 
     async def insert(self, stream: 'Stream',
                      data: np.ndarray, start: int, end: int):
@@ -144,8 +142,7 @@ class TimescaleStore(DataStore):
                     bounds = await psql_helpers.convert_time_bounds(conn, stream, start, end)
                     if bounds is None:
                         return  # no data to remove
-                    query = "SELECT drop_chunks(table_name=>'%s', schema_name=>'data', older_than=>'%s'::timestamp)" % \
-                            (table.split(".")[1], bounds[1])
+                    query = "SELECT drop_chunks('%s', older_than=>'%s'::timestamp)" % (table, bounds[1])
                 else:
                     query = 'DELETE FROM %s ' % table + where_clause
                 try:

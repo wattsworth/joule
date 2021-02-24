@@ -50,7 +50,7 @@ class Daemon(object):
         self.tasks: List[asyncio.Task] = []
         self.stop_requested = False
 
-    def initialize(self, loop: Loop):
+    def initialize(self):
 
         # make sure this is the only copy of jouled running
         pid_file = os.path.join(self.config.socket_directory, 'pid')
@@ -73,11 +73,11 @@ class Daemon(object):
             self.data_store: DataStore = \
                 NilmdbStore(self.config.nilmdb_url,
                             self.config.insert_period,
-                            self.config.cleanup_period, loop)
+                            self.config.cleanup_period)
         else:
             self.data_store: DataStore = \
                 TimescaleStore(self.config.database, self.config.insert_period,
-                               self.config.cleanup_period, loop)
+                               self.config.cleanup_period)
 
         engine = create_engine(self.config.database, echo=False)
         self.engine = engine  # keep for erasing database if needed
@@ -157,14 +157,14 @@ class Daemon(object):
 
             return TcpNode(follower.name, follower.location,
                            follower.key,
-                           self.cafile, loop)
+                           self.cafile)
 
         self.supervisor = Supervisor(workers, self.config.proxies, get_node)
 
         # save the metadata
         self.db.commit()
 
-    async def run(self, loop: Loop):
+    async def run(self):
         # initialize streams in the data store
         try:
             await self.data_store.initialize(self.db.query(Stream).all())
@@ -172,7 +172,7 @@ class Daemon(object):
             log.error("Database error: %s" % e)
             exit(1)
         # start the supervisor (runs the workers)
-        await self.supervisor.start(loop)
+        await self.supervisor.start()
 
         # start inserters by subscribing to the streams
         inserter_tasks = []
@@ -180,11 +180,11 @@ class Daemon(object):
             if not stream.is_destination:
                 continue  # only subscribe to active streams
             try:
-                task = self._spawn_inserter(stream, loop)
+                task = self._spawn_inserter(stream)
                 inserter_tasks.append(task)
             except SubscriptionError as e:
                 logging.warning(e)
-        inserter_task_grp = asyncio.gather(*inserter_tasks, loop=loop)
+        inserter_task_grp = asyncio.gather(*inserter_tasks)
 
         # start the API server
         middlewares = [
@@ -239,7 +239,7 @@ class Daemon(object):
             await asyncio.sleep(0.5)
 
         # clean everything up
-        await self.supervisor.stop(loop)
+        await self.supervisor.stop()
         inserter_task_grp.cancel()
         try:
             await inserter_task_grp
@@ -256,18 +256,18 @@ class Daemon(object):
     def stop(self):
         self.stop_requested = True
 
-    async def _spawn_inserter(self, stream: Stream, loop: Loop):
+    async def _spawn_inserter(self, stream: Stream):
         while True:
-            pipe = pipes.LocalPipe(layout=stream.layout, loop=loop, name='inserter:%s' % stream.name)
-            unsubscribe = self.supervisor.subscribe(stream, pipe, loop)
+            pipe = pipes.LocalPipe(layout=stream.layout, name='inserter:%s' % stream.name)
+            unsubscribe = self.supervisor.subscribe(stream, pipe)
             task = None
             try:
-                task = await self.data_store.spawn_inserter(stream, pipe, loop)
+                task = await self.data_store.spawn_inserter(stream, pipe)
                 await task
                 break  # inserter terminated, program is closing
             except DataError as e:
                 msg = "stream [%s]: %s" % (stream.name, str(e))
-                await self.supervisor.restart_producer(stream, loop, msg=msg)
+                await self.supervisor.restart_producer(stream, msg=msg)
             except asyncio.CancelledError:
                 if task is not None:
                     task.cancel()
@@ -306,7 +306,7 @@ def main(argv=None):
     loop.set_debug(True)
     daemon = Daemon(my_config)
     try:
-        daemon.initialize(loop)
+        daemon.initialize()
     except SQLAlchemyError as e:
         print("""
         Error initializing database, ensure user 'joule' has sufficient permissions:
@@ -322,7 +322,7 @@ def main(argv=None):
     loop.add_signal_handler(signal.SIGINT, daemon.stop)
     loop.add_signal_handler(signal.SIGTERM, daemon.stop)
 
-    loop.run_until_complete(daemon.run(loop))
+    loop.run_until_complete(daemon.run())
     loop.close()
 
     # clear out the socket directory

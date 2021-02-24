@@ -34,7 +34,7 @@ class BaseModule:
         self.runner = None
         self.node = None
 
-    async def run_as_task(self, parsed_args, app: web.Application, loop) -> asyncio.Task:
+    async def run_as_task(self, parsed_args, app: web.Application) -> asyncio.Task:
         assert False, "implement in child class"  # pragma: no cover
 
     def custom_args(self, parser: argparse.ArgumentParser):
@@ -77,7 +77,7 @@ class BaseModule:
         # override in client for alternate shutdown strategy
         self.stop_requested = True
 
-    def create_dev_app(self, loop: asyncio.AbstractEventLoop) -> web.Application:
+    def create_dev_app(self) -> web.Application:
         parser = argparse.ArgumentParser()
         self._build_args(parser)
         # must specify module config in JOULE_MODULE_CONFIG environment variable
@@ -95,7 +95,7 @@ class BaseModule:
         my_app = self._create_app()
 
         async def on_startup(app):
-            app['task'] = await self.run_as_task(parsed_args, app, loop)
+            app['task'] = await self.run_as_task(parsed_args, app)
 
         my_app.on_startup.append(on_startup)
 
@@ -140,7 +140,7 @@ class BaseModule:
                 cafile = os.environ['JOULE_CA_FILE']
             else:
                 cafile = ""
-            self.node = node.UnixNode("local", parsed_args.api_socket, cafile, loop)
+            self.node = node.UnixNode("local", parsed_args.api_socket, cafile)
         else:
             self.node = api.get_node(parsed_args.node)
         self.runner: web.AppRunner = loop.run_until_complete(self._start_interface(parsed_args))
@@ -149,7 +149,7 @@ class BaseModule:
             app = self.runner.app
         try:
             task = loop.run_until_complete(
-                self.run_as_task(parsed_args, app, loop))
+                self.run_as_task(parsed_args, app))
         except ConfigurationError as e:
             log.error("ERROR: " + str(e))
             self._cleanup(loop)

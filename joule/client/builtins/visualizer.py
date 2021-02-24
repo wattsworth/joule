@@ -128,9 +128,9 @@ class Visualizer(FilterModule):  # pragma: no cover
         return elements
 
 
-def create_app(loop: asyncio.AbstractEventLoop):
+def create_app():
     r = Visualizer()
-    return r.create_dev_app(loop)
+    return r.create_dev_app()
 
 
 def main():  # pragma: no cover

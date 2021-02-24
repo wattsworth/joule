@@ -87,8 +87,7 @@ async def run(config, delete_links):
     # erase data
     data_store = TimescaleStore(config.database,
                                 config.insert_period,
-                                config.cleanup_period,
-                                asyncio.get_event_loop())
+                                config.cleanup_period)
     try:
         await data_store.initialize([])
         await data_store.destroy_all()

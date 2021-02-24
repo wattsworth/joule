@@ -91,7 +91,7 @@ class Inserter:
                     joule.utilities.time_now() - self.stream.keep_us)
                 query = "DELETE FROM data.%s WHERE time < '%s'" % (table, cutoff)
             else:
-                query = "SELECT drop_chunks(interval '%d seconds', '%s', 'data')" % (keep_s, table)
+                query = "SELECT drop_chunks('data.%s',older_than => interval '%d seconds')" % (table, keep_s)
             await conn.execute(query)
 
 

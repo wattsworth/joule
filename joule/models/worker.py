@@ -156,8 +156,7 @@ class Worker:
         else:
             return False
 
-    async def run(self, subscribe: Callable[[Stream, pipes.Pipe, Loop], Callable],
-                  loop: Loop, restart: bool = True) -> None:
+    async def run(self, subscribe: Callable[[Stream, pipes.Pipe, Loop], Callable], restart: bool = True) -> None:
         self.stop_requested = False
         while True:
             # when jouled is run from the command line Ctrl+C sends SIGTERM
@@ -167,7 +166,7 @@ class Worker:
                 break  # pragma: no cover
             self.log("---starting module---")
             try:
-                await self._spawn_child(subscribe, loop)
+                await self._spawn_child(subscribe)
             except SubscriptionError as e:
                 log.error("Cannot start module [%s]: %s" % (self.module.name, e))
                 self.log("inputs are not available: %s" % e)
@@ -187,14 +186,14 @@ class Worker:
             else:
                 break
 
-    async def restart(self, loop: Loop) -> None:
-        await self._stop_child(loop)
+    async def restart(self) -> None:
+        await self._stop_child()
 
-    async def stop(self, loop: Loop) -> None:
+    async def stop(self) -> None:
         self.stop_requested = True
-        await self._stop_child(loop)
+        await self._stop_child()
 
-    async def _stop_child(self, loop: Loop) -> None:
+    async def _stop_child(self) -> None:
         if self.process is None:
             return
         try:
@@ -203,8 +202,7 @@ class Worker:
             return  # process is already terminated
         try:
             await asyncio.wait_for(self.process.wait(),
-                                   timeout=self.SIGTERM_TIMEOUT,
-                                   loop=loop)
+                                   timeout=self.SIGTERM_TIMEOUT)
         except asyncio.TimeoutError:
             log.warning(
                 "Cannot stop %s with SIGTERM, killing process" % self.module.name)
@@ -240,22 +238,21 @@ class Worker:
 
         return unsubscribe
 
-    async def _spawn_child(self, subscribe: Callable[[Stream, pipes.Pipe, Loop], Callable],
-                           loop: Loop) -> None:
+    async def _spawn_child(self, subscribe: Callable[[Stream, pipes.Pipe, Loop], Callable]) -> None:
 
         # lock so fd's don't pollute other modules
         _initialize_popen_lock()
         await popen_lock.acquire()
         try:
 
-            await self._subscribe_to_inputs(subscribe, loop)
+            await self._subscribe_to_inputs(subscribe)
         except SubscriptionError as e:
             self._close_child_fds()
             popen_lock.release()
             await self._close_connections()
             raise e  # bubble up the exception
 
-        output_task = await self._spawn_outputs(loop)
+        output_task = await self._spawn_outputs()
         cmd = self._compose_cmd()
         env = {**os.environ, 'PYTHONUNBUFFERED': '1'}
         create = asyncio.create_subprocess_exec(
@@ -285,7 +282,7 @@ class Worker:
         self._close_child_fds()
         popen_lock.release()
 
-        logger_task = loop.create_task(self._logger())
+        logger_task = asyncio.create_task(self._logger())
         await self.process.wait()
         # Unwind the tasks
         await self._close_connections()
@@ -311,24 +308,24 @@ class Worker:
         except asyncio.CancelledError:  # pragma: no cover
             return
 
-    async def _spawn_outputs(self, loop: Loop) -> asyncio.Task:
+    async def _spawn_outputs(self) -> asyncio.Task:
         tasks: List[asyncio.Task] = []
         # configure output pipes          [module]==>[worker]
         for (name, stream) in self.module.outputs.items():
             (r, w) = os.pipe()
-            rf = pipes.reader_factory(r, loop)
+            rf = pipes.reader_factory(r)
             os.set_inheritable(w, True)
             pipe = pipes.InputPipe(name=name, stream=stream,
                                    reader_factory=rf)
             self.output_connections.append(DataConnection(
                 name, w, stream, pipe))
-            tasks.append(loop.create_task(
-                self._output_handler(pipe, self.subscribers[stream], loop)))
+            tasks.append(asyncio.create_task(
+                self._output_handler(pipe, self.subscribers[stream])))
 
         return asyncio.gather(*tasks)
 
     async def _output_handler(self, child_output: pipes.Pipe,
-                              subscribers: List[pipes.Pipe], loop: Loop):
+                              subscribers: List[pipes.Pipe]):
         """given a numpy pipe, get data and put it
            into each queue in [output_queues] """
         last_ts = None
@@ -340,7 +337,7 @@ class Worker:
                     if not self._verify_monotonic_timestamps(data, last_ts, child_output.name):
                         for pipe in subscribers:
                             await pipe.close_interval()
-                        await self.restart(loop)
+                        await self.restart()
                         break
                     last_ts = data['timestamp'][-1]
 
@@ -374,18 +371,17 @@ class Worker:
                     self.name, child_output.name, str(e)))
 
     async def _subscribe_to_inputs(self,
-                                   subscribe: Callable[[Stream, pipes.Pipe, Loop], Callable],
-                                   loop: Loop):
+                                   subscribe: Callable[[Stream, pipes.Pipe, Loop], Callable]):
         # configure input pipes            [module]<==[worker]
         for (name, stream) in self.module.inputs.items():
             (r, w) = os.pipe()
-            wf = pipes.writer_factory(w, loop)
+            wf = pipes.writer_factory(w)
             writer = await wf()
             os.set_inheritable(r, True)
             pipe = pipes.OutputPipe(name=name, stream=stream,
                                     writer=writer)
             try:
-                unsubscribe = subscribe(stream, pipe, loop)
+                unsubscribe = subscribe(stream, pipe)
             except SubscriptionError as e:
                 os.close(r)
                 await pipe.close()

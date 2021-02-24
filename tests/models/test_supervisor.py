@@ -27,20 +27,18 @@ class TestSupervisor(AsyncTestCase):
         started_uuids = []
         stopped_uuids = []
 
-        async def mock_run(uuid, _, loop):
+        async def mock_run(uuid, _):
             started_uuids.append(uuid)
-            self.assertEqual(loop, self.loop)
 
-        async def mock_stop(uuid, loop):
+        async def mock_stop(uuid):
             stopped_uuids.append(uuid)
-            self.assertEqual(loop, self.loop)
 
         for worker in self.workers:
             worker.run = functools.partial(mock_run, worker.module.uuid)
             worker.stop = functools.partial(mock_stop, worker.module.uuid)
 
-        self.loop.run_until_complete(self.supervisor.start(self.loop))
-        self.loop.run_until_complete(self.supervisor.stop(self.loop))
+        self.loop.run_until_complete(self.supervisor.start())
+        self.loop.run_until_complete(self.supervisor.stop())
         # make sure each worker ran
         for worker in self.workers:
             self.assertTrue(worker.module.uuid in started_uuids)
@@ -61,7 +59,7 @@ class TestSupervisor(AsyncTestCase):
     def test_restarts_producers(self):
         restarted = False
 
-        async def mock_restart(_):
+        async def mock_restart():
             nonlocal restarted
             restarted = True
 
@@ -70,7 +68,7 @@ class TestSupervisor(AsyncTestCase):
         self.workers[0].restart = mock_restart
         with self.assertLogs(level="WARNING") as logs:
             self.loop.run_until_complete(
-                self.supervisor.restart_producer(s, self.loop, msg="test"))
+                self.supervisor.restart_producer(s, msg="test"))
         self.assertTrue('restarting' in ''.join(logs.output).lower())
         self.assertTrue(restarted)
         # check the worker logs
@@ -102,12 +100,14 @@ class TestSupervisor(AsyncTestCase):
             self.assertEqual(name, "http://remote:3000")
             return MockNode()
 
-        self.supervisor.get_node = get_mock_node
-        self.supervisor.subscribe(remote_stream, p1, self.loop)
-        self.supervisor.subscribe(remote_stream, p2, self.loop)
+        async def setup():
+            self.supervisor.get_node = get_mock_node
+            self.supervisor.subscribe(remote_stream, p1)
+            self.supervisor.subscribe(remote_stream, p2)
 
-        self.supervisor.task = asyncio.sleep(0)
-        self.loop.run_until_complete(self.supervisor.stop(self.loop))
+            self.supervisor.task = asyncio.sleep(0)
+        self.loop.run_until_complete(setup())
+        self.loop.run_until_complete(self.supervisor.stop())
 
         # make sure there is only one connection to the remote
         self.assertEqual(subscription_requests, 1)
@@ -126,7 +126,7 @@ class TestSupervisor(AsyncTestCase):
         module.outputs = {'output': remote_stream}
         worker = Worker(module)
 
-        async def mock_run(subscribe, loop):
+        async def mock_run(subscribe):
             await asyncio.sleep(0)
 
         worker.run = mock_run
@@ -153,12 +153,12 @@ class TestSupervisor(AsyncTestCase):
 
         supervisor = Supervisor([worker], [], get_mock_node)
 
-        self.loop.run_until_complete(supervisor.start(self.loop))
+        self.loop.run_until_complete(supervisor.start())
         self.supervisor.task = asyncio.sleep(0)
-        self.loop.run_until_complete(self.supervisor.stop(self.loop))
+        self.loop.run_until_complete(self.supervisor.stop())
 
         # pipe should be created
         self.assertTrue(output_requested)
         # worker should be producing data into the pipe
         self.assertEqual(1, len(worker.subscribers[remote_stream]))
-        self.loop.run_until_complete(supervisor.stop(self.loop))
+        self.loop.run_until_complete(supervisor.stop())

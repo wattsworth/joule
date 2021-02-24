@@ -28,7 +28,7 @@ BEGIN
     AND table_type='BASE TABLE' AND table_name LIKE base_name
     AND table_name NOT LIKE '%intervals' LOOP
 
-    EXECUTE 'SELECT total_bytes FROM hypertable_relation_size($1)'
+    EXECUTE 'SELECT total_bytes FROM hypertable_detailed_size($1)'
       INTO _table_size
       USING _table_name;
 

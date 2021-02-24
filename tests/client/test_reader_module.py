@@ -52,7 +52,7 @@ class TestReaderModule(helpers.AsyncTestCase):
         module = SimpleReader()
         (r, w) = os.pipe()
         loop = asyncio.get_event_loop()
-        rf = pipes.reader_factory(r, loop)
+        rf = pipes.reader_factory(r)
         pipe = pipes.InputPipe(name="output", stream=self.stream, reader_factory=rf)
         pipe_arg = json.dumps(json.dumps({"outputs": {'output': {'fd': w, 'id': None, 'layout': self.stream.layout}},
                                           "inputs": {}}))

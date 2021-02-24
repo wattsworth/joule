@@ -33,7 +33,7 @@ class CompositeAdder(joule.CompositeModule):
                             required=True,
                             help="JSON array, length must equal npaths")
         
-    async def setup(self, parsed_args, inputs, outputs, loop):
+    async def setup(self, parsed_args, inputs, outputs):
         npaths = parsed_args.npaths
         offsets = json.loads(parsed_args.offsets)
         tasks = []

@@ -13,11 +13,11 @@ class TestLocalPipe(helpers.AsyncTestCase):
         LAYOUT = "int8_2"
         LENGTH = 1003
         loop = asyncio.get_event_loop()
-        my_pipe = LocalPipe(LAYOUT, loop, name="pipe")
+        my_pipe = LocalPipe(LAYOUT, name="pipe")
         # test timeouts, since the writer is slow
         my_pipe.TIMEOUT_INTERVAL = 0.05
-        subscriber_pipe = LocalPipe(LAYOUT, loop)
-        subscriber_pipe2 = LocalPipe(LAYOUT, loop)
+        subscriber_pipe = LocalPipe(LAYOUT)
+        subscriber_pipe2 = LocalPipe(LAYOUT)
         my_pipe.subscribe(subscriber_pipe)
         my_pipe.subscribe(subscriber_pipe2)
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
@@ -77,7 +77,7 @@ class TestLocalPipe(helpers.AsyncTestCase):
         LENGTH = 500
         UNCONSUMED_ROWS = 4
         # test that the default event loop is used if loop is not specified
-        my_pipe = LocalPipe(LAYOUT, None)
+        my_pipe = LocalPipe(LAYOUT)
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
         #    print(test_data['data'][:,1])
         my_pipe.write_nowait(test_data)
@@ -100,8 +100,8 @@ class TestLocalPipe(helpers.AsyncTestCase):
         LAYOUT = "int8_2"
         LENGTH = 500
         loop = asyncio.get_event_loop()
-        my_pipe = LocalPipe(LAYOUT, loop)
-        my_subscriber = LocalPipe(LAYOUT, loop)
+        my_pipe = LocalPipe(LAYOUT)
+        my_subscriber = LocalPipe(LAYOUT)
         my_pipe.subscribe(my_subscriber)
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
         my_pipe.write_nowait(test_data)
@@ -119,7 +119,7 @@ class TestLocalPipe(helpers.AsyncTestCase):
     def test_invalid_write_nowait_inputs(self):
         LAYOUT = "int8_2"
         loop = asyncio.get_event_loop()
-        my_pipe = LocalPipe(LAYOUT, loop, name="testpipe")
+        my_pipe = LocalPipe(LAYOUT, name="testpipe")
         with self.assertLogs(level="INFO"):
             my_pipe.write_nowait(np.array([[]]))
         with self.assertRaises(PipeError):
@@ -128,7 +128,7 @@ class TestLocalPipe(helpers.AsyncTestCase):
     def test_different_format_writes(self):
         LAYOUT = "int8_2"
         loop = asyncio.get_event_loop()
-        my_pipe = LocalPipe(LAYOUT, loop, name="testpipe")
+        my_pipe = LocalPipe(LAYOUT, name="testpipe")
 
         test_data = helpers.create_data(LAYOUT, length=4, step=1, start=106)
 
@@ -165,8 +165,7 @@ class TestLocalPipe(helpers.AsyncTestCase):
         LAYOUT = "float32_2"
         LENGTH = 128
         CACHE_SIZE = 40
-        # test that the default event loop is used if loop is not specified
-        my_pipe = LocalPipe(LAYOUT, None)
+        my_pipe = LocalPipe(LAYOUT)
         my_pipe.enable_cache(CACHE_SIZE)
         test_data = helpers.create_data(LAYOUT, length=LENGTH, start=1, step=1)
 
@@ -208,7 +207,7 @@ class TestLocalPipe(helpers.AsyncTestCase):
         LAYOUT = "int8_2"
         LENGTH = 50
         loop = asyncio.get_event_loop()
-        my_pipe = LocalPipe(LAYOUT, loop)
+        my_pipe = LocalPipe(LAYOUT)
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
 
         async def writer():
@@ -227,8 +226,7 @@ class TestLocalPipe(helpers.AsyncTestCase):
     def test_nowait_read_does_not_block(self):
         LAYOUT = "int8_2"
         LENGTH = 50
-        loop = asyncio.get_event_loop()
-        my_pipe = LocalPipe(LAYOUT, loop)
+        my_pipe = LocalPipe(LAYOUT)
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
         my_pipe.write_nowait(test_data)
         self.assertEqual(len(my_pipe.read_nowait()), LENGTH)
@@ -245,7 +243,7 @@ class TestLocalPipe(helpers.AsyncTestCase):
            either flat or structured arrays depending on [flatten] parameter"""
         LAYOUT = "float64_1"
         LENGTH = 1000
-        my_pipe = LocalPipe(LAYOUT, loop=asyncio.get_event_loop())
+        my_pipe = LocalPipe(LAYOUT)
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
         flat_data = np.c_[test_data['timestamp'][:, None], test_data['data']]
 
@@ -267,7 +265,7 @@ class TestLocalPipe(helpers.AsyncTestCase):
     def test_raises_consume_errors(self):
         LAYOUT = "int32_3"
         LENGTH = 1000
-        my_pipe = LocalPipe(LAYOUT, loop=asyncio.get_event_loop())
+        my_pipe = LocalPipe(LAYOUT)
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
         my_pipe.write_nowait(test_data)
         read_data = my_pipe.read_nowait()
@@ -283,7 +281,7 @@ class TestLocalPipe(helpers.AsyncTestCase):
     def test_handles_interval_breaks(self):
         LAYOUT = "int32_3"
         LENGTH = 1000
-        my_pipe = LocalPipe(LAYOUT, loop=asyncio.get_event_loop(), name="pipe")
+        my_pipe = LocalPipe(LAYOUT, name="pipe")
         test_data1 = helpers.create_data(LAYOUT, length=LENGTH)
         test_data2 = helpers.create_data(LAYOUT, length=LENGTH)
         my_pipe.write_nowait(test_data1)

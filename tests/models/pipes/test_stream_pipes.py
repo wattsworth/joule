@@ -19,8 +19,8 @@ class TestStreamingPipes(helpers.AsyncTestCase):
         LENGTH = 1000
         (fd_r, fd_w) = os.pipe()
         loop = asyncio.get_event_loop()
-        npipe_in = InputPipe(layout=LAYOUT, reader_factory=reader_factory(fd_r, loop))
-        npipe_out = OutputPipe(layout=LAYOUT, writer_factory=writer_factory(fd_w, loop))
+        npipe_in = InputPipe(layout=LAYOUT, reader_factory=reader_factory(fd_r))
+        npipe_out = OutputPipe(layout=LAYOUT, writer_factory=writer_factory(fd_w))
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
 
         async def writer():
@@ -65,7 +65,7 @@ class TestStreamingPipes(helpers.AsyncTestCase):
         (fd_r, fd_w) = os.pipe()
         loop = asyncio.get_event_loop()
         # wrap the file descriptors in numpypipes
-        npipe_in = InputPipe(layout=LAYOUT, reader_factory=reader_factory(fd_r, loop))
+        npipe_in = InputPipe(layout=LAYOUT, reader_factory=reader_factory(fd_r))
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
 
         async def writer():
@@ -110,9 +110,9 @@ class TestStreamingPipes(helpers.AsyncTestCase):
         (fd_r, fd_w) = os.pipe()
         # wrap the file descriptors in numpypipes
         loop = asyncio.get_event_loop()
-        npipe_in = InputPipe(layout=LAYOUT, reader_factory=reader_factory(fd_r, loop),
+        npipe_in = InputPipe(layout=LAYOUT, reader_factory=reader_factory(fd_r),
                              buffer_size=BUFFER_SIZE)
-        npipe_out = OutputPipe(layout=LAYOUT, writer_factory=writer_factory(fd_w, loop))
+        npipe_out = OutputPipe(layout=LAYOUT, writer_factory=writer_factory(fd_w))
 
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
 
@@ -145,8 +145,8 @@ class TestStreamingPipes(helpers.AsyncTestCase):
         LENGTH = 100
         (fd_r, fd_w) = os.pipe()
         loop = asyncio.get_event_loop()
-        npipe_in = InputPipe(layout=LAYOUT, reader_factory=reader_factory(fd_r, loop))
-        npipe_out = OutputPipe(layout=LAYOUT, writer_factory=writer_factory(fd_w, loop))
+        npipe_in = InputPipe(layout=LAYOUT, reader_factory=reader_factory(fd_r))
+        npipe_out = OutputPipe(layout=LAYOUT, writer_factory=writer_factory(fd_w))
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
 
         # cannot consume more data than is in the pipe
@@ -175,9 +175,9 @@ class TestStreamingPipes(helpers.AsyncTestCase):
         CACHE_SIZE = 40
         (fd_r, fd_w) = os.pipe()
         loop = asyncio.get_event_loop()
-        npipe_in = InputPipe(layout=LAYOUT, reader_factory=reader_factory(fd_r, loop))
+        npipe_in = InputPipe(layout=LAYOUT, reader_factory=reader_factory(fd_r))
         npipe_in.TIMEOUT_INTERVAL = 2
-        npipe_out = OutputPipe(layout=LAYOUT, writer_factory=writer_factory(fd_w, loop))
+        npipe_out = OutputPipe(layout=LAYOUT, writer_factory=writer_factory(fd_w))
         npipe_out.enable_cache(CACHE_SIZE)
         test_data = helpers.create_data(LAYOUT, length=LENGTH, start=1, step=1)
 
@@ -227,14 +227,14 @@ class TestStreamingPipes(helpers.AsyncTestCase):
         output_cb = CoroutineMock()
         input_cb = CoroutineMock()
         subscriber_cb = CoroutineMock()
-        npipe_out = OutputPipe(layout=LAYOUT, writer_factory=writer_factory(fd_w, loop),
+        npipe_out = OutputPipe(layout=LAYOUT, writer_factory=writer_factory(fd_w),
                                close_cb=output_cb)
         subscriber = LocalPipe(layout=LAYOUT, close_cb=subscriber_cb)
         npipe_out.subscribe(subscriber)
         test_data = helpers.create_data(LAYOUT)
         loop.run_until_complete(npipe_out.write(test_data))
         # data should be available on the InputPipe side
-        npipe_in = InputPipe(layout=LAYOUT, reader_factory=reader_factory(fd_r, loop),
+        npipe_in = InputPipe(layout=LAYOUT, reader_factory=reader_factory(fd_r),
                              close_cb=input_cb)
         rx_data = loop.run_until_complete(npipe_in.read())
         np.testing.assert_array_equal(test_data, rx_data)

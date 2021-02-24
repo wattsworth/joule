@@ -32,7 +32,7 @@ class Inserter:
         self.decimator = None
         self.retry_interval = retry_interval
 
-    async def run(self, pipe: pipes.Pipe, loop: Loop) -> None:
+    async def run(self, pipe: pipes.Pipe) -> None:
         """insert stream data from the queue until the queue is empty"""
         # create the database path
         # lazy stream creation,
@@ -43,7 +43,7 @@ class Inserter:
 
         cleaner_task: asyncio.Task = None
         if self.stream.keep_us != Stream.KEEP_ALL:
-            cleaner_task = loop.create_task(self._clean())
+            cleaner_task = asyncio.create_task(self._clean())
 
         while True:
             try:

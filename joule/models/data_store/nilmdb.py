@@ -23,16 +23,15 @@ class PathNotFound(Exception):
 
 class NilmdbStore(DataStore):
 
-    def __init__(self, server: str, insert_period: float, cleanup_period: float, loop: Loop):
+    def __init__(self, server: str, insert_period: float, cleanup_period: float):
         self.server = server
         self.decimation_factor = 4
         self.insert_period = insert_period
         self.cleanup_period = cleanup_period
-        self.loop = loop
         self.connector = None
 
     async def initialize(self, streams: List[Stream]) -> None:
-        self.connector = aiohttp.TCPConnector(loop=self.loop)
+        self.connector = aiohttp.TCPConnector()
         url = "{server}/stream/create".format(server=self.server)
         try:
             async with self._get_client() as session:
@@ -62,13 +61,13 @@ class NilmdbStore(DataStore):
                     raise errors.DataError(await resp.text())  # pragma: no cover
 
     async def spawn_inserter(self, stream: Stream,
-                             pipe: pipes.Pipe, loop: Loop, insert_period=None, retry_interval=0.5) -> asyncio.Task:
+                             pipe: pipes.Pipe, insert_period=None, retry_interval=0.5) -> asyncio.Task:
         if insert_period is None:
             insert_period = self.insert_period
         inserter = Inserter(self.server, stream,
                             insert_period, self.cleanup_period, self._get_client,
                             retry_interval=retry_interval)
-        return loop.create_task(inserter.run(pipe, loop))
+        return asyncio.create_task(inserter.run(pipe))
 
     async def extract(self, stream: Stream, start: Optional[int], end: Optional[int],
                       callback: Callable[[np.ndarray, str, int], Coroutine], max_rows: int = None,
@@ -329,8 +328,7 @@ class NilmdbStore(DataStore):
                 return info
 
     def _get_client(self):
-        return aiohttp.ClientSession(connector=self.connector,
-                                     loop=self.loop, connector_owner=False)
+        return aiohttp.ClientSession(connector=self.connector, connector_owner=False)
 
     async def close(self):
         if self.connector is not None:

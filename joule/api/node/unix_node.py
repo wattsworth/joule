@@ -8,13 +8,10 @@ from joule.api.session import UnixSession
 
 class UnixNode(BaseNode):
 
-    def __init__(self, name: str, path: str, cafile: str = "",
-                 loop: Optional[AbstractEventLoop] = None):
+    def __init__(self, name: str, path: str, cafile: str = ""):
         self._path = path
         session = UnixSession(path, cafile)
-        if loop is None:
-            loop = get_event_loop()
-        super().__init__(name, session, loop)
+        super().__init__(name, session)
         self.url = "http://joule.localhost"
 
     def __repr__(self):

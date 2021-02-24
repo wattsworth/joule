@@ -90,14 +90,12 @@ def set_default_node(node: Union[str, BaseNode]) -> None:
         f.write(name + "\n")
 
 
-def create_tcp_node(url: str, key: str, name: str = "node",
-                    loop: AbstractEventLoop = None) -> TcpNode:
-    return TcpNode(name, url, key, _get_cafile(), loop)
+def create_tcp_node(url: str, key: str, name: str = "node") -> TcpNode:
+    return TcpNode(name, url, key, _get_cafile())
 
 
-def create_unix_node(path: str, name: str = "node",
-                     loop: AbstractEventLoop = None) -> BaseNode:
-    return UnixNode(name, path, loop)
+def create_unix_node(path: str, name: str = "node") -> BaseNode:
+    return UnixNode(name, path)
 
 
 def _get_cafile():

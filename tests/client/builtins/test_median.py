@@ -2,7 +2,6 @@ from joule import LocalPipe
 import unittest
 import asyncio
 import numpy as np
-import numpy.matlib
 import argparse
 
 from tests import helpers
@@ -24,15 +23,15 @@ class TestMedianFilter(helpers.AsyncTestCase):
         my_filter = MedianFilter()
         loop = asyncio.get_event_loop()
 
-        pipe_in = LocalPipe("float32_%d" % WIDTH, loop, name="input")
-        pipe_out = LocalPipe("float32_%d" % WIDTH, loop, name="output")
+        pipe_in = LocalPipe("float32_%d" % WIDTH, name="input")
+        pipe_out = LocalPipe("float32_%d" % WIDTH, name="output")
         args = argparse.Namespace(window=WINDOW, pipes="unset")
         base = np.array([np.arange(x, WINDOW + x) for x in range(WIDTH)]).T
 
         async def writer():
             prev_ts = 0
             for block in range(NUM_BLOCKS):
-                data = numpy.matlib.repmat(base, REPS_PER_BLOCK, 1)
+                data = np.tile(base, (REPS_PER_BLOCK, 1))
                 ts = np.arange(prev_ts, prev_ts + len(data))
                 input_block = np.hstack((ts[:, None], data))
                 pipe_in.write_nowait(input_block)

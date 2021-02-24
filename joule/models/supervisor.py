@@ -35,17 +35,17 @@ class Supervisor:
     def proxies(self) -> List[Proxy]:
         return self._proxies
 
-    async def start(self, loop: Loop):
+    async def start(self):
         # returns a co-routine
         tasks: Tasks = []
         for worker in self._workers:
-            await self._connect_remote_outputs(worker, loop)
-            tasks.append(loop.create_task(worker.run(self.subscribe, loop)))
-        self.task = asyncio.gather(*tasks, loop=loop)
+            await self._connect_remote_outputs(worker)
+            tasks.append(asyncio.create_task(worker.run(self.subscribe)))
+        self.task = asyncio.gather(*tasks)
 
-    async def stop(self, loop: Loop):
+    async def stop(self):
         for worker in self._workers:
-            await worker.stop(loop)
+            await worker.stop()
         try:
             await self.task
         except Exception as e:
@@ -58,19 +58,19 @@ class Supervisor:
                 log.warning("Supervisor remote i/o shutdown exception: %s " % str(e))
                 raise e
 
-    async def restart_producer(self, stream: Stream, loop: Loop, msg=""):
+    async def restart_producer(self, stream: Stream, msg=""):
         # find the worker who produces this stream
         for worker in self._workers:
             if worker.produces(stream):
                 if msg is not None:
                     log.warning("Restarting module [%s]: %s" % (worker.name, msg))
                     worker.log("[Supervisor Restarting Module: %s]" % msg)
-                await worker.restart(loop)
+                await worker.restart()
 
-    def subscribe(self, stream: Stream, pipe: pipes.Pipe, loop: Loop) -> Callable:
+    def subscribe(self, stream: Stream, pipe: pipes.Pipe) -> Callable:
         # if the stream is remote, connect to it
         if stream.is_remote:
-            return self._connect_remote_input(stream, pipe, loop)
+            return self._connect_remote_input(stream, pipe)
         # otherwise find a worker producing it
         for worker in self._workers:
             try:
@@ -92,7 +92,7 @@ class Supervisor:
                 return p.url
         return None
 
-    async def _connect_remote_outputs(self, worker: Worker, loop: Loop):
+    async def _connect_remote_outputs(self, worker: Worker):
         """ Provide a pipe to the worker for each remote stream, spawn a
             task that reads from the worker's pipe and writes out to a remote
             network pipe, if the remote network pipe goes down or is not available,
@@ -100,13 +100,13 @@ class Supervisor:
         """
         remote_streams = [stream for stream in worker.subscribers if stream.is_remote]
         for stream in remote_streams:
-            src_pipe = pipes.LocalPipe(stream.layout, loop, stream=stream)
+            src_pipe = pipes.LocalPipe(stream.layout, stream=stream)
             # ignore unsubscribe cb, not used
             worker.subscribe(stream, src_pipe)
-            task = loop.create_task(self._handle_remote_output(src_pipe, stream, loop))
+            task = asyncio.create_task(self._handle_remote_output(src_pipe, stream))
             self.remote_tasks.append(task)
 
-    async def _handle_remote_output(self, src_pipe: pipes.Pipe, dest_stream: Stream, loop: Loop):
+    async def _handle_remote_output(self, src_pipe: pipes.Pipe, dest_stream: Stream):
         """
         Continuously tries to make a connection to dest_stream and write src_pipe's data to it
         """
@@ -135,7 +135,7 @@ class Supervisor:
                 await dest_pipe.close()
             await node.close()
 
-    def _connect_remote_input(self, stream: Stream, pipe: pipes.Pipe, loop: Loop):
+    def _connect_remote_input(self, stream: Stream, pipe: pipes.Pipe):
         """
         Spawn a task that maintains a connection with [stream] and provides the data to [pipe]
         """
@@ -144,12 +144,12 @@ class Supervisor:
             return self.remote_inputs[stream].subscribe(pipe)
 
         # this is the first subscriber, spawn an input task to feed the pipe
-        task = loop.create_task(self._handle_remote_input(stream, pipe, loop))
+        task = asyncio.create_task(self._handle_remote_input(stream, pipe))
 
         self.remote_inputs[stream] = pipe
         self.remote_tasks.append(task)
 
-    async def _handle_remote_input(self, src_stream: Stream, dest_pipe: pipes.Pipe, loop: Loop):
+    async def _handle_remote_input(self, src_stream: Stream, dest_pipe: pipes.Pipe):
         """
         Continuously tries to make a connection to src_stream and write its data to dest_pipe
         """

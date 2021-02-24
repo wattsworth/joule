@@ -48,12 +48,12 @@ class FilterModule(base_module.BaseModule):
         """
         assert False, "implement in child class"  # pragma: no cover
 
-    async def run_as_task(self, parsed_args, app, loop) -> asyncio.Task:
+    async def run_as_task(self, parsed_args, app) -> asyncio.Task:
         try:
             (pipes_in, pipes_out) = await self._build_pipes(parsed_args)
         except errors.ApiError as e:
             logging.error(str(e))
-            return loop.create_task(asyncio.sleep(0))
+            return asyncio.create_task(asyncio.sleep(0))
         await self.setup(parsed_args, app, pipes_in, pipes_out)
-        return loop.create_task(
+        return asyncio.create_task(
             self.run(parsed_args, pipes_in, pipes_out))
