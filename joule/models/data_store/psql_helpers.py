@@ -7,7 +7,7 @@ from typing import List, Optional, Tuple
 import logging
 
 from joule.errors import DataError
-from joule.models.stream import Stream
+from joule.models.data_stream import DataStream
 import joule.utilities
 
 log = logging.getLogger('joule')
@@ -101,7 +101,7 @@ def query_time_bounds(start, end):
         return ''
 
 
-async def create_stream_table(conn: asyncpg.Connection, stream: Stream):
+async def create_stream_table(conn: asyncpg.Connection, stream: DataStream):
     n_elems = len(stream.elements)
     # create the main table
     col_type = get_psql_type(stream.datatype)
@@ -119,7 +119,7 @@ async def create_stream_table(conn: asyncpg.Connection, stream: Stream):
     await conn.execute(sql)
 
 
-async def create_decimation_table(conn: asyncpg.Connection, stream: Stream, level: int):
+async def create_decimation_table(conn: asyncpg.Connection, stream: DataStream, level: int):
     n_elems = len(stream.elements)
     table_name = 'data.stream%d_%d' % (stream.id, level)
     # create decimation table (just a template)
@@ -135,22 +135,22 @@ async def create_decimation_table(conn: asyncpg.Connection, stream: Stream, leve
     await conn.execute(sql)
 
 
-def get_psql_type(x: Stream.DATATYPE):
-    if x == Stream.DATATYPE.FLOAT32:
+def get_psql_type(x: DataStream.DATATYPE):
+    if x == DataStream.DATATYPE.FLOAT32:
         return 'real'
-    elif x == Stream.DATATYPE.FLOAT64:
+    elif x == DataStream.DATATYPE.FLOAT64:
         return 'double precision'
-    elif x == Stream.DATATYPE.INT16:
+    elif x == DataStream.DATATYPE.INT16:
         return 'smallint'
-    elif x == Stream.DATATYPE.INT32:
+    elif x == DataStream.DATATYPE.INT32:
         return 'integer'
-    elif x == Stream.DATATYPE.INT64:
+    elif x == DataStream.DATATYPE.INT64:
         return 'bigint'
     else:
         raise DataError("Invalid type [%r] for timescale backend" % x)
 
 
-async def get_row_count(conn: asyncpg.Connection, stream: Stream,
+async def get_row_count(conn: asyncpg.Connection, stream: DataStream,
                         start=None, end=None):
     # hyper table approximate row count is not sensitive to data removal
     # always use the custom function
@@ -169,7 +169,7 @@ async def get_row_count(conn: asyncpg.Connection, stream: Stream,
     return nrows
 
 
-async def close_interval(conn: asyncpg.Connection, stream: Stream, ts: int):
+async def close_interval(conn: asyncpg.Connection, stream: DataStream, ts: int):
     # place a boundary 1us *after* ts
     base_table = "data.stream%d" % stream.id
     interval_table = "data.stream%d_intervals" % stream.id
@@ -192,7 +192,7 @@ async def close_interval(conn: asyncpg.Connection, stream: Stream, ts: int):
         await conn.execute(query, last_ts + datetime.timedelta(microseconds=1))
 
 
-async def get_table_names(conn: asyncpg.Connection, stream: Stream, with_schema=True) -> List[str]:
+async def get_table_names(conn: asyncpg.Connection, stream: DataStream, with_schema=True) -> List[str]:
     query = r'''select table_name from information_schema.tables 
                where table_schema='data' 
                and table_type='BASE TABLE' 
@@ -216,7 +216,7 @@ async def get_all_table_names(conn: asyncpg.Connection, with_schema=True) -> Lis
         return [r['table_name'] for r in records]
 
 
-async def get_boundaries(conn: asyncpg.Connection, stream: Stream,
+async def get_boundaries(conn: asyncpg.Connection, stream: DataStream,
                          start: Optional[int], end: Optional[int]) -> List[datetime.datetime]:
     """
     Return a list of data boundaries including the start and end of the data
@@ -237,7 +237,7 @@ async def get_boundaries(conn: asyncpg.Connection, stream: Stream,
 
 
 async def convert_time_bounds(conn: asyncpg.Connection,
-                              stream: Stream,
+                              stream: DataStream,
                               start: Optional[int], end: Optional[int]) -> Optional[
     Tuple[datetime.datetime, datetime.datetime]]:
     """
@@ -275,7 +275,7 @@ async def convert_time_bounds(conn: asyncpg.Connection,
 
 
 async def limit_time_bounds(conn: asyncpg.Connection,
-                            stream: Stream,
+                            stream: DataStream,
                             start: Optional[int], end: Optional[int]) -> Tuple[Optional[int], Optional[int]]:
     data_bounds = await convert_time_bounds(conn, stream, None, None)
     if data_bounds is None:

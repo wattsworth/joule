@@ -65,7 +65,7 @@ def from_json(json) -> Annotation:
 
 async def annotation_create(session: BaseSession,
                             annotation: Annotation,
-                            stream: Union[int, str, 'Stream'], ) -> Annotation:
+                            stream: Union[int, str, 'DataStream'], ) -> Annotation:
     from .stream import Stream
 
     data = {"title": annotation.title,
@@ -79,7 +79,7 @@ async def annotation_create(session: BaseSession,
     elif type(stream) is str:
         data["stream_path"] = stream
     else:
-        raise errors.ApiError("Invalid stream datatype. Must be Stream, Path, or ID")
+        raise errors.ApiError("Invalid stream datatype. Must be DataStream, Path, or ID")
 
     json = await session.post("/annotation.json", json=data)
     return from_json(json)
@@ -107,7 +107,7 @@ async def annotation_update(session: BaseSession,
 
 
 async def annotation_get(session: BaseSession,
-                         stream: Union['Stream', str, int],
+                         stream: Union['DataStream', str, int],
                          start: Optional[int],
                          end: Optional[int]) -> List[Annotation]:
     from .stream import Stream
@@ -125,7 +125,7 @@ async def annotation_get(session: BaseSession,
     elif type(stream) is str:
         data["stream_path"] = stream
     else:
-        raise errors.ApiError("Invalid stream datatype. Must be Stream, Path, or ID")
+        raise errors.ApiError("Invalid stream datatype. Must be DataStream, Path, or ID")
 
     json = await session.get("/annotations.json", data)
 

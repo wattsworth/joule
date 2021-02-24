@@ -1,7 +1,7 @@
 
 from tests import helpers
 from joule.services import parse_pipe_config
-from joule.models import Stream, folder, Folder
+from joule.models import DataStream, folder, Folder
 from joule.errors import ConfigurationError
 
 
@@ -14,7 +14,7 @@ class TestFolder(helpers.DbTestCase):
         self.assertEqual("/very/long/path/to/stream", path)
 
         # stream outside the database has no path
-        stream = Stream(name="all alone")
+        stream = DataStream(name="all alone")
         self.assertIsNone(folder.get_stream_path(stream))
 
     def test_find_or_create(self):

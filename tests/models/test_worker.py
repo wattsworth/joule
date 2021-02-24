@@ -15,7 +15,7 @@ from unittest.mock import Mock
 from contextlib import contextmanager
 import warnings
 
-from joule.models import Module, Stream, Worker, Element
+from joule.models import Module, DataStream, Worker, Element
 from joule.models.supervisor import Supervisor
 from joule.models.worker import DataConnection
 from joule.models import pipes
@@ -44,8 +44,8 @@ class TestWorker(unittest.TestCase):
         logging.getLogger('asyncio').setLevel(logging.DEBUG)
         asyncio.set_event_loop(self.loop)
         # generic float32_4 streams
-        streams = [Stream(name="str%d" % n, datatype=Stream.DATATYPE.FLOAT32,
-                          elements=[Element(name="e%d" % j, index=j,
+        streams = [DataStream(name="str%d" % n, datatype=DataStream.DATATYPE.FLOAT32,
+                              elements=[Element(name="e%d" % j, index=j,
                                             display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(3)]) for n in
                    range(5)]  # 5th stream is not produced
         self.streams = streams

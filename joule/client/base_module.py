@@ -14,7 +14,7 @@ from joule import api
 from joule.client import helpers
 # import directly so it can be mocked easily in unit tests
 from joule.errors import ConfigurationError, EmptyPipeError
-from joule.models import pipes, stream
+from joule.models import pipes, data_stream
 
 Pipes = Dict[str, 'pipes.Pipe']
 Loop = asyncio.AbstractEventLoop

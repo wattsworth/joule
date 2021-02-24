@@ -34,8 +34,7 @@ class FakeStream:
 
 class FakeNilmdb:
 
-    def __init__(self, loop):
-        self.loop = loop
+    def __init__(self):
         self.app = web.Application()
         self.app.router.add_routes(
             [web.get('/', self.info),

@@ -11,7 +11,7 @@ from unittest import mock
 from typing import Optional, Callable, Coroutine
 
 from joule.models.data_store.errors import DataError, InsufficientDecimationError
-from joule.models import (Base, DataStore, Stream,
+from joule.models import (Base, DataStore, DataStream,
                           StreamInfo, DbInfo, pipes,
                           worker)
 from joule.errors import SubscriptionError
@@ -54,21 +54,20 @@ class MockStore(DataStore):
         self.destroyed_stream_id = None
         self.raise_data_error = False
 
-    async def initialize(self, streams: List[Stream]):
+    async def initialize(self, streams: List[DataStream]):
         pass
 
-    async def insert(self, stream: Stream,
+    async def insert(self, stream: DataStream,
                      data: np.ndarray, start: int, end: int):
         pass
 
-    async def spawn_inserter(self, stream: Stream, pipe: pipes.InputPipe,
-                       loop: Loop, insert_period=None) -> asyncio.Task:
+    async def spawn_inserter(self, stream: DataStream, pipe: pipes.InputPipe, insert_period=None) -> asyncio.Task:
         async def task():
             if self.raise_data_error:
                 raise DataError("test error")
             self.inserted_data = True
 
-        return loop.create_task(task())
+        return asyncio.create_task(task())
 
     def configure_extract(self, nchunks, nintervals=1,
                           decimation_error=False,
@@ -80,7 +79,7 @@ class MockStore(DataStore):
         self.raise_data_error = data_error
         self.no_data = no_data
 
-    async def extract(self, stream: Stream, start: Optional[int], end: Optional[int],
+    async def extract(self, stream: DataStream, start: Optional[int], end: Optional[int],
                       callback: Callable[[np.ndarray, str, bool], Coroutine],
                       max_rows: int = None, decimation_level=1):
         if self.no_data:
@@ -100,7 +99,7 @@ class MockStore(DataStore):
             if i < (self.nintervals - 1):
                 await callback(pipes.interval_token(layout), layout, decimation_level)
 
-    async def intervals(self, stream: 'Stream', start: Optional[int], end: Optional[int]):
+    async def intervals(self, stream: 'DataStream', start: Optional[int], end: Optional[int]):
         if start is None:
             if end is None:
                 # just a random set of intervals
@@ -113,16 +112,16 @@ class MockStore(DataStore):
             else:
                 return [[start, end]]
 
-    async def remove(self, stream: Stream, start: Optional[int], end: Optional[int]):
+    async def remove(self, stream: DataStream, start: Optional[int], end: Optional[int]):
         self.removed_data_bounds = (start, end)
 
-    async def destroy(self, stream: Stream):
+    async def destroy(self, stream: DataStream):
         self.destroyed_stream_id = stream.id
 
     async def destroy_all(self):
         raise Exception("not implemented!")
 
-    async def info(self, streams: List[Stream]) -> Dict[int, StreamInfo]:
+    async def info(self, streams: List[DataStream]) -> Dict[int, StreamInfo]:
         info_dict = {}
         for s in streams:
             if s in self.stream_info:
@@ -132,14 +131,14 @@ class MockStore(DataStore):
     async def dbinfo(self) -> DbInfo:
         return DbInfo('/file/path', 0, 0, 0, 0)
 
-    async def consolidate(self, stream: 'Stream', start: Optional[int], end: Optional[int], max_gap: int) -> int:
+    async def consolidate(self, stream: 'DataStream', start: Optional[int], end: Optional[int], max_gap: int) -> int:
         return 0
 
     def close(self):
         pass
 
     # -- special mock tools --
-    def set_info(self, stream: Stream, info: StreamInfo):
+    def set_info(self, stream: DataStream, info: StreamInfo):
         self.stream_info[stream] = info
 
 
@@ -178,7 +177,7 @@ class MockSupervisor:
     def unsubscribe(self):
         self.unsubscribe_calls += 1
 
-    def subscribe(self, stream: Stream, pipe: pipes.LocalPipe, loop: Loop):
+    def subscribe(self, stream: DataStream, pipe: pipes.LocalPipe):
         if self.raise_error:
             raise SubscriptionError()
 

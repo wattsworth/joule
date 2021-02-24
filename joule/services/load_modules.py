@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from typing import List, Dict, TYPE_CHECKING
 import logging
 
-from joule.models import (Module, Stream)
+from joule.models import (Module, DataStream)
 from joule.errors import ConfigurationError
 from joule.models.module import from_config as module_from_config
 
@@ -17,7 +17,7 @@ logger = logging.getLogger('joule')
 
 # types
 Modules = List[Module]
-StreamConnections = Dict[str, Stream]
+StreamConnections = Dict[str, DataStream]
 
 
 def run(path: str, db: Session) -> Modules:

@@ -3,7 +3,7 @@ from aiohttp import web
 import aiohttp
 from sqlalchemy.orm import Session
 
-from joule.models import folder, Stream, Folder, Element, StreamInfo
+from joule.models import folder, DataStream, Folder, Element, StreamInfo
 import joule.controllers
 from tests.controllers.helpers import create_db, MockStore
 
@@ -25,7 +25,7 @@ class TestStreamController(AioHTTPTestCase):
     @unittest_run_loop
     async def test_stream_list(self):
         db: Session = self.app["db"]
-        my_stream: Stream = db.query(Stream).filter_by(name="stream1").one()
+        my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
         store: MockStore = self.app["data-store"]
         mock_info = StreamInfo(start=0, end=100, rows=200)
         store.set_info(my_stream, mock_info)
@@ -39,7 +39,7 @@ class TestStreamController(AioHTTPTestCase):
     @unittest_run_loop
     async def test_stream_info(self):
         db: Session = self.app["db"]
-        my_stream: Stream = db.query(Stream).filter_by(name="stream1").one()
+        my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
         store: MockStore = self.app["data-store"]
         mock_info = StreamInfo(start=0, end=100, rows=200)
         store.set_info(my_stream, mock_info)
@@ -86,7 +86,7 @@ class TestStreamController(AioHTTPTestCase):
     @unittest_run_loop
     async def test_stream_create(self):
         db: Session = self.app["db"]
-        new_stream = Stream(name="test", datatype=Stream.DATATYPE.FLOAT32)
+        new_stream = DataStream(name="test", datatype=DataStream.DATATYPE.FLOAT32)
         new_stream.elements = [Element(name="e%d" % j, index=j,
                                        display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(3)]
         payload = {
@@ -97,7 +97,7 @@ class TestStreamController(AioHTTPTestCase):
 
         self.assertEqual(resp.status, 200)
         # check the stream was created correctly
-        created_stream: Stream = db.query(Stream).filter_by(name="test").one()
+        created_stream: DataStream = db.query(DataStream).filter_by(name="test").one()
         self.assertEqual(len(created_stream.elements), len(new_stream.elements))
         self.assertEqual(created_stream.folder.name, "new folder")
 
@@ -112,14 +112,14 @@ class TestStreamController(AioHTTPTestCase):
 
         self.assertEqual(resp.status, 200)
         # check the stream was created correctly
-        created_stream: Stream = db.query(Stream).filter_by(name="test2").one()
+        created_stream: DataStream = db.query(DataStream).filter_by(name="test2").one()
         self.assertEqual(len(created_stream.elements), len(new_stream.elements))
         self.assertEqual(created_stream.folder.name, "folder1")
 
     @unittest_run_loop
     async def test_stream_delete_by_path(self):
         db: Session = self.app["db"]
-        my_stream: Stream = db.query(Stream).filter_by(name="stream1").one()
+        my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
         store: MockStore = self.app["data-store"]
         payload = {'path': "/folder1/stream1"}
         resp = await self.client.delete("/stream.json", params=payload)
@@ -127,12 +127,12 @@ class TestStreamController(AioHTTPTestCase):
         # make sure it was removed from the data store
         self.assertEqual(store.destroyed_stream_id, my_stream.id)
         # and the metadata
-        self.assertEqual(0, db.query(Stream).filter_by(name="stream1").count())
+        self.assertEqual(0, db.query(DataStream).filter_by(name="stream1").count())
 
     @unittest_run_loop
     async def test_stream_delete_by_id(self):
         db: Session = self.app["db"]
-        my_stream: Stream = db.query(Stream).filter_by(name="stream1").one()
+        my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
         store: MockStore = self.app["data-store"]
         payload = {'id': my_stream.id}
         resp = await self.client.delete("/stream.json", params=payload)
@@ -140,12 +140,12 @@ class TestStreamController(AioHTTPTestCase):
         # make sure it was removed from the data store
         self.assertEqual(store.destroyed_stream_id, my_stream.id)
         # and the metadata
-        self.assertEqual(0, db.query(Stream).filter_by(name="stream1").count())
+        self.assertEqual(0, db.query(DataStream).filter_by(name="stream1").count())
 
     @unittest_run_loop
     async def test_stream_update(self):
         db: Session = self.app["db"]
-        my_stream: Stream = db.query(Stream).filter_by(name="stream1").one()
+        my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
         # change the stream name
         payload = {
             "id": my_stream.id,
@@ -153,5 +153,5 @@ class TestStreamController(AioHTTPTestCase):
         }
         resp = await self.client.put("/stream.json", json=payload)
         self.assertEqual(resp.status, 200)
-        my_stream: Stream = db.query(Stream).get(my_stream.id)
+        my_stream: DataStream = db.query(DataStream).get(my_stream.id)
         self.assertEqual("new name", my_stream.name)

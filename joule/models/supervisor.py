@@ -4,7 +4,7 @@ import yarl
 import logging
 from sqlalchemy import orm
 
-from joule.models import Worker, Stream, Proxy, Follower, pipes
+from joule.models import Worker, DataStream, Proxy, Follower, pipes
 from joule.errors import SubscriptionError, ConfigurationError, ApiError
 
 from joule.api import BaseNode
@@ -23,7 +23,7 @@ class Supervisor:
         self.get_node = get_node
         self.task: asyncio.Task = None
         self.remote_tasks: List[asyncio.Task] = []
-        self.remote_inputs: Dict[Stream, pipes.Pipe] = {}
+        self.remote_inputs: Dict[DataStream, pipes.Pipe] = {}
 
         self.REMOTE_HANDLER_RESTART_INTERVAL = 5
 
@@ -58,7 +58,7 @@ class Supervisor:
                 log.warning("Supervisor remote i/o shutdown exception: %s " % str(e))
                 raise e
 
-    async def restart_producer(self, stream: Stream, msg=""):
+    async def restart_producer(self, stream: DataStream, msg=""):
         # find the worker who produces this stream
         for worker in self._workers:
             if worker.produces(stream):
@@ -67,7 +67,7 @@ class Supervisor:
                     worker.log("[Supervisor Restarting Module: %s]" % msg)
                 await worker.restart()
 
-    def subscribe(self, stream: Stream, pipe: pipes.Pipe) -> Callable:
+    def subscribe(self, stream: DataStream, pipe: pipes.Pipe) -> Callable:
         # if the stream is remote, connect to it
         if stream.is_remote:
             return self._connect_remote_input(stream, pipe)
@@ -106,7 +106,7 @@ class Supervisor:
             task = asyncio.create_task(self._handle_remote_output(src_pipe, stream))
             self.remote_tasks.append(task)
 
-    async def _handle_remote_output(self, src_pipe: pipes.Pipe, dest_stream: Stream):
+    async def _handle_remote_output(self, src_pipe: pipes.Pipe, dest_stream: DataStream):
         """
         Continuously tries to make a connection to dest_stream and write src_pipe's data to it
         """
@@ -135,7 +135,7 @@ class Supervisor:
                 await dest_pipe.close()
             await node.close()
 
-    def _connect_remote_input(self, stream: Stream, pipe: pipes.Pipe):
+    def _connect_remote_input(self, stream: DataStream, pipe: pipes.Pipe):
         """
         Spawn a task that maintains a connection with [stream] and provides the data to [pipe]
         """
@@ -149,7 +149,7 @@ class Supervisor:
         self.remote_inputs[stream] = pipe
         self.remote_tasks.append(task)
 
-    async def _handle_remote_input(self, src_stream: Stream, dest_pipe: pipes.Pipe):
+    async def _handle_remote_input(self, src_stream: DataStream, dest_pipe: pipes.Pipe):
         """
         Continuously tries to make a connection to src_stream and write its data to dest_pipe
         """

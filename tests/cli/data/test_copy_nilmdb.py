@@ -14,7 +14,7 @@ import unittest
 from ..fake_joule import FakeJoule, FakeJouleTestCase
 from tests.models.data_store.fake_nilmdb import FakeNilmdb, FakeStream
 from joule.cli import main
-from joule.models import Stream, Element, StreamInfo
+from joule.models import DataStream, Element, StreamInfo
 from tests import helpers
 
 warnings.simplefilter('always')
@@ -50,7 +50,7 @@ class TestDataCopyWithNilmDb(FakeJouleTestCase):
     def _run_nilmdb(self, port, msgs):
 
         loop = asyncio.new_event_loop()
-        server = FakeNilmdb(loop)
+        server = FakeNilmdb()
         # create an empty stream
         server.streams['/existing/float32_3'] = FakeStream(
             layout='float32_3', start=0, end=0, rows=0)
@@ -69,7 +69,7 @@ class TestDataCopyWithNilmDb(FakeJouleTestCase):
         # create the source and destination streams
         src_data = create_source_data(source_server)  # helpers.create_data(src.layout)
 
-        src_stream = Stream(id=1, name="dest", keep_us=100, datatype=Stream.DATATYPE.FLOAT32)
+        src_stream = DataStream(id=1, name="dest", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32)
         src_stream.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in
                                range(3)]
         source_server.add_stream('/test/destination', src_stream, StreamInfo(None, None, 0), None)
@@ -97,7 +97,7 @@ class TestDataCopyWithNilmDb(FakeJouleTestCase):
         # create just the source stream
         src_data = create_source_data(source_server)  # helpers.create_data(src.layout)
 
-        src_stream = Stream(id=1, name="dest", keep_us=100, datatype=Stream.DATATYPE.FLOAT32)
+        src_stream = DataStream(id=1, name="dest", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32)
         src_stream.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in
                                range(3)]
         source_server.add_stream('/test/destination', src_stream, StreamInfo(None, None, 0), None)
@@ -156,7 +156,7 @@ def _print_result_on_error(result):
 
 def create_source_data(server):
     # create the source stream
-    src = Stream(id=0, name="source", keep_us=100, datatype=Stream.DATATYPE.FLOAT32)
+    src = DataStream(id=0, name="source", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32)
     src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
 
     # source has 100 rows of data

@@ -17,12 +17,12 @@ if TYPE_CHECKING:
     from joule.models import (Folder)  # pragma: no cover
 
 
-class Stream(Base):
+class DataStream(Base):
     """
     Attributes:
         name (str): stream name
         description (str): stream description
-        datatype (Stream.DATATYPE): data representation on disk see :ref:`sec-streams`
+        datatype (DataStream.DATATYPE): data representation on disk see :ref:`sec-streams`
         decimate (bool): whether to store decimated data for stream visualization
         folder (joule.Folder): parent Folder
         elements (List[joule.Element]): array of stream elements
@@ -69,7 +69,7 @@ class Stream(Base):
                                                             cascade="all, delete-orphan",
                                                             back_populates="stream")
 
-    def merge_configs(self, other: 'Stream') -> None:
+    def merge_configs(self, other: 'DataStream') -> None:
         # replace configurable attributes with other's values
         self.keep_us = other.keep_us
         self.decimate = other.decimate
@@ -93,10 +93,10 @@ class Stream(Base):
                 e.update_attributes(element_configs[e.index])
 
     def __str__(self):
-        return "Stream [{name}]".format(name=self.name)
+        return "DataStream [{name}]".format(name=self.name)
 
     def __repr__(self):
-        return "<Stream(id=%r, name='%s', datatype=%r)>" % (
+        return "<DataStream(id=%r, name='%s', datatype=%r)>" % (
             self.id, self.name, self.datatype)
 
     @property
@@ -175,7 +175,7 @@ class Stream(Base):
           Args:
             info: optional content added to ``data_info`` field
 
-        Returns: Dictionary of Stream attributes
+        Returns: Dictionary of DataStream attributes
 
         """
 
@@ -210,15 +210,15 @@ class Stream(Base):
         }
 
 
-def from_json(data: Dict) -> Stream:
+def from_json(data: Dict) -> DataStream:
     """
-    Construct a Stream from a dictionary of attributes produced by
-    :meth:`Stream.to_json`
+    Construct a DataStream from a dictionary of attributes produced by
+    :meth:`DataStream.to_json`
 
     Args:
         data: attribute dictionary
 
-    Returns: Stream
+    Returns: DataStream
 
     """
     elements = []
@@ -228,26 +228,26 @@ def from_json(data: Dict) -> Stream:
         elements.append(element.from_json(item))
         index += 1
 
-    return Stream(id=data["id"],
-                  name=validate_name(data["name"]),
-                  description=data["description"],
-                  datatype=validate_datatype(data["datatype"].upper()),
-                  keep_us=data["keep_us"],
-                  decimate=data["decimate"],
-                  is_configured=data["is_configured"],
-                  is_source=data["is_source"],
-                  is_destination=data["is_destination"],
-                  elements=elements)
+    return DataStream(id=data["id"],
+                      name=validate_name(data["name"]),
+                      description=data["description"],
+                      datatype=validate_datatype(data["datatype"].upper()),
+                      keep_us=data["keep_us"],
+                      decimate=data["decimate"],
+                      is_configured=data["is_configured"],
+                      is_source=data["is_source"],
+                      is_destination=data["is_destination"],
+                      elements=elements)
 
 
-def from_config(config: configparser.ConfigParser) -> Stream:
+def from_config(config: configparser.ConfigParser) -> DataStream:
     """
-    Construct a Stream from a configuration file
+    Construct a DataStream from a configuration file
 
     Args:
         config: parsed *.conf file
 
-    Returns: Stream
+    Returns: DataStream
 
     Raises: ConfigurationError
 
@@ -262,8 +262,8 @@ def from_config(config: configparser.ConfigParser) -> Stream:
         decimate = main_configs.getboolean("decimate", fallback=True)
         name = validate_name(main_configs["name"])
         description = main_configs.get("description", fallback="")
-        stream = Stream(name=name, description=description,
-                        datatype=datatype, keep_us=keep_us, decimate=decimate)
+        stream = DataStream(name=name, description=description,
+                            datatype=datatype, keep_us=keep_us, decimate=decimate)
     except KeyError as e:
         raise ConfigurationError("[Main] missing %s" % e.args[0]) from e
     # now try to load the elements
@@ -285,7 +285,7 @@ def from_config(config: configparser.ConfigParser) -> Stream:
     return stream
 
 
-def from_nilmdb_metadata(config_data: Dict, layout: str) -> Stream:
+def from_nilmdb_metadata(config_data: Dict, layout: str) -> DataStream:
     datatype = validate_datatype(layout.split('_')[0])
     nelem = int(layout.split('_')[1])
     if 'streams' in config_data:
@@ -295,8 +295,8 @@ def from_nilmdb_metadata(config_data: Dict, layout: str) -> Stream:
                      'scale_factor': 1.0, 'offset': 0.0, 'plottable': True,
                      'discrete': False, 'default_min': None, 'default_max': None} for
                     i in range(nelem)]
-    stream = Stream(name=config_data['name'], description='', datatype=datatype,
-                    keep_us=Stream.KEEP_ALL, decimate=True)
+    stream = DataStream(name=config_data['name'], description='', datatype=datatype,
+                        keep_us=DataStream.KEEP_ALL, decimate=True)
     for metadata in elements:
         elem = element.from_nilmdb_metadata(metadata)
         stream.elements.append(elem)
@@ -311,23 +311,23 @@ def validate_name(name: str) -> str:
     return name
 
 
-def validate_datatype(datatype: str) -> Stream.DATATYPE:
+def validate_datatype(datatype: str) -> DataStream.DATATYPE:
     try:
-        return Stream.DATATYPE[datatype.upper()]
+        return DataStream.DATATYPE[datatype.upper()]
     except KeyError as e:
-        valid_types = ", ".join([m.name.lower() for m in Stream.DATATYPE])
+        valid_types = ", ".join([m.name.lower() for m in DataStream.DATATYPE])
         raise ConfigurationError("invalid datatype [%s], choose from [%s]" %
                                  (datatype, valid_types)) from e
 
 
 def validate_keep(keep: str) -> int:
     if keep.lower() == "none":
-        return Stream.KEEP_NONE
+        return DataStream.KEEP_NONE
     if keep.lower() == "all":
-        return Stream.KEEP_ALL
+        return DataStream.KEEP_ALL
     match = re.fullmatch(r'^(\d+)([hdwmy])$', keep)
     if match is None:
-        raise ConfigurationError("invalid [Stream] keep"
+        raise ConfigurationError("invalid [DataStream] keep"
                                  "use format #unit (eg 1w), none or all")
 
     units = {
@@ -340,6 +340,6 @@ def validate_keep(keep: str) -> int:
     unit = match.group(2)
     time = int(match.group(1))
     if time <= 0:
-        raise ConfigurationError("invalid [Stream] keep"
+        raise ConfigurationError("invalid [DataStream] keep"
                                  "use format #unit (eg 1w), none or all")
     return int(time * units[unit])

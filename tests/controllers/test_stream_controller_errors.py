@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from aiohttp import web
 import aiohttp
 
-from joule.models import Stream, Element
+from joule.models import DataStream, Element
 import joule.controllers
 from tests.controllers.helpers import create_db, MockStore
 
@@ -74,7 +74,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
                                                                 "dest_path": "/folder_x2"})
         self.assertEqual(resp.status, 400)
         # cannot move streams with a fixed configuration
-        my_stream: Stream = db.query(Stream).filter_by(name="stream1").one()
+        my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
         my_stream.is_configured = True
         resp = await self.client.put("/stream/move.json", json={"src_path": "/folder1/stream1",
                                                                 "dest_path": "/folder8"})
@@ -95,7 +95,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         resp = await self.client.post("/stream.json", json={"dest_path": "notapath"})
         self.assertEqual(resp.status, 400)
         # must specify a path
-        new_stream = Stream(name="test", datatype=Stream.DATATYPE.FLOAT32)
+        new_stream = DataStream(name="test", datatype=DataStream.DATATYPE.FLOAT32)
         new_stream.elements = [Element(name="e%d" % j, index=j,
                                        display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(3)]
         resp = await self.client.post("/stream.json", json={"stream": new_stream.to_json()})
@@ -162,17 +162,17 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         resp = await self.client.delete("/stream.json", params={"path": "/bad/path"})
         self.assertEqual(resp.status, 404)
         # cannot delete locked streams
-        my_stream: Stream = db.query(Stream).filter_by(name="stream1").one()
+        my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
         my_stream.is_configured = True
         resp = await self.client.delete("/stream.json", params={"id": my_stream.id})
         self.assertEqual(resp.status, 400)
         self.assertTrue('locked' in await resp.text())
-        self.assertIsNotNone(db.query(Stream).filter_by(name="stream1").one())
+        self.assertIsNotNone(db.query(DataStream).filter_by(name="stream1").one())
 
     @unittest_run_loop
     async def test_stream_update(self):
         db: Session = self.app["db"]
-        my_stream: Stream = db.query(Stream).filter_by(name="stream1").one()
+        my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
 
         # must be json
         resp = await self.client.put("/stream.json", data={"bad_values": "not_json"})
@@ -192,7 +192,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         self.assertEqual(resp.status, 400)
         self.assertTrue('display_type' in await resp.text())
 
-        my_stream: Stream = db.query(Stream).get(my_stream.id)
+        my_stream: DataStream = db.query(DataStream).get(my_stream.id)
         self.assertEqual("stream1", my_stream.name)
         elem_0 = [e for e in my_stream.elements if e.index == 0][0]
         self.assertEqual(elem_0.display_type, Element.DISPLAYTYPE.CONTINUOUS)

@@ -4,7 +4,7 @@ import aiohttp
 import numpy as np
 from sqlalchemy.orm import Session
 
-from joule.models import Stream, pipes
+from joule.models import DataStream, pipes
 import joule.controllers
 from tests.controllers.helpers import create_db, MockStore, MockSupervisor
 from tests import helpers
@@ -41,7 +41,7 @@ class TestDataController(AioHTTPTestCase):
         self.assertEqual(nchunks, rx_chunks)
 
         # can retrieve stream by id and as decimated data
-        stream = db.query(Stream).filter_by(name="stream1").one()
+        stream = db.query(DataStream).filter_by(name="stream1").one()
         resp: aiohttp.ClientResponse = await \
             self.client.get("/data", params={"id": stream.id, 'decimation-level': 16})
         rx_chunks = 0
@@ -66,7 +66,7 @@ class TestDataController(AioHTTPTestCase):
         self.assertEqual(1, data['decimation_factor'])
         self.assertEqual(len(data['data'][0]), n_chunks * 25)
         # can retrieve stream by id and as decimated data as well
-        stream = db.query(Stream).filter_by(name="stream1").one()
+        stream = db.query(DataStream).filter_by(name="stream1").one()
         resp: aiohttp.ClientResponse = await \
             self.client.get("/data.json", params={"id": stream.id, 'decimation-level': 16})
         data = await resp.json()
@@ -79,7 +79,7 @@ class TestDataController(AioHTTPTestCase):
     @unittest_run_loop
     async def test_subscribes_to_data(self):
         db: Session = self.app["db"]
-        my_stream = db.query(Stream).filter_by(name="stream1").one()
+        my_stream = db.query(DataStream).filter_by(name="stream1").one()
         blk1 = helpers.create_data(my_stream.layout)
         blk2 = helpers.create_data(my_stream.layout, length=50)
         my_pipe = pipes.LocalPipe(my_stream.layout)
@@ -108,7 +108,7 @@ class TestDataController(AioHTTPTestCase):
         db: Session = self.app["db"]
         supervisor: MockSupervisor = self.app["supervisor"]
         supervisor.hang_pipe = True
-        my_stream = db.query(Stream).filter_by(name="stream1").one()
+        my_stream = db.query(DataStream).filter_by(name="stream1").one()
         my_pipe = pipes.LocalPipe(my_stream.layout)
         my_pipe.close_nowait()
         self.supervisor.subscription_pipe = my_pipe
@@ -124,7 +124,7 @@ class TestDataController(AioHTTPTestCase):
     async def test_write_data(self):
         db: Session = self.app["db"]
         store: MockStore = self.app['data-store']
-        stream: Stream = db.query(Stream).filter_by(name="stream1").one()
+        stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
         data = helpers.create_data(stream.layout)
         resp: aiohttp.ClientResponse = await \
             self.client.post("/data", params={"path": "/folder1/stream1"},
@@ -145,7 +145,7 @@ class TestDataController(AioHTTPTestCase):
     async def test_remove_data(self):
         db: Session = self.app["db"]
         store: MockStore = self.app['data-store']
-        stream: Stream = db.query(Stream).filter_by(name="stream1").one()
+        stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
         resp: aiohttp.ClientResponse = await \
             self.client.delete("/data", params={"path": "/folder1/stream1",
                                                 "start": "100", "end": "200"})
@@ -166,7 +166,7 @@ class TestDataController(AioHTTPTestCase):
     @unittest_run_loop
     async def test_interval_data(self):
         db: Session = self.app["db"]
-        stream: Stream = db.query(Stream).filter_by(name="stream1").one()
+        stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
         resp = await self.client.get("/data/intervals.json",
                                      params={"id": stream.id})
         # response should be a list of intervals

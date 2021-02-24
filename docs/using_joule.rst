@@ -144,7 +144,7 @@ attempts to connect an output pipe to a stream that already has a producer, Joul
 
 .. _sec-streams:
 
-Stream Configuration
+DataStream Configuration
 --------------------
 
 Streams are timestamped data flows. They are composed of one or more elements as shown
@@ -166,7 +166,7 @@ The configuration format is shown below:
 
   <div class="config-file">
 
-  : Stream Configuration File
+  : DataStream Configuration File
 
   [Main]
   #required settings (examples)
@@ -194,7 +194,7 @@ The configuration format is shown below:
 
   </div>
 
-Stream configuration files must end with the **.conf** suffix and should be placed in
+DataStream configuration files must end with the **.conf** suffix and should be placed in
 **/etc/joule/stream_configs**. Both **[Main]** and **[Element1]** are required.
 For streams with more than one element include additional sections **[Element2]**, **[Element3]**, etc.
 See the list below for information on each setting.
@@ -262,7 +262,7 @@ full set of options and their default settings:
     # Module configuration files
     ModuleDirectory = /etc/joule/module_configs
 
-    # Stream configuration files
+    # DataStream configuration files
     StreamDirectory = /etc/joule/stream_configs
 
     # Listen on address
@@ -277,7 +277,7 @@ full set of options and their default settings:
     # How often to flush stream data to database
     InsertPeriod = 5
 
-    # How often to remove old data (from Stream keep settings)
+    # How often to remove old data (from DataStream keep settings)
     CleanupPeriod = 60
 
     # Keep the most recent N lines in each module log

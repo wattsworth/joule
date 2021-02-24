@@ -10,7 +10,7 @@ import datetime
 from joule.cli.config import pass_config
 from joule.api import get_node, BaseNode, Annotation
 from joule.api.annotation import from_json as annotation_from_json
-from joule.models import stream, Stream, pipes, StreamInfo
+from joule.models import data_stream, DataStream, pipes, StreamInfo
 from joule.utilities import interval_difference, human_to_timestamp, timestamp_to_human
 from joule import errors
 
@@ -260,7 +260,7 @@ async def _run(config, start, end, new, destination_node, source_url, source, de
             await source_node.close()
 
 
-async def _get_intervals(server: Union[BaseNode, str], my_stream: Stream, path: str,
+async def _get_intervals(server: Union[BaseNode, str], my_stream: DataStream, path: str,
                          start: Optional[int], end: Optional[int],
                          is_nilmdb: bool = False) -> List[Interval]:
     if is_nilmdb:
@@ -286,7 +286,7 @@ async def _get_intervals(server: Union[BaseNode, str], my_stream: Stream, path: 
         return await server.data_intervals(my_stream, start, end)
 
 
-async def _retrieve_source(server: Union[BaseNode, str], path: str, is_nilmdb: bool = False) -> Stream:
+async def _retrieve_source(server: Union[BaseNode, str], path: str, is_nilmdb: bool = False) -> DataStream:
     if is_nilmdb:
         src_stream, src_info = await _retrieve_nilmdb_stream(server, path)
         if src_stream is None:
@@ -300,8 +300,8 @@ async def _retrieve_source(server: Union[BaseNode, str], path: str, is_nilmdb: b
     return src_stream
 
 
-async def _retrieve_destination(server: Union[str, BaseNode], path: str, template: Stream,
-                                is_nilmdb: bool = False) -> Stream:
+async def _retrieve_destination(server: Union[str, BaseNode], path: str, template: DataStream,
+                                is_nilmdb: bool = False) -> DataStream:
     if is_nilmdb:
         dest_stream, dest_info = await _retrieve_nilmdb_stream(server, path)
         if dest_stream is None:
@@ -317,20 +317,20 @@ async def _retrieve_destination(server: Union[str, BaseNode], path: str, templat
             raise e
 
 
-async def _create_joule_stream(node: BaseNode, path: str, template: Stream) -> Stream:
+async def _create_joule_stream(node: BaseNode, path: str, template: DataStream) -> DataStream:
     click.echo("creating destination stream")
     # split the destination into the path and stream name
-    dest_stream = stream.from_json(template.to_json())
-    dest_stream.keep_us = Stream.KEEP_ALL
+    dest_stream = data_stream.from_json(template.to_json())
+    dest_stream.keep_us = DataStream.KEEP_ALL
     dest_stream.name = path.split("/")[-1]
     folder = "/".join(path.split("/")[:-1])
     return await node.stream_create(dest_stream, folder)
 
 
-async def _create_nilmdb_stream(server: str, path: str, template: Stream):
+async def _create_nilmdb_stream(server: str, path: str, template: DataStream):
     click.echo("creating destination stream")
-    dest_stream = stream.from_json(template.to_json())
-    dest_stream.keep_us = Stream.KEEP_ALL
+    dest_stream = data_stream.from_json(template.to_json())
+    dest_stream.keep_us = DataStream.KEEP_ALL
     dest_stream.name = path.split("/")[-1]
 
     url = "{server}/stream/create".format(server=server)
@@ -353,7 +353,7 @@ async def _create_nilmdb_stream(server: str, path: str, template: Stream):
     return dest_stream
 
 
-async def _retrieve_nilmdb_stream(server: str, path: str) -> Tuple[Optional[Stream], Optional[StreamInfo]]:
+async def _retrieve_nilmdb_stream(server: str, path: str) -> Tuple[Optional[DataStream], Optional[StreamInfo]]:
     url = "{server}/stream/get_metadata".format(server=server)
     params = {"path": path, "key": 'config_key__'}
     async with aiohttp.ClientSession() as session:
@@ -380,7 +380,7 @@ async def _retrieve_nilmdb_stream(server: str, path: str) -> Tuple[Optional[Stre
         async with session.get(url, params=params) as resp:
 
             info = (await resp.json())[0]
-            my_stream = stream.from_nilmdb_metadata(config_data, info[1])
+            my_stream = data_stream.from_nilmdb_metadata(config_data, info[1])
             my_info = StreamInfo(start=info[2],
                                  end=info[3],
                                  rows=info[4],

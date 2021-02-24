@@ -21,7 +21,7 @@ TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), 'local_postgres_templates
 if typing.TYPE_CHECKING:
     import sqlalchemy
     from sqlalchemy.orm import Session
-    from joule.models import Base, Stream, folder, DataStore, TimescaleStore, NilmdbStore
+    from joule.models import Base, DataStream, folder, DataStore, TimescaleStore, NilmdbStore
 
 
 @click.command(name="ingest")
@@ -309,16 +309,16 @@ async def run(src_db: 'Session',
               confirmed: bool,
               start: Optional[int],
               end: Optional[int]):
-    from joule.models import Stream, folder, stream
+    from joule.models import DataStream, folder, data_stream
     from joule.services import parse_pipe_config
 
-    src_streams = src_db.query(Stream).all()
-    dest_streams = dest_db.query(Stream).all()
+    src_streams = src_db.query(DataStream).all()
+    dest_streams = dest_db.query(DataStream).all()
     await src_datastore.initialize(src_streams)
     await dest_datastore.initialize(dest_streams)
 
     if stream_map is None:
-        src_streams = src_db.query(Stream).all()
+        src_streams = src_db.query(DataStream).all()
         src_paths = map(folder.get_stream_path, src_streams)
         stream_map = map(lambda _path: [_path, _path], src_paths)
 
@@ -335,7 +335,7 @@ async def run(src_db: 'Session',
         if dest is None:
             (path, name, _) = parse_pipe_config.parse_pipe_config(item[1])
             dest_folder = folder.find(path, dest_db, create=True)
-            dest = stream.from_json(source.to_json())
+            dest = data_stream.from_json(source.to_json())
             # set the attributes on the new stream
             dest.name = name
             dest.keep_us = dest.KEEP_ALL
@@ -441,11 +441,11 @@ async def copy(copy_map: 'CopyMap',
 
 
 async def copy_interval(start: int, end: int, bar,
-                        src_stream: 'Stream', dest_stream: 'Stream',
+                        src_stream: 'DataStream', dest_stream: 'DataStream',
                         src_datastore: 'DataStore', dest_datastore: 'DataStore'):
-    from joule.models import pipes, Stream
+    from joule.models import pipes, DataStream
     pipe = pipes.LocalPipe(src_stream.layout, write_limit=4, debug=False)
-    dest_stream.keep_us = Stream.KEEP_ALL  # do not delete any data
+    dest_stream.keep_us = DataStream.KEEP_ALL  # do not delete any data
     insert_task = await dest_datastore.spawn_inserter(dest_stream,
                                                       pipe, asyncio.get_event_loop())
 
@@ -470,7 +470,7 @@ async def copy_interval(start: int, end: int, bar,
 
 
 class CopyMap:
-    def __init__(self, source: 'Stream', dest: 'Stream', intervals: List):
+    def __init__(self, source: 'DataStream', dest: 'DataStream', intervals: List):
         self.source = source
         self.dest = dest
         self.intervals = intervals

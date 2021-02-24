@@ -7,7 +7,7 @@ import re
 from typing import Tuple, Dict
 
 from joule.errors import ConfigurationError
-from joule.models import stream
+from joule.models import data_stream
 from joule.api import stream as api_stream
 from joule.services.helpers import load_configs
 
@@ -66,12 +66,12 @@ def read_module_config(file_path: str) -> configparser.ConfigParser:
     return config
 
 
-def read_stream_configs(file_path: str) -> Dict[str, stream.Stream]:
+def read_stream_configs(file_path: str) -> Dict[str, data_stream.DataStream]:
     configs = load_configs(file_path)
-    streams: Dict[str, stream.Stream] = {}
+    streams: Dict[str, data_stream.DataStream] = {}
     for file_path, data in configs.items():
         try:
-            s = stream.from_config(data)
+            s = data_stream.from_config(data)
             # convert to an API object
             api_s = api_stream.from_json(s.to_json())
             stream_path = _create_path(data)

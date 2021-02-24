@@ -1,4 +1,4 @@
-from joule.models import module, Stream, Element
+from joule.models import module, DataStream, Element
 from joule.errors import ConfigurationError
 from tests import helpers
 import unittest
@@ -46,10 +46,10 @@ class TestModule(unittest.TestCase):
 
     def test_has_json_representation(self):
         # create an input stream
-        src = Stream(id=0, name="source", keep_us=100, datatype=Stream.DATATYPE.FLOAT32)
+        src = DataStream(id=0, name="source", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32)
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         # create an output stream
-        dest = Stream(id=1, name="dest", keep_us=100, datatype=Stream.DATATYPE.UINT16)
+        dest = DataStream(id=1, name="dest", keep_us=100, datatype=DataStream.DATATYPE.UINT16)
         dest.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.EVENT) for x in range(5)]
         m = module.from_config(self.config)
         m.inputs = {'input': src}

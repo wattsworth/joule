@@ -21,7 +21,7 @@ class TestLoadStreamErrors(DbTestCase):
             parser = configparser.ConfigParser()
             parser.read_string("""
                                 [Main]
-                                name=Bad Stream
+                                name=Bad DataStream
                                 DataType=float32
                                 Path = %s
                                 [Element1]
@@ -37,7 +37,7 @@ class TestLoadStreamErrors(DbTestCase):
             parser = configparser.ConfigParser()
             parser.read_string("""
                                [Main]
-                                name=Bad Stream
+                                name=Bad DataStream
                                 DataType=float32
                                 Path = %s
                                 [Element1]
@@ -52,7 +52,7 @@ class TestLoadStreamErrors(DbTestCase):
             parser = configparser.ConfigParser()
             parser.read_string("""
                         [Main]
-                        name=Bad Stream
+                        name=Bad DataStream
                         DataType=float32
                         Path = /no/elements
                         """)

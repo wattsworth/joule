@@ -99,7 +99,7 @@ class BaseNode:
                             recursive: bool = False) -> None:
         await folder_delete(self.session, folder, recursive)
 
-    # Stream actions
+    # DataStream actions
 
     async def stream_get(self,
                          stream: Union[Stream, str, int]) -> Stream:

@@ -1,7 +1,7 @@
 import unittest
 from unittest import mock
 from joule.errors import ConfigurationError
-from joule.models import stream  # for helper functions
+from joule.models import data_stream  # for helper functions
 from tests import helpers
 
 
@@ -23,7 +23,7 @@ class TestStreamErrors(unittest.TestCase):
     def test_errors_on_missing_main(self):
         self.base_config.remove_section("Main")
         with self.assertRaisesRegex(ConfigurationError, 'Main'):
-            stream.from_config(self.base_config)
+            data_stream.from_config(self.base_config)
 
     def test_errors_on_bad_name(self):
         bad_names = ["", "has/slash", "/other"]
@@ -32,7 +32,7 @@ class TestStreamErrors(unittest.TestCase):
     def test_errors_on_missing_info(self):
         self.base_config.remove_option("Main", "name")
         with self.assertRaisesRegex(ConfigurationError, 'name'):
-            stream.from_config(self.base_config)
+            data_stream.from_config(self.base_config)
 
     def test_errors_on_bad_keep(self):
         """keep is # and timeunit (eg 1w, 30h, 2y) or False"""
@@ -47,23 +47,23 @@ class TestStreamErrors(unittest.TestCase):
         """Must have at least one element"""
         self.base_config.remove_section("Element1")
         with self.assertRaises(ConfigurationError):
-            stream.from_config(self.base_config)
+            data_stream.from_config(self.base_config)
 
     @mock.patch('joule.models.element.from_config')
     def test_errors_on_invalid_elements(self, from_config: mock.Mock):
         from_config.side_effect = ConfigurationError()
         with self.assertRaisesRegex(ConfigurationError, 'element'):
-            stream.from_config(self.base_config)
+            data_stream.from_config(self.base_config)
 
     def evaluate_bad_values(self, setting_name, bad_settings, section="Main"):
         for setting in bad_settings:
             with self.subTest(setting=setting):
                 self.base_config[section][setting_name] = setting
                 with self.assertRaisesRegex(ConfigurationError, setting_name):
-                    stream.from_config(self.base_config)
+                    data_stream.from_config(self.base_config)
 
     def evaluate_good_values(self, setting_name, settings, section="Main"):
         for setting in settings:
             with self.subTest(setting=setting):
                 self.base_config[section][setting_name] = setting
-                stream.from_config(self.base_config)
+                data_stream.from_config(self.base_config)

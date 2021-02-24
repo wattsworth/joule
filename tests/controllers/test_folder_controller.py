@@ -2,7 +2,7 @@ from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 from aiohttp import web
 from sqlalchemy.orm import Session
 
-from joule.models import folder, Stream, Folder, Element
+from joule.models import folder, DataStream, Folder, Element
 import joule.controllers
 from tests.controllers.helpers import create_db, MockStore
 
@@ -108,7 +108,7 @@ class TestFolderController(AioHTTPTestCase):
         self.assertEqual(resp.status, 200)
         # this is the top folder so everything should be gone
         self.assertEqual(1, db.query(Folder).count())
-        self.assertEqual(0, db.query(Stream).count())
+        self.assertEqual(0, db.query(DataStream).count())
         self.assertEqual(0, db.query(Element).count())
 
     @unittest_run_loop
@@ -122,6 +122,6 @@ class TestFolderController(AioHTTPTestCase):
         }
         resp = await self.client.put("/folder.json", json=payload)
         self.assertEqual(200, resp.status)
-        my_folder: Stream = db.query(Folder).get(my_folder.id)
+        my_folder: DataStream = db.query(Folder).get(my_folder.id)
         self.assertEqual("new name", my_folder.name)
         self.assertEqual("new description", my_folder.description)

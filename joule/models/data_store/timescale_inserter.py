@@ -4,7 +4,7 @@ import random
 import logging
 import asyncpg
 
-from joule.models import Stream, pipes
+from joule.models import DataStream, pipes
 import joule.utilities
 from joule.models.data_store import psql_helpers
 
@@ -14,7 +14,7 @@ log = logging.getLogger('joule')
 
 class Inserter:
 
-    def __init__(self, pool: asyncpg.pool.Pool, stream: Stream, insert_period: float,
+    def __init__(self, pool: asyncpg.pool.Pool, stream: DataStream, insert_period: float,
                  cleanup_period: float):
         self.pool = pool
         self.stream = stream
@@ -79,7 +79,7 @@ class Inserter:
             pass
 
     async def cleanup(self, conn: asyncpg.Connection):
-        if self.stream.keep_us == Stream.KEEP_ALL:
+        if self.stream.keep_us == DataStream.KEEP_ALL:
             return
         tables = await psql_helpers.get_table_names(conn, self.stream, with_schema=False)
         # ts is milliseconds UNIX timestamp
@@ -97,7 +97,7 @@ class Inserter:
 
 class Decimator:
 
-    def __init__(self, stream: Stream, from_level: int, factor: int, debug=False):
+    def __init__(self, stream: DataStream, from_level: int, factor: int, debug=False):
         self.stream = stream
         self.level = from_level * factor
         self.table_name = "stream%d_%d" % (stream.id, self.level)

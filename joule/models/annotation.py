@@ -24,7 +24,7 @@ class Annotation(Base):
     end: datetime = Column(types.TIMESTAMP, default=None)
 
     stream_id: int = Column(Integer, ForeignKey('metadata.stream.id'))
-    stream: 'Stream' = relationship("Stream", back_populates="annotations")
+    stream: 'DataStream' = relationship("DataStream", back_populates="annotations")
 
     def __repr__(self):
         return "<Annotation(title='%s', content='%s', stream_id=%s)>" % (self.title, self.content, self.stream_id)

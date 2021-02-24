@@ -3,7 +3,7 @@ from typing import Dict
 import configparser
 
 from joule.errors import ConfigurationError
-from joule.models.stream import Stream
+from joule.models.data_stream import DataStream
 
 """
 Configuration File:
@@ -50,8 +50,8 @@ class Module:
         # arg_name => value
         self.arguments: Dict[str, str] = {}
         # pipe name (from config) => stream object
-        self.inputs: Dict[str, Stream] = {}
-        self.outputs: Dict[str, Stream] = {}
+        self.inputs: Dict[str, DataStream] = {}
+        self.outputs: Dict[str, DataStream] = {}
         self.uuid: int = uuid
         self.status: Module.STATUS = Module.STATUS.UNKNOWN
 

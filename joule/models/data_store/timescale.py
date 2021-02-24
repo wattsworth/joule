@@ -9,7 +9,7 @@ import shutil
 from joule.utilities import interval_tools, timestamp_to_datetime
 from joule.models.data_store.timescale_inserter import Inserter
 from joule.models.data_store import psql_helpers
-from joule.models import Stream, pipes
+from joule.models import DataStream, pipes
 from joule.models.data_store.data_store import DataStore, StreamInfo, DbInfo
 
 Loop = asyncio.AbstractEventLoop
@@ -27,13 +27,13 @@ class TimescaleStore(DataStore):
         # tunable constants
         self.extract_block_size = 50000
 
-    async def initialize(self, streams: List[Stream]) -> None:
+    async def initialize(self, streams: List[DataStream]) -> None:
         self.pool = await asyncpg.create_pool(self.dsn, command_timeout=60)
 
     async def close(self):
         await self.pool.close()
 
-    async def spawn_inserter(self, stream: 'Stream', pipe: pipes.Pipe, insert_period=None) -> asyncio.Task:
+    async def spawn_inserter(self, stream: 'DataStream', pipe: pipes.Pipe, insert_period=None) -> asyncio.Task:
         if insert_period is None:
             insert_period = self.insert_period
 
@@ -41,11 +41,11 @@ class TimescaleStore(DataStore):
                             insert_period, self.cleanup_period)
         return asyncio.create_task(inserter.run(pipe))
 
-    async def insert(self, stream: 'Stream',
+    async def insert(self, stream: 'DataStream',
                      data: np.ndarray, start: int, end: int):
         pass
 
-    async def consolidate(self, stream: 'Stream', start: int, end: int, max_gap: int) -> int:
+    async def consolidate(self, stream: 'DataStream', start: int, end: int, max_gap: int) -> int:
         # remove interval gaps less than or equal to max_gap duration (in us)
         intervals = await self.intervals(stream, start, end)
         if len(intervals) == 0:
@@ -64,7 +64,7 @@ class TimescaleStore(DataStore):
             await conn.execute(query)
         return len(small_gaps)
 
-    async def intervals(self, stream: 'Stream', start: Optional[int], end: Optional[int]):
+    async def intervals(self, stream: 'DataStream', start: Optional[int], end: Optional[int]):
         # find the intervals
         # for each interval find the nearest data
         intervals = []
@@ -94,7 +94,7 @@ class TimescaleStore(DataStore):
                     cur_start = next_ts
         return intervals
 
-    async def extract(self, stream: 'Stream', start: Optional[int], end: Optional[int],
+    async def extract(self, stream: 'DataStream', start: Optional[int], end: Optional[int],
                       callback: Callable[[np.ndarray, str, int], Coroutine],
                       max_rows: int = None, decimation_level=None):
         conn = await self.pool.acquire()
@@ -128,7 +128,7 @@ class TimescaleStore(DataStore):
         finally:
             await self.pool.release(conn)
 
-    async def remove(self, stream: 'Stream',
+    async def remove(self, stream: 'DataStream',
                      start: Optional[int], end: Optional[int],
                      exact: bool = True):
         where_clause = psql_helpers.query_time_bounds(start, end)
@@ -156,7 +156,7 @@ class TimescaleStore(DataStore):
             if start is not None:
                 await psql_helpers.close_interval(conn, stream, start)
 
-    async def destroy(self, stream: 'Stream'):
+    async def destroy(self, stream: 'DataStream'):
         async with self.pool.acquire() as conn:
             tables = await psql_helpers.get_table_names(conn, stream)
             for table in tables:
@@ -174,7 +174,7 @@ class TimescaleStore(DataStore):
                 except asyncpg.UndefinedTableError:
                     pass
 
-    async def info(self, streams: List['Stream']) -> Dict[int, StreamInfo]:
+    async def info(self, streams: List['DataStream']) -> Dict[int, StreamInfo]:
         results = {}
         async with self.pool.acquire() as conn:
             for my_stream in streams:
@@ -222,7 +222,7 @@ class TimescaleStore(DataStore):
                               free=-1)
 
 
-async def _extract_data(conn: asyncpg.Connection, stream: Stream, callback,
+async def _extract_data(conn: asyncpg.Connection, stream: DataStream, callback,
                         decimation_level: int = 1, start: int = None, end: int = None,
                         block_size=50000):
     if decimation_level > 1:

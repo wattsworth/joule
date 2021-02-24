@@ -15,14 +15,14 @@ import tempfile
 
 
 from tests import helpers
-from joule.models import Stream, StreamInfo, pipes, stream, master
+from joule.models import DataStream, StreamInfo, pipes, data_stream, master
 from joule.api import annotation
 
 # from https://github.com/aio-libs/aiohttp/blob/master/examples/fake_server.py
 
 
 class MockDbEntry:
-    def __init__(self, stream: Stream, info: StreamInfo, data: Optional[np.ndarray] = None,
+    def __init__(self, stream: DataStream, info: StreamInfo, data: Optional[np.ndarray] = None,
                  intervals=None):
         self.stream = stream
         self.info = info
@@ -135,7 +135,7 @@ class FakeJoule:
                 msgs.get()
                 break
 
-    def add_stream(self, path, my_stream: Stream, info: StreamInfo, data: Optional[np.ndarray],
+    def add_stream(self, path, my_stream: DataStream, info: StreamInfo, data: Optional[np.ndarray],
                    intervals: Optional[List] = None):
         self.streams[path] = MockDbEntry(my_stream, info, data, intervals)
 
@@ -146,7 +146,7 @@ class FakeJoule:
         path = body['dest_path']
         if path == '':  # check for invalid value (eg)
             return web.Response(text='invalid request', status=400)
-        new_stream = stream.from_json(body['stream'])
+        new_stream = data_stream.from_json(body['stream'])
         if new_stream.id is None:
             new_stream.id = 150
         else:

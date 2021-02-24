@@ -33,10 +33,10 @@ class TestAnnotationApi(asynctest.TestCase):
         self.assertEqual(self.session.request_data["stream_path"], "/a/path")
         stream = Stream(name="test")
         stream.id = 100
-        # create by Stream object
+        # create by DataStream object
         await self.node.annotation_create(annotation, stream)
         self.assertEqual(self.session.request_data["stream_id"], 100)
-        # create by Stream id
+        # create by DataStream id
         await self.node.annotation_create(annotation, 100)
         self.assertEqual(self.session.request_data["stream_id"], 100)
         # errors with invalid stream type

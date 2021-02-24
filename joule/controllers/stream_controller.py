@@ -1,6 +1,6 @@
 from aiohttp import web
 from sqlalchemy.orm import Session
-from joule.models import Stream, DataStore, stream
+from joule.models import DataStream, DataStore, data_stream
 
 from joule.models import folder, Folder
 from joule.errors import ConfigurationError
@@ -10,7 +10,7 @@ async def index(request: web.Request):
     db: Session = request.app["db"]
     data_store: DataStore = request.app["data-store"]
     root = folder.root(db)
-    streams = db.query(Stream).all()
+    streams = db.query(DataStream).all()
     streams_info = await data_store.info(streams)
     resp = root.to_json(streams_info)
     return web.json_response(resp)
@@ -22,7 +22,7 @@ async def info(request: web.Request):
     if 'path' in request.query:
         my_stream = folder.find_stream_by_path(request.query['path'], db)
     elif 'id' in request.query:
-        my_stream = db.query(Stream).get(request.query["id"])
+        my_stream = db.query(DataStream).get(request.query["id"])
     else:
         return web.Response(text="specify an id or a path", status=400)
     if my_stream is None:
@@ -40,7 +40,7 @@ async def move(request: web.Request):
     if 'src_path' in body:
         my_stream = folder.find_stream_by_path(body['src_path'], db)
     elif 'src_id' in body:
-        my_stream = db.query(Stream).get(body["src_id"])
+        my_stream = db.query(DataStream).get(body["src_id"])
     else:
         return web.Response(text="specify a source id or a path", status=400)
     if my_stream is None:
@@ -89,7 +89,7 @@ async def create(request):
         return web.Response(text="specify a destination", status=400)
 
     try:
-        new_stream = stream.from_json(body['stream'])
+        new_stream = data_stream.from_json(body['stream'])
         # make sure stream has at least 1 element
         if len(new_stream.elements) == 0:
             raise ConfigurationError("stream must have at least one element")
@@ -129,7 +129,7 @@ async def update(request: web.Request):
     if 'id' not in body:
         return web.Response(text="Invalid request: specify id", status=400)
 
-    my_stream: Stream = db.query(Stream).get(body['id'])
+    my_stream: DataStream = db.query(DataStream).get(body['id'])
     if my_stream is None:
         return web.Response(text="stream does not exist", status=404)
     if my_stream.locked:
@@ -160,7 +160,7 @@ async def delete(request):
     if 'path' in request.query:
         my_stream = folder.find_stream_by_path(request.query['path'], db)
     elif 'id' in request.query:
-        my_stream = db.query(Stream).get(request.query["id"])
+        my_stream = db.query(DataStream).get(request.query["id"])
     else:
         return web.Response(text="specify an id or a path", status=400)
     if my_stream is None:

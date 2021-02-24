@@ -15,7 +15,7 @@ class LocalPipe(Pipe):
 
            Args:
                layout: ``datatype_width``, for example ``float32_3`` for a three element stream
-                 must. See Stream.layout
+                 must. See DataStream.layout
            Keyword Args:
                name: useful for debugging with multiple pipes
                close_cb: callback coroutine executed when pipe closes

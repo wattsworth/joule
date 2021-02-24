@@ -10,7 +10,7 @@ import unittest
 
 from ..fake_joule import FakeJoule, FakeJouleTestCase
 from joule.cli import main
-from joule.models import Stream, Element, StreamInfo, pipes
+from joule.models import DataStream, Element, StreamInfo, pipes
 from tests import helpers
 
 warnings.simplefilter('always')
@@ -23,7 +23,7 @@ class TestDataRead(FakeJouleTestCase):
     def test_reads_data(self):
         server = FakeJoule()
         # create the source stream
-        src = Stream(id=0, name="source", keep_us=100, datatype=Stream.DATATYPE.FLOAT32)
+        src = DataStream(id=0, name="source", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32)
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         # source has 100 rows of data between [0, 100]
         src_data = helpers.create_data(src.layout)
@@ -49,7 +49,7 @@ class TestDataRead(FakeJouleTestCase):
 
         server = FakeJoule()
         # create the source stream
-        src = Stream(id=0, name="source", keep_us=100, datatype=Stream.DATATYPE.FLOAT32)
+        src = DataStream(id=0, name="source", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32)
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         # source has 200 rows of data between [0, 200] in two intervals
         src_data = np.hstack((helpers.create_data(src.decimated_layout, start=0, length=100, step=1),
@@ -106,7 +106,7 @@ class TestDataRead(FakeJouleTestCase):
     def test_reads_selected_elements_of_decimated_data(self):
         server = FakeJoule()
         # create the source stream
-        src = Stream(id=0, name="source", keep_us=100, datatype=Stream.DATATYPE.FLOAT32)
+        src = DataStream(id=0, name="source", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32)
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         # source has 200 rows of data between [0, 200] in two intervals
         src_data = np.hstack((helpers.create_data(src.decimated_layout, start=0, length=100, step=1),
@@ -163,7 +163,7 @@ class TestDataRead(FakeJouleTestCase):
     def test_reads_selected_elements(self):
         server = FakeJoule()
         # create the source stream
-        src = Stream(id=0, name="source", keep_us=100, datatype=Stream.DATATYPE.FLOAT32)
+        src = DataStream(id=0, name="source", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32)
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         # source has 100 rows of data between [0, 100]
         src_data = helpers.create_data(src.layout)
@@ -188,7 +188,7 @@ class TestDataRead(FakeJouleTestCase):
     def test_reads_selected_elements_to_file(self):
         server = FakeJoule()
         # create the source stream
-        src = Stream(id=0, name="source", keep_us=100, datatype=Stream.DATATYPE.UINT16)
+        src = DataStream(id=0, name="source", keep_us=100, datatype=DataStream.DATATYPE.UINT16)
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         # source has 100 rows of data between [0, 100]
         src_data = helpers.create_data(src.layout)
@@ -220,7 +220,7 @@ class TestDataRead(FakeJouleTestCase):
     def test_reads_data_to_file(self):
         server = FakeJoule()
         # create the source stream
-        src = Stream(id=0, name="source", keep_us=100, datatype=Stream.DATATYPE.FLOAT32)
+        src = DataStream(id=0, name="source", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32)
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         # source has 100 rows of data between [0, 100]
         src_data = helpers.create_data(src.layout)
@@ -248,7 +248,7 @@ class TestDataRead(FakeJouleTestCase):
     def test_when_server_returns_error_code(self):
         server = FakeJoule()
         # create the source stream
-        src = Stream(id=0, name="source", keep_us=100, datatype=Stream.DATATYPE.FLOAT32)
+        src = DataStream(id=0, name="source", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32)
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         # source has 200 rows of data between [0, 200] in two intervals
         src_data = np.hstack((helpers.create_data(src.decimated_layout, start=0, length=100, step=1),

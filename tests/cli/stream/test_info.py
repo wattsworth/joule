@@ -6,7 +6,7 @@ import copy
 import asyncio
 import re
 
-from joule.models import Stream
+from joule.models import DataStream
 from ..fake_joule import FakeJoule, FakeJouleTestCase
 from joule.cli import main
 
@@ -86,7 +86,7 @@ class TestStreamInfo(FakeJouleTestCase):
         stream1['is_configured'] = True
         stream1['keep_us'] = 8*60*60*1e6  # 8 hours
         stream2 = copy.deepcopy(orig_stream_data)
-        stream2['keep_us'] = Stream.KEEP_NONE
+        stream2['keep_us'] = DataStream.KEEP_NONE
         stream2['description'] = 'description'
         stream2['data_info']['start'] = None
         stream2['data_info']['end'] = None

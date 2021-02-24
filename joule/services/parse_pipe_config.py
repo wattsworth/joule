@@ -2,8 +2,8 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from joule.errors import ConfigurationError
-from joule.models import Stream, Element, Follower
-from joule.models import stream, folder
+from joule.models import DataStream, Element, Follower
+from joule.models import data_stream, folder
 
 
 # basic format of stream is just the full_path
@@ -14,20 +14,20 @@ from joule.models import stream, folder
 #
 
 
-def run(pipe_config: str, db: Session) -> Stream:
+def run(pipe_config: str, db: Session) -> DataStream:
     # check for a remote stream config
     (pipe_config, node_name) = strip_remote_config(pipe_config)
     local = node_name is None
     # separate the configuration pieces
     (path, name, inline_config) = parse_pipe_config(pipe_config)
-    name = stream.validate_name(name)
+    name = data_stream.validate_name(name)
     # parse the inline configuration
     (datatype, element_names) = parse_inline_config(inline_config)
     # if the stream is local, check for it in the database
     if local:
         my_folder = folder.find(path, db, create=True)
         # check if the stream exists in the database
-        existing_stream: Stream = db.query(Stream). \
+        existing_stream: DataStream = db.query(DataStream). \
             filter_by(folder=my_folder, name=name). \
             one_or_none()
         if existing_stream is not None:
@@ -47,8 +47,8 @@ def run(pipe_config: str, db: Session) -> Stream:
         raise ConfigurationError(msg)
 
     # build the stream from inline config
-    my_stream = stream.Stream(name=name,
-                              datatype=datatype)
+    my_stream = data_stream.DataStream(name=name,
+                                       datatype=datatype)
     i = 0
     for e in element_names:
         my_stream.elements.append(Element(name=e, index=i))
@@ -94,34 +94,34 @@ def parse_pipe_config(pipe_config: str) -> (str, str, str):
     return path, name, inline_config
 
 
-def parse_inline_config(inline_config: str) -> (Stream.DATATYPE, List[str]):
+def parse_inline_config(inline_config: str) -> (DataStream.DATATYPE, List[str]):
     if len(inline_config) == 0:
         return None, None
     try:
         config = inline_config.split('[')
         if len(config) != 2 or inline_config[-1] != ']':
             raise ConfigurationError("format is datatype[e1,e2,e3,...]")
-        datatype = stream.validate_datatype(config[0].strip())
+        datatype = data_stream.validate_datatype(config[0].strip())
         element_names = [e.strip() for e in config[1].strip()[:-1].split(",")]
         return datatype, element_names
     except ConfigurationError as e:
         raise ConfigurationError("invalid inline configuration: %s" % inline_config) from e
 
 
-def _validate_config_match(existing_stream: Stream,
-                           datatype: Stream.DATATYPE,
+def _validate_config_match(existing_stream: DataStream,
+                           datatype: DataStream.DATATYPE,
                            elem_names: List[str]):
     # verify data_type match if specified
     if (datatype is not None and
             datatype != existing_stream.datatype):
-        raise ConfigurationError("Stream [%s] exists with data_type %s" %
+        raise ConfigurationError("DataStream [%s] exists with data_type %s" %
                                  (existing_stream.name,
                                   existing_stream.datatype))
 
     # verify elem_names
     existing_names = [e.name for e in existing_stream.elements]
     if len(existing_names) != len(elem_names):
-        raise ConfigurationError("Stream exists with different elements")
+        raise ConfigurationError("DataStream exists with different elements")
     for name in elem_names:
         if name not in existing_names:
-            raise ConfigurationError("Stream exists with different elements")
+            raise ConfigurationError("DataStream exists with different elements")

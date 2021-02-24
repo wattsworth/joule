@@ -8,7 +8,7 @@ from joule.models.meta import Base
 from joule.errors import ConfigurationError
 
 if TYPE_CHECKING:  # pragma: no cover
-    from joule.models.folder import Stream
+    from joule.models.folder import DataStream
 
 
 class Element(Base):
@@ -46,7 +46,7 @@ class Element(Base):
     default_max: Optional[float] = Column(Float, default=None)
     default_min: Optional[float] = Column(Float, default=None)
     stream_id: int = Column(Integer, ForeignKey('metadata.stream.id'))
-    stream: 'Stream' = relationship("Stream", back_populates="elements")
+    stream: 'DataStream' = relationship("DataStream", back_populates="elements")
 
     def __repr__(self):
         return "<Element(name='%s', units='%s', display_type=%s)>" % (self.name, self.units, self.display_type)

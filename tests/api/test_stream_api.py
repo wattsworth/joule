@@ -31,7 +31,7 @@ class TestStreamApi(asynctest.TestCase):
         self.assertEqual(self.session.request_data,
                          {'src_path': '/a/path', 'dest_path': '/b/path'})
 
-        # can move by Folder and Stream
+        # can move by Folder and DataStream
         src = Stream()
         src.id = 1
         dest = Folder()
@@ -63,7 +63,7 @@ class TestStreamApi(asynctest.TestCase):
         self.assertEqual(self.session.path, "/stream.json")
         self.assertEqual(self.session.request_data, {'path': '/a/path'})
 
-        # can delete by Stream
+        # can delete by DataStream
         src = Stream()
         src.id = 1
         await self.node.stream_delete(src)
@@ -92,7 +92,7 @@ class TestStreamApi(asynctest.TestCase):
         self.assertEqual(self.session.path, "/stream.json")
         self.assertEqual(self.session.request_data, {'path': '/a/path'})
 
-        # can get by Stream
+        # can get by DataStream
         src = Stream()
         src.id = 1
         await self.node.stream_get(src)

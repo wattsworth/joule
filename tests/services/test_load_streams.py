@@ -7,7 +7,7 @@ import os
 import warnings
 
 from tests.helpers import DbTestCase
-from joule.models import (Base, Stream, Folder, Element)
+from joule.models import (Base, DataStream, Folder, Element)
 from joule.services import load_streams
 
 logger = logging.getLogger('joule')
@@ -21,20 +21,20 @@ class TestConfigureStreams(DbTestCase):
 
         # /test/stream1:float32_3
         folder_test = Folder(name="test")
-        stream1 = Stream(name="stream1", keep_us=100,
-                         datatype=Stream.DATATYPE.FLOAT32)
+        stream1 = DataStream(name="stream1", keep_us=100,
+                             datatype=DataStream.DATATYPE.FLOAT32)
         stream1.elements = [Element(name="e%d" % x, index=x, default_min=1) for x in range(3)]
         folder_test.streams.append(stream1)
 
         # /test/deeper/stream2: int8_2
         folder_deeper = Folder(name="deeper")
-        stream2 = Stream(name="stream2", datatype=Stream.DATATYPE.INT8)
+        stream2 = DataStream(name="stream2", datatype=DataStream.DATATYPE.INT8)
         stream2.elements = [Element(name="e%d" % x, index=x) for x in range(2)]
         folder_deeper.streams.append(stream2)
         folder_deeper.parent = folder_test
 
         # /test/deeper/stream3: int8_2
-        stream3 = Stream(name="stream3", datatype=Stream.DATATYPE.INT16)
+        stream3 = DataStream(name="stream3", datatype=DataStream.DATATYPE.INT16)
         stream3.elements = [Element(name="e%d" % x, index=x) for x in range(2)]
         folder_deeper.streams.append(stream3)
 
@@ -117,13 +117,13 @@ class TestConfigureStreams(DbTestCase):
 
         # now check the database:
         # should have 3 streams
-        self.assertEqual(self.db.query(Stream).count(), 5)
+        self.assertEqual(self.db.query(DataStream).count(), 5)
         # and 7 elements (orphans eliminated)
         self.assertEqual(self.db.query(Element).count(), 10)
         # Check stream merging
         #   stream1 should have a new keep value
-        stream1: Stream = self.db.query(Stream).filter_by(name="stream1").one()
-        self.assertEqual(stream1.keep_us, Stream.KEEP_ALL)
+        stream1: DataStream = self.db.query(DataStream).filter_by(name="stream1").one()
+        self.assertEqual(stream1.keep_us, DataStream.KEEP_ALL)
         #   its elements should have new attributes
         self.assertEqual(stream1.elements[0].name, 'new_e1')
         self.assertEqual(stream1.elements[0].display_type, Element.DISPLAYTYPE.DISCRETE)
@@ -135,13 +135,13 @@ class TestConfigureStreams(DbTestCase):
         self.assertEqual(stream1.elements[2].default_min, -10)
         # Check unconfigured streams are unchanged
         #   /test/deeper/stream2 should be the same
-        stream2: Stream = self.db.query(Stream).filter_by(name="stream2").one()
+        stream2: DataStream = self.db.query(DataStream).filter_by(name="stream2").one()
         self.assertEqual(stream2.layout, 'int8_2')
         #   /test/deeper/stream3 should be the same
-        stream3: Stream = self.db.query(Stream).filter_by(name="stream3").one()
+        stream3: DataStream = self.db.query(DataStream).filter_by(name="stream3").one()
         self.assertEqual(stream3.layout, 'int16_2')
         # Check new streams are added
-        stream4: Stream = self.db.query(Stream).filter_by(name="stream4").one()
+        stream4: DataStream = self.db.query(DataStream).filter_by(name="stream4").one()
         self.assertEqual(stream4.layout, 'uint8_2')
 
         # Check the folder structure

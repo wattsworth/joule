@@ -5,7 +5,7 @@ import asyncio
 import logging
 import aiohttp
 
-from joule.models import (folder, DataStore, Stream,
+from joule.models import (folder, DataStore, DataStream,
                           InsufficientDecimationError, DataError,
                           pipes)
 from joule.models.supervisor import Supervisor
@@ -33,7 +33,7 @@ async def _read(request: web.Request, json):
     if 'path' in request.query:
         stream = folder.find_stream_by_path(request.query['path'], db)
     elif 'id' in request.query:
-        stream = db.query(Stream).get(request.query["id"])
+        stream = db.query(DataStream).get(request.query["id"])
     else:
         return web.Response(text="specify an id or a path", status=400)
     if stream is None:
@@ -135,7 +135,7 @@ async def _subscribe(request: web.Request, json: bool):
     if 'path' in request.query:
         stream = folder.find_stream_by_path(request.query['path'], db)
     elif 'id' in request.query:
-        stream = db.query(Stream).get(request.query["id"])
+        stream = db.query(DataStream).get(request.query["id"])
     else:
         return web.Response(text="specify an id or a path", status=400)
     if stream is None:
@@ -183,7 +183,7 @@ async def intervals(request: web.Request):
     if 'path' in request.query:
         stream = folder.find_stream_by_path(request.query['path'], db)
     elif 'id' in request.query:
-        stream = db.query(Stream).get(request.query["id"])
+        stream = db.query(DataStream).get(request.query["id"])
     else:
         return web.Response(text="specify an id or a path", status=400)
     if stream is None:
@@ -215,7 +215,7 @@ async def write(request: web.Request):
     if 'path' in request.query:
         stream = folder.find_stream_by_path(request.query['path'], db)
     elif 'id' in request.query:
-        stream = db.query(Stream).get(request.query["id"])
+        stream = db.query(DataStream).get(request.query["id"])
     else:
         return web.Response(text="specify an id or a path", status=400)
     if stream is None:
@@ -246,7 +246,7 @@ async def remove(request: web.Request):
     if 'path' in request.query:
         stream = folder.find_stream_by_path(request.query['path'], db)
     elif 'id' in request.query:
-        stream = db.query(Stream).get(request.query["id"])
+        stream = db.query(DataStream).get(request.query["id"])
     else:
         return web.Response(text="specify an id or a path", status=400)
     if stream is None:
@@ -279,7 +279,7 @@ async def consolidate(request):
     if 'path' in request.query:
         stream = folder.find_stream_by_path(request.query['path'], db)
     elif 'id' in request.query:
-        stream = db.query(Stream).get(request.query["id"])
+        stream = db.query(DataStream).get(request.query["id"])
     else:
         return web.Response(text="specify an id or a path", status=400)
     if stream is None:

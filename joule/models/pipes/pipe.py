@@ -6,7 +6,7 @@ import logging
 from joule.models.pipes.errors import PipeError
 
 if TYPE_CHECKING:  # pragma: no cover
-    from joule.models import (Module, Stream)
+    from joule.models import (Module, DataStream)
 
 log = logging.getLogger('joule')
 
@@ -40,7 +40,7 @@ class Pipe:
         self.name: str = name
         self.direction: Pipe.DIRECTION = direction
         self.module: 'Module' = module
-        self.stream: 'Stream' = stream
+        self.stream: 'DataStream' = stream
         self._layout = layout
         self.closed = False
         self.decimation_level = 1

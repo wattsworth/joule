@@ -10,7 +10,7 @@ import psutil
 import numpy as np
 
 from joule.models.module import Module
-from joule.models.stream import Stream
+from joule.models.data_stream import DataStream
 from joule.models.folder import get_stream_path
 from joule.errors import SubscriptionError
 from joule.models import pipes
@@ -18,7 +18,7 @@ from joule.models.pipes.errors import EmptyPipe, PipeError
 
 # custom types
 Loop = asyncio.AbstractEventLoop
-Subscribers = Dict[Stream, List[pipes.Pipe]]
+Subscribers = Dict[DataStream, List[pipes.Pipe]]
 
 popen_lock = None
 log = logging.getLogger('joule')
@@ -35,7 +35,7 @@ def _initialize_popen_lock():
 
 class DataConnection:
     def __init__(self, name: str, child_fd: int,
-                 stream: Stream, pipe: pipes.Pipe,
+                 stream: DataStream, pipe: pipes.Pipe,
                  unsubscribe: Callable = None):
         self.name = name
         self.child_fd = child_fd
@@ -148,7 +148,7 @@ class Worker:
             return SOCKET_BASE % self.module.uuid
         return "none"
 
-    def produces(self, stream: Stream) -> bool:
+    def produces(self, stream: DataStream) -> bool:
         # returns True if this worker produces [stream]
         for output in self.module.outputs.values():
             if output == stream:
@@ -156,7 +156,7 @@ class Worker:
         else:
             return False
 
-    async def run(self, subscribe: Callable[[Stream, pipes.Pipe, Loop], Callable], restart: bool = True) -> None:
+    async def run(self, subscribe: Callable[[DataStream, pipes.Pipe, Loop], Callable], restart: bool = True) -> None:
         self.stop_requested = False
         while True:
             # when jouled is run from the command line Ctrl+C sends SIGTERM
@@ -221,7 +221,7 @@ class Worker:
         return list(self._logs)
 
     # returns a queue and unsubscribe function
-    def subscribe(self, stream: Stream, pipe: pipes.Pipe) -> Callable:
+    def subscribe(self, stream: DataStream, pipe: pipes.Pipe) -> Callable:
         try:
             self.subscribers[stream].append(pipe)
         except KeyError:
@@ -238,7 +238,7 @@ class Worker:
 
         return unsubscribe
 
-    async def _spawn_child(self, subscribe: Callable[[Stream, pipes.Pipe, Loop], Callable]) -> None:
+    async def _spawn_child(self, subscribe: Callable[[DataStream, pipes.Pipe, Loop], Callable]) -> None:
 
         # lock so fd's don't pollute other modules
         _initialize_popen_lock()
@@ -371,7 +371,7 @@ class Worker:
                     self.name, child_output.name, str(e)))
 
     async def _subscribe_to_inputs(self,
-                                   subscribe: Callable[[Stream, pipes.Pipe, Loop], Callable]):
+                                   subscribe: Callable[[DataStream, pipes.Pipe, Loop], Callable]):
         # configure input pipes            [module]<==[worker]
         for (name, stream) in self.module.inputs.items():
             (r, w) = os.pipe()

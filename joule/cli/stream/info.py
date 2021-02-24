@@ -6,7 +6,7 @@ import asyncio
 
 from joule.api.stream import (stream_get,
                               stream_info)
-from joule.models import stream
+from joule.models import data_stream
 from joule import errors
 from joule.cli.config import pass_config
 
@@ -69,9 +69,9 @@ def _display_decimate(decimate: bool) -> str:
 
 
 def _display_keep(keep: int) -> str:
-    if keep == stream.Stream.KEEP_NONE:
+    if keep == data_stream.DataStream.KEEP_NONE:
         return "no data"
-    if keep == stream.Stream.KEEP_ALL:
+    if keep == data_stream.DataStream.KEEP_ALL:
         return "all data"
     return str(datetime.timedelta(microseconds=keep))
 

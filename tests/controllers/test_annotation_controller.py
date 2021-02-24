@@ -3,7 +3,7 @@ from aiohttp import web
 
 import joule.controllers
 from tests.controllers.helpers import create_db
-from joule.models import Stream, Annotation
+from joule.models import DataStream, Annotation
 from joule import utilities
 
 
@@ -15,8 +15,8 @@ class TestAnnotationController(AioHTTPTestCase):
 
         db, app["psql"] = create_db(["/top/leaf/stream1:float32[x, y, z]",
                                      "/top/middle/leaf/stream2:int8[val1, val2]"])
-        self.stream1 = db.query(Stream).filter_by(name="stream1").one_or_none()
-        self.stream2 = db.query(Stream).filter_by(name="stream2").one_or_none()
+        self.stream1 = db.query(DataStream).filter_by(name="stream1").one_or_none()
+        self.stream2 = db.query(DataStream).filter_by(name="stream2").one_or_none()
 
         # add 5 event annotations to stream1
         # add 5 interval annotations to stream2
@@ -141,7 +141,7 @@ class TestAnnotationController(AioHTTPTestCase):
     @unittest_run_loop
     async def test_annotation_delete_cascade(self):
         # make sure annotation are deleted when streams are deleted
-        for stream in self.db.query(Stream).all():
+        for stream in self.db.query(DataStream).all():
             self.db.delete(stream)
         self.db.commit()
         self.assertEqual(0, self.db.query(Annotation).count())

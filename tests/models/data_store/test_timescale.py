@@ -10,7 +10,7 @@ import os
 import sys
 import json
 
-from joule.models import Stream, Element, pipes
+from joule.models import DataStream, Element, pipes
 from joule.models.data_store.timescale import TimescaleStore
 from joule.models.data_store import psql_helpers
 from joule.errors import DataError
@@ -74,15 +74,15 @@ class TestTimescale(asynctest.TestCase):
             await conn.execute("CREATE SCHEMA data")
             await conn.execute("GRANT ALL ON SCHEMA data TO public")
 
-            self.store = TimescaleStore(self.db_url, 0, 60, self.loop)
+            self.store = TimescaleStore(self.db_url, 0, 60,)
             await self.store.initialize([])
             # make a sample stream with data
-            self.test_stream = Stream(id=100, name="stream1", datatype=Stream.DATATYPE.FLOAT32,
-                                      keep_us=Stream.KEEP_ALL, decimate=True,
-                                      elements=[Element(name="e%d" % x) for x in range(3)])
+            self.test_stream = DataStream(id=100, name="stream1", datatype=DataStream.DATATYPE.FLOAT32,
+                                          keep_us=DataStream.KEEP_ALL, decimate=True,
+                                          elements=[Element(name="e%d" % x) for x in range(3)])
             pipe = pipes.LocalPipe(self.test_stream.layout)
             self.test_data = helpers.create_data(layout=self.test_stream.layout, length=1005)
-            task = self.store.spawn_inserter(self.test_stream, pipe, self.loop)
+            task = self.store.spawn_inserter(self.test_stream, pipe)
             await pipe.write(self.test_data)
             await pipe.close()
             runner = await task
@@ -99,21 +99,21 @@ class TestTimescale(asynctest.TestCase):
         stream_id = 990
         self.store.extract_block_size = 500
         psql_types = ['double precision', 'real', 'bigint', 'integer', 'smallint']
-        datatypes = [Stream.DATATYPE.FLOAT64, Stream.DATATYPE.FLOAT32, Stream.DATATYPE.INT64,
-                     Stream.DATATYPE.INT32, Stream.DATATYPE.INT16]
+        datatypes = [DataStream.DATATYPE.FLOAT64, DataStream.DATATYPE.FLOAT32, DataStream.DATATYPE.INT64,
+                     DataStream.DATATYPE.INT32, DataStream.DATATYPE.INT16]
         conn: asyncpg.Connection = await asyncpg.connect(self.db_url)
         for i in range(len(datatypes)):
             datatype = datatypes[i]
             psql_type = psql_types[i]
             for n_elements in range(1, 5):
-                test_stream = Stream(id=stream_id, name="stream1", datatype=datatype, keep_us=Stream.KEEP_ALL,
-                                     elements=[Element(name="e%d" % x) for x in range(n_elements)])
+                test_stream = DataStream(id=stream_id, name="stream1", datatype=datatype, keep_us=DataStream.KEEP_ALL,
+                                         elements=[Element(name="e%d" % x) for x in range(n_elements)])
                 test_stream.decimate = True
                 source = QueueReader()
                 pipe = pipes.InputPipe(stream=test_stream, reader=source)
                 nrows = 955
                 data = helpers.create_data(layout=test_stream.layout, length=nrows)
-                task = await self.store.spawn_inserter(test_stream, pipe, self.loop)
+                task = await self.store.spawn_inserter(test_stream, pipe)
                 for chunk in helpers.to_chunks(data, 300):
                     await source.put(chunk.tobytes())
                 await task
@@ -168,12 +168,12 @@ class TestTimescale(asynctest.TestCase):
         await conn.close()
 
     async def _test_extract_data_with_intervals(self):
-        test_stream = Stream(id=1, name="stream1", datatype=Stream.DATATYPE.FLOAT32, keep_us=Stream.KEEP_ALL,
-                             decimate=True, elements=[Element(name="e%d" % x) for x in range(3)])
+        test_stream = DataStream(id=1, name="stream1", datatype=DataStream.DATATYPE.FLOAT32, keep_us=DataStream.KEEP_ALL,
+                                 decimate=True, elements=[Element(name="e%d" % x) for x in range(3)])
         pipe = pipes.LocalPipe(test_stream.layout)
         nrows = 955
         data = helpers.create_data(layout=test_stream.layout, length=nrows)
-        task = await self.store.spawn_inserter(test_stream, pipe, self.loop)
+        task = await self.store.spawn_inserter(test_stream, pipe)
         for chunk in helpers.to_chunks(data, 300):
             await pipe.write(chunk)
             await pipe.close_interval()
@@ -218,10 +218,10 @@ class TestTimescale(asynctest.TestCase):
 
     async def _test_row_count(self):
         test_data = helpers.create_data(layout=self.test_stream.layout, length=10000)
-        test_stream = Stream(id=95, name="stream1", datatype=Stream.DATATYPE.FLOAT32, keep_us=Stream.KEEP_ALL,
-                             decimate=True, elements=[Element(name="e%d" % x) for x in range(3)])
+        test_stream = DataStream(id=95, name="stream1", datatype=DataStream.DATATYPE.FLOAT32, keep_us=DataStream.KEEP_ALL,
+                                 decimate=True, elements=[Element(name="e%d" % x) for x in range(3)])
         pipe = pipes.LocalPipe(test_stream.layout)
-        task = await self.store.spawn_inserter(test_stream, pipe, self.loop)
+        task = await self.store.spawn_inserter(test_stream, pipe)
         await pipe.write(test_data)
         await pipe.close()
         await task
@@ -254,8 +254,8 @@ class TestTimescale(asynctest.TestCase):
         self.assertEqual(0, nrows)
 
         # Test row count for stream with no data tables
-        empty_stream = Stream(id=96, name="empty", datatype=Stream.DATATYPE.FLOAT64,
-                              keep_us=100, decimate=True, elements=[Element(name="e%d" % x) for x in range(8)])
+        empty_stream = DataStream(id=96, name="empty", datatype=DataStream.DATATYPE.FLOAT64,
+                                  keep_us=100, decimate=True, elements=[Element(name="e%d" % x) for x in range(8)])
         nrows = await psql_helpers.get_row_count(conn, empty_stream,
                                                  None,
                                                  None)
@@ -377,8 +377,8 @@ class TestTimescale(asynctest.TestCase):
     async def _test_consolidate(self):
         # intervals less than max_gap us apart are consolidated
         # data: 100 samples spaced at 1000us
-        test_stream = Stream(id=1, name="stream1", datatype=Stream.DATATYPE.FLOAT32, keep_us=Stream.KEEP_ALL,
-                             decimate=True, elements=[Element(name="e%d" % x) for x in range(3)])
+        test_stream = DataStream(id=1, name="stream1", datatype=DataStream.DATATYPE.FLOAT32, keep_us=DataStream.KEEP_ALL,
+                                 decimate=True, elements=[Element(name="e%d" % x) for x in range(3)])
         pipe = pipes.LocalPipe(test_stream.layout)
         nrows = 955
         orig_data = helpers.create_data(layout=test_stream.layout, length=nrows)
@@ -389,7 +389,7 @@ class TestTimescale(asynctest.TestCase):
         # data: |++++++|  |+++++++++|    |++++++|    |++++|  |++++|
         #               ^--5000 us    ^--2000 us   |        ^--- 2000 us
         #                                          `---0.1 sec (retained)
-        task = await self.store.spawn_inserter(test_stream, pipe, self.loop)
+        task = await self.store.spawn_inserter(test_stream, pipe)
         for chunk in chunks:
             await pipe.write(chunk)
             await pipe.close_interval()
@@ -416,8 +416,8 @@ class TestTimescale(asynctest.TestCase):
     async def _test_consolidate_with_time_bounds(self):
         # intervals less than max_gap us apart between start and end are consolidated
         # data: 100 samples spaced at 1000us
-        test_stream = Stream(id=1, name="stream1", datatype=Stream.DATATYPE.FLOAT32, keep_us=Stream.KEEP_ALL,
-                             decimate=True, elements=[Element(name="e%d" % x) for x in range(3)])
+        test_stream = DataStream(id=1, name="stream1", datatype=DataStream.DATATYPE.FLOAT32, keep_us=DataStream.KEEP_ALL,
+                                 decimate=True, elements=[Element(name="e%d" % x) for x in range(3)])
         pipe = pipes.LocalPipe(test_stream.layout)
         nrows = 955
         orig_data = helpers.create_data(layout=test_stream.layout, length=nrows)
@@ -425,7 +425,7 @@ class TestTimescale(asynctest.TestCase):
         # data: |++++++|  |+++++++++|    |++++++|    |++++|  |++++|
         #               ^--(retained) ^--2000 us   |        ^--- 2000 us (retained)
         #                                          `---0.1 sec (retained)
-        task = await self.store.spawn_inserter(test_stream, pipe, self.loop)
+        task = await self.store.spawn_inserter(test_stream, pipe)
         for chunk in chunks:
             await pipe.write(chunk)
             await pipe.close_interval()
@@ -463,15 +463,15 @@ class TestTimescale(asynctest.TestCase):
 
     async def _test_info(self):
         # create another stream
-        empty_stream = Stream(id=103, name="empty stream", datatype=Stream.DATATYPE.INT32,
-                              keep_us=Stream.KEEP_ALL, decimate=True,
-                              elements=[Element(name="e%d" % x) for x in range(8)])
-        stream2 = Stream(id=104, name="stream2", datatype=Stream.DATATYPE.INT32,
-                         keep_us=Stream.KEEP_ALL, decimate=True,
-                         elements=[Element(name="e%d" % x) for x in range(8)])
+        empty_stream = DataStream(id=103, name="empty stream", datatype=DataStream.DATATYPE.INT32,
+                                  keep_us=DataStream.KEEP_ALL, decimate=True,
+                                  elements=[Element(name="e%d" % x) for x in range(8)])
+        stream2 = DataStream(id=104, name="stream2", datatype=DataStream.DATATYPE.INT32,
+                             keep_us=DataStream.KEEP_ALL, decimate=True,
+                             elements=[Element(name="e%d" % x) for x in range(8)])
         pipe = pipes.LocalPipe(stream2.layout)
         test_data = helpers.create_data(layout=stream2.layout, length=800)
-        task = await self.store.spawn_inserter(stream2, pipe, self.loop)
+        task = await self.store.spawn_inserter(stream2, pipe)
         await pipe.write(test_data)
         await pipe.close()
         await task
@@ -503,9 +503,9 @@ class TestTimescale(asynctest.TestCase):
 
     async def _test_actions_on_empty_streams(self):
         # make sure all actions can be performed on streams with no data
-        empty_stream = Stream(id=103, name="empty stream", datatype=Stream.DATATYPE.INT32,
-                              keep_us=Stream.KEEP_ALL, decimate=True,
-                              elements=[Element(name="e%d" % x) for x in range(8)])
+        empty_stream = DataStream(id=103, name="empty stream", datatype=DataStream.DATATYPE.INT32,
+                                  keep_us=DataStream.KEEP_ALL, decimate=True,
+                                  elements=[Element(name="e%d" % x) for x in range(8)])
 
         # ==== extract =====
         cb_executed = False

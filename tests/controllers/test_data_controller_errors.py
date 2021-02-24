@@ -3,7 +3,7 @@ from aiohttp import web
 import aiohttp
 from sqlalchemy.orm import Session
 
-from joule.models import Stream
+from joule.models import DataStream
 import joule.controllers
 from tests.controllers.helpers import create_db, MockStore, MockSupervisor
 from tests import helpers
@@ -228,7 +228,7 @@ class TestDataController(AioHTTPTestCase):
         db: Session = self.app["db"]
         store: MockStore = self.app['data-store']
         store.raise_data_error = True
-        stream: Stream = db.query(Stream).filter_by(name="stream1").one()
+        stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
         data = helpers.create_data(stream.layout)
         resp: aiohttp.ClientResponse = await \
             self.client.post("/data", params={"path": "/folder1/stream1"},

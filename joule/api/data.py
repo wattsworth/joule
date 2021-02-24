@@ -36,7 +36,7 @@ async def data_delete(session: BaseSession,
     elif type(stream) is int:
         params['id'] = stream
     else:
-        raise errors.ApiError("Invalid stream datatype. Must be Stream, Path, or ID")
+        raise errors.ApiError("Invalid stream datatype. Must be DataStream, Path, or ID")
 
     await session.delete("/data", params)
 
@@ -54,7 +54,7 @@ async def data_write(session: BaseSession,
 
     if type(stream) is Stream:
         if dest_stream.layout != stream.layout:
-            raise errors.ApiError("Stream [%s] configured for [%s] but destination is [%s]" % (
+            raise errors.ApiError("DataStream [%s] configured for [%s] but destination is [%s]" % (
                 stream.name, stream.layout, dest_stream.layout))
         # raise a warning if the element names do not match
         actual_names = [e.name for e in dest_stream.elements]
@@ -64,7 +64,7 @@ async def data_write(session: BaseSession,
 
     # make sure the stream is not currently produced
     if dest_stream.is_destination:
-        raise errors.ApiError("Stream [%s] is already being produced" % dest_stream.name)
+        raise errors.ApiError("DataStream [%s] is already being produced" % dest_stream.name)
 
     # all checks passed, subscribe to the output
     async def close():
@@ -89,7 +89,7 @@ async def data_intervals(session: BaseSession,
     elif type(stream) is str:
         data["path"] = stream
     else:
-        raise errors.ApiError("Invalid stream datatype. Must be Stream, Path, or ID")
+        raise errors.ApiError("Invalid stream datatype. Must be DataStream, Path, or ID")
     if start_time is not None:
         data['start'] = int(start_time)
     if end_time is not None:
@@ -111,7 +111,7 @@ async def data_consolidate(session: BaseSession,
     elif type(stream) is str:
         data["path"] = stream
     else:
-        raise errors.ApiError("Invalid stream datatype. Must be Stream, Path, or ID")
+        raise errors.ApiError("Invalid stream datatype. Must be DataStream, Path, or ID")
     if start_time is not None:
         data['start'] = int(start_time)
     if end_time is not None:
@@ -164,7 +164,7 @@ async def data_subscribe(session: BaseSession,
     # make sure the stream is being produced
     if not src_stream.is_destination:
         raise errors.ApiError(
-            "Stream [%s] is not being produced, specify time bounds for historic execution" % src_stream.name)
+            "DataStream [%s] is not being produced, specify time bounds for historic execution" % src_stream.name)
     # replace the stub stream (from config file) with actual stream
     # do not let the buffer grow beyond 5 server chunks
     pipe = LocalPipe(src_stream.layout, name=src_stream.name, stream=src_stream, write_limit=5)

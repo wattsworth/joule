@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from collections import deque
 from typing import Optional
 
-from joule.models import Stream, Element, Base, Pipe
+from joule.models import DataStream, Element, Base, Pipe
 from joule.models.pipes.errors import PipeError
 from joule.errors import EmptyPipeError
 
@@ -41,12 +41,12 @@ def create_data(layout: str,
     return sarray
 
 
-def create_stream(name, layout, id=0) -> Stream:
+def create_stream(name, layout, id=0) -> DataStream:
     (ltype, lcount, dtype) = parse_layout(layout)
-    datatype = Stream.DATATYPE[ltype.upper()]
+    datatype = DataStream.DATATYPE[ltype.upper()]
 
-    return Stream(name=name, datatype=datatype, id=id,
-                  elements=[Element(name="e%d" % j, index=j,
+    return DataStream(name=name, datatype=datatype, id=id,
+                      elements=[Element(name="e%d" % j, index=j,
                                     display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(lcount)])
 
 

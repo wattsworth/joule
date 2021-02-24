@@ -116,27 +116,27 @@ Folder Actions
 
 .. _sec-node-stream-actions:
 
-Stream Actions
+DataStream Actions
 ''''''''''''''
 
-.. function:: Node.stream_get(stream: Union[Stream, str, int]) -> Stream:
+.. function:: Node.stream_get(stream: Union[DataStream, str, int]) -> DataStream:
 
-    Retrieve the specified stream. Stream may be specified by a :class:`joule.api.Stream` object,
+    Retrieve the specified stream. DataStream may be specified by a :class:`joule.api.DataStream` object,
     a path, or numeric ID. Raises :exc:`joule.errors.ApiError` if stream specification is invalid.
 
     Examples:
         >>> stream = await node.stream_get("/parent/my_folder/stream")
-        <joule.api.Stream id=2627 name='stream' description='' datatype='int32'
+        <joule.api.DataStream id=2627 name='stream' description='' datatype='int32'
          is_configured=False is_source=False is_destination=False locked=False decimate=True>
 
         >>> stream = await node.stream_get(2627)
-        <joule.api.Stream id=2627 name='stream' description='' datatype='int32'
+        <joule.api.DataStream id=2627 name='stream' description='' datatype='int32'
          is_configured=False is_source=False is_destination=False locked=False decimate=True>
 
         >>> await node.stream_get("/does/not/exist") # raises ApiError
         joule.errors.ApiError: stream does not exist [404]
 
-.. function:: Node.stream_move(stream: Union[Stream, str, int], folder: Union[Folder, str, int]) -> None:
+.. function:: Node.stream_move(stream: Union[DataStream, str, int], folder: Union[Folder, str, int]) -> None:
 
     Move a stream into a different folder. The stream and folder may be
     specified by objects, paths, or numeric ID's. The stream name must be unique in the destination
@@ -148,13 +148,13 @@ Stream Actions
         >>> await node.stream_move("/parent1/my_folder/stream","/parent2")
         >>> parent2 = await node.folder_get("/parent2")
         >>> parent2.streams
-        [<joule.api.Stream id=2627 name='stream' description='' datatype='int32'
+        [<joule.api.DataStream id=2627 name='stream' description='' datatype='int32'
          is_configured=False is_source=False is_destination=False locked=False decimate=True>]
 
         >>> await node.stream_move("/does/not/exist","/parent2") # raises ApiError
         joule.errors.ApiError: stream does not exist [404]
 
-.. function:: Node.stream_update(stream: Stream) -> None:
+.. function:: Node.stream_update(stream: DataStream) -> None:
 
     Update stream and element attributes.
     Raises :exc:`joule.errors.ApiError` if stream is locked or the specification is invalid. The datatype and
@@ -172,16 +172,16 @@ Stream Actions
         [<joule.api.Element id=3192 index=0, name='New Name' units=None
          plottable=True display_type='CONTINUOUS'>]
 
-.. function:: Node.stream_delete(stream: Union[Stream, str, int]) -> None:
+.. function:: Node.stream_delete(stream: Union[DataStream, str, int]) -> None:
 
-    Delete a stream. Stream may be specified by a :class:`joule.api.Stream` object,
+    Delete a stream. DataStream may be specified by a :class:`joule.api.DataStream` object,
     a path, or numeric ID. Raises :exc:`joule.errors.ApiError` if the stream specification
     is invalid or if the stream is locked. To remove data within a stream see :meth:`Node.data_delete`.
 
     Example:
         >>> folder = await node.folder_get("/parent/my_folder")
         >>> folder.streams # my_folder has one stream
-        [<joule.api.Stream id=2627 name='stream' description='' datatype='int32'
+        [<joule.api.DataStream id=2627 name='stream' description='' datatype='int32'
          is_configured=False is_source=False is_destination=False locked=False decimate=True>]
         >>> await node.stream_delete("/parent/my_folder/stream") # delete the stream
         >>> folder = await node.folder_get("/parent/my_folder")
@@ -189,25 +189,41 @@ Stream Actions
         []
 
 
-.. function:: Node.stream_create(stream: Stream, folder: Union[Folder, str, int]) -> Stream:
+.. function:: Node.stream_create(stream: DataStream, folder: Union[Folder, str, int]) -> DataStream:
 
     Create a stream and place in the specified folder. Folder may be specified by object, path or numeric ID.
-    See :class:`joule.api.Stream` for details on creating Stream objects. Raises :exc:`joule.errors.ApiError` if the
+    See :class:`joule.api.DataStream` for details on creating DataStream objects. Raises :exc:`joule.errors.ApiError` if the
+        stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+        Example:
+            >>> new_stream = joule.api.DataStream(name="New Stream")
+            >>> new_stream.elements = [joule.api.Element(name="Element1")]
+            >>> await node.stream_create(new_stream,"/parent/new_folder")
+            <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+        stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+        Example:
+            >>> new_stream = joule.api.DataStream(name="New Stream")
+            >>> new_stream.elements = [joule.api.Element(name="Element1")]
+            >>> await node.stream_create(new_stream,"/parent/new_folder")
+            <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
     stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
 
     Example:
-        >>> new_stream = joule.api.Stream(name="New Stream")
+        >>> new_stream = joule.api.Stream(name="New DataStream")
         >>> new_stream.elements = [joule.api.Element(name="Element1")]
         >>> await node.stream_create(new_stream,"/parent/new_folder")
-        <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+        <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
          is_configured=False is_source=False is_destination=False locked=False decimate=True>
 
 
 
-.. function:: Node.stream_info(stream: Union[Stream, str, int]) -> StreamInfo:
+.. function:: Node.stream_info(stream: Union[DataStream, str, int]) -> StreamInfo:
 
-    Get information about a stream as a :class:`joule.api.StreamInfo` object. Stream may be specified
-    by a :class:`joule.api.Stream` object, a path, or numeric ID. Raises :exc:`joule.errors.ApiError`
+    Get information about a stream as a :class:`joule.api.StreamInfo` object. DataStream may be specified
+    by a :class:`joule.api.DataStream` object, a path, or numeric ID. Raises :exc:`joule.errors.ApiError`
     if the stream specification is invalid.
 
     Example:
@@ -216,7 +232,7 @@ Stream Actions
          rows=61440, total_time=20633185982>
 
 
-.. function:: Node.stream_annotation_delete(stream: Union[Stream, str, int], start: Optional[int] = None,
+.. function:: Node.stream_annotation_delete(stream: Union[DataStream, str, int], start: Optional[int] = None,
         end: Optional[int] = None) -> None:
 
     Remove annotations from this stream. If start and/or end is specified only remove annotations within this range.
@@ -227,14 +243,14 @@ Stream Actions
 Data Actions
 ''''''''''''
 
-.. function:: Node.data_read(stream: Union[Stream, str, int], start: Optional[int] = None, end: Optional[int] = None, max_rows: Optional[int] = None) -> Pipe
+.. function:: Node.data_read(stream: Union[DataStream, str, int], start: Optional[int] = None, end: Optional[int] = None, max_rows: Optional[int] = None) -> Pipe
 
     Read historic data from a stream. Specify timestamp bounds for a particular range or omit to read all historic data.
     This method returns a pipe which should be used to read the data. The pipe must be closed after use. See :ref:`pipes`
     for details on Joule Pipes.
 
     Parameters:
-        :stream: Stream specification, may be a :class:`joule.api.Stream` object, path, or numeric ID
+        :stream: DataStream specification, may be a :class:`joule.api.DataStream` object, path, or numeric ID
         :start: Timestamp in UNIX microseconds. Omit to read from beginning of the stream.
         :end: Timestamp in UNIX microseconds. Omit to read until the end of the stream.
         :max_rows: Return a decimated view of the data with at most this many rows, decimations are provided in powers of 4.
@@ -252,7 +268,7 @@ Data Actions
         >>> pipe.consume(len(data)) # flush the pipe
         >>> await pipe.close() # close the data connection
 
-.. function:: Node.data_subscribe(stream: Union[Stream, str, int]) -> Pipe
+.. function:: Node.data_subscribe(stream: Union[DataStream, str, int]) -> Pipe
 
     Read live data from a stream. The stream must be actively produced by a module. This method returns a pipe which
     should be used to read the data. The pipe must be closed after use. See :ref:`pipes`
@@ -268,7 +284,7 @@ Data Actions
         >>> pipe.consume(len(data)) # flush the pipe
         >>> await pipe.close() # close the data connection
 
-.. function:: Node.data_write(stream: Union[Stream, str, int], start: Optional[int] = None, end: Optional[int] = None)
+.. function:: Node.data_write(stream: Union[DataStream, str, int], start: Optional[int] = None, end: Optional[int] = None)
 
     Write data to a stream. The stream must not be an active destination from any other source.
     Optionally specify start and end timestamps to remove existing data over the interval you plan to write. This is required when
@@ -289,7 +305,7 @@ Data Actions
                (1551758297115090, 2.), (1551758297115111, 3.)],
               dtype=[('timestamp', '<i8'), ('data', '<f4')])
 
-.. function:: Node.data_delete(stream: Union[Stream, str, int], start: Optional[int] = None, end: Optional[int] = None) -> None:
+.. function:: Node.data_delete(stream: Union[DataStream, str, int], start: Optional[int] = None, end: Optional[int] = None) -> None:
 
     Delete data from a stream. Specify timestamp bounds to delete a particular range or omit to delete all data. Deleting
     a range of data creates an interval break in the stream as show in the example below.
@@ -305,7 +321,7 @@ Data Actions
          [1551831387204004, 1551863787204004]]
 
 
-.. function:: Node.data_intervals(stream: Union[Stream, str, int], start: Optional[int] = None, end: Optional[int] = None) -> List
+.. function:: Node.data_intervals(stream: Union[DataStream, str, int], start: Optional[int] = None, end: Optional[int] = None) -> List
 
     Retrieve list of data intervals. See :ref:`sec-intervals` for details on data intervals. Specify timestamp bounds to
     list intervals over a particular range or omit to list all intervals.
@@ -326,10 +342,10 @@ Data Actions
 Annotation Actions
 ''''''''''''''''''
 
-.. function:: Node.annotation_create(annotation: Annotation,  stream: Union[int, str, Stream]) -> Annotation
+.. function:: Node.annotation_create(annotation: Annotation,  stream: Union[int, str, DataStream]) -> Annotation
 
     Add an annotation. Create a new :class:`joule.api.Annotation` object locally and associate it with a data stream.
-    The stream may be specified by path, ID, or a :class:`joule.api.Stream` object
+    The stream may be specified by path, ID, or a :class:`joule.api.DataStream` object
 
     Example:
         >>> from joule import utilities
@@ -357,10 +373,10 @@ Annotation Actions
     Example:
         >>> await node.annotation_update(annotation) # assuming annotation already exists on the stream
 
-.. function:: Node.annotation_get(stream: Union['Stream', str, int], start: Optional[int], end: Optional[int]) -> List[Annotation]:
+.. function:: Node.annotation_get(stream: Union['DataStream', str, int], start: Optional[int], end: Optional[int]) -> List[Annotation]:
 
     Retrieve annotations for a particular stream. Specify timestamps to only retrieve annotations over
-    a particular interval. The stream may be specified by path, ID, or a :class:`joule.api.Stream` object
+    a particular interval. The stream may be specified by path, ID, or a :class:`joule.api.DataStream` object
 
     Example:
         >>> annotations = await node.annotation_get("/path/to/stream")
@@ -503,7 +519,7 @@ Models
 .. autoclass:: joule.api.Folder
     :members:
 
-.. autoclass:: joule.api.Stream
+.. autoclass:: joule.api.DataStream
     :members:
 
 .. autoclass:: joule.api.StreamInfo

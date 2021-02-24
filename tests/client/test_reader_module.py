@@ -13,7 +13,7 @@ import time
 import requests
 
 from joule.client import ReaderModule
-from joule.models import Stream, Element, pipes
+from joule.models import DataStream, Element, pipes
 from tests import helpers
 import warnings
 
@@ -44,8 +44,8 @@ class TestReaderModule(helpers.AsyncTestCase):
     def setUp(self):
         super().setUp()
         # module output is a float32_3 stream
-        self.stream = Stream(name="output", datatype=Stream.DATATYPE.FLOAT32,
-                             elements=[Element(name="e%d" % j, index=j,
+        self.stream = DataStream(name="output", datatype=DataStream.DATATYPE.FLOAT32,
+                                 elements=[Element(name="e%d" % j, index=j,
                                                display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(3)])
 
     def test_writes_to_pipes(self):

@@ -10,7 +10,7 @@ from joule import errors
 
 class Stream:
     """
-    API Stream model. See :ref:`sec-node-stream-actions` for details on using the API to
+    API DataStream model. See :ref:`sec-node-stream-actions` for details on using the API to
     manipulate streams. Streams are locked if they are active or statically configured. When
     creating a stream manually, omit the ID and status attributes (**is_\***, **active**, and **locked**),
     these are set by the Joule server.
@@ -51,7 +51,7 @@ class Stream:
         self.elements = elements
 
     def __repr__(self):
-        return "<joule.api.Stream id=%r name=%r description=%r datatype=%r is_configured=%r is_source=%r is_destination=%r locked=%r decimate=%r>" % (
+        return "<joule.api.DataStream id=%r name=%r description=%r datatype=%r is_configured=%r is_source=%r is_destination=%r locked=%r decimate=%r>" % (
             self._id, self.name, self.description,
             self.datatype, self.is_configured,
             self.is_source, self.is_destination,
@@ -227,7 +227,7 @@ async def stream_delete(session: BaseSession,
     elif type(stream) is str:
         data["path"] = stream
     else:
-        raise errors.ApiError("Invalid stream datatype. Must be Stream, Path, or ID")
+        raise errors.ApiError("Invalid stream datatype. Must be DataStream, Path, or ID")
 
     await session.delete("/stream.json", data)
 
@@ -260,7 +260,7 @@ async def stream_info(session: BaseSession,
     elif type(stream) is str:
         data["path"] = stream
     else:
-        raise errors.ApiError("Invalid stream datatype. Must be Stream, Path, or ID")
+        raise errors.ApiError("Invalid stream datatype. Must be DataStream, Path, or ID")
 
     resp = await session.get("/stream.json", data)
     return info_from_json(resp['data_info'])
@@ -277,7 +277,7 @@ async def stream_get(session: BaseSession,
     elif type(stream) is str:
         data["path"] = stream
     else:
-        raise errors.ApiError("Invalid stream datatype. Must be Stream, Path, or ID")
+        raise errors.ApiError("Invalid stream datatype. Must be DataStream, Path, or ID")
 
     resp = await session.get("/stream.json", data)
     return from_json(resp)
@@ -301,7 +301,7 @@ async def stream_move(session: BaseSession,
     elif type(source) is str:
         data["src_path"] = source
     else:
-        raise errors.ApiError("Invalid source datatype. Must be Stream, Path, or ID")
+        raise errors.ApiError("Invalid source datatype. Must be DataStream, Path, or ID")
 
     if type(destination) is Folder:
         data["dest_id"] = destination.id
@@ -331,6 +331,6 @@ async def stream_annotation_delete(session: BaseSession,
     elif type(stream) is str:
         data["stream_path"] = stream
     else:
-        raise errors.ApiError("Invalid source datatype. Must be Stream, Path, or ID")
+        raise errors.ApiError("Invalid source datatype. Must be DataStream, Path, or ID")
 
     await session.delete("/stream/annotations.json", params=data)

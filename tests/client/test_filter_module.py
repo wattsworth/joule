@@ -10,7 +10,7 @@ import asynctest
 from joule.api import BaseNode
 
 from joule.client import FilterModule
-from joule.models import Stream, Element, pipes
+from joule.models import DataStream, Element, pipes
 from tests import helpers
 import warnings
 
@@ -35,12 +35,12 @@ class TestFilterModule(helpers.AsyncTestCase):
     def setUp(self):
         super().setUp()
         # module output is a float32_3 stream
-        self.output = Stream(name="output", datatype=Stream.DATATYPE.FLOAT32,
-                             elements=[Element(name="e%d" % j, index=j,
+        self.output = DataStream(name="output", datatype=DataStream.DATATYPE.FLOAT32,
+                                 elements=[Element(name="e%d" % j, index=j,
                                                display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(3)])
         # module input is a float32_3 stream
-        self.input = Stream(name="input", datatype=Stream.DATATYPE.FLOAT32,
-                            elements=[Element(name="e%d" % j, index=j,
+        self.input = DataStream(name="input", datatype=DataStream.DATATYPE.FLOAT32,
+                                elements=[Element(name="e%d" % j, index=j,
                                               display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(3)])
 
     def test_writes_to_pipes(self):

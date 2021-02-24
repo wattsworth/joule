@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from joule.models import pipes
 
 if TYPE_CHECKING:
-    from joule.models import Stream
+    from joule.models import DataStream
 
 Loop = asyncio.AbstractEventLoop
 # starting and ending timestamps
@@ -59,38 +59,38 @@ class DbInfo:
 class DataStore(ABC):  # pragma: no cover
 
     @abstractmethod
-    async def initialize(self, streams: List['Stream']):
+    async def initialize(self, streams: List['DataStream']):
         pass
 
     @abstractmethod
-    async def insert(self, stream: 'Stream',
+    async def insert(self, stream: 'DataStream',
                      data: np.ndarray, start: int, end: int):
         pass
 
     @abstractmethod
-    async def consolidate(self, stream: 'Stream', start: Optional[int], end: Optional[int], max_gap: int) -> int:
+    async def consolidate(self, stream: 'DataStream', start: Optional[int], end: Optional[int], max_gap: int) -> int:
         pass
 
     @abstractmethod
-    async def spawn_inserter(self, stream: 'Stream', pipe: pipes.Pipe, insert_period=None) -> asyncio.Task:
+    async def spawn_inserter(self, stream: 'DataStream', pipe: pipes.Pipe, insert_period=None) -> asyncio.Task:
         pass
 
     @abstractmethod
-    async def intervals(self, stream: 'Stream', start: Optional[int], end: Optional[int]):
+    async def intervals(self, stream: 'DataStream', start: Optional[int], end: Optional[int]):
         pass
 
     @abstractmethod
-    async def extract(self, stream: 'Stream', start: Optional[int], end: Optional[int],
+    async def extract(self, stream: 'DataStream', start: Optional[int], end: Optional[int],
                       callback: Callable[[np.ndarray, str, bool], Coroutine],
                       max_rows: int = None, decimation_level=None):
         pass
 
     @abstractmethod
-    async def remove(self, stream: 'Stream', start: Optional[int], end: Optional[int]):
+    async def remove(self, stream: 'DataStream', start: Optional[int], end: Optional[int]):
         pass
 
     @abstractmethod
-    async def destroy(self, stream: 'Stream'):
+    async def destroy(self, stream: 'DataStream'):
         pass
 
     @abstractmethod
@@ -98,7 +98,7 @@ class DataStore(ABC):  # pragma: no cover
         pass
 
     @abstractmethod
-    async def info(self, streams: List['Stream']) -> Dict[int, StreamInfo]:
+    async def info(self, streams: List['DataStream']) -> Dict[int, StreamInfo]:
         pass
 
     @abstractmethod

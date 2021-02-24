@@ -18,7 +18,7 @@ import dsnparse
 import sys
 
 from joule.models import (Base, Worker, config,
-                          DataStore, Stream, pipes)
+                          DataStore, DataStream, pipes)
 from joule.models.supervisor import Supervisor
 from joule.errors import ConfigurationError, SubscriptionError
 from joule.models import NilmdbStore, TimescaleStore, Follower
@@ -125,7 +125,7 @@ class Daemon(object):
         self.db = Session(bind=engine)
 
         # reset flags on streams, these will be set by load_modules and load_streams
-        for stream in self.db.query(Stream).all():
+        for stream in self.db.query(DataStream).all():
             stream.is_configured = False
             stream.is_destination = False
             stream.is_source = False
@@ -167,7 +167,7 @@ class Daemon(object):
     async def run(self):
         # initialize streams in the data store
         try:
-            await self.data_store.initialize(self.db.query(Stream).all())
+            await self.data_store.initialize(self.db.query(DataStream).all())
         except DataError as e:
             log.error("Database error: %s" % e)
             exit(1)
@@ -176,7 +176,7 @@ class Daemon(object):
 
         # start inserters by subscribing to the streams
         inserter_tasks = []
-        for stream in self.db.query(Stream).filter(Stream.keep_us != Stream.KEEP_NONE):
+        for stream in self.db.query(DataStream).filter(DataStream.keep_us != DataStream.KEEP_NONE):
             if not stream.is_destination:
                 continue  # only subscribe to active streams
             try:
@@ -256,7 +256,7 @@ class Daemon(object):
     def stop(self):
         self.stop_requested = True
 
-    async def _spawn_inserter(self, stream: Stream):
+    async def _spawn_inserter(self, stream: DataStream):
         while True:
             pipe = pipes.LocalPipe(layout=stream.layout, name='inserter:%s' % stream.name)
             unsubscribe = self.supervisor.subscribe(stream, pipe)

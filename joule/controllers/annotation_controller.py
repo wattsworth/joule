@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 
 from joule.models.annotation import Annotation, from_json
-from joule.models.stream import Stream
+from joule.models.data_stream import DataStream
 from joule.models import folder
 from joule.errors import ApiError
 
@@ -79,7 +79,7 @@ async def create(request):
     body = await request.json()
 
     if 'stream_id' in body:
-        my_stream = db.query(Stream).get(body["stream_id"])
+        my_stream = db.query(DataStream).get(body["stream_id"])
     elif 'stream_path' in body:
         my_stream = folder.find_stream_by_path(body['stream_path'], db)
     else:
@@ -118,7 +118,7 @@ async def delete_all(request):
 
     if "stream_id" in request.query:
         stream_id = request.query["stream_id"]
-        my_stream = db.query(Stream).get(stream_id)
+        my_stream = db.query(DataStream).get(stream_id)
     elif "stream_path" in request.query:
         path = request.query["stream_path"]
         my_stream = folder.find_stream_by_path(path, db)

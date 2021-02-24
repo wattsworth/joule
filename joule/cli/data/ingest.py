@@ -64,7 +64,7 @@ def ingest(config, stream_path, file):
                 ))
             # make sure the number of elements match
             if len(stream_obj.elements) != hdf_data.shape[1]:
-                raise click.ClickException("Stream has [%d] elements but data file has [%d] elements" % (
+                raise click.ClickException("DataStream has [%d] elements but data file has [%d] elements" % (
                     len(stream_obj.elements), hdf_data.shape[1]
                 ))
             # check if there is existing data in this time period

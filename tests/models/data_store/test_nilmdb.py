@@ -4,7 +4,7 @@ from aiohttp.test_utils import unused_port
 import os
 import warnings
 
-from joule.models import Stream, Element, pipes
+from joule.models import DataStream, Element, pipes
 from joule.models.data_store.nilmdb import NilmdbStore, bytes_per_row
 from joule.models.data_store.errors import InsufficientDecimationError, DataError
 from tests.models.data_store.fake_nilmdb import FakeNilmdb, FakeStream
@@ -19,20 +19,20 @@ class TestNilmdbStore(asynctest.TestCase):
     forbid_get_event_loop = True
 
     async def setUp(self):
-        self.fake_nilmdb = FakeNilmdb(loop=self.loop)
+        self.fake_nilmdb = FakeNilmdb()
         url = await self.fake_nilmdb.start()
 
         # use a 0 insert period for test execution
-        self.store = NilmdbStore(url, 0, 60, self.loop)
+        self.store = NilmdbStore(url, 0, 60)
 
         # make a couple example streams
         # stream1 int8_3
-        self.stream1 = Stream(id=1, name="stream1", datatype=Stream.DATATYPE.INT8,
-                              elements=[Element(name="e%d" % x) for x in range(3)])
+        self.stream1 = DataStream(id=1, name="stream1", datatype=DataStream.DATATYPE.INT8,
+                                  elements=[Element(name="e%d" % x) for x in range(3)])
 
         # stream2 uint16_4
-        self.stream2 = Stream(id=2, name="stream2", datatype=Stream.DATATYPE.UINT16,
-                              elements=[Element(name="e%d" % x) for x in range(4)])
+        self.stream2 = DataStream(id=2, name="stream2", datatype=DataStream.DATATYPE.UINT16,
+                                  elements=[Element(name="e%d" % x) for x in range(4)])
 
     async def tearDown(self):
         await self.fake_nilmdb.stop()

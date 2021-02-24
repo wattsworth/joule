@@ -1,5 +1,5 @@
 import aiohttp
-from joule.models import Stream
+from joule.models import DataStream
 from enum import Enum
 from typing import List
 
@@ -12,7 +12,7 @@ class ERRORS(Enum):
     NO_STREAM_AT_PATH = "No stream at path"
 
 
-def compute_path(stream: Stream, decimation_level: int = 1):
+def compute_path(stream: DataStream, decimation_level: int = 1):
     path = "/joule/%d" % stream.id
     if decimation_level == 1:
         return path

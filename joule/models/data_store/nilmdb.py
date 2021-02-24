@@ -6,7 +6,7 @@ import re
 import numpy as np
 from typing import List, Dict, Optional, Callable, Coroutine
 from joule.utilities import interval_tools, timestamp_to_datetime
-from joule.models import Stream, pipes
+from joule.models import DataStream, pipes
 from joule.models.data_store.data_store import DataStore, StreamInfo, DbInfo, Interval
 from joule.models.data_store import errors
 from joule.models.data_store.nilmdb_inserter import Inserter
@@ -30,7 +30,7 @@ class NilmdbStore(DataStore):
         self.cleanup_period = cleanup_period
         self.connector = None
 
-    async def initialize(self, streams: List[Stream]) -> None:
+    async def initialize(self, streams: List[DataStream]) -> None:
         self.connector = aiohttp.TCPConnector()
         url = "{server}/stream/create".format(server=self.server)
         try:
@@ -43,7 +43,7 @@ class NilmdbStore(DataStore):
         except aiohttp.ClientError:
             raise errors.DataError("cannot contact NilmDB at [%s]" % self.server)
 
-    async def insert(self, stream: Stream, start: int, end: int, data: np.array) -> None:
+    async def insert(self, stream: DataStream, start: int, end: int, data: np.array) -> None:
         """insert stream data"""
         url = "{server}/stream/insert".format(server=self.server)
         params = {"start": "%d" % start,
@@ -60,7 +60,7 @@ class NilmdbStore(DataStore):
                         raise errors.DataError(error["message"])
                     raise errors.DataError(await resp.text())  # pragma: no cover
 
-    async def spawn_inserter(self, stream: Stream,
+    async def spawn_inserter(self, stream: DataStream,
                              pipe: pipes.Pipe, insert_period=None, retry_interval=0.5) -> asyncio.Task:
         if insert_period is None:
             insert_period = self.insert_period
@@ -69,7 +69,7 @@ class NilmdbStore(DataStore):
                             retry_interval=retry_interval)
         return asyncio.create_task(inserter.run(pipe))
 
-    async def extract(self, stream: Stream, start: Optional[int], end: Optional[int],
+    async def extract(self, stream: DataStream, start: Optional[int], end: Optional[int],
                       callback: Callable[[np.ndarray, str, int], Coroutine], max_rows: int = None,
                       decimation_level=None):
         # figure out appropriate decimation level
@@ -119,7 +119,7 @@ class NilmdbStore(DataStore):
         except aiohttp.ClientError as e:
             raise errors.DataError(str(e))
 
-    async def intervals(self, stream: Stream, start: Optional[int], end: Optional[int]):
+    async def intervals(self, stream: DataStream, start: Optional[int], end: Optional[int]):
         try:
             return await self._intervals_by_path(compute_path(stream),
                                                  start, end)
@@ -130,7 +130,7 @@ class NilmdbStore(DataStore):
             else:
                 raise e
 
-    async def consolidate(self, stream: 'Stream', start: int, end: int, max_gap: int) -> int:
+    async def consolidate(self, stream: 'DataStream', start: int, end: int, max_gap: int) -> int:
         # remove interval gaps less than or equal to max_gap duration (in us)
         intervals = await self.intervals(stream, start, end)
         if len(intervals) == 0:
@@ -173,7 +173,7 @@ class NilmdbStore(DataStore):
         for path in [base_path, *decim_paths]:
             await self._remove_by_path(path, start, end)
 
-    async def info(self, streams: List[Stream]) -> Dict[int, StreamInfo]:
+    async def info(self, streams: List[DataStream]) -> Dict[int, StreamInfo]:
         info_dict = await self._path_info()
         # go through each stream and compute the effective StreamInfo
         # object by looking at the raw and decimated paths
@@ -206,7 +206,7 @@ class NilmdbStore(DataStore):
                 data = await resp.json()
                 return DbInfo(**data)
 
-    async def destroy(self, stream: Stream):
+    async def destroy(self, stream: DataStream):
         await self.remove(stream)
         url = "{server}/stream/destroy".format(server=self.server)
         info = await self._path_info()

@@ -294,7 +294,7 @@ Arguments
 
   <div class="block-indent">
     <dl class="arglist">
-      <dt>PATH</dt><dd>Path of the new stream. Stream paths are similar to filesystem paths and must contain at least two components. For example, /foo/bar.</dd>
+      <dt>PATH</dt><dd>Path of the new stream. DataStream paths are similar to filesystem paths and must contain at least two components. For example, /foo/bar.</dd>
       <dt>LAYOUT</dt><dd>Layout for the new stream. Layouts are of the form &lt;type&gt;_&lt;count&gt;. The &lt;type&gt; is one of those described in Section 2.2.3 of the <a href="#">NilmDB Reference Guide</a>, such as uint16, int64, or float32. &lt;count&gt; is a numeric count of how many data elements there are, per row. Streams store rows of homogeneous data only, and the largest supported &lt;count&gt; is 1024. Generally, counts should fall within a much lower range, typically between 1 and 32. For example, float32_8.</dd>
   </dl>
   </div>
@@ -630,7 +630,7 @@ Copy data and metadata, from multiple streams, between two servers. Similar to n
 
 * Wildcards and multiple paths are supported in the stream names.
 * Streams must always be copied between two servers.
-* Stream paths must match on the source and destination server.
+* DataStream paths must match on the source and destination server.
 * If a stream does not exist on the destination server, it is created with the correct layout automatically.
 
 
@@ -881,7 +881,7 @@ to remove. The configuration file is a text file in the following format::
   [*/wildcard/path]
   keep = 3.5m # or 2520h or 105d or 15w or 0.29y
 
-Stream paths are specified inside square brackets (``[]``) and are followed by configuration
+DataStream paths are specified inside square brackets (``[]``) and are followed by configuration
 keywords for the matching streams. Paths can contain wildcards. Supported keywords are:
 
 ``keep``

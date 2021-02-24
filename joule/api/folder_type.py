@@ -26,7 +26,7 @@ class Folder:
         self.name: str = ""
         self.description: str = ""
         self.locked: bool = False
-        self.streams: List['Stream'] = []
+        self.streams: List['DataStream'] = []
         self.children: List['Folder'] = []
 
     def __repr__(self):

@@ -6,7 +6,7 @@ import time
 from typing import List, Callable
 import logging
 
-from joule.models import Stream, pipes
+from joule.models import DataStream, pipes
 from joule.models.data_store import errors
 from joule.models.data_store.nilmdb_helpers import compute_path, ERRORS, check_for_error
 
@@ -16,7 +16,7 @@ log = logging.getLogger('joule')
 
 class Inserter:
 
-    def __init__(self, server: str, stream: Stream, insert_period: float, cleanup_period: float,
+    def __init__(self, server: str, stream: DataStream, insert_period: float, cleanup_period: float,
                  session_factory: Callable[[], aiohttp.ClientSession], retry_interval=0.5):
         self.insert_url = "{server}/stream/insert".format(server=server)
         self.remove_url = "{server}/stream/remove".format(server=server)
@@ -42,7 +42,7 @@ class Inserter:
             return
 
         cleaner_task: asyncio.Task = None
-        if self.stream.keep_us != Stream.KEEP_ALL:
+        if self.stream.keep_us != DataStream.KEEP_ALL:
             cleaner_task = asyncio.create_task(self._clean())
 
         while True:
@@ -140,7 +140,7 @@ class Inserter:
 
 class NilmdbDecimator:
 
-    def __init__(self, server: str, stream: Stream, from_level: int, factor: int,
+    def __init__(self, server: str, stream: DataStream, from_level: int, factor: int,
                  session_factory: Callable[[], aiohttp.ClientSession], retry_interval=0.5):
         self.stream = stream
         self.level = from_level * factor

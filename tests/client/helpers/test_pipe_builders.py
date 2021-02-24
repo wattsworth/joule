@@ -4,7 +4,7 @@ import logging
 from unittest import mock
 
 from joule.models.pipes import interval_token, EmptyPipe
-from joule.models.stream import StreamInfo, Stream
+from joule.models.data_stream import StreamInfo, DataStream
 from joule.models.element import Element
 from joule import api
 from joule.errors import ConfigurationError, ApiError
@@ -294,7 +294,7 @@ class TestPipeHelpers(FakeJouleTestCase):
 
 def create_destination(server):
     # create an empty destination stream
-    dest = Stream(id=8, name="dest", keep_us=100, datatype=Stream.DATATYPE.UINT8)
+    dest = DataStream(id=8, name="dest", keep_us=100, datatype=DataStream.DATATYPE.UINT8)
     dest.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
 
     # destination has no data
@@ -303,8 +303,8 @@ def create_destination(server):
 
 def create_source_data(server, is_destination=False):
     # create the source stream
-    src = Stream(id=0, name="source", keep_us=100, datatype=Stream.DATATYPE.UINT8,
-                 is_destination=is_destination)
+    src = DataStream(id=0, name="source", keep_us=100, datatype=DataStream.DATATYPE.UINT8,
+                     is_destination=is_destination)
     src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
 
     # source has 100 rows of data

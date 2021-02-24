@@ -4,7 +4,7 @@ import os
 import unittest
 
 from tests.helpers import DbTestCase
-from joule.models import (Stream, Folder,
+from joule.models import (DataStream, Folder,
                           Element, Module)
 from joule.services import load_modules
 
@@ -17,14 +17,14 @@ class TestConfigureModules(DbTestCase):
 
         # /test/stream1:float32_3
         folder_test = Folder(name="test")
-        stream1 = Stream(name="stream1", keep_us=100,
-                         datatype=Stream.DATATYPE.FLOAT32)
+        stream1 = DataStream(name="stream1", keep_us=100,
+                             datatype=DataStream.DATATYPE.FLOAT32)
         stream1.elements = [Element(name="e%d" % x, index=x, default_min=1) for x in range(3)]
         folder_test.streams.append(stream1)
 
         # /test/deeper/stream2: int8_2
         folder_deeper = Folder(name="deeper")
-        stream2 = Stream(name="stream2", datatype=Stream.DATATYPE.INT8)
+        stream2 = DataStream(name="stream2", datatype=DataStream.DATATYPE.INT8)
         stream2.elements = [Element(name="e%d" % x, index=x) for x in range(2)]
         folder_deeper.streams.append(stream2)
         folder_deeper.parent = folder_test
@@ -92,7 +92,7 @@ class TestConfigureModules(DbTestCase):
                 self.assertIn('different elements', output)
         # now check the database:
         # should have three streams
-        self.assertEqual(self.db.query(Stream).count(), 3)
+        self.assertEqual(self.db.query(DataStream).count(), 3)
         # and two modules
         self.assertEqual(len(modules), 2)
         # module1 should have no inputs and one output
@@ -107,6 +107,6 @@ class TestConfigureModules(DbTestCase):
         self.assertEqual(m2.inputs["source"], stream1)
         self.assertEqual(m2.outputs['sink1'], stream2)
         # sink2 goes to a new stream
-        stream3 = self.db.query(Stream).filter_by(name="stream3").one()
+        stream3 = self.db.query(DataStream).filter_by(name="stream3").one()
         self.assertEqual(m2.outputs['sink2'], stream3)
 

@@ -10,7 +10,7 @@ from .test_filter_module import SimpleFilter
 from .test_reader_module import SimpleReader
 from joule.client import CompositeModule
 from joule.api import BaseNode, Stream
-from joule.models import Stream, Element, pipes
+from joule.models import DataStream, Element, pipes
 from joule import api
 from tests import helpers
 import warnings
@@ -37,8 +37,8 @@ class TestCompositeModule(helpers.AsyncTestCase):
     def setUp(self):
         super().setUp()
         # module output is a float32_3 stream
-        self.stream = Stream(name="output", datatype=Stream.DATATYPE.FLOAT32,
-                             elements=[Element(name="e%d" % j, index=j,
+        self.stream = DataStream(name="output", datatype=DataStream.DATATYPE.FLOAT32,
+                                 elements=[Element(name="e%d" % j, index=j,
                                                display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(3)])
 
     def test_runs_composited_modules(self):

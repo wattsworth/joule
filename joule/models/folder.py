@@ -3,7 +3,7 @@ from sqlalchemy import Column, Integer, String, ForeignKey
 from typing import List, TYPE_CHECKING, Optional, Dict
 import logging
 from joule.errors import ConfigurationError
-from joule.models.stream import Stream
+from joule.models.data_stream import DataStream
 from joule.models.data_store.data_store import StreamInfo
 from joule.models.meta import Base
 
@@ -20,12 +20,12 @@ class Folder(Base):
     children: List["Folder"] = relationship("Folder",
                                             backref=backref('parent',
                                                             remote_side=[id]))
-    streams: List[Stream] = relationship("Stream", back_populates="folder")
+    streams: List[DataStream] = relationship("DataStream", back_populates="folder")
     parent_id: int = Column(Integer, ForeignKey('metadata.folder.id'))
     if TYPE_CHECKING:  # pragma: no cover
         parent: 'Folder'
 
-    def find_stream_by_segments(self, segments: List[str]) -> Optional[Stream]:
+    def find_stream_by_segments(self, segments: List[str]) -> Optional[DataStream]:
         if len(segments) == 1:
             for stream in self.streams:
                 if stream.name == segments[0]:
@@ -117,13 +117,13 @@ def find(path: str, db: Session, create=False, parent=None) -> Optional[Folder]:
     return find(sub_path, db, create=create, parent=folder)
 
 
-def find_stream_by_path(path: str, db: Session) -> Optional[Stream]:
+def find_stream_by_path(path: str, db: Session) -> Optional[DataStream]:
     segments = path[1:].split('/')
     return root(db).find_stream_by_segments(segments)
 
 
 # return the file path
-def get_stream_path(stream: Stream) -> Optional[str]:
+def get_stream_path(stream: DataStream) -> Optional[str]:
     if stream.is_remote:
         return "[%s] %s" % (stream.remote_node, stream.remote_path)
     if stream.folder is None:

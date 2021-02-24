@@ -3,7 +3,7 @@ from aiohttp import web
 from sqlalchemy.orm import Session
 import json
 
-from joule.models import folder, Stream, Folder
+from joule.models import folder, DataStream, Folder
 import joule.controllers
 from tests.controllers.helpers import create_db, MockStore
 
@@ -76,7 +76,7 @@ class TestFolderControllerErrors(AioHTTPTestCase):
         self.assertIsNotNone(folder.find('/top/middle/leaf', db))
 
         # cannot move folders with locked streams
-        my_stream: Stream = db.query(Stream).filter_by(name="stream1").one()
+        my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
         my_stream.is_configured = True
         resp = await self.client.put("/folder/move.json", json={"src_path": "/top/leaf",
                                                                 "dest_path": "/top/middle"})

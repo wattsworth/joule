@@ -3,17 +3,17 @@ from typing import Dict ,List
 import logging
 import re
 
-from joule.models import Stream
+from joule.models import DataStream
 from joule.errors import ConfigurationError
 from joule.models.folder import find as find_folder
-from joule.models.stream import from_config as stream_from_config
+from joule.models.data_stream import from_config as stream_from_config
 from joule.services.helpers import (Configurations,
                                     load_configs)
 
 logger = logging.getLogger('joule')
 
 # types
-Streams = Dict[str, List[Stream]]
+Streams = Dict[str, List[DataStream]]
 
 
 def run(path: str, db: Session):
@@ -54,9 +54,9 @@ def _validate_path(path: str) -> str:
     return path
 
 
-def _save_stream(new_stream: Stream, path: str, db: Session) -> None:
+def _save_stream(new_stream: DataStream, path: str, db: Session) -> None:
     my_folder = find_folder(path, db, create=True)
-    cur_stream: Stream = db.query(Stream) \
+    cur_stream: DataStream = db.query(DataStream) \
         .filter_by(folder=my_folder, name=new_stream.name) \
         .one_or_none()
     if cur_stream is not None:
