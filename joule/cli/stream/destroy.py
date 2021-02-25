@@ -2,7 +2,6 @@ import click
 import asyncio
 
 from joule import errors
-from joule.api.data_stream import stream_delete
 from joule.cli.config import pass_config
 
 

@@ -20,13 +20,13 @@ from joule.api.module import (Module,
 
 from joule.api.data_stream import (DataStream,
                                    DataStreamInfo,
-                                   stream_get,
-                                   stream_update,
-                                   stream_move,
-                                   stream_delete,
-                                   stream_create,
-                                   stream_info,
-                                   stream_annotation_delete)
+                                   data_stream_get,
+                                   data_stream_update,
+                                   data_stream_move,
+                                   data_stream_delete,
+                                   data_stream_create,
+                                   data_stream_info,
+                                   data_stream_annotation_delete)
 
 from joule.api.data import (data_write,
                             data_read,
@@ -103,36 +103,36 @@ class BaseNode:
 
     async def data_stream_get(self,
                               stream: Union[DataStream, str, int]) -> DataStream:
-        return await stream_get(self.session, stream)
+        return await data_stream_get(self.session, stream)
 
     async def data_stream_move(self,
                                stream: Union[DataStream, str, int],
                                folder: Union[Folder, str, int]) -> None:
-        return await stream_move(self.session, stream, folder)
+        return await data_stream_move(self.session, stream, folder)
 
     async def data_stream_update(self,
                                  stream: DataStream) -> None:
-        return await stream_update(self.session,
+        return await data_stream_update(self.session,
                                    stream)
 
     async def data_stream_delete(self,
                                  stream: Union[DataStream, str, int]) -> None:
-        await stream_delete(self.session, stream)
+        await data_stream_delete(self.session, stream)
 
     async def data_stream_create(self,
                                  stream: DataStream,
                                  folder: Union[Folder, str, int]) -> DataStream:
-        return await stream_create(self.session, stream, folder)
+        return await data_stream_create(self.session, stream, folder)
 
     async def data_stream_info(self,
                                stream: Union[DataStream, str, int]) -> DataStreamInfo:
-        return await stream_info(self.session, stream)
+        return await data_stream_info(self.session, stream)
 
     async def data_stream_annotation_delete(self,
                                             stream: Union[DataStream, str, int],
                                             start: Optional[int] = None,
                                             end: Optional[int] = None):
-        return await stream_annotation_delete(self.session, stream, start, end)
+        return await data_stream_annotation_delete(self.session, stream, start, end)
 
     # Data actions
 

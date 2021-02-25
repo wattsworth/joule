@@ -3,9 +3,6 @@ from tabulate import tabulate
 import datetime
 import asyncio
 
-
-from joule.api.data_stream import (stream_get,
-                                   stream_info)
 from joule.models import data_stream
 from joule import errors
 from joule.cli.config import pass_config

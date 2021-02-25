@@ -303,11 +303,7 @@ class Worker:
                 bline = await stream.readline()
                 if len(bline) == 0:
                     break
-                try:
-                    line = bline.decode('UTF-8').rstrip()
-                except UnicodeDecodeError:
-                    breakpoint()
-                    print('here')
+                line = bline.decode('UTF-8').rstrip()
                 self.log(line)
         except asyncio.CancelledError:  # pragma: no cover
             return

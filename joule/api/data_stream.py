@@ -217,7 +217,7 @@ def info_from_json(json) -> DataStreamInfo:
                               0)
 
 
-async def stream_delete(session: BaseSession,
+async def data_stream_delete(session: BaseSession,
                         stream: Union[DataStream, str, int]):
     data = {}
     if type(stream) is DataStream:
@@ -232,7 +232,7 @@ async def stream_delete(session: BaseSession,
     await session.delete("/stream.json", data)
 
 
-async def stream_create(session: BaseSession,
+async def data_stream_create(session: BaseSession,
                         stream: DataStream, folder: Union[Folder, str, int]) -> DataStream:
     data = {"stream": stream.to_json()}
 
@@ -249,7 +249,7 @@ async def stream_create(session: BaseSession,
     return from_json(resp)
 
 
-async def stream_info(session: BaseSession,
+async def data_stream_info(session: BaseSession,
                       stream: Union[DataStream, str, int]) -> DataStreamInfo:
     data = {}
 
@@ -266,7 +266,7 @@ async def stream_info(session: BaseSession,
     return info_from_json(resp['data_info'])
 
 
-async def stream_get(session: BaseSession,
+async def data_stream_get(session: BaseSession,
                      stream: Union[DataStream, str, int]) -> DataStream:
     data = {}
 
@@ -283,13 +283,13 @@ async def stream_get(session: BaseSession,
     return from_json(resp)
 
 
-async def stream_update(session: BaseSession,
+async def data_stream_update(session: BaseSession,
                         stream: DataStream) -> None:
     await session.put("/stream.json", {"id": stream.id,
                                        "stream": stream.to_json()})
 
 
-async def stream_move(session: BaseSession,
+async def data_stream_move(session: BaseSession,
                       source: Union[DataStream, str, int],
                       destination: Union[Folder, str, int]) -> None:
     data = {}
@@ -314,7 +314,7 @@ async def stream_move(session: BaseSession,
     await session.put("/stream/move.json", data)
 
 
-async def stream_annotation_delete(session: BaseSession,
+async def data_stream_annotation_delete(session: BaseSession,
                                    stream: Union[DataStream, str, int],
                                    start: Optional[int] = None,
                                    end: Optional[int] = None):

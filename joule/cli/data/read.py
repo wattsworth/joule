@@ -4,8 +4,7 @@ import signal
 
 from joule.cli.config import pass_config
 from joule.models.pipes import EmptyPipe
-from joule.api.data import (data_subscribe,
-                            data_read)
+
 import h5py
 import json
 from joule import errors

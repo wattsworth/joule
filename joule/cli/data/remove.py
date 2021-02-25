@@ -2,7 +2,6 @@ import click
 import asyncio
 
 from joule.cli.config import pass_config
-from joule.api.data import data_delete
 from joule.utilities import human_to_timestamp
 from joule import errors
 

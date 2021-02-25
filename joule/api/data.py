@@ -5,8 +5,8 @@ import numpy as np
 
 from .session import BaseSession
 from .data_stream import (DataStream,
-                          stream_get,
-                          stream_create)
+                          data_stream_get,
+                          data_stream_create)
 
 from joule.models.pipes import (Pipe,
                                 InputPipe,
@@ -48,7 +48,7 @@ async def data_write(session: BaseSession,
                      ) -> Pipe:
     # stream must exist, does not automatically create a stream
     # retrieve the destination stream object
-    dest_stream = await stream_get(session, stream)
+    dest_stream = await data_stream_get(session, stream)
     if start_time is not None or end_time is not None:
         await data_delete(session, dest_stream, start_time, end_time)
 
@@ -127,7 +127,7 @@ async def data_read(session: BaseSession,
                     end: Optional[int] = None,
                     max_rows: Optional[int] = None) -> Pipe:
     # make sure the input is compatible
-    src_stream = await stream_get(session, stream)
+    src_stream = await data_stream_get(session, stream)
     if type(stream) is DataStream:
         if src_stream.layout != src_stream.layout:
             raise errors.ApiError("Input [%s] configured for [%s] but source is [%s]" % (
@@ -155,7 +155,7 @@ async def data_read(session: BaseSession,
 async def data_subscribe(session: BaseSession,
                          stream: Union[DataStream, str, int]) -> Pipe:
     # make sure the input is compatible
-    src_stream = await stream_get(session, stream)
+    src_stream = await data_stream_get(session, stream)
     if type(stream) is DataStream:
         if src_stream.layout != src_stream.layout:
             raise errors.ApiError("Input [%s] configured for [%s] but source is [%s]" % (
