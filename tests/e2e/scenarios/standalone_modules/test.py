@@ -6,7 +6,7 @@ import numpy as np
 import asyncio
 
 from joule import api
-from joule.api.stream import Stream, Element
+from joule.api.data_stream import DataStream, Element
 from joule.models.pipes import EmptyPipe
 
 NILMDB_URL = "http://nilmdb"
@@ -75,7 +75,7 @@ async def start_standalone_procs2(node: api.BaseNode):
     #  proc4 reads /counting/base and writes to /counting/plus3
     p1 = subprocess.Popen(build_standalone_args("proc1"))
 
-    stream = Stream()
+    stream = DataStream()
     stream.name = "int8"
     stream.datatype = "int8"
     for x in range(3):
@@ -83,7 +83,7 @@ async def start_standalone_procs2(node: api.BaseNode):
         e.name = 'item%d' % x
         e.index = x
         stream.elements.append(e)
-    await node.stream_create(stream, "/exists")
+    await node.data_stream_create(stream, "/exists")
 
     # proc5 tries to write to /exists/int8 with wrong element count
     p4 = subprocess.run(build_standalone_args("proc4"),
@@ -126,7 +126,7 @@ async def check_streams(node: api.BaseNode):
     Goal:
         /counting/plus3 should have customized display_type and keep settings
     """
-    plus3 = await node.stream_get("/counting/plus3")
+    plus3 = await node.data_stream_get("/counting/plus3")
     assert (plus3.keep_us == (5 * 24 * 60 * 60 * 1e6))  # keep=5d
     assert (plus3.elements[0].display_type == "DISCRETE")
 
@@ -174,7 +174,7 @@ async def check_data(node: api.BaseNode):
     # verify the filter module executed correctly
     # use the filter time bounds because to extract
     # the data to compare
-    stream_info = await node.stream_info(plus1_path)
+    stream_info = await node.data_stream_info(plus1_path)
     p = await node.data_read(base_path,
                              start=stream_info.start,
                              end=stream_info.end,

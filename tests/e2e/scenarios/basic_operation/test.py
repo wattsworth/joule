@@ -98,7 +98,7 @@ async def check_data(node: api.BaseNode):
     # verify the filter module executed correctly
     # use the filter time bounds because to extract
     # the data to compare
-    stream_info = await node.stream_info(filter1_path)
+    stream_info = await node.data_stream_info(filter1_path)
     p = await node.data_read(normal1_path,
                              start=stream_info.start,
                              end=stream_info.end,
@@ -116,7 +116,7 @@ async def check_data(node: api.BaseNode):
     np.testing.assert_almost_equal(actual_data[:verify_len, :],
                                    expected_data[:verify_len, :])
 
-    stream_info = await node.stream_info(filter2_path)
+    stream_info = await node.data_stream_info(filter2_path)
     p = await node.data_read(normal2_path,
                              start=stream_info.start,
                              end=stream_info.end,

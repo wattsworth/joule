@@ -10,7 +10,7 @@ import json
 from ..fake_joule import FakeJoule, FakeJouleTestCase
 from joule.cli import main
 from joule.models import DataStream, Element, StreamInfo
-from joule.api.stream import Element as ApiElement
+from joule.api.data_stream import Element as ApiElement
 from tests import helpers
 
 warnings.simplefilter('always')

@@ -124,6 +124,78 @@ DataStream Actions
     Retrieve the specified stream. DataStream may be specified by a :class:`joule.api.DataStream` object,
     a path, or numeric ID. Raises :exc:`joule.errors.ApiError` if stream specification is invalid.
 
+        Examples:
+            >>> stream = await node.stream_get("/parent/my_folder/stream")
+            <joule.api.DataStream id=2627 name='stream' description='' datatype='int32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+
+            >>> stream = await node.stream_get(2627)
+            <joule.api.DataStream id=2627 name='stream' description='' datatype='int32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+
+            >>> await node.data_stream_get("/does/not/exist") # raises ApiError
+            joule.errors.ApiError: stream does not exist [404]
+
+        Examples:
+            >>> stream = await node.stream_get("/parent/my_folder/stream")
+            <joule.api.DataStream id=2627 name='stream' description='' datatype='int32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+
+            >>> stream = await node.stream_get(2627)
+            <joule.api.DataStream id=2627 name='stream' description='' datatype='int32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+
+            >>> await node.data_stream_get("/does/not/exist") # raises ApiError
+            joule.errors.ApiError: stream does not exist [404]
+
+        Examples:
+            >>> stream = await node.data_stream_get("/parent/my_folder/stream")
+            <joule.api.DataStream id=2627 name='stream' description='' datatype='int32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+
+            >>> stream = await node.stream_get(2627)
+            <joule.api.DataStream id=2627 name='stream' description='' datatype='int32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+
+            >>> await node.stream_get("/does/not/exist") # raises ApiError
+            joule.errors.ApiError: stream does not exist [404]
+
+        Examples:
+            >>> stream = await node.data_stream_get("/parent/my_folder/stream")
+            <joule.api.DataStream id=2627 name='stream' description='' datatype='int32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+
+            >>> stream = await node.stream_get(2627)
+            <joule.api.DataStream id=2627 name='stream' description='' datatype='int32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+
+            >>> await node.stream_get("/does/not/exist") # raises ApiError
+            joule.errors.ApiError: stream does not exist [404]
+
+        Examples:
+            >>> stream = await node.stream_get("/parent/my_folder/stream")
+            <joule.api.DataStream id=2627 name='stream' description='' datatype='int32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+
+            >>> stream = await node.data_stream_get(2627)
+            <joule.api.DataStream id=2627 name='stream' description='' datatype='int32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+
+            >>> await node.stream_get("/does/not/exist") # raises ApiError
+            joule.errors.ApiError: stream does not exist [404]
+
+        Examples:
+            >>> stream = await node.stream_get("/parent/my_folder/stream")
+            <joule.api.DataStream id=2627 name='stream' description='' datatype='int32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+
+            >>> stream = await node.data_stream_get(2627)
+            <joule.api.DataStream id=2627 name='stream' description='' datatype='int32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+
+            >>> await node.stream_get("/does/not/exist") # raises ApiError
+            joule.errors.ApiError: stream does not exist [404]
+
     Examples:
         >>> stream = await node.stream_get("/parent/my_folder/stream")
         <joule.api.DataStream id=2627 name='stream' description='' datatype='int32'
@@ -142,6 +214,50 @@ DataStream Actions
     specified by objects, paths, or numeric ID's. The stream name must be unique in the destination
     and not be locked (actively in use by a module or statically configured). Raises
     :exc:`joule.errors.ApiError` if stream or folder specifications are invalid or the requested
+        move cannot be performed. The destination is automatically created if it does not exist.
+
+        Examples:
+            >>> await node.data_stream_move("/parent1/my_folder/stream","/parent2")
+            >>> parent2 = await node.folder_get("/parent2")
+            >>> parent2.streams
+            [<joule.api.DataStream id=2627 name='stream' description='' datatype='int32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>]
+
+            >>> await node.stream_move("/does/not/exist","/parent2") # raises ApiError
+            joule.errors.ApiError: stream does not exist [404]
+        move cannot be performed. The destination is automatically created if it does not exist.
+
+        Examples:
+            >>> await node.data_stream_move("/parent1/my_folder/stream","/parent2")
+            >>> parent2 = await node.folder_get("/parent2")
+            >>> parent2.streams
+            [<joule.api.DataStream id=2627 name='stream' description='' datatype='int32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>]
+
+            >>> await node.stream_move("/does/not/exist","/parent2") # raises ApiError
+            joule.errors.ApiError: stream does not exist [404]
+        move cannot be performed. The destination is automatically created if it does not exist.
+
+        Examples:
+            >>> await node.stream_move("/parent1/my_folder/stream","/parent2")
+            >>> parent2 = await node.folder_get("/parent2")
+            >>> parent2.streams
+            [<joule.api.DataStream id=2627 name='stream' description='' datatype='int32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>]
+
+            >>> await node.data_stream_move("/does/not/exist","/parent2") # raises ApiError
+            joule.errors.ApiError: stream does not exist [404]
+        move cannot be performed. The destination is automatically created if it does not exist.
+
+        Examples:
+            >>> await node.stream_move("/parent1/my_folder/stream","/parent2")
+            >>> parent2 = await node.folder_get("/parent2")
+            >>> parent2.streams
+            [<joule.api.DataStream id=2627 name='stream' description='' datatype='int32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>]
+
+            >>> await node.data_stream_move("/does/not/exist","/parent2") # raises ApiError
+            joule.errors.ApiError: stream does not exist [404]
     move cannot be performed. The destination is automatically created if it does not exist.
 
     Examples:
@@ -158,6 +274,708 @@ DataStream Actions
 
     Update stream and element attributes.
     Raises :exc:`joule.errors.ApiError` if stream is locked or the specification is invalid. The datatype and
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.data_stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.data_stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.data_stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.data_stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.data_stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+        number of elements may not be changed.
+
+        Example:
+            >>> stream = await node.stream_get("/parent/my_folder/stream")
+            >>> stream.elements # Element name is "Element1"
+            [<joule.api.Element id=3192 index=0, name='Element1' units=None
+             plottable=True display_type='CONTINUOUS'>]
+            >>> stream.elements[0].name="New Name"
+            >>> await node.stream_update(stream) # send updated values to Joule
+            >>> updated_stream = await node.stream_get(stream) # refresh local copy
+            >>> updated_stream.elements # Element name is now "New Name"
+            [<joule.api.Element id=3192 index=0, name='New Name' units=None
+             plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.data_stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.data_stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.data_stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.data_stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.data_stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+        number of elements may not be changed.
+
+        Example:
+            >>> stream = await node.stream_get("/parent/my_folder/stream")
+            >>> stream.elements # Element name is "Element1"
+            [<joule.api.Element id=3192 index=0, name='Element1' units=None
+             plottable=True display_type='CONTINUOUS'>]
+            >>> stream.elements[0].name="New Name"
+            >>> await node.stream_update(stream) # send updated values to Joule
+            >>> updated_stream = await node.stream_get(stream) # refresh local copy
+            >>> updated_stream.elements # Element name is now "New Name"
+            [<joule.api.Element id=3192 index=0, name='New Name' units=None
+             plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.data_stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.data_stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.data_stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.data_stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.data_stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+        number of elements may not be changed.
+
+        Example:
+            >>> stream = await node.stream_get("/parent/my_folder/stream")
+            >>> stream.elements # Element name is "Element1"
+            [<joule.api.Element id=3192 index=0, name='Element1' units=None
+             plottable=True display_type='CONTINUOUS'>]
+            >>> stream.elements[0].name="New Name"
+            >>> await node.stream_update(stream) # send updated values to Joule
+            >>> updated_stream = await node.stream_get(stream) # refresh local copy
+            >>> updated_stream.elements # Element name is now "New Name"
+            [<joule.api.Element id=3192 index=0, name='New Name' units=None
+             plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.data_stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.data_stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.data_stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.data_stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.data_stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+        number of elements may not be changed.
+
+        Example:
+            >>> stream = await node.stream_get("/parent/my_folder/stream")
+            >>> stream.elements # Element name is "Element1"
+            [<joule.api.Element id=3192 index=0, name='Element1' units=None
+             plottable=True display_type='CONTINUOUS'>]
+            >>> stream.elements[0].name="New Name"
+            >>> await node.stream_update(stream) # send updated values to Joule
+            >>> updated_stream = await node.stream_get(stream) # refresh local copy
+            >>> updated_stream.elements # Element name is now "New Name"
+            [<joule.api.Element id=3192 index=0, name='New Name' units=None
+             plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.data_stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.data_stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.data_stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.data_stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+        number of elements may not be changed.
+
+        Example:
+            >>> stream = await node.stream_get("/parent/my_folder/stream")
+            >>> stream.elements # Element name is "Element1"
+            [<joule.api.Element id=3192 index=0, name='Element1' units=None
+             plottable=True display_type='CONTINUOUS'>]
+            >>> stream.elements[0].name="New Name"
+            >>> await node.data_stream_update(stream) # send updated values to Joule
+            >>> updated_stream = await node.stream_get(stream) # refresh local copy
+            >>> updated_stream.elements # Element name is now "New Name"
+            [<joule.api.Element id=3192 index=0, name='New Name' units=None
+             plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.data_stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.data_stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.data_stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.data_stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+        number of elements may not be changed.
+
+        Example:
+            >>> stream = await node.stream_get("/parent/my_folder/stream")
+            >>> stream.elements # Element name is "Element1"
+            [<joule.api.Element id=3192 index=0, name='Element1' units=None
+             plottable=True display_type='CONTINUOUS'>]
+            >>> stream.elements[0].name="New Name"
+            >>> await node.data_stream_update(stream) # send updated values to Joule
+            >>> updated_stream = await node.stream_get(stream) # refresh local copy
+            >>> updated_stream.elements # Element name is now "New Name"
+            [<joule.api.Element id=3192 index=0, name='New Name' units=None
+             plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.data_stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.data_stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.data_stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.data_stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.data_stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+        number of elements may not be changed.
+
+        Example:
+            >>> stream = await node.stream_get("/parent/my_folder/stream")
+            >>> stream.elements # Element name is "Element1"
+            [<joule.api.Element id=3192 index=0, name='Element1' units=None
+             plottable=True display_type='CONTINUOUS'>]
+            >>> stream.elements[0].name="New Name"
+            >>> await node.stream_update(stream) # send updated values to Joule
+            >>> updated_stream = await node.stream_get(stream) # refresh local copy
+            >>> updated_stream.elements # Element name is now "New Name"
+            [<joule.api.Element id=3192 index=0, name='New Name' units=None
+             plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.data_stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.data_stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.data_stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.data_stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.data_stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+        number of elements may not be changed.
+
+        Example:
+            >>> stream = await node.stream_get("/parent/my_folder/stream")
+            >>> stream.elements # Element name is "Element1"
+            [<joule.api.Element id=3192 index=0, name='Element1' units=None
+             plottable=True display_type='CONTINUOUS'>]
+            >>> stream.elements[0].name="New Name"
+            >>> await node.stream_update(stream) # send updated values to Joule
+            >>> updated_stream = await node.stream_get(stream) # refresh local copy
+            >>> updated_stream.elements # Element name is now "New Name"
+            [<joule.api.Element id=3192 index=0, name='New Name' units=None
+             plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.data_stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.data_stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.data_stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.data_stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.data_stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+        number of elements may not be changed.
+
+        Example:
+            >>> stream = await node.stream_get("/parent/my_folder/stream")
+            >>> stream.elements # Element name is "Element1"
+            [<joule.api.Element id=3192 index=0, name='Element1' units=None
+             plottable=True display_type='CONTINUOUS'>]
+            >>> stream.elements[0].name="New Name"
+            >>> await node.stream_update(stream) # send updated values to Joule
+            >>> updated_stream = await node.stream_get(stream) # refresh local copy
+            >>> updated_stream.elements # Element name is now "New Name"
+            [<joule.api.Element id=3192 index=0, name='New Name' units=None
+             plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.data_stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.data_stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.data_stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.data_stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+            number of elements may not be changed.
+
+            Example:
+                >>> stream = await node.data_stream_get("/parent/my_folder/stream")
+                >>> stream.elements # Element name is "Element1"
+                [<joule.api.Element id=3192 index=0, name='Element1' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+                >>> stream.elements[0].name="New Name"
+                >>> await node.stream_update(stream) # send updated values to Joule
+                >>> updated_stream = await node.stream_get(stream) # refresh local copy
+                >>> updated_stream.elements # Element name is now "New Name"
+                [<joule.api.Element id=3192 index=0, name='New Name' units=None
+                 plottable=True display_type='CONTINUOUS'>]
+        number of elements may not be changed.
+
+        Example:
+            >>> stream = await node.stream_get("/parent/my_folder/stream")
+            >>> stream.elements # Element name is "Element1"
+            [<joule.api.Element id=3192 index=0, name='Element1' units=None
+             plottable=True display_type='CONTINUOUS'>]
+            >>> stream.elements[0].name="New Name"
+            >>> await node.stream_update(stream) # send updated values to Joule
+            >>> updated_stream = await node.stream_get(stream) # refresh local copy
+            >>> updated_stream.elements # Element name is now "New Name"
+            [<joule.api.Element id=3192 index=0, name='New Name' units=None
+             plottable=True display_type='CONTINUOUS'>]
+        number of elements may not be changed.
+
+        Example:
+            >>> stream = await node.stream_get("/parent/my_folder/stream")
+            >>> stream.elements # Element name is "Element1"
+            [<joule.api.Element id=3192 index=0, name='Element1' units=None
+             plottable=True display_type='CONTINUOUS'>]
+            >>> stream.elements[0].name="New Name"
+            >>> await node.stream_update(stream) # send updated values to Joule
+            >>> updated_stream = await node.data_stream_get(stream) # refresh local copy
+            >>> updated_stream.elements # Element name is now "New Name"
+            [<joule.api.Element id=3192 index=0, name='New Name' units=None
+             plottable=True display_type='CONTINUOUS'>]
+        number of elements may not be changed.
+
+        Example:
+            >>> stream = await node.stream_get("/parent/my_folder/stream")
+            >>> stream.elements # Element name is "Element1"
+            [<joule.api.Element id=3192 index=0, name='Element1' units=None
+             plottable=True display_type='CONTINUOUS'>]
+            >>> stream.elements[0].name="New Name"
+            >>> await node.stream_update(stream) # send updated values to Joule
+            >>> updated_stream = await node.data_stream_get(stream) # refresh local copy
+            >>> updated_stream.elements # Element name is now "New Name"
+            [<joule.api.Element id=3192 index=0, name='New Name' units=None
+             plottable=True display_type='CONTINUOUS'>]
+        number of elements may not be changed.
+
+        Example:
+            >>> stream = await node.data_stream_get("/parent/my_folder/stream")
+            >>> stream.elements # Element name is "Element1"
+            [<joule.api.Element id=3192 index=0, name='Element1' units=None
+             plottable=True display_type='CONTINUOUS'>]
+            >>> stream.elements[0].name="New Name"
+            >>> await node.stream_update(stream) # send updated values to Joule
+            >>> updated_stream = await node.stream_get(stream) # refresh local copy
+            >>> updated_stream.elements # Element name is now "New Name"
+            [<joule.api.Element id=3192 index=0, name='New Name' units=None
+             plottable=True display_type='CONTINUOUS'>]
+        number of elements may not be changed.
+
+        Example:
+            >>> stream = await node.data_stream_get("/parent/my_folder/stream")
+            >>> stream.elements # Element name is "Element1"
+            [<joule.api.Element id=3192 index=0, name='Element1' units=None
+             plottable=True display_type='CONTINUOUS'>]
+            >>> stream.elements[0].name="New Name"
+            >>> await node.stream_update(stream) # send updated values to Joule
+            >>> updated_stream = await node.stream_get(stream) # refresh local copy
+            >>> updated_stream.elements # Element name is now "New Name"
+            [<joule.api.Element id=3192 index=0, name='New Name' units=None
+             plottable=True display_type='CONTINUOUS'>]
     number of elements may not be changed.
 
     Example:
@@ -178,6 +996,26 @@ DataStream Actions
     a path, or numeric ID. Raises :exc:`joule.errors.ApiError` if the stream specification
     is invalid or if the stream is locked. To remove data within a stream see :meth:`Node.data_delete`.
 
+        Example:
+            >>> folder = await node.folder_get("/parent/my_folder")
+            >>> folder.streams # my_folder has one stream
+            [<joule.api.DataStream id=2627 name='stream' description='' datatype='int32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>]
+            >>> await node.data_stream_delete("/parent/my_folder/stream") # delete the stream
+            >>> folder = await node.folder_get("/parent/my_folder")
+            >>> folder.streams # my_folder is now empty
+            []
+
+        Example:
+            >>> folder = await node.folder_get("/parent/my_folder")
+            >>> folder.streams # my_folder has one stream
+            [<joule.api.DataStream id=2627 name='stream' description='' datatype='int32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>]
+            >>> await node.data_stream_delete("/parent/my_folder/stream") # delete the stream
+            >>> folder = await node.folder_get("/parent/my_folder")
+            >>> folder.streams # my_folder is now empty
+            []
+
     Example:
         >>> folder = await node.folder_get("/parent/my_folder")
         >>> folder.streams # my_folder has one stream
@@ -193,21 +1031,1365 @@ DataStream Actions
 
     Create a stream and place in the specified folder. Folder may be specified by object, path or numeric ID.
     See :class:`joule.api.DataStream` for details on creating DataStream objects. Raises :exc:`joule.errors.ApiError` if the
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.data_stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
         stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
 
         Example:
-            >>> new_stream = joule.api.DataStream(name="New Stream")
+            >>> new_stream = joule.api.Stream(name="New DataStream")
             >>> new_stream.elements = [joule.api.Element(name="Element1")]
             >>> await node.stream_create(new_stream,"/parent/new_folder")
-            <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+            <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.data_stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+        stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+        Example:
+            >>> new_stream = joule.api.Stream(name="New DataStream")
+            >>> new_stream.elements = [joule.api.Element(name="Element1")]
+            >>> await node.stream_create(new_stream,"/parent/new_folder")
+            <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.data_stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+        stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+        Example:
+            >>> new_stream = joule.api.Stream(name="New DataStream")
+            >>> new_stream.elements = [joule.api.Element(name="Element1")]
+            >>> await node.stream_create(new_stream,"/parent/new_folder")
+            <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.data_stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+        stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+        Example:
+            >>> new_stream = joule.api.Stream(name="New DataStream")
+            >>> new_stream.elements = [joule.api.Element(name="Element1")]
+            >>> await node.stream_create(new_stream,"/parent/new_folder")
+            <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.data_stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+        stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+        Example:
+            >>> new_stream = joule.api.Stream(name="New DataStream")
+            >>> new_stream.elements = [joule.api.Element(name="Element1")]
+            >>> await node.stream_create(new_stream,"/parent/new_folder")
+            <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.data_stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+        stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+        Example:
+            >>> new_stream = joule.api.Stream(name="New DataStream")
+            >>> new_stream.elements = [joule.api.Element(name="Element1")]
+            >>> await node.stream_create(new_stream,"/parent/new_folder")
+            <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.data_stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+        stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+        Example:
+            >>> new_stream = joule.api.Stream(name="New DataStream")
+            >>> new_stream.elements = [joule.api.Element(name="Element1")]
+            >>> await node.stream_create(new_stream,"/parent/new_folder")
+            <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.data_stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+        stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+        Example:
+            >>> new_stream = joule.api.Stream(name="New DataStream")
+            >>> new_stream.elements = [joule.api.Element(name="Element1")]
+            >>> await node.stream_create(new_stream,"/parent/new_folder")
+            <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.data_stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+        stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+        Example:
+            >>> new_stream = joule.api.Stream(name="New DataStream")
+            >>> new_stream.elements = [joule.api.Element(name="Element1")]
+            >>> await node.stream_create(new_stream,"/parent/new_folder")
+            <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.data_stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+        stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+        Example:
+            >>> new_stream = joule.api.Stream(name="New DataStream")
+            >>> new_stream.elements = [joule.api.Element(name="Element1")]
+            >>> await node.stream_create(new_stream,"/parent/new_folder")
+            <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.data_stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+        stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+        Example:
+            >>> new_stream = joule.api.Stream(name="New DataStream")
+            >>> new_stream.elements = [joule.api.Element(name="Element1")]
+            >>> await node.stream_create(new_stream,"/parent/new_folder")
+            <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.data_stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+        stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+        Example:
+            >>> new_stream = joule.api.Stream(name="New DataStream")
+            >>> new_stream.elements = [joule.api.Element(name="Element1")]
+            >>> await node.stream_create(new_stream,"/parent/new_folder")
+            <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+        stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+        Example:
+            >>> new_stream = joule.api.Stream(name="New DataStream")
+            >>> new_stream.elements = [joule.api.Element(name="Element1")]
+            >>> await node.data_stream_create(new_stream,"/parent/new_folder")
+            <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+        stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+        Example:
+            >>> new_stream = joule.api.Stream(name="New DataStream")
+            >>> new_stream.elements = [joule.api.Element(name="Element1")]
+            >>> await node.data_stream_create(new_stream,"/parent/new_folder")
+            <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.data_stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+        stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+        Example:
+            >>> new_stream = joule.api.Stream(name="New DataStream")
+            >>> new_stream.elements = [joule.api.Element(name="Element1")]
+            >>> await node.stream_create(new_stream,"/parent/new_folder")
+            <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.data_stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+        stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+        Example:
+            >>> new_stream = joule.api.Stream(name="New DataStream")
+            >>> new_stream.elements = [joule.api.Element(name="Element1")]
+            >>> await node.stream_create(new_stream,"/parent/new_folder")
+            <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.data_stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+        stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+        Example:
+            >>> new_stream = joule.api.Stream(name="New DataStream")
+            >>> new_stream.elements = [joule.api.Element(name="Element1")]
+            >>> await node.stream_create(new_stream,"/parent/new_folder")
+            <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.data_stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+                stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+                Example:
+                    >>> new_stream = joule.api.DataStream(name="New Stream")
+                    >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                    >>> await node.stream_create(new_stream,"/parent/new_folder")
+                    <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                     is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New DataStream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+        stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+        Example:
+            >>> new_stream = joule.api.Stream(name="New DataStream")
+            >>> new_stream.elements = [joule.api.Element(name="Element1")]
+            >>> await node.stream_create(new_stream,"/parent/new_folder")
+            <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New Stream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New Stream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+        stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+        Example:
+            >>> new_stream = joule.api.DataStream(name="New DataStream")
+            >>> new_stream.elements = [joule.api.Element(name="Element1")]
+            >>> await node.stream_create(new_stream,"/parent/new_folder")
+            <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New Stream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+            stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+            Example:
+                >>> new_stream = joule.api.DataStream(name="New Stream")
+                >>> new_stream.elements = [joule.api.Element(name="Element1")]
+                >>> await node.stream_create(new_stream,"/parent/new_folder")
+                <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+                 is_configured=False is_source=False is_destination=False locked=False decimate=True>
+        stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+        Example:
+            >>> new_stream = joule.api.DataStream(name="New DataStream")
+            >>> new_stream.elements = [joule.api.Element(name="Element1")]
+            >>> await node.stream_create(new_stream,"/parent/new_folder")
+            <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
              is_configured=False is_source=False is_destination=False locked=False decimate=True>
         stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
 
         Example:
-            >>> new_stream = joule.api.DataStream(name="New Stream")
+            >>> new_stream = joule.api.DataStream(name="New DataStream")
             >>> new_stream.elements = [joule.api.Element(name="Element1")]
             >>> await node.stream_create(new_stream,"/parent/new_folder")
-            <joule.api.Stream id=2628 name='New Stream' description='' datatype='float32'
+            <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
+             is_configured=False is_source=False is_destination=False locked=False decimate=True>
+        stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+        Example:
+            >>> new_stream = joule.api.DataStream(name="New DataStream")
+            >>> new_stream.elements = [joule.api.Element(name="Element1")]
+            >>> await node.stream_create(new_stream,"/parent/new_folder")
+            <joule.api.DataStream id=2628 name='New DataStream' description='' datatype='float32'
              is_configured=False is_source=False is_destination=False locked=False decimate=True>
     stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
 
@@ -220,15 +2402,25 @@ DataStream Actions
 
 
 
-.. function:: Node.stream_info(stream: Union[DataStream, str, int]) -> StreamInfo:
+.. function:: Node.stream_info(stream: Union[DataStream, str, int]) -> DataStreamInfo:
 
-    Get information about a stream as a :class:`joule.api.StreamInfo` object. DataStream may be specified
+    Get information about a stream as a :class:`joule.api.DataStreamInfo` object. DataStream may be specified
     by a :class:`joule.api.DataStream` object, a path, or numeric ID. Raises :exc:`joule.errors.ApiError`
     if the stream specification is invalid.
 
+        Example:
+            >>> await node.data_stream_info("/parent/my_folder/stream")
+            <joule.api.DataStreamInfo start=1551730769556442 end=1551751402742424
+             rows=61440, total_time=20633185982>
+
+        Example:
+            >>> await node.data_stream_info("/parent/my_folder/stream")
+            <joule.api.DataStreamInfo start=1551730769556442 end=1551751402742424
+             rows=61440, total_time=20633185982>
+
     Example:
         >>> await node.stream_info("/parent/my_folder/stream")
-        <joule.api.StreamInfo start=1551730769556442 end=1551751402742424
+        <joule.api.DataStreamInfo start=1551730769556442 end=1551751402742424
          rows=61440, total_time=20633185982>
 
 
@@ -522,7 +2714,7 @@ Models
 .. autoclass:: joule.api.DataStream
     :members:
 
-.. autoclass:: joule.api.StreamInfo
+.. autoclass:: joule.api.DataStreamInfo
     :members:
 
 .. autoclass:: joule.api.Element

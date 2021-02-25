@@ -2,7 +2,7 @@ from typing import List, TYPE_CHECKING
 from joule import errors
 
 if TYPE_CHECKING:
-    from .stream import Stream
+    from .data_stream import DataStream
 
 
 class Folder:
@@ -16,7 +16,7 @@ class Folder:
         name (str): folder name, must be unique in the parent
         description (str): optional field
         locked (bool): folder may not be moved, deleted, or changed
-        streams (List[Stream]): streams in the folder
+        streams (List[DataStream]): streams in the folder
         children (List[Folder]): subfolders in the folder
 
     """

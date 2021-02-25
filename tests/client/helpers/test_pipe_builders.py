@@ -198,7 +198,7 @@ class TestPipeHelpers(FakeJouleTestCase):
         async def runner():
             # the destination does not exist
             with self.assertRaises(errors.ApiError):
-                await my_node.stream_get("/test/dest")
+                await my_node.data_stream_get("/test/dest")
             pipes_in, pipes_out = await build_network_pipes({},
                                                             {'output': '/test/dest:uint8[e0,e1,e2]'},
                                                             {},
@@ -206,7 +206,7 @@ class TestPipeHelpers(FakeJouleTestCase):
                                                             None, None)
             await pipes_out['output'].close()
             # make sure the stream exists
-            dest_stream = await my_node.stream_get("/test/dest")
+            dest_stream = await my_node.data_stream_get("/test/dest")
             self.assertIsNotNone(dest_stream)
 
             await my_node.close()

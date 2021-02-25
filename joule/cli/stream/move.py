@@ -13,7 +13,7 @@ def cli_move(config: Config, source, destination):
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(
-            config.node.stream_move(source, destination))
+            config.node.data_stream_move(source, destination))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:

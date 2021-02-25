@@ -25,7 +25,7 @@ class StreamInfo:
         self.total_time = total_time
 
     def __repr__(self):
-        return "<StreamInfo start=%r end=%r rows=%r, total_time=%r>" % (
+        return "<DataStreamInfo start=%r end=%r rows=%r, total_time=%r>" % (
             self.start, self.end, self.rows, self.total_time)
 
     def to_json(self):

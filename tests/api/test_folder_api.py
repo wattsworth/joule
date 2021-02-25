@@ -5,7 +5,7 @@ import asynctest
 from joule.api.node import TcpNode
 from joule import errors
 
-from joule.api.stream import Stream
+from joule.api.data_stream import DataStream
 from joule.api.folder import Folder
 from joule.utilities import build_stream
 
@@ -45,11 +45,11 @@ class TestFolderApi(asynctest.TestCase):
     async def test_folder_move_errors(self):
         self.session.method = None
         with self.assertRaises(errors.ApiError):
-            await self.node.folder_move(Stream(), '/b/path')
+            await self.node.folder_move(DataStream(), '/b/path')
         self.assertIsNone(self.session.method)
 
         with self.assertRaises(errors.ApiError):
-            await self.node.folder_move('/a/path', Stream())
+            await self.node.folder_move('/a/path', DataStream())
         self.assertIsNone(self.session.method)
 
     async def test_folder_delete(self):
@@ -75,7 +75,7 @@ class TestFolderApi(asynctest.TestCase):
     async def test_folder_delete_errors(self):
         self.session.method = None
         with self.assertRaises(errors.ApiError):
-            await self.node.folder_delete(Stream(), recursive=False)
+            await self.node.folder_delete(DataStream(), recursive=False)
         self.assertIsNone(self.session.method)
 
     async def test_folder_get(self):
@@ -102,7 +102,7 @@ class TestFolderApi(asynctest.TestCase):
     async def test_folder_get_errors(self):
         self.session.method = None
         with self.assertRaises(errors.ApiError):
-            await self.node.folder_get(Stream())
+            await self.node.folder_get(DataStream())
         self.assertIsNone(self.session.method)
 
     async def test_local_folder_has_no_id(self):

@@ -4,8 +4,8 @@ import datetime
 import asyncio
 
 
-from joule.api.stream import (stream_get,
-                              stream_info)
+from joule.api.data_stream import (stream_get,
+                                   stream_info)
 from joule.models import data_stream
 from joule import errors
 from joule.cli.config import pass_config
@@ -29,7 +29,7 @@ def cli_info(config, elements, path):
 
 
 async def _run(node, path, show_elements):
-    my_stream = await node.stream_get(path)
+    my_stream = await node.data_stream_get(path)
     # display stream information
     click.echo()
     click.echo("\tName:         %s" % my_stream.name)
@@ -40,7 +40,7 @@ async def _run(node, path, show_elements):
     click.echo()
     # display information from the data store
     click.echo("\tStatus:       %s" % _display_status(my_stream.locked, my_stream.active))
-    my_info = await node.stream_info(path)
+    my_info = await node.data_stream_info(path)
     click.echo("\tStart:        %s" % _display_time(my_info.start))
     click.echo("\tEnd:          %s" % _display_time(my_info.end))
     click.echo("\tRows:         %d" % my_info.rows)

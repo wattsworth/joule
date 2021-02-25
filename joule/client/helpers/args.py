@@ -8,7 +8,7 @@ from typing import Tuple, Dict
 
 from joule.errors import ConfigurationError
 from joule.models import data_stream
-from joule.api import stream as api_stream
+from joule.api import data_stream as api_stream
 from joule.services.helpers import load_configs
 
 """ helpers for handling module arguments

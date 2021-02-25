@@ -9,7 +9,7 @@ import asynctest
 from .test_filter_module import SimpleFilter
 from .test_reader_module import SimpleReader
 from joule.client import CompositeModule
-from joule.api import BaseNode, Stream
+from joule.api import BaseNode, DataStream
 from joule.models import DataStream, Element, pipes
 from joule import api
 from tests import helpers

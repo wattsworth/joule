@@ -18,15 +18,15 @@ from joule.api.module import (Module,
                               module_list,
                               module_logs)
 
-from joule.api.stream import (Stream,
-                              StreamInfo,
-                              stream_get,
-                              stream_update,
-                              stream_move,
-                              stream_delete,
-                              stream_create,
-                              stream_info,
-                              stream_annotation_delete)
+from joule.api.data_stream import (DataStream,
+                                   DataStreamInfo,
+                                   stream_get,
+                                   stream_update,
+                                   stream_move,
+                                   stream_delete,
+                                   stream_create,
+                                   stream_info,
+                                   stream_annotation_delete)
 
 from joule.api.data import (data_write,
                             data_read,
@@ -101,43 +101,43 @@ class BaseNode:
 
     # DataStream actions
 
-    async def stream_get(self,
-                         stream: Union[Stream, str, int]) -> Stream:
+    async def data_stream_get(self,
+                              stream: Union[DataStream, str, int]) -> DataStream:
         return await stream_get(self.session, stream)
 
-    async def stream_move(self,
-                          stream: Union[Stream, str, int],
-                          folder: Union[Folder, str, int]) -> None:
+    async def data_stream_move(self,
+                               stream: Union[DataStream, str, int],
+                               folder: Union[Folder, str, int]) -> None:
         return await stream_move(self.session, stream, folder)
 
-    async def stream_update(self,
-                            stream: Stream) -> None:
+    async def data_stream_update(self,
+                                 stream: DataStream) -> None:
         return await stream_update(self.session,
                                    stream)
 
-    async def stream_delete(self,
-                            stream: Union[Stream, str, int]) -> None:
+    async def data_stream_delete(self,
+                                 stream: Union[DataStream, str, int]) -> None:
         await stream_delete(self.session, stream)
 
-    async def stream_create(self,
-                            stream: Stream,
-                            folder: Union[Folder, str, int]) -> Stream:
+    async def data_stream_create(self,
+                                 stream: DataStream,
+                                 folder: Union[Folder, str, int]) -> DataStream:
         return await stream_create(self.session, stream, folder)
 
-    async def stream_info(self,
-                          stream: Union[Stream, str, int]) -> StreamInfo:
+    async def data_stream_info(self,
+                               stream: Union[DataStream, str, int]) -> DataStreamInfo:
         return await stream_info(self.session, stream)
 
-    async def stream_annotation_delete(self,
-                                       stream: Union[Stream, str, int],
-                                       start: Optional[int] = None,
-                                       end: Optional[int] = None):
+    async def data_stream_annotation_delete(self,
+                                            stream: Union[DataStream, str, int],
+                                            start: Optional[int] = None,
+                                            end: Optional[int] = None):
         return await stream_annotation_delete(self.session, stream, start, end)
 
     # Data actions
 
     async def data_read(self,
-                        stream: Union[Stream, str, int],
+                        stream: Union[DataStream, str, int],
                         start: Optional[int] = None,
                         end: Optional[int] = None,
                         max_rows: Optional[int] = None) -> Pipe:
@@ -145,28 +145,28 @@ class BaseNode:
                                max_rows)
 
     async def data_subscribe(self,
-                             stream: Union[Stream, str, int]) -> Pipe:
+                             stream: Union[DataStream, str, int]) -> Pipe:
         return await data_subscribe(self.session, stream)
 
     async def data_intervals(self,
-                             stream: Union[Stream, str, int],
+                             stream: Union[DataStream, str, int],
                              start: Optional[int] = None,
                              end: Optional[int] = None) -> List:
         return await data_intervals(self.session, stream, start, end)
 
     async def data_consolidate(self,
-                               stream: Union[Stream, str, int],
+                               stream: Union[DataStream, str, int],
                                max_gap: int,
                                start: Optional[int] = None,
                                end: Optional[int] = None) -> List:
         return await data_consolidate(self.session, stream, start, end, max_gap)
 
-    async def data_write(self, stream: Union[Stream, str, int],
+    async def data_write(self, stream: Union[DataStream, str, int],
                          start: Optional[int] = None,
                          end: Optional[int] = None) -> Pipe:
         return await data_write(self.session, stream, start, end)
 
-    async def data_delete(self, stream: Union[Stream, str, int],
+    async def data_delete(self, stream: Union[DataStream, str, int],
                           start: Optional[int] = None,
                           end: Optional[int] = None) -> None:
         return await data_delete(self.session, stream, start, end)
@@ -219,14 +219,14 @@ class BaseNode:
         await self.session.delete("/follower.json", params=data)
 
     # Annotation actions
-    async def annotation_get(self, stream: Union[int, str, Stream],
+    async def annotation_get(self, stream: Union[int, str, DataStream],
                              start: Optional[int] = None,
                              end: Optional[int] = None) -> List[Annotation]:
         return await annotation_get(self.session, stream, start, end)
 
     async def annotation_create(self,
                                 annotation: Annotation,
-                                stream: Union[int, str, Stream], ) -> Annotation:
+                                stream: Union[int, str, DataStream], ) -> Annotation:
         return await annotation_create(self.session,
                                        annotation, stream)
 

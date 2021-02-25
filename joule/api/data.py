@@ -4,9 +4,9 @@ import aiohttp
 import numpy as np
 
 from .session import BaseSession
-from .stream import (Stream,
-                     stream_get,
-                     stream_create)
+from .data_stream import (DataStream,
+                          stream_get,
+                          stream_create)
 
 from joule.models.pipes import (Pipe,
                                 InputPipe,
@@ -21,7 +21,7 @@ log = logging.getLogger('joule')
 
 
 async def data_delete(session: BaseSession,
-                      stream: Union[Stream, str, int],
+                      stream: Union[DataStream, str, int],
                       start: Optional[int] = None,
                       end: Optional[int] = None):
     params = {}
@@ -29,7 +29,7 @@ async def data_delete(session: BaseSession,
         params['start'] = int(start)
     if end is not None:
         params['end'] = int(end)
-    if type(stream) is Stream:
+    if type(stream) is DataStream:
         params['id'] = stream.id
     elif type(stream) is str:
         params['path'] = stream
@@ -42,7 +42,7 @@ async def data_delete(session: BaseSession,
 
 
 async def data_write(session: BaseSession,
-                     stream: Union[Stream, str, int],
+                     stream: Union[DataStream, str, int],
                      start_time: Optional[int] = None,
                      end_time: Optional[int] = None,
                      ) -> Pipe:
@@ -52,7 +52,7 @@ async def data_write(session: BaseSession,
     if start_time is not None or end_time is not None:
         await data_delete(session, dest_stream, start_time, end_time)
 
-    if type(stream) is Stream:
+    if type(stream) is DataStream:
         if dest_stream.layout != stream.layout:
             raise errors.ApiError("DataStream [%s] configured for [%s] but destination is [%s]" % (
                 stream.name, stream.layout, dest_stream.layout))
@@ -77,12 +77,12 @@ async def data_write(session: BaseSession,
 
 
 async def data_intervals(session: BaseSession,
-                         stream: Union[Stream, str, int],
+                         stream: Union[DataStream, str, int],
                          start_time: Optional[int] = None,
                          end_time: Optional[int] = None,
                          ) -> List:
     data = {}
-    if type(stream) is Stream:
+    if type(stream) is DataStream:
         data["id"] = stream.id
     elif type(stream) is int:
         data["id"] = stream
@@ -98,13 +98,13 @@ async def data_intervals(session: BaseSession,
 
 
 async def data_consolidate(session: BaseSession,
-                           stream: Union[Stream, str, int],
+                           stream: Union[DataStream, str, int],
                            start_time: Optional[int] = None,
                            end_time: Optional[int] = None,
                            max_gap: int = 2e6
                            ) -> List:
     data = {}
-    if type(stream) is Stream:
+    if type(stream) is DataStream:
         data["id"] = stream.id
     elif type(stream) is int:
         data["id"] = stream
@@ -122,13 +122,13 @@ async def data_consolidate(session: BaseSession,
 
 
 async def data_read(session: BaseSession,
-                    stream: Union[Stream, str, int],
+                    stream: Union[DataStream, str, int],
                     start: Optional[int] = None,
                     end: Optional[int] = None,
                     max_rows: Optional[int] = None) -> Pipe:
     # make sure the input is compatible
     src_stream = await stream_get(session, stream)
-    if type(stream) is Stream:
+    if type(stream) is DataStream:
         if src_stream.layout != src_stream.layout:
             raise errors.ApiError("Input [%s] configured for [%s] but source is [%s]" % (
                 stream, stream.layout, src_stream.layout))
@@ -153,10 +153,10 @@ async def data_read(session: BaseSession,
 
 
 async def data_subscribe(session: BaseSession,
-                         stream: Union[Stream, str, int]) -> Pipe:
+                         stream: Union[DataStream, str, int]) -> Pipe:
     # make sure the input is compatible
     src_stream = await stream_get(session, stream)
-    if type(stream) is Stream:
+    if type(stream) is DataStream:
         if src_stream.layout != src_stream.layout:
             raise errors.ApiError("Input [%s] configured for [%s] but source is [%s]" % (
                 stream, stream.layout, src_stream.layout))
@@ -185,7 +185,7 @@ async def data_subscribe(session: BaseSession,
     return pipe
 
 
-async def _live_reader(session: BaseSession, my_stream: Stream,
+async def _live_reader(session: BaseSession, my_stream: DataStream,
                        pipe_out: Pipe):
     log.info("requesting live connection to [%s]" % my_stream.name)
     params = {'id': my_stream.id, 'subscribe': '1'}
@@ -219,7 +219,7 @@ async def _live_reader(session: BaseSession, my_stream: Stream,
 
 
 async def _historic_reader(session: BaseSession,
-                           my_stream: Stream,
+                           my_stream: DataStream,
                            pipe_out: Pipe,
                            start_time: int, end_time: int,
                            max_rows: Optional[int]):
@@ -262,7 +262,7 @@ async def _historic_reader(session: BaseSession,
 
 
 async def _send_data(session: BaseSession,
-                     stream: Stream,
+                     stream: DataStream,
                      pipe: Pipe):
     # TODO is this necssary?
     output_complete = False

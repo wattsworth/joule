@@ -3,7 +3,7 @@ from typing import Union
 from joule import errors
 from .folder_type import Folder
 from .session import BaseSession
-from .stream import from_json as stream_from_json
+from .data_stream import from_json as stream_from_json
 
 
 def from_json(json) -> Folder:

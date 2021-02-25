@@ -2,7 +2,7 @@ import click
 import asyncio
 
 from joule import errors
-from joule.api.stream import stream_delete
+from joule.api.data_stream import stream_delete
 from joule.cli.config import pass_config
 
 
@@ -17,7 +17,7 @@ def cli_delete(config, stream):
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(
-            config.node.stream_delete(stream))
+            config.node.data_stream_delete(stream))
         click.echo("OK")
 
     except errors.ApiError as e:

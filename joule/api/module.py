@@ -1,7 +1,7 @@
 from typing import List, Union, Dict
 
 from joule import errors
-from . import stream
+from . import data_stream
 from .session import BaseSession
 
 
@@ -48,8 +48,8 @@ class Module:
 
     def __init__(self, id: int, name: str, description: str,
                  is_app: bool,
-                 inputs: Dict[str, stream.Stream],
-                 outputs: Dict[str, stream.Stream],
+                 inputs: Dict[str, data_stream.DataStream],
+                 outputs: Dict[str, data_stream.DataStream],
                  statistics: ModuleStatistics = None):
         self.id = id
         self.name = name

@@ -40,7 +40,7 @@ async def _run(node: BaseNode, stream, start, end, delete, csv):
         except ValueError:
             raise click.ClickException("invalid end time: [%s]" % end)
     if delete:
-        await node.stream_annotation_delete(stream, start, end)
+        await node.data_stream_annotation_delete(stream, start, end)
         click.echo("OK")
         return
     annotations = await node.annotation_get(stream, start, end)

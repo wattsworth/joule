@@ -25,8 +25,8 @@ class TestBasicAPI(asynctest.TestCase):
         logs = await self.node1.module_logs("Remote")
         print(logs)
         print('----------')
-        added_stream = await self.node1.stream_get("/main/folder/added")
-        base_stream = await self.node2.stream_get("/main/folder/base")
+        added_stream = await self.node1.data_stream_get("/main/folder/added")
+        base_stream = await self.node2.data_stream_get("/main/folder/base")
         # make sure added_stream has data
         added_data = await self.node1.data_subscribe(added_stream)
         base_data =await self.node2.data_subscribe(base_stream)

@@ -4,7 +4,7 @@ from joule import errors
 from .session import BaseSession
 
 if TYPE_CHECKING:
-    from .stream import Stream
+    from .data_stream import DataStream
 
 
 class Annotation:
@@ -66,13 +66,13 @@ def from_json(json) -> Annotation:
 async def annotation_create(session: BaseSession,
                             annotation: Annotation,
                             stream: Union[int, str, 'DataStream'], ) -> Annotation:
-    from .stream import Stream
+    from .data_stream import DataStream
 
     data = {"title": annotation.title,
             "content": annotation.content,
             "start": annotation.start,
             "end": annotation.end}
-    if type(stream) is Stream:
+    if type(stream) is DataStream:
         data["stream_id"] = stream.id
     elif type(stream) is int:
         data["stream_id"] = stream
@@ -110,7 +110,7 @@ async def annotation_get(session: BaseSession,
                          stream: Union['DataStream', str, int],
                          start: Optional[int],
                          end: Optional[int]) -> List[Annotation]:
-    from .stream import Stream
+    from .data_stream import DataStream
 
     data = {}
     if start is not None:
@@ -118,7 +118,7 @@ async def annotation_get(session: BaseSession,
     if end is not None:
         data["end"] = end
 
-    if type(stream) is Stream:
+    if type(stream) is DataStream:
         data["stream_id"] = stream.id
     elif type(stream) is int:
         data["stream_id"] = stream

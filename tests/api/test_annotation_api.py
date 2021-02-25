@@ -4,7 +4,7 @@ import asynctest
 from joule.api.node import TcpNode
 from joule import errors
 
-from joule.api.stream import Stream
+from joule.api.data_stream import DataStream
 from joule.api.annotation import Annotation
 
 
@@ -31,7 +31,7 @@ class TestAnnotationApi(asynctest.TestCase):
         # create by stream path
         await self.node.annotation_create(annotation, '/a/path')
         self.assertEqual(self.session.request_data["stream_path"], "/a/path")
-        stream = Stream(name="test")
+        stream = DataStream(name="test")
         stream.id = 100
         # create by DataStream object
         await self.node.annotation_create(annotation, stream)
@@ -91,7 +91,7 @@ class TestAnnotationApi(asynctest.TestCase):
         self.assertEqual(req_data["stream_id"], 1)
 
         # get by stream object
-        stream = Stream(name="test")
+        stream = DataStream(name="test")
         stream.id = 100
         await self.node.annotation_get(stream)
         req_data = self.session.request_data

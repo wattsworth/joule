@@ -73,8 +73,8 @@ def cmd(config, start, end, live, max_rows, show_bounds, mark_intervals, element
         bar = None
 
         # get the stream object from the API
-        stream_obj = await config.node.stream_get(stream)
-        stream_info = await config.node.stream_info(stream)
+        stream_obj = await config.node.data_stream_get(stream)
+        stream_info = await config.node.data_stream_info(stream)
         if stream_info.rows == 0:
             raise click.ClickException("This stream has no data")
         if live:

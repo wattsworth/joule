@@ -292,8 +292,8 @@ async def _retrieve_source(server: Union[BaseNode, str], path: str, is_nilmdb: b
         if src_stream is None:
             raise errors.ApiError("The stream [%s] is not available on [%s]" % (path, server))
     else:
-        src_stream = await server.stream_get(path)
-        src_info = await server.stream_info(path)
+        src_stream = await server.data_stream_get(path)
+        src_info = await server.data_stream_info(path)
 
     if src_info.start is None or src_info.end is None:
         raise errors.ApiError("[%s] has no data" % path)
@@ -310,7 +310,7 @@ async def _retrieve_destination(server: Union[str, BaseNode], path: str, templat
             return dest_stream
     else:
         try:
-            return await server.stream_get(path)
+            return await server.data_stream_get(path)
         except errors.ApiError as e:
             if "404" in str(e):
                 return await _create_joule_stream(server, path, template)
@@ -324,7 +324,7 @@ async def _create_joule_stream(node: BaseNode, path: str, template: DataStream) 
     dest_stream.keep_us = DataStream.KEEP_ALL
     dest_stream.name = path.split("/")[-1]
     folder = "/".join(path.split("/")[:-1])
-    return await node.stream_create(dest_stream, folder)
+    return await node.data_stream_create(dest_stream, folder)
 
 
 async def _create_nilmdb_stream(server: str, path: str, template: DataStream):

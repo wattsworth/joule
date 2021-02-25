@@ -3,7 +3,7 @@ import asyncio
 from treelib import Tree
 
 from joule import errors
-from joule.api.stream import Stream
+from joule.api.data_stream import DataStream
 from joule.api.folder import (Folder, folder_root)
 from joule.cli.config import pass_config
 from joule.api import BaseNode
@@ -50,7 +50,7 @@ def _process_folder(tree: Tree, folder: Folder, parent_id,
         _process_folder(tree, child, identifier, layout, status, showid)
 
 
-def _process_stream(tree: Tree, stream: Stream, parent_id,
+def _process_stream(tree: Tree, stream: DataStream, parent_id,
                     layout: bool, status: bool, showid: bool):
     tag = stream.name
     if showid:

@@ -25,6 +25,6 @@ def cli_rename(config: Config, stream, name):
 
 
 async def _run(node: BaseNode, stream_path: str, name: str):
-    stream = await node.stream_get(stream_path)
+    stream = await node.data_stream_get(stream_path)
     stream.name = name
-    await node.stream_update(stream)
+    await node.data_stream_update(stream)

@@ -4,7 +4,7 @@ import signal
 
 from joule.cli.config import pass_config
 from joule.models.pipes import compute_dtype
-from joule.api.stream import Stream, Element, elem_from_json
+from joule.api.data_stream import DataStream, Element, elem_from_json
 
 import h5py
 import json
@@ -52,10 +52,10 @@ def ingest(config, stream_path, file):
 
         # get the stream object from the API
         try:
-            stream_obj = await config.node.stream_get(stream_path)
+            stream_obj = await config.node.data_stream_get(stream_path)
             print("Destination stream: %s" % stream_path)
 
-            stream_info = await config.node.stream_info(stream_path)
+            stream_info = await config.node.data_stream_info(stream_path)
             # make sure the datatypes match
             dtype = compute_dtype(stream_obj.layout)
             if dtype[1].base != hdf_data.dtype:
@@ -123,10 +123,10 @@ async def _create_stream(stream_path, hdf_root, node):
     folder = '/'.join(stream_path.split('/')[:-1])
     if folder == '':
         raise click.ClickException("Invalid stream path, must include a folder")
-    new_stream = Stream(stream_name)
+    new_stream = DataStream(stream_name)
     new_stream.datatype = hdf_root['data'].dtype.name
     new_stream.elements = elements
-    stream_obj = await node.stream_create(new_stream, folder)
+    stream_obj = await node.data_stream_create(new_stream, folder)
     print("creating [%s]" % stream_path)
     return stream_obj
 

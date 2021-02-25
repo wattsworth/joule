@@ -175,7 +175,7 @@ class NilmdbStore(DataStore):
 
     async def info(self, streams: List[DataStream]) -> Dict[int, StreamInfo]:
         info_dict = await self._path_info()
-        # go through each stream and compute the effective StreamInfo
+        # go through each stream and compute the effective DataStreamInfo
         # object by looking at the raw and decimated paths
         streams_info = {}
         for s in streams:

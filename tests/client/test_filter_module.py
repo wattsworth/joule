@@ -80,11 +80,11 @@ class TestFilterModule(helpers.AsyncTestCase):
 
         with mock.patch('joule.client.base_module.node') as mock_node_pkg:
             node = MockNode()
-            node.stream_get = asynctest.CoroutineMock(return_value=self.output)
+            node.data_stream_get = asynctest.CoroutineMock(return_value=self.output)
             mock_node_pkg.UnixNode = mock.Mock(return_value=node)
             module.start(args)
             # make sure the API was used to retrieve stream objects
-            self.assertEqual(node.stream_get.await_count, 2)
+            self.assertEqual(node.data_stream_get.await_count, 2)
 
         asyncio.set_event_loop(self.loop)
         # check the output

@@ -90,8 +90,8 @@ class TestDataMethods(asynctest.TestCase):
 
     async def test_data_delete(self):
         # copy data to a new stream
-        src = await self.node.stream_get("/live/base")
-        dest = await self.node.stream_create(src, "/tmp")
+        src = await self.node.data_stream_get("/live/base")
+        dest = await self.node.data_stream_create(src, "/tmp")
         data_in = await self.node.data_read(src)
         data_out = await self.node.data_write(dest)
         first_ts = None
@@ -107,10 +107,10 @@ class TestDataMethods(asynctest.TestCase):
             except models.pipes.EmptyPipe:
                 break
         await data_out.close()
-        dest_info = await self.node.stream_info(dest)
+        dest_info = await self.node.data_stream_info(dest)
         self.assertGreater(dest_info.rows, 2)
         # remove all but the first and last samples
         await self.node.data_delete(dest, start=first_ts + 1, end=last_ts - 1)
-        dest_info = await self.node.stream_info(dest)
+        dest_info = await self.node.data_stream_info(dest)
         self.assertEqual(dest_info.rows, 2)
-        await self.node.stream_delete(dest)
+        await self.node.data_stream_delete(dest)
