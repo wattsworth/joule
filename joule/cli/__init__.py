@@ -8,6 +8,7 @@ from joule.cli.proxy import proxies
 from joule.cli.admin import admin
 from joule.cli.master import master
 from joule.cli.follower import follower
+from joule.cli.event import events
 from joule.cli.node import node
 from joule.cli.config import Config, pass_config
 
@@ -24,6 +25,7 @@ def main(config, node):
 
 main.add_command(admin)
 main.add_command(streams)
+main.add_command(events)
 main.add_command(data)
 main.add_command(module)
 main.add_command(folders)

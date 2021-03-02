@@ -3,18 +3,22 @@ from typing import Union
 from joule import errors
 from .folder_type import Folder
 from .session import BaseSession
-from .data_stream import from_json as stream_from_json
+from .data_stream import from_json as data_stream_from_json
+from .event_stream import from_json as event_stream_from_json
 
 
 def from_json(json) -> Folder:
-    streams = [stream_from_json(val) for val in json['streams']]
+    data_streams = [data_stream_from_json(val) for val in json['data_streams']]
+    event_streams = [event_stream_from_json(val) for val in json['event_streams']]
+
     children = [from_json(val) for val in json['children']]
     my_folder = Folder()
     my_folder.id = json['id']
     my_folder.name = json['name']
     my_folder.description = json['description']
     my_folder.children = children
-    my_folder.streams = streams
+    my_folder.data_streams = data_streams
+    my_folder.event_streams = event_streams
     my_folder.locked = json['locked']
     return my_folder
 

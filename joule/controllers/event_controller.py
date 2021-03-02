@@ -1,41 +1,23 @@
 from aiohttp import web
 from sqlalchemy.orm import Session
-from joule.models import (
-    DataStream,
-    EventStream,
-    DataStore,
-    data_stream)
+from joule.models import EventStream, EventStore, event_stream
 
 from joule.models import folder, Folder
 from joule.errors import ConfigurationError
 
 
-async def index(request: web.Request):
-    db: Session = request.app["db"]
-    data_store: DataStore = request.app["data-store"]
-    event_store: DataStore = request.app["event-store"]
-
-    root = folder.root(db)
-    data_streams = db.query(DataStream).all()
-    data_streams_info = await data_store.info(data_streams)
-    event_streams = db.query(EventStream).all()
-    event_streams_info = await event_store.info(event_streams)
-    resp = root.to_json(data_streams_info, event_streams_info)
-    return web.json_response(resp)
-
-
 async def info(request: web.Request):
     db: Session = request.app["db"]
-    data_store: DataStore = request.app["data-store"]
+    event_store: EventStore = request.app["event-store"]
     if 'path' in request.query:
-        my_stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
+        my_stream = folder.find_stream_by_path(request.query['path'], db, stream_type=EventStream)
     elif 'id' in request.query:
-        my_stream = db.query(DataStream).get(request.query["id"])
+        my_stream = db.query(EventStream).get(request.query["id"])
     else:
         return web.Response(text="specify an id or a path", status=400)
     if my_stream is None:
         return web.Response(text="stream does not exist", status=404)
-    stream_info = await data_store.info([my_stream])
+    stream_info = await event_store.info([my_stream])
     return web.json_response(my_stream.to_json(stream_info))
 
 
@@ -46,15 +28,13 @@ async def move(request: web.Request):
     body = await request.json()
     # find the stream
     if 'src_path' in body:
-        my_stream = folder.find_stream_by_path(body['src_path'], db, stream_type=DataStream)
+        my_stream = folder.find_stream_by_path(body['src_path'], db, stream_type=EventStream)
     elif 'src_id' in body:
-        my_stream = db.query(DataStream).get(body["src_id"])
+        my_stream = db.query(EventStream).get(body["src_id"])
     else:
         return web.Response(text="specify a source id or a path", status=400)
     if my_stream is None:
         return web.Response(text="stream does not exist", status=404)
-    if my_stream.locked:
-        return web.Response(text="locked streams cannot be moved", status=400)
     # find or create the destination folder
     if 'dest_path' in body:
         try:
@@ -66,7 +46,7 @@ async def move(request: web.Request):
     else:
         return web.Response(text="specify a destination", status=400)
     # make sure name is unique in this destination
-    existing_names = [s.name for s in destination.streams+destination.event_streams]
+    existing_names = [s.name for s in destination.streams + destination.event_streams]
     if my_stream.name in existing_names:
         db.rollback()
         return web.Response(text="stream with the same name exists in the destination folder",
@@ -97,24 +77,14 @@ async def create(request):
         return web.Response(text="specify a destination", status=400)
 
     try:
-        new_stream = data_stream.from_json(body['stream'])
-        # make sure stream has at least 1 element
-        if len(new_stream.elements) == 0:
-            raise ConfigurationError("stream must have at least one element")
-
-        # clear out the status flags
-        new_stream.is_configured = False
-        new_stream.is_destination = False
-        new_stream.is_source = False
+        new_stream = event_stream.from_json(body['stream'])
         # clear out the id's
         new_stream.id = None
-        for elem in new_stream.elements:
-            elem.id = None
         # make sure name is unique in this destination
         existing_names = [s.name for s in destination.streams + destination.event_streams]
         if new_stream.name in existing_names:
             raise ConfigurationError("stream with the same name exists in the folder")
-        destination.streams.append(new_stream)
+        destination.event_streams.append(new_stream)
         db.commit()
     except (TypeError, ValueError) as e:
         db.rollback()
@@ -137,11 +107,9 @@ async def update(request: web.Request):
     if 'id' not in body:
         return web.Response(text="Invalid request: specify id", status=400)
 
-    my_stream: DataStream = db.query(DataStream).get(body['id'])
+    my_stream: EventStream = db.query(EventStream).get(body['id'])
     if my_stream is None:
         return web.Response(text="stream does not exist", status=404)
-    if my_stream.locked:
-        return web.Response(text="stream is locked", status=400)
     if 'stream' not in body:
         return web.Response(text="Invalid request: specify stream as JSON", status=400)
     try:
@@ -165,19 +133,105 @@ async def update(request: web.Request):
 
 async def delete(request):
     db: Session = request.app["db"]
-    data_store: DataStore = request.app["data-store"]
+    data_store: EventStore = request.app["event-store"]
     # find the requested stream
     if 'path' in request.query:
-        my_stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
+        my_stream = folder.find_stream_by_path(request.query['path'], db,
+                                               stream_type=EventStream)
     elif 'id' in request.query:
-        my_stream = db.query(DataStream).get(request.query["id"])
+        my_stream = db.query(EventStream).get(request.query["id"])
     else:
         return web.Response(text="specify an id or a path", status=400)
     if my_stream is None:
         return web.Response(text="stream does not exist", status=404)
-    if my_stream.locked or my_stream.active:
-        return web.Response(text="locked streams cannot be deleted", status=400)
     await data_store.destroy(my_stream)
     db.delete(my_stream)
     db.commit()
+    return web.Response(text="ok")
+
+
+# ----- data actions ----
+
+async def write_events(request):
+    db: Session = request.app["db"]
+    event_store: EventStore = request.app["event-store"]
+    body = await request.json()
+
+    # find the requested stream
+    if 'path' in body:
+        my_stream = folder.find_stream_by_path(body['path'], db,
+                                               stream_type=EventStream)
+    elif 'id' in body:
+        my_stream = db.query(EventStream).get(body["id"])
+    else:
+        return web.Response(text="specify an id or a path!!", status=400)
+    if my_stream is None:
+        return web.Response(text="stream does not exist", status=404)
+    if 'events' not in body:
+        return web.Response(text="specify events to add", status=400)
+    await event_store.insert(my_stream, body['events'])
+    return web.Response(text="ok")
+
+
+async def read_events(request):
+    db: Session = request.app["db"]
+    event_store: EventStore = request.app["event-store"]
+    # find the requested stream
+    if 'path' in request.query:
+        my_stream = folder.find_stream_by_path(request.query['path'], db,
+                                               stream_type=EventStream)
+    elif 'id' in request.query:
+        my_stream = db.query(EventStream).get(request.query["id"])
+    else:
+        return web.Response(text="specify an id or a path", status=400)
+    if my_stream is None:
+        return web.Response(text="stream does not exist", status=404)
+
+    # parse optional parameters
+    params = {'start': None, 'end': None}
+    param = ""  # to appease type checker
+    try:
+        for param in params:
+            if param in request.query:
+                params[param] = int(request.query[param])
+    except ValueError:
+        return web.Response(text="parameter [%s] must be an int" % param, status=400)
+
+    # make sure parameters make sense
+    if ((params['start'] is not None and params['end'] is not None) and
+            (params['start'] >= params['end'])):
+        return web.Response(text="[start] must be < [end]", status=400)
+    events = await event_store.extract(my_stream, params['start'], params['end'])
+    return web.json_response(data=events)
+
+
+async def remove_events(request):
+    db: Session = request.app["db"]
+    event_store: EventStore = request.app["event-store"]
+    # find the requested stream
+    if 'path' in request.query:
+        my_stream = folder.find_stream_by_path(request.query['path'], db,
+                                               stream_type=EventStream)
+    elif 'id' in request.query:
+        my_stream = db.query(EventStream).get(request.query["id"])
+    else:
+        return web.Response(text="specify an id or a path", status=400)
+    if my_stream is None:
+        return web.Response(text="stream does not exist", status=404)
+
+    # parse optional parameters
+    params = {'start': None, 'end': None}
+    param = ""  # to appease type checker
+    try:
+        for param in params:
+            if param in request.query:
+                params[param] = int(request.query[param])
+    except ValueError:
+        return web.Response(text="parameter [%s] must be an int" % param, status=400)
+
+    # make sure parameters make sense
+    if ((params['start'] is not None and params['end'] is not None) and
+            (params['start'] >= params['end'])):
+        return web.Response(text="[start] must be < [end]", status=400)
+    await event_store.remove(my_stream, params['start'], params['end'])
     return web.Response(text="ok")

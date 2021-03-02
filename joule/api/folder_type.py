@@ -3,6 +3,7 @@ from joule import errors
 
 if TYPE_CHECKING:
     from .data_stream import DataStream
+    from .event_stream import EventStream
 
 
 class Folder:
@@ -16,7 +17,8 @@ class Folder:
         name (str): folder name, must be unique in the parent
         description (str): optional field
         locked (bool): folder may not be moved, deleted, or changed
-        streams (List[DataStream]): streams in the folder
+        data_streams (List[DataStream]): data streams in the folder
+        event_streams (List[EventStream]): event streams in the folder
         children (List[Folder]): subfolders in the folder
 
     """
@@ -26,7 +28,8 @@ class Folder:
         self.name: str = ""
         self.description: str = ""
         self.locked: bool = False
-        self.streams: List['DataStream'] = []
+        self.data_streams: List['DataStream'] = []
+        self.event_streams: List['EventStream'] = []
         self.children: List['Folder'] = []
 
     def __repr__(self):
@@ -48,7 +51,8 @@ class Folder:
             "id": self._id,
             "name": self.name,
             "description": self.description,
-            "streams": [s.to_json() for s in self.streams],
+            "data_streams": [s.to_json() for s in self.data_streams],
+            "event_streams": [s.to_json() for s in self.event_streams],
             "children": [c.to_json() for c in self.children],
             "locked": self.locked
         }

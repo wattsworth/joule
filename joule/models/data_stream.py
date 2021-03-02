@@ -61,7 +61,7 @@ class DataStream(Base):
 
     description: str = Column(String)
     folder_id: int = Column(Integer, ForeignKey('metadata.folder.id'))
-    folder: "Folder" = relationship("Folder", back_populates="streams")
+    folder: "Folder" = relationship("Folder", back_populates="data_streams")
     elements: List[element.Element] = relationship("Element",
                                                    cascade="all, delete-orphan",
                                                    back_populates="stream")

@@ -4,6 +4,7 @@ from treelib import Tree
 
 from joule import errors
 from joule.api.data_stream import DataStream
+
 from joule.api.folder import (Folder, folder_root)
 from joule.cli.config import pass_config
 from joule.api import BaseNode

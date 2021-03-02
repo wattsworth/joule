@@ -101,6 +101,16 @@ def query_time_bounds(start, end):
         return ''
 
 
+async def create_event_table(conn: asyncpg.Connection):
+    sql = """CREATE TABLE IF NOT EXISTS data.events (
+    time TIMESTAMP NOT NULL,
+    end_Time TIMESTAMP,
+    event_stream_id INTEGER NOT NULL,
+    content JSONB
+    )"""
+    await conn.execute(sql)
+
+
 async def create_stream_table(conn: asyncpg.Connection, stream: DataStream):
     n_elems = len(stream.elements)
     # create the main table

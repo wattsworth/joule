@@ -17,7 +17,7 @@ import psutil
 import dsnparse
 import sys
 
-from joule.models import (Base, Worker, config,
+from joule.models import (Base, Worker, config, EventStore,
                           DataStore, DataStream, pipes)
 from joule.models.supervisor import Supervisor
 from joule.errors import ConfigurationError, SubscriptionError
@@ -46,6 +46,7 @@ class Daemon(object):
         self.engine = None
         self.supervisor: Supervisor = None
         self.data_store: DataStore = None
+        self.event_store: EventStore = None
         self.module_connection_info = None
         self.tasks: List[asyncio.Task] = []
         self.stop_requested = False
@@ -78,6 +79,8 @@ class Daemon(object):
             self.data_store: DataStore = \
                 TimescaleStore(self.config.database, self.config.insert_period,
                                self.config.cleanup_period)
+
+        self.event_store: EventStore = EventStore(self.config.database)
 
         engine = create_engine(self.config.database, echo=False)
         self.engine = engine  # keep for erasing database if needed
@@ -165,9 +168,10 @@ class Daemon(object):
         self.db.commit()
 
     async def run(self):
-        # initialize streams in the data store
+        # initialize streams in the data store and event store
         try:
             await self.data_store.initialize(self.db.query(DataStream).all())
+            await self.event_store.initialize()
         except DataError as e:
             log.error("Database error: %s" % e)
             exit(1)
@@ -197,6 +201,7 @@ class Daemon(object):
         app['module-connection-info'] = self.module_connection_info
         app['supervisor'] = self.supervisor
         app['data-store'] = self.data_store
+        app['event-store'] = self.event_store
         app['db'] = self.db
         # used to tell master's this node's info
 

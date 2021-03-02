@@ -5,8 +5,8 @@ import logging
 import asyncpg
 
 from joule.models import DataStream, pipes
-import joule.utilities
 from joule.models.data_store import psql_helpers
+import joule.utilities
 
 Loop = asyncio.AbstractEventLoop
 log = logging.getLogger('joule')

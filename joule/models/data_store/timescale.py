@@ -8,8 +8,8 @@ import datetime
 import shutil
 from joule.utilities import interval_tools, timestamp_to_datetime
 from joule.models.data_store.timescale_inserter import Inserter
-from joule.models.data_store import psql_helpers
 from joule.models import DataStream, pipes
+from joule.models.data_store import psql_helpers
 from joule.models.data_store.data_store import DataStore, StreamInfo, DbInfo
 
 Loop = asyncio.AbstractEventLoop

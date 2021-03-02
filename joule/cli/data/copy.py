@@ -108,7 +108,9 @@ async def _run(config, start, end, new, destination_node, source_url, source, de
         dest_intervals = await _get_intervals(dest_node, dest_stream, destination, None, None, is_nilmdb=nilmdb_dest)
         if len(dest_intervals) > 0:
             start = dest_intervals[-1][-1]
-        print("Starting copy at [%s]" % timestamp_to_human(start))
+            print("Starting copy at [%s]" % timestamp_to_human(start))
+        else:
+            print("Starting copy at beginning of source")
     # compute the target intervals (source - dest)
     src_intervals = await _get_intervals(source_node, src_stream, source, start, end, is_nilmdb=nilmdb_source)
     dest_intervals = await _get_intervals(dest_node, dest_stream, destination, start, end, is_nilmdb=nilmdb_dest)

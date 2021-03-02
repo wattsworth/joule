@@ -1,13 +1,20 @@
 from sqlalchemy.orm import relationship, backref, Session
 from sqlalchemy import Column, Integer, String, ForeignKey
-from typing import List, TYPE_CHECKING, Optional, Dict
+from typing import List, TYPE_CHECKING, Optional, Dict, Union
 import logging
 from joule.errors import ConfigurationError
 from joule.models.data_stream import DataStream
-from joule.models.data_store.data_store import StreamInfo
+from joule.models.event_stream import EventStream
+
 from joule.models.meta import Base
 
 logger = logging.getLogger('joule')
+
+Stream = Union[EventStream, DataStream]
+
+if TYPE_CHECKING:
+    from joule.models.data_store.event_store import StreamInfo as EventStreamInfo
+    from joule.models.data_store.data_store import StreamInfo as DataStreamInfo
 
 
 class Folder(Base):
@@ -20,14 +27,18 @@ class Folder(Base):
     children: List["Folder"] = relationship("Folder",
                                             backref=backref('parent',
                                                             remote_side=[id]))
-    streams: List[DataStream] = relationship("DataStream", back_populates="folder")
+    data_streams: List[DataStream] = relationship("DataStream", back_populates="folder")
+    event_streams: List[EventStream] = relationship("EventStream", back_populates="folder")
     parent_id: int = Column(Integer, ForeignKey('metadata.folder.id'))
     if TYPE_CHECKING:  # pragma: no cover
         parent: 'Folder'
 
-    def find_stream_by_segments(self, segments: List[str]) -> Optional[DataStream]:
+    def find_stream_by_segments(self, segments: List[str]) -> Optional[Stream]:
         if len(segments) == 1:
-            for stream in self.streams:
+            for stream in self.data_streams:
+                if stream.name == segments[0]:
+                    return stream
+            for stream in self.event_streams:
                 if stream.name == segments[0]:
                     return stream
             else:
@@ -46,7 +57,9 @@ class Folder(Base):
 
     def contains_streams(self) -> bool:
         """does this folder or any of its children have streams?"""
-        if len(self.streams) > 0:
+        if len(self.data_streams) > 0:
+            return True
+        if len(self.event_streams) > 0:
             return True
         for c in self.children:
             if c.contains_streams():
@@ -61,7 +74,7 @@ class Folder(Base):
         for f in self.children:
             if f.locked:
                 return True
-        for s in self.streams:
+        for s in self.data_streams:
             if s.locked:
                 return True
         return False
@@ -72,14 +85,19 @@ class Folder(Base):
         else:
             return "<Folder(id=%d, name='%s')>" % (self.id, self.name)
 
-    def to_json(self, info: Dict[int, StreamInfo] = None):
+    def to_json(self,
+                data_stream_info: Dict[int, 'DataStreamInfo'] = None,
+                event_stream_info: Dict[int, 'EventStreamInfo'] = None):
         return {
             'id': self.id,
             'name': self.name,
             'description': self.description,
             'locked': self.locked,
-            'children': [c.to_json(info) for c in self.children],
-            'streams': [s.to_json(info) for s in self.streams]
+            'children': [c.to_json(data_stream_info,
+                                   event_stream_info) for c in self.children],
+            'data_streams': [s.to_json(data_stream_info) for s in self.data_streams],
+            'event_streams': [s.to_json(event_stream_info) for s in self.event_streams],
+            'events': [e.to_json(event_stream_info) for e in self.event_streams]
         }
 
 
@@ -117,22 +135,30 @@ def find(path: str, db: Session, create=False, parent=None) -> Optional[Folder]:
     return find(sub_path, db, create=create, parent=folder)
 
 
-def find_stream_by_path(path: str, db: Session) -> Optional[DataStream]:
+def find_stream_by_path(path: str, db: Session, stream_type=None) -> Optional[Stream]:
+    if stream_type not in [None, EventStream, DataStream]:
+        raise ValueError("type must be None, EventStream, or DataStream")
     segments = path[1:].split('/')
-    return root(db).find_stream_by_segments(segments)
+    stream = root(db).find_stream_by_segments(segments)
+    if type is None:  # accept either
+        return stream
+    elif type(stream) is stream_type:
+        return stream
+    else:
+        return None
 
 
 # return the file path
-def get_stream_path(stream: DataStream) -> Optional[str]:
-    if stream.is_remote:
+def get_stream_path(stream: Stream) -> Optional[str]:
+    if type(stream) is DataStream and stream.is_remote:
         return "[%s] %s" % (stream.remote_node, stream.remote_path)
     if stream.folder is None:
         return None
 
     def _get_path(folder: Folder, path: str):
         if folder.parent is None:
-            return "/"+path
-        return _get_path(folder.parent, folder.name+"/"+path)
+            return "/" + path
+        return _get_path(folder.parent, folder.name + "/" + path)
 
     return _get_path(stream.folder, stream.name)
 

@@ -28,6 +28,19 @@ from joule.api.data_stream import (DataStream,
                                    data_stream_info,
                                    data_stream_annotation_delete)
 
+from joule.api.event_stream import (EventStream,
+                                    EventStreamInfo,
+                                    event_stream_get,
+                                    event_stream_update,
+                                    event_stream_move,
+                                    event_stream_delete,
+                                    event_stream_create,
+                                    event_stream_info,
+                                    event_stream_write,
+                                    event_stream_read,
+                                    event_stream_remove)
+from joule.api.event import Event
+
 from joule.api.data import (data_write,
                             data_read,
                             data_subscribe,
@@ -113,7 +126,7 @@ class BaseNode:
     async def data_stream_update(self,
                                  stream: DataStream) -> None:
         return await data_stream_update(self.session,
-                                   stream)
+                                        stream)
 
     async def data_stream_delete(self,
                                  stream: Union[DataStream, str, int]) -> None:
@@ -133,6 +146,52 @@ class BaseNode:
                                             start: Optional[int] = None,
                                             end: Optional[int] = None):
         return await data_stream_annotation_delete(self.session, stream, start, end)
+
+    # EventStream actions
+
+    async def event_stream_get(self,
+                               stream: Union[EventStream, str, int]) -> EventStream:
+        return await event_stream_get(self.session, stream)
+
+    async def event_stream_move(self,
+                                stream: Union[DataStream, str, int],
+                                folder: Union[Folder, str, int]) -> None:
+        return await event_stream_move(self.session, stream, folder)
+
+    async def event_stream_update(self,
+                                  stream: EventStream) -> None:
+        return await event_stream_update(self.session,
+                                         stream)
+
+    async def event_stream_delete(self,
+                                  stream: Union[EventStream, str, int]) -> None:
+        await event_stream_delete(self.session, stream)
+
+    async def event_stream_create(self,
+                                  stream: EventStream,
+                                  folder: Union[Folder, str, int]) -> EventStream:
+        return await event_stream_create(self.session, stream, folder)
+
+    async def event_stream_info(self,
+                                stream: Union[EventStream, str, int]) -> EventStreamInfo:
+        return await event_stream_info(self.session, stream)
+
+    async def event_stream_write(self,
+                                 stream: Union[EventStream, str, int],
+                                 events: List[Event]):
+        return await event_stream_write(self.session, stream, events)
+
+    async def event_stream_read(self,
+                                stream: Union[EventStream, str, int],
+                                start: Optional[int] = None,
+                                end: Optional[int] = None) -> List[Event]:
+        return await event_stream_read(self.session, stream, start, end)
+
+    async def event_stream_remove(self,
+                                  stream: Union[EventStream, str, int],
+                                  start: Optional[int] = None,
+                                  end: Optional[int] = None):
+        return await event_stream_remove(self.session, stream, start, end)
 
     # Data actions
 

@@ -2,6 +2,7 @@ from aiohttp import web
 from joule.controllers import (
     root_controller,
     stream_controller,
+    event_controller,
     folder_controller,
     data_controller,
     module_controller,
@@ -17,6 +18,16 @@ routes = [
     web.get('/dbinfo', root_controller.dbinfo),
     web.get('/version', root_controller.version),
     web.get('/version.json', root_controller.version_json),
+    # --- event stream routes ---
+    web.get('/event.json', event_controller.info),
+    web.put('/event/move.json', event_controller.move),
+    web.put('/event.json', event_controller.update),
+    web.post('/event.json', event_controller.create),
+    web.delete('/event.json', event_controller.delete),
+    # --- event stream data routes ---
+    web.get('/event/data.json', event_controller.read_events),
+    web.post('/event/data.json', event_controller.write_events),
+    web.delete('/event/data.json', event_controller.remove_events),
     # --- stream routes ---
     web.get('/streams.json', stream_controller.index),
     web.get('/stream.json', stream_controller.info),

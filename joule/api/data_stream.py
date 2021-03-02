@@ -2,21 +2,19 @@ from typing import Optional, Union, Dict, List
 
 from .session import BaseSession
 from .folder_type import Folder
-from .annotation import Annotation
-from .annotation import from_json as annotation_from_json
 
 from joule import errors
 
 
 class DataStream:
     """
-    API DataStream model. See :ref:`sec-node-stream-actions` for details on using the API to
-    manipulate streams. Streams are locked if they are active or statically configured. When
+    API DataStream model. See :ref:`sec-node-data-stream-actions` for details on using the API to
+    manipulate data streams. Streams are locked if they are active or statically configured. When
     creating a stream manually, omit the ID and status attributes (**is_\***, **active**, and **locked**),
     these are set by the Joule server.
 
     Parameters:
-        name (str): folder name, must be unique in the parent
+        name (str): stream name, must be unique in the parent
         description (str): optional field
         datatype (str): element datatype
         keep_us (int): store the last N microseconds of data (-1 to keep all and 0 to keep none)
@@ -218,7 +216,7 @@ def info_from_json(json) -> DataStreamInfo:
 
 
 async def data_stream_delete(session: BaseSession,
-                        stream: Union[DataStream, str, int]):
+                             stream: Union[DataStream, str, int]):
     data = {}
     if type(stream) is DataStream:
         data["id"] = stream.id
@@ -233,7 +231,7 @@ async def data_stream_delete(session: BaseSession,
 
 
 async def data_stream_create(session: BaseSession,
-                        stream: DataStream, folder: Union[Folder, str, int]) -> DataStream:
+                             stream: DataStream, folder: Union[Folder, str, int]) -> DataStream:
     data = {"stream": stream.to_json()}
 
     if type(folder) is Folder:
@@ -250,7 +248,7 @@ async def data_stream_create(session: BaseSession,
 
 
 async def data_stream_info(session: BaseSession,
-                      stream: Union[DataStream, str, int]) -> DataStreamInfo:
+                           stream: Union[DataStream, str, int]) -> DataStreamInfo:
     data = {}
 
     if type(stream) is DataStream:
@@ -267,7 +265,7 @@ async def data_stream_info(session: BaseSession,
 
 
 async def data_stream_get(session: BaseSession,
-                     stream: Union[DataStream, str, int]) -> DataStream:
+                          stream: Union[DataStream, str, int]) -> DataStream:
     data = {}
 
     if type(stream) is DataStream:
@@ -284,14 +282,14 @@ async def data_stream_get(session: BaseSession,
 
 
 async def data_stream_update(session: BaseSession,
-                        stream: DataStream) -> None:
+                             stream: DataStream) -> None:
     await session.put("/stream.json", {"id": stream.id,
                                        "stream": stream.to_json()})
 
 
 async def data_stream_move(session: BaseSession,
-                      source: Union[DataStream, str, int],
-                      destination: Union[Folder, str, int]) -> None:
+                           source: Union[DataStream, str, int],
+                           destination: Union[Folder, str, int]) -> None:
     data = {}
 
     if type(source) is DataStream:
@@ -315,9 +313,9 @@ async def data_stream_move(session: BaseSession,
 
 
 async def data_stream_annotation_delete(session: BaseSession,
-                                   stream: Union[DataStream, str, int],
-                                   start: Optional[int] = None,
-                                   end: Optional[int] = None):
+                                        stream: Union[DataStream, str, int],
+                                        start: Optional[int] = None,
+                                        end: Optional[int] = None):
     data = {}
     if start is not None:
         data["start"] = start

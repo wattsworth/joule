@@ -8,12 +8,10 @@ import tempfile
 import shutil
 import os
 import sys
-import json
 
 from joule.models import DataStream, Element, pipes
-from joule.models.data_store.timescale import TimescaleStore
 from joule.models.data_store import psql_helpers
-from joule.errors import DataError
+from joule.models.data_store.timescale import TimescaleStore
 from tests import helpers
 from tests.models.pipes.reader import QueueReader
 
