@@ -8,7 +8,7 @@ from .event_stream import from_json as event_stream_from_json
 
 
 def from_json(json) -> Folder:
-    data_streams = [data_stream_from_json(val) for val in json['data_streams']]
+    data_streams = [data_stream_from_json(val) for val in json['streams']]
     event_streams = [event_stream_from_json(val) for val in json['event_streams']]
 
     children = [from_json(val) for val in json['children']]
@@ -24,7 +24,7 @@ def from_json(json) -> Folder:
 
 
 async def folder_root(session: BaseSession) -> Folder:
-    resp = await session.get("/streams.json")
+    resp = await session.get("/folders.json")
     return from_json(resp)
 
 

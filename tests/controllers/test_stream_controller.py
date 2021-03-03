@@ -23,20 +23,6 @@ class TestStreamController(AioHTTPTestCase):
         return app
 
     @unittest_run_loop
-    async def test_stream_list(self):
-        db: Session = self.app["db"]
-        my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
-        store: MockStore = self.app["data-store"]
-        mock_info = StreamInfo(start=0, end=100, rows=200)
-        store.set_info(my_stream, mock_info)
-
-        resp: aiohttp.ClientResponse = await self.client.request("GET", "/streams.json")
-        actual = await resp.json()
-        # basic check to see if JSON response matches database structure
-        expected = folder.root(db).to_json({my_stream.id: mock_info})
-        self.assertEqual(actual, expected)
-
-    @unittest_run_loop
     async def test_stream_info(self):
         db: Session = self.app["db"]
         my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
@@ -67,10 +53,10 @@ class TestStreamController(AioHTTPTestCase):
         folder3 = db.query(Folder).filter_by(name="folder3").one()
         folder1 = db.query(Folder).filter_by(name="folder1").one()
         # check the destination
-        self.assertEqual(folder3.streams[0].name, "stream1")
+        self.assertEqual(folder3.data_streams[0].name, "stream1")
         self.assertEqual(folder3.parent.name, "new")
         # check the source
-        self.assertEqual(len(folder1.streams), 0)
+        self.assertEqual(len(folder1.data_streams), 0)
         # move stream1 back to folder1
         payload = {
             "src_path": "/new/folder3/stream1",
@@ -79,9 +65,9 @@ class TestStreamController(AioHTTPTestCase):
         resp = await self.client.put("/stream/move.json", json=payload)
         self.assertEqual(resp.status, 200)
         # check the destination
-        self.assertEqual(folder1.streams[0].name, "stream1")
+        self.assertEqual(folder1.data_streams[0].name, "stream1")
         # check the source
-        self.assertEqual(len(folder3.streams), 0)
+        self.assertEqual(len(folder3.data_streams), 0)
 
     @unittest_run_loop
     async def test_stream_create(self):

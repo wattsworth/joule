@@ -11,12 +11,17 @@ if TYPE_CHECKING:
 
 class EventStore:
 
-    def __init__(self, dsn: str):
+    def __init__(self, dsn=""):
         self.dsn = dsn
         self.pool = None
 
-    async def initialize(self) -> None:
-        self.pool = await asyncpg.create_pool(self.dsn, command_timeout=60)
+    async def initialize(self, pool=None) -> None:
+        if pool is None:
+            if self.dsn == "":
+                raise ValueError("Must specify either dsn or pool")
+            self.pool = await asyncpg.create_pool(self.dsn, command_timeout=60)
+        else:
+            self.pool = pool
         async with self.pool.acquire() as conn:
             await psql_helpers.create_event_table(conn)
 

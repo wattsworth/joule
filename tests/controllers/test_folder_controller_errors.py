@@ -5,7 +5,7 @@ import json
 
 from joule.models import folder, DataStream, Folder
 import joule.controllers
-from tests.controllers.helpers import create_db, MockStore
+from tests.controllers.helpers import create_db, MockStore, MockEventStore
 
 
 class TestFolderControllerErrors(AioHTTPTestCase):
@@ -21,6 +21,7 @@ class TestFolderControllerErrors(AioHTTPTestCase):
                                             "/top/same_name/stream3:float32[x, y, z]",
                                             "/top/middle/leaf/stream2:int8[val1, val2]"])
         app["data-store"] = MockStore()
+        app["event-store"] = MockEventStore()
         return app
 
     @unittest_run_loop
@@ -103,7 +104,7 @@ class TestFolderControllerErrors(AioHTTPTestCase):
         self.assertIsNotNone(db.query(Folder).get(f.id))
         # cannot delete locked folders
         my_folder = folder.find("/top/middle", db)
-        my_folder.children[0].streams[0].is_configured = True
+        my_folder.children[0].data_streams[0].is_configured = True
         resp = await self.client.delete("/folder.json", params={"path": "/top/middle"})
         self.assertEqual(resp.status, 400)
         self.assertIn("locked", await resp.text())
@@ -158,7 +159,7 @@ class TestFolderControllerErrors(AioHTTPTestCase):
         self.assertTrue('JSON' in await resp.text())
 
         # cannot modify locked streams
-        my_folder.children[0].streams[0].is_configured = True
+        my_folder.children[0].data_streams[0].is_configured = True
         payload = {
             "id": my_folder.id,
             "folder": json.dumps({"name": "new name"})
@@ -166,7 +167,7 @@ class TestFolderControllerErrors(AioHTTPTestCase):
         resp = await self.client.put("/folder.json", json=payload)
         self.assertEqual(resp.status, 400)
         self.assertTrue('locked' in await resp.text())
-        my_folder.children[0].streams[0].is_configured = False
+        my_folder.children[0].data_streams[0].is_configured = False
 
         # folder must exist
         payload = {

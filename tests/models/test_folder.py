@@ -42,7 +42,7 @@ class TestFolder(helpers.DbTestCase):
 
     def test_contains_streams(self):
         my_folder = folder.find("/new/folder/path", self.db, create=True)
-        my_folder.streams = [helpers.create_stream("stream1", "int8_2")]
+        my_folder.data_streams = [helpers.create_stream("stream1", "int8_2")]
         self.db.add(my_folder)
         self.db.commit()
         f = folder.find("/new", self.db)

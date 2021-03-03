@@ -120,7 +120,7 @@ def build_folder(depth) -> Folder:
     for n in range(random.randint(2, 4)):
         s = build_stream('s%d' % n, 'float32[x,y,z]')
         s.id = idgen()
-        target.streams.append(s)
+        target.data_streams.append(s)
     if depth > 0:
         for n in range(random.randint(2, 3)):
             target.children.append(build_folder(depth - 1))

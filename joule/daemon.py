@@ -170,8 +170,8 @@ class Daemon(object):
     async def run(self):
         # initialize streams in the data store and event store
         try:
-            await self.data_store.initialize(self.db.query(DataStream).all())
-            await self.event_store.initialize()
+            pool = await self.data_store.initialize(self.db.query(DataStream).all())
+            await self.event_store.initialize(pool)
         except DataError as e:
             log.error("Database error: %s" % e)
             exit(1)

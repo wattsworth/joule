@@ -46,12 +46,12 @@ async def move(request: web.Request):
     else:
         return web.Response(text="specify a destination", status=400)
     # make sure name is unique in this destination
-    existing_names = [s.name for s in destination.streams + destination.event_streams]
+    existing_names = [s.name for s in destination.data_streams + destination.event_streams]
     if my_stream.name in existing_names:
         db.rollback()
         return web.Response(text="stream with the same name exists in the destination folder",
                             status=400)
-    destination.streams.append(my_stream)
+    destination.event_streams.append(my_stream)
     db.commit()
     return web.json_response({"stream": my_stream.to_json()})
 
@@ -81,7 +81,7 @@ async def create(request):
         # clear out the id's
         new_stream.id = None
         # make sure name is unique in this destination
-        existing_names = [s.name for s in destination.streams + destination.event_streams]
+        existing_names = [s.name for s in destination.data_streams + destination.event_streams]
         if new_stream.name in existing_names:
             raise ConfigurationError("stream with the same name exists in the folder")
         destination.event_streams.append(new_stream)
@@ -120,7 +120,7 @@ async def update(request: web.Request):
         my_stream.update_attributes(attrs)
         # make sure name is unique in this destination
         existing_names = [s.name for s in
-                          my_stream.folder.streams + my_stream.folder.event_streams
+                          my_stream.folder.data_streams + my_stream.folder.event_streams
                           if s.id != my_stream.id]
         if my_stream.name in existing_names:
             raise ConfigurationError("stream with the same name exists in the folder")

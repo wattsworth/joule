@@ -29,6 +29,7 @@ async def _run(node, path, show_elements):
     my_stream = await node.data_stream_get(path)
     # display stream information
     click.echo()
+    click.echo("Data Stream Information:")
     click.echo("\tName:         %s" % my_stream.name)
     click.echo("\tDescription:  %s" % _optional_field(my_stream.description))
     click.echo("\tDatatype:     %s" % my_stream.datatype.lower())

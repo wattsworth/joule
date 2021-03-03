@@ -36,7 +36,7 @@ async def index(request):
         stream_ids = request.query.getall("stream_id")
     if "stream_path" in request.query:
         for path in request.query.getall("stream_path"):
-            stream = folder.find_stream_by_path(path, db)
+            stream = folder.find_stream_by_path(path, db, stream_type=DataStream)
             if stream is None:
                 return web.Response(text="stream [%s] does not exist" % path, status=404)
             stream_ids.append(stream.id)
@@ -81,7 +81,7 @@ async def create(request):
     if 'stream_id' in body:
         my_stream = db.query(DataStream).get(body["stream_id"])
     elif 'stream_path' in body:
-        my_stream = folder.find_stream_by_path(body['stream_path'], db)
+        my_stream = folder.find_stream_by_path(body['stream_path'], db, stream_type=DataStream)
     else:
         return web.Response(text="specify a stream_id", status=400)
     if my_stream is None:
@@ -121,7 +121,7 @@ async def delete_all(request):
         my_stream = db.query(DataStream).get(stream_id)
     elif "stream_path" in request.query:
         path = request.query["stream_path"]
-        my_stream = folder.find_stream_by_path(path, db)
+        my_stream = folder.find_stream_by_path(path, db, stream_type=DataStream)
     else:
         return web.Response(text="must specify either stream_id or stream_path", status=400)
 

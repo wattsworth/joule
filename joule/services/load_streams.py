@@ -68,4 +68,4 @@ def _save_stream(new_stream: DataStream, path: str, db: Session) -> None:
             db.add(cur_stream)
             db.expunge(new_stream)
     else:
-        my_folder.streams.append(new_stream)
+        my_folder.data_streams.append(new_stream)

@@ -51,7 +51,7 @@ class Folder:
             "id": self._id,
             "name": self.name,
             "description": self.description,
-            "data_streams": [s.to_json() for s in self.data_streams],
+            "streams": [s.to_json() for s in self.data_streams],
             "event_streams": [s.to_json() for s in self.event_streams],
             "children": [c.to_json() for c in self.children],
             "locked": self.locked

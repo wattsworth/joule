@@ -29,13 +29,14 @@ routes = [
     web.post('/event/data.json', event_controller.write_events),
     web.delete('/event/data.json', event_controller.remove_events),
     # --- stream routes ---
-    web.get('/streams.json', stream_controller.index),
+    web.get('/folders.json', folder_controller.index),  # legacy support for Rails API
     web.get('/stream.json', stream_controller.info),
     web.put('/stream/move.json', stream_controller.move),
     web.put('/stream.json', stream_controller.update),
     web.post('/stream.json', stream_controller.create),
     web.delete('/stream.json', stream_controller.delete),
     # --- folder routes ---
+    web.get('/folders.json', folder_controller.index),
     web.get("/folder.json", folder_controller.info),
     web.put('/folder/move.json', folder_controller.move),
     web.put('/folder.json', folder_controller.update),

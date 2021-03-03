@@ -20,13 +20,13 @@ class TestConfigureModules(DbTestCase):
         stream1 = DataStream(name="stream1", keep_us=100,
                              datatype=DataStream.DATATYPE.FLOAT32)
         stream1.elements = [Element(name="e%d" % x, index=x, default_min=1) for x in range(3)]
-        folder_test.streams.append(stream1)
+        folder_test.data_streams.append(stream1)
 
         # /test/deeper/stream2: int8_2
         folder_deeper = Folder(name="deeper")
         stream2 = DataStream(name="stream2", datatype=DataStream.DATATYPE.INT8)
         stream2.elements = [Element(name="e%d" % x, index=x) for x in range(2)]
-        folder_deeper.streams.append(stream2)
+        folder_deeper.data_streams.append(stream2)
         folder_deeper.parent = folder_test
 
         root = Folder(name="root")

@@ -24,19 +24,19 @@ class TestConfigureStreams(DbTestCase):
         stream1 = DataStream(name="stream1", keep_us=100,
                              datatype=DataStream.DATATYPE.FLOAT32)
         stream1.elements = [Element(name="e%d" % x, index=x, default_min=1) for x in range(3)]
-        folder_test.streams.append(stream1)
+        folder_test.data_streams.append(stream1)
 
         # /test/deeper/stream2: int8_2
         folder_deeper = Folder(name="deeper")
         stream2 = DataStream(name="stream2", datatype=DataStream.DATATYPE.INT8)
         stream2.elements = [Element(name="e%d" % x, index=x) for x in range(2)]
-        folder_deeper.streams.append(stream2)
+        folder_deeper.data_streams.append(stream2)
         folder_deeper.parent = folder_test
 
         # /test/deeper/stream3: int8_2
         stream3 = DataStream(name="stream3", datatype=DataStream.DATATYPE.INT16)
         stream3.elements = [Element(name="e%d" % x, index=x) for x in range(2)]
-        folder_deeper.streams.append(stream3)
+        folder_deeper.data_streams.append(stream3)
 
         root = Folder(name="root")
         root.children = [folder_test]
@@ -156,23 +156,23 @@ class TestConfigureStreams(DbTestCase):
         self.assertEqual(len(root.children), 2)
         for f in root.children:
             if f.name == 'test':
-                self.assertEqual(len(f.streams), 1)
-                self.assertEqual(f.streams[0].name, 'stream1')
+                self.assertEqual(len(f.data_streams), 1)
+                self.assertEqual(f.data_streams[0].name, 'stream1')
                 self.assertEqual(len(f.children), 1)
                 deeper = f.children[0]
                 self.assertEqual(deeper.name, "deeper")
                 self.assertEqual(len(deeper.children), 0)
-                self.assertEqual(len(deeper.streams), 2)
-                self.assertEqual(deeper.streams[0].name, 'stream2')
-                self.assertEqual(deeper.streams[1].name, 'stream3')
+                self.assertEqual(len(deeper.data_streams), 2)
+                self.assertEqual(deeper.data_streams[0].name, 'stream2')
+                self.assertEqual(deeper.data_streams[1].name, 'stream3')
             elif f.name == 'new':
-                self.assertEqual(len(f.streams), 0)
+                self.assertEqual(len(f.data_streams), 0)
                 self.assertEqual(len(f.children), 1)
                 path = f.children[0]
                 self.assertEqual(path.name, "path")
                 self.assertEqual(len(path.children), 0)
-                self.assertEqual(len(path.streams), 2)
-                for stream in path.streams:
+                self.assertEqual(len(path.data_streams), 2)
+                for stream in path.data_streams:
                     self.assertTrue(stream.name in ['stream4', 'stream5'])
             else:
                 self.fail("unexpected name: " + f.name)

@@ -27,7 +27,6 @@ class TestEventStore(asynctest.TestCase):
         self.postgresql = testing.postgresql.Postgresql(base_dir=self.psql_dir.name)
 
         self.db_url = self.postgresql.url()
-        print
         # self.db_url = "postgresql://joule:joule@127.0.0.1:5432/joule"
         conn: asyncpg.Connection = await asyncpg.connect(self.db_url)
 
@@ -58,15 +57,15 @@ class TestEventStore(asynctest.TestCase):
 
     async def _test_basic_insert_extract_remove(self):
         event_stream1 = EventStream(id=1, name='test_stream1')
-        events1 = [{'start': i * 100,
-                    'end': i * 100 + 10,
+        events1 = [{'start_time': i * 100,
+                    'end_time': i * 100 + 10,
                     'content': {'title': "Event%d" % i,
                                 'stream': event_stream1.name}
                     } for i in range(20)]
         await self.store.insert(event_stream1, events1)
         event_stream2 = EventStream(id=2, name='test_stream2')
-        events2 = [{'start': (i * 100) + 3,
-                    'end': (i * 100) + 13,
+        events2 = [{'start_time': (i * 100) + 3,
+                    'end_time': (i * 100) + 13,
                     'content': {'title': "Event%d" % i,
                                 'stream': event_stream2.name}
                     } for i in range(20)]
@@ -87,18 +86,18 @@ class TestEventStore(asynctest.TestCase):
 
     async def _test_time_bound_queries(self):
         event_stream1 = EventStream(id=1, name='test_stream1')
-        early_events = [{'start': i * 100,
-                         'end': i * 100 + 10,
+        early_events = [{'start_time': i * 100,
+                         'end_time': i * 100 + 10,
                          'content': {'title': "Event%d" % i,
                                      'stream': event_stream1.name}
                          } for i in range(20)]
-        mid_events = [{'start': i * 100,
-                       'end': i * 100 + 10,
+        mid_events = [{'start_time': i * 100,
+                       'end_time': i * 100 + 10,
                        'content': {'title': "Event%d" % i,
                                    'stream': event_stream1.name}
                        } for i in range(30, 40)]
-        late_events = [{'start': i * 100,
-                        'end': i * 100 + 10,
+        late_events = [{'start_time': i * 100,
+                        'end_time': i * 100 + 10,
                         'content': {'title': "Event%d" % i,
                                     'stream': event_stream1.name}
                         } for i in range(50, 60)]
@@ -115,18 +114,18 @@ class TestEventStore(asynctest.TestCase):
     async def _test_remove_bound_queries(self):
         event_stream1 = EventStream(id=20, name='test_stream1')
 
-        early_events = [{'start': i * 100,
-                         'end': i * 100 + 10,
+        early_events = [{'start_time': i * 100,
+                         'end_time': i * 100 + 10,
                          'content': {'title': "Event%d" % i,
                                      'stream': event_stream1.name}
                          } for i in range(20)]
-        mid_events = [{'start': i * 100,
-                       'end': i * 100 + 10,
+        mid_events = [{'start_time': i * 100,
+                       'end_time': i * 100 + 10,
                        'content': {'title': "Event%d" % i,
                                    'stream': event_stream1.name}
                        } for i in range(30, 40)]
-        late_events = [{'start': i * 100,
-                        'end': i * 100 + 10,
+        late_events = [{'start_time': i * 100,
+                        'end_time': i * 100 + 10,
                         'content': {'title': "Event%d" % i,
                                     'stream': event_stream1.name}
                         } for i in range(50, 60)]

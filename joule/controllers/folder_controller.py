@@ -1,11 +1,24 @@
 from aiohttp import web
-import json
 from sqlalchemy.exc import CircularDependencyError
 from sqlalchemy.orm import Session
 from typing import List
 
-from joule.models import folder, Folder, DataStore
+from joule.models import folder, Folder, EventStore, DataStore, DataStream, EventStream
 from joule.errors import ConfigurationError
+
+
+async def index(request: web.Request):
+    db: Session = request.app["db"]
+    data_store: DataStore = request.app["data-store"]
+    event_store: DataStore = request.app["event-store"]
+
+    root = folder.root(db)
+    data_streams = db.query(DataStream).all()
+    data_streams_info = await data_store.info(data_streams)
+    event_streams = db.query(EventStream).all()
+    event_streams_info = await event_store.info(event_streams)
+    resp = root.to_json(data_streams_info, event_streams_info)
+    return web.json_response(resp)
 
 
 async def info(request: web.Request):
@@ -107,7 +120,7 @@ async def update(request):
 async def delete(request):
     db: Session = request.app["db"]
     data_store: DataStore = request.app["data-store"]
-
+    event_store: EventStore = request.app["event-store"]
     # find the requested folder
     if 'path' in request.query:
         my_folder: Folder = folder.find(request.query['path'], db)
@@ -120,31 +133,37 @@ async def delete(request):
     if my_folder.locked:
         return web.Response(text="folder is locked", status=400)
     if 'recursive' in request.query and request.query["recursive"] == '1':
-        await _recursive_delete(my_folder.children, db, data_store)
+        await _recursive_delete(my_folder.children, db, data_store, event_store)
     elif len(my_folder.children) > 0:
         return web.Response(text="specify [recursive] or remove child folders first", status=400)
 
-    for stream in my_folder.streams:
+    for stream in my_folder.data_streams:
         if stream.locked:  # pragma: no cover
             # shouldn't ever get here because of the check above, but just in case
             return web.Response(text="cannot delete folder with locked streams", status=400)
         await data_store.destroy(stream)
         db.delete(stream)
+    for stream in my_folder.event_streams:
+        await event_store.destroy(stream)
 
     db.delete(my_folder)
     db.commit()
     return web.Response(text="ok")
 
 
-async def _recursive_delete(folders: List[Folder], db: Session, data_store: DataStore):
+async def _recursive_delete(folders: List[Folder], db: Session, data_store: DataStore,
+                            event_store: EventStore):
     if len(folders) == 0:
         return
     for f in folders:
-        for stream in f.streams:
+        for stream in f.data_streams:
             if stream.locked:  # pragma: no cover
                 # shouldn't ever get here because a locked folder shouldn't call us
                 raise ConfigurationError("cannot delete folder with locked streams")
             await data_store.destroy(stream)
             db.delete(stream)
-        await _recursive_delete(f.children, db, data_store)
+        for stream in f.event_streams:
+            await event_store.destroy(stream)
+            db.delete(stream)
+        await _recursive_delete(f.children, db, data_store, event_store)
         db.delete(f)

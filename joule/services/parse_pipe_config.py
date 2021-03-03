@@ -54,7 +54,7 @@ def run(pipe_config: str, db: Session) -> DataStream:
         my_stream.elements.append(Element(name=e, index=i))
         i += 1
     if local:
-        my_folder.streams.append(my_stream)
+        my_folder.data_streams.append(my_stream)
         db.add(my_stream)
     else:
         my_stream.set_remote(node_name, path + '/' + my_stream.name)

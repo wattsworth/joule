@@ -29,6 +29,7 @@ class TimescaleStore(DataStore):
 
     async def initialize(self, streams: List[DataStream]) -> None:
         self.pool = await asyncpg.create_pool(self.dsn, command_timeout=60)
+        return self.pool  # so the event store can reuse it
 
     async def close(self):
         await self.pool.close()

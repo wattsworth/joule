@@ -50,7 +50,7 @@ class FakeJoule:
                 web.get('/', self.info),
                 web.get('/version.json', self.stub_get),
                 web.get('/dbinfo', self.dbinfo),
-                web.get('/streams.json', self.stub_get),
+                web.get('/folders.json', self.stub_get),
                 web.get('/stream.json', self.stream_info),
                 web.post('/stream.json', self.create_stream),
                 web.put('/stream.json', self.update_stream),

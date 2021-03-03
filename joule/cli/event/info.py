@@ -25,11 +25,10 @@ def cli_info(config, path):
 async def _run(node, path):
     my_stream = await node.event_stream_get(path)
     my_info = await node.event_stream_info(my_stream)
-
     # display stream information
     click.echo()
+    click.echo("Event Stream Information:")
     click.echo("\tName:         %s" % my_stream.name)
-    click.echo("\tDescription:  %s" % _optional_field(my_stream.description))
     click.echo("\tStart:        %s" % _display_time(my_info.start))
     click.echo("\tEnd:          %s" % _display_time(my_info.end))
     click.echo("\tRows:         %d" % my_info.event_count)

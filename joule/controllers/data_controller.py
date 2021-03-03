@@ -31,7 +31,7 @@ async def _read(request: web.Request, json):
     data_store: DataStore = request.app["data-store"]
     # find the requested stream
     if 'path' in request.query:
-        stream = folder.find_stream_by_path(request.query['path'], db)
+        stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
     elif 'id' in request.query:
         stream = db.query(DataStream).get(request.query["id"])
     else:
@@ -133,7 +133,7 @@ async def _subscribe(request: web.Request, json: bool):
 
     # find the requested stream
     if 'path' in request.query:
-        stream = folder.find_stream_by_path(request.query['path'], db)
+        stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
     elif 'id' in request.query:
         stream = db.query(DataStream).get(request.query["id"])
     else:
@@ -181,7 +181,7 @@ async def intervals(request: web.Request):
     data_store: DataStore = request.app["data-store"]
     # find the requested stream
     if 'path' in request.query:
-        stream = folder.find_stream_by_path(request.query['path'], db)
+        stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
     elif 'id' in request.query:
         stream = db.query(DataStream).get(request.query["id"])
     else:
@@ -213,7 +213,7 @@ async def write(request: web.Request):
     data_store: DataStore = request.app["data-store"]
     # find the requested stream
     if 'path' in request.query:
-        stream = folder.find_stream_by_path(request.query['path'], db)
+        stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
     elif 'id' in request.query:
         stream = db.query(DataStream).get(request.query["id"])
     else:
@@ -244,7 +244,7 @@ async def remove(request: web.Request):
     data_store: DataStore = request.app["data-store"]
     # find the requested stream
     if 'path' in request.query:
-        stream = folder.find_stream_by_path(request.query['path'], db)
+        stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
     elif 'id' in request.query:
         stream = db.query(DataStream).get(request.query["id"])
     else:
@@ -277,7 +277,7 @@ async def consolidate(request):
     data_store: DataStore = request.app["data-store"]
     # find the requested stream
     if 'path' in request.query:
-        stream = folder.find_stream_by_path(request.query['path'], db)
+        stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
     elif 'id' in request.query:
         stream = db.query(DataStream).get(request.query["id"])
     else:

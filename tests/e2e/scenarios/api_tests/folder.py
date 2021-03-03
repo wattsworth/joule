@@ -37,7 +37,7 @@ class TestFolderMethods(asynctest.TestCase):
         # should have all of the streams and folders, check a few
         f_test = [f for f in root.children if f.name == 'test'][0]
         f1 = [f for f in f_test.children if f.name == 'f1'][0]
-        s1a = [s for s in f1.streams if s.name == 's1a'][0]
+        s1a = [s for s in f1.data_streams if s.name == 's1a'][0]
         self.assertEqual("e1", s1a.elements[0].name)
 
     async def test_folder_move_to_existing_destination(self):

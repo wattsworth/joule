@@ -10,20 +10,6 @@ from joule.models import folder, Folder
 from joule.errors import ConfigurationError
 
 
-async def index(request: web.Request):
-    db: Session = request.app["db"]
-    data_store: DataStore = request.app["data-store"]
-    event_store: DataStore = request.app["event-store"]
-
-    root = folder.root(db)
-    data_streams = db.query(DataStream).all()
-    data_streams_info = await data_store.info(data_streams)
-    event_streams = db.query(EventStream).all()
-    event_streams_info = await event_store.info(event_streams)
-    resp = root.to_json(data_streams_info, event_streams_info)
-    return web.json_response(resp)
-
-
 async def info(request: web.Request):
     db: Session = request.app["db"]
     data_store: DataStore = request.app["data-store"]
@@ -66,12 +52,12 @@ async def move(request: web.Request):
     else:
         return web.Response(text="specify a destination", status=400)
     # make sure name is unique in this destination
-    existing_names = [s.name for s in destination.streams+destination.event_streams]
+    existing_names = [s.name for s in destination.data_streams + destination.event_streams]
     if my_stream.name in existing_names:
         db.rollback()
         return web.Response(text="stream with the same name exists in the destination folder",
                             status=400)
-    destination.streams.append(my_stream)
+    destination.data_streams.append(my_stream)
     db.commit()
     return web.json_response({"stream": my_stream.to_json()})
 
@@ -111,10 +97,10 @@ async def create(request):
         for elem in new_stream.elements:
             elem.id = None
         # make sure name is unique in this destination
-        existing_names = [s.name for s in destination.streams + destination.event_streams]
+        existing_names = [s.name for s in destination.data_streams + destination.event_streams]
         if new_stream.name in existing_names:
             raise ConfigurationError("stream with the same name exists in the folder")
-        destination.streams.append(new_stream)
+        destination.data_streams.append(new_stream)
         db.commit()
     except (TypeError, ValueError) as e:
         db.rollback()
@@ -152,7 +138,7 @@ async def update(request: web.Request):
         my_stream.update_attributes(attrs)
         # make sure name is unique in this destination
         existing_names = [s.name for s in
-                          my_stream.folder.streams + my_stream.folder.event_streams
+                          my_stream.folder.data_streams + my_stream.folder.event_streams
                           if s.id != my_stream.id]
         if my_stream.name in existing_names:
             raise ConfigurationError("stream with the same name exists in the folder")

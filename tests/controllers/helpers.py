@@ -11,9 +11,11 @@ from unittest import mock
 from typing import Optional, Callable, Coroutine
 
 from joule.models.data_store.errors import DataError, InsufficientDecimationError
+from joule.models.data_store.event_store import EventStore
+from joule.models.data_store.event_store import StreamInfo as EventStreamInfo
 from joule.models import (Base, DataStore, DataStream,
                           StreamInfo, DbInfo, pipes,
-                          worker)
+                          worker, EventStream)
 from joule.errors import SubscriptionError
 from joule.services import parse_pipe_config
 from tests import helpers
@@ -37,6 +39,25 @@ def create_db(pipe_configs: List[str]) -> Tuple[Session, testing.postgresql.Post
 
     db.commit()
     return db, postgresql
+
+
+class MockEventStore(EventStore):
+    def __init__(self):
+        self.stream_info = {}
+        self.destroyed_stream_id = None
+
+    async def initialize(self):
+        pass
+
+    async def info(self, streams: List[EventStream]) -> Dict[int, EventStreamInfo]:
+        info_dict = {}
+        for s in streams:
+            if s in self.stream_info:
+                info_dict[s.id] = self.stream_info[s]
+        return info_dict
+
+    async def destroy(self, stream: EventStream):
+        self.destroyed_stream_id = stream.id
 
 
 class MockStore(DataStore):

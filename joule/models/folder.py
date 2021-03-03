@@ -95,9 +95,8 @@ class Folder(Base):
             'locked': self.locked,
             'children': [c.to_json(data_stream_info,
                                    event_stream_info) for c in self.children],
-            'data_streams': [s.to_json(data_stream_info) for s in self.data_streams],
+            'streams': [s.to_json(data_stream_info) for s in self.data_streams],
             'event_streams': [s.to_json(event_stream_info) for s in self.event_streams],
-            'events': [e.to_json(event_stream_info) for e in self.event_streams]
         }
 
 
@@ -140,7 +139,7 @@ def find_stream_by_path(path: str, db: Session, stream_type=None) -> Optional[St
         raise ValueError("type must be None, EventStream, or DataStream")
     segments = path[1:].split('/')
     stream = root(db).find_stream_by_segments(segments)
-    if type is None:  # accept either
+    if stream_type is None:  # accept either
         return stream
     elif type(stream) is stream_type:
         return stream

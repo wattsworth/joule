@@ -2,9 +2,9 @@ from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 from aiohttp import web
 from sqlalchemy.orm import Session
 
-from joule.models import folder, DataStream, Folder, Element
+from joule.models import folder, DataStream, Folder, Element, StreamInfo
 import joule.controllers
-from tests.controllers.helpers import create_db, MockStore
+from tests.controllers.helpers import create_db, MockStore, MockEventStore
 
 
 class TestFolderController(AioHTTPTestCase):
@@ -19,7 +19,22 @@ class TestFolderController(AioHTTPTestCase):
         app["db"], app["psql"] = create_db(["/top/leaf/stream1:float32[x, y, z]",
                                             "/top/middle/leaf/stream2:int8[val1, val2]"])
         app["data-store"] = MockStore()
+        app["event-store"] = MockEventStore()
         return app
+
+    @unittest_run_loop
+    async def test_stream_list(self):
+        db: Session = self.app["db"]
+        my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
+        store: MockStore = self.app["data-store"]
+        mock_info = StreamInfo(start=0, end=100, rows=200)
+        store.set_info(my_stream, mock_info)
+
+        resp = await self.client.request("GET", "/folders.json")
+        actual = await resp.json()
+        # basic check to see if JSON response matches database structure
+        expected = folder.root(db).to_json({my_stream.id: mock_info})
+        self.assertEqual(actual, expected)
 
     @unittest_run_loop
     async def test_folder_info(self):
@@ -51,7 +66,7 @@ class TestFolderController(AioHTTPTestCase):
         resp = await self.client.put("/folder/move.json", json=payload)
         self.assertEqual(resp.status, 200)
         f = folder.find("/top/other/leaf", db)
-        self.assertEqual(f.streams[0].name, "stream1")
+        self.assertEqual(f.data_streams[0].name, "stream1")
         self.assertIsNone(folder.find("/top/leaf", db))
 
     @unittest_run_loop
