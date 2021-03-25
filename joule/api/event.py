@@ -6,8 +6,8 @@ class Event:
     def __init__(self, start_time: int,
                  end_time: Optional[int] = None,
                  content: Optional[Dict] = None):
-        self.start_time = start_time
-        self.end_time = end_time
+        self.start_time = int(start_time)
+        self.end_time = int(end_time)
         if content is None:
             self.content = {}
         else:
@@ -35,6 +35,7 @@ class Event:
         if json.dumps(other.content) != json.dumps(other.content):
             return False
         return True
+
 def from_json(json):
     return Event(start_time=json['start_time'],
                  end_time=json['end_time'],
