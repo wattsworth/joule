@@ -21,6 +21,9 @@ class InputPipe(Pipe):
         self.unprocessed_np_buffer = b''
         self.interval_break = False
         self._reread = False
+        self._last_read = False  # set flag to indicate the pipe is done,
+                                 # the *next* read will generate an EmptyPipe exception
+                                 # this prevents pipes that are partially consumed from running forever
         # tunable constant
         self.BUFFER_SIZE = buffer_size
         """Note: The StreamReader.read coroutine hangs even if the write
@@ -57,9 +60,13 @@ class InputPipe(Pipe):
         while True:
             new_data = b''
             if self.reader.at_eof():
+                if self._last_read:
+                    raise EmptyPipe()  # this data has already been read once
                 if (len(self.unprocessed_np_buffer) == 0 and
                         self.last_index == 0):
                     raise EmptyPipe()
+                if len(self.unprocessed_np_buffer) == 0:
+                    self._last_read = True
                 break
             try:
                 new_data = await asyncio.wait_for(self.reader.read(max_rows * rowbytes),
@@ -129,6 +136,18 @@ class InputPipe(Pipe):
                             % (num_rows, self.last_index))
         self.buffer = np.roll(self.buffer, -1 * num_rows)
         self.last_index -= num_rows
+
+    def is_empty(self):
+        # 0.) if the read() has already signaled its finished the pipe is empty
+        if self._last_read:
+            return True
+        # 1.) make sure the sender is closed
+        if not self.reader.at_eof():
+            return False
+        # 2.) make sure there is no data left in the buffer
+        if len(self.unprocessed_np_buffer) == 0 and self.last_index == 0:
+            return True
+        return False
 
     @property
     def end_of_interval(self):

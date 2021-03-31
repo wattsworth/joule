@@ -1,13 +1,11 @@
 import numpy as np
 import asyncio
 import logging
-
 from joule.models.pipes import Pipe
 from joule.models.pipes.errors import PipeError, EmptyPipe
 
 Loop = asyncio.AbstractEventLoop
 log = logging.getLogger('joule')
-
 
 class LocalPipe(Pipe):
     """
@@ -33,6 +31,7 @@ class LocalPipe(Pipe):
         self.closed = False
         self.read_buffer = np.empty((0,), dtype=self.dtype)
         self.close_cb = close_cb
+        self._last_read = False  # flag to indicate pipe only has previously read data (see input_pipe.py)
         self._reread = False
         # initialize buffer and queue
         self.queue = asyncio.Queue(maxsize=write_limit)
@@ -59,14 +58,20 @@ class LocalPipe(Pipe):
         self.interval_break = False
 
         # if the queue is empty and we have old data, just return the old data
-        if self.queue.empty() and len(self.read_buffer) > 0:
-            return self._format_data(self.read_buffer, flatten)
+        # THIS IS REMOVED, OTHERWISE THE WRITER CAN BE STARVED AND NEVER CLOSE THE PIPE
+        #if self.queue.empty() and len(self.read_buffer) > 0:
+        #    await asyncio.sleep(self.TIMEOUT_INTERVAL)
+        #    return self._format_data(self.read_buffer, flatten)
 
         # otherwise wait for at least one block
         while self.queue.empty():
+            if self._last_read:
+                raise EmptyPipe()  # trying to re-read old data
             # if the buffer is empty and the queue is empty and the pipe is closed
-            if self.queue.empty() and len(self.read_buffer) == 0 and self.closed:
-                raise EmptyPipe()
+            if self.queue.empty() and self.closed:
+                self._last_read = True
+                break  # return unconsumed data one time
+
             await asyncio.sleep(self.TIMEOUT_INTERVAL)
 
         return self._read(flatten)
@@ -140,6 +145,13 @@ class LocalPipe(Pipe):
     @property
     def end_of_interval(self):
         return self.interval_break
+
+    def is_empty(self):
+        if self._last_read:
+            return True
+        if self.queue.empty() and len(self.read_buffer) == 0 and self.closed:
+            return True
+        return False
 
     def consume(self, num_rows):
         if num_rows == 0:

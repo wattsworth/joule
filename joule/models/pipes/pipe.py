@@ -177,6 +177,9 @@ class Pipe:
             raise PipeError("cannot consume from an output pipe")
         raise PipeError("abstract method must be implemented by child")
 
+    def is_empty(self):
+        raise PipeError("not implemented")
+
     def fail(self):
         self._failed = True
 
