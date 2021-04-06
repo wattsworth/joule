@@ -6,7 +6,8 @@ import logging
 import tempfile
 import h5py
 import json
-
+import unittest
+from icecream import ic
 from ..fake_joule import FakeJoule, FakeJouleTestCase
 from joule.cli import main
 from joule.models import DataStream, Element, StreamInfo
@@ -128,6 +129,7 @@ class TestDataIngest(FakeJouleTestCase):
         src_data = helpers.create_data('float32_3')
         self.start_server(server)
         runner = CliRunner()
+
         with tempfile.NamedTemporaryFile() as data_file:
             write_hd5_data(data_file, src_data[:750])
             result = runner.invoke(main, ['data', 'ingest', '--file', data_file.name],

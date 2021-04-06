@@ -4,7 +4,7 @@ import logging
 
 from joule.models.pipes import Pipe, interval_token
 from joule.models.pipes.errors import PipeError
-
+from icecream import ic
 log = logging.getLogger('joule')
 
 
@@ -96,10 +96,10 @@ class OutputPipe(Pipe):
             await self.close_cb()
         if self.writer is not None:
             self.writer.close()
-            # TODO: available in python3.7
-            # await self.writer.wait_closed()
-            # Hack to close the transport
-            await asyncio.sleep(0.01)
+            # available in python3.7
+            await self.writer.wait_closed()
+            # Hack to close the transport (if wait_closed is not available)
+            # await asyncio.sleep(0.01)
             self.writer = None
         # close any subscribers
         for pipe in self.subscribers:

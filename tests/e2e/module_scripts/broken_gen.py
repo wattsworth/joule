@@ -1,15 +1,15 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 from joule.utilities import time_now
 import joule
 import numpy as np
 import asyncio
-
+from icecream import ic
 rows = 100
 freq = 40  # Hz
 
 
-class NormalGen(joule.ReaderModule):
+class BrokenGen(joule.ReaderModule):
 
     async def run(self, parsed_args, output):
             data = 100 * np.sin(np.arange(0, 2 * np.pi, 2 * np.pi / rows))
@@ -24,10 +24,11 @@ class NormalGen(joule.ReaderModule):
                 ts_data = np.hstack((ts, data))
                 await output.write(ts_data)
                 data_ts = top_ts
-                await asyncio.sleep(1 / freq)
-                raise ValueError
+                await asyncio.sleep(1/freq)
+                raise ValueError("Intentional Exception")
+
 
             
 if __name__ == "__main__":
-    r = NormalGen()
+    r = BrokenGen()
     r.start()

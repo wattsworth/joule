@@ -167,7 +167,8 @@ class BaseModule:
             loop.run_until_complete(task)
         except (asyncio.CancelledError, pipes.EmptyPipe, EmptyPipeError):
             pass
-        self._cleanup(loop)
+        finally:
+            self._cleanup(loop)
 
     def _cleanup(self, loop: Loop):
 

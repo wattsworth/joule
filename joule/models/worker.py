@@ -8,6 +8,7 @@ import collections
 import datetime
 import psutil
 import numpy as np
+from icecream import ic
 
 from joule.models.module import Module
 from joule.models.data_stream import DataStream
@@ -371,7 +372,7 @@ class Worker:
                     self.name, child_output.name, str(e)))
 
     async def _subscribe_to_inputs(self,
-                                   subscribe: Callable[[DataStream, pipes.Pipe, Loop], Callable]):
+                                   subscribe: Callable[[DataStream, pipes.Pipe], Callable]):
         # configure input pipes            [module]<==[worker]
         for (name, stream) in self.module.inputs.items():
             (r, w) = os.pipe()

@@ -2,6 +2,7 @@ import asynctest
 from joule import api, utilities, models
 import numpy as np
 import asyncio
+from icecream import ic
 
 
 class TestDataMethods(asynctest.TestCase):
@@ -79,13 +80,11 @@ class TestDataMethods(asynctest.TestCase):
         # now read the data back
         pipe = await self.node.data_read("/archive/data1", start=0)
         nrows = 0
-        while True:
-            try:
-                data = await pipe.read()
-                nrows += len(data)
-                pipe.consume(len(data))
-            except models.pipes.EmptyPipe:
-                break
+        while not pipe.is_empty():
+            data = await pipe.read()
+            nrows += len(data)
+            pipe.consume(len(data))
+
         self.assertEqual(blk_size * nblks, nrows)
 
     async def test_data_delete(self):
@@ -96,16 +95,14 @@ class TestDataMethods(asynctest.TestCase):
         data_out = await self.node.data_write(dest)
         first_ts = None
         last_ts = None
-        while True:
-            try:
-                data = await data_in.read()
-                if first_ts is None:
-                    first_ts = data['timestamp'][0]
-                last_ts = data['timestamp'][-1]
-                data_in.consume(len(data))
-                await data_out.write(data)
-            except models.pipes.EmptyPipe:
-                break
+        while not data_in.is_empty():
+            data = await data_in.read()
+            if first_ts is None:
+                first_ts = data['timestamp'][0]
+            last_ts = data['timestamp'][-1]
+            data_in.consume(len(data))
+            await data_out.write(data)
+
         await data_out.close()
         dest_info = await self.node.data_stream_info(dest)
         self.assertGreater(dest_info.rows, 2)

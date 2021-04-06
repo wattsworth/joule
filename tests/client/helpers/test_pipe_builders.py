@@ -2,7 +2,8 @@ import asyncio
 import numpy as np
 import logging
 from unittest import mock
-
+from icecream import ic
+import unittest
 from joule.models.pipes import interval_token, EmptyPipe
 from joule.models.data_stream import StreamInfo, DataStream
 from joule.models.element import Element
@@ -94,14 +95,13 @@ class TestPipeHelpers(FakeJouleTestCase):
         create_destination(server)
 
         self.start_server(server)
-        loop = asyncio.get_event_loop()
         my_node = api.get_node()
         async def runner():
             pipes_in, pipes_out = await build_network_pipes({},
                                                             {'output': '/test/dest:uint8[e0,e1,e2]'},
                                                             {},
                                                             my_node,
-                                                            10, 100, force=True)
+                                                            10, 210, force=True)
             await pipes_out['output'].write(blk1)
             await pipes_out['output'].close_interval()
             await pipes_out['output'].write(blk2)
@@ -109,20 +109,20 @@ class TestPipeHelpers(FakeJouleTestCase):
             await pipes_out['output'].close()
             await my_node.close()
 
-        loop.run_until_complete(runner())
+        asyncio.run(runner())
         # first msg should be the data removal
         (stream_id, start, end) = self.msgs.get()
         self.assertEqual(int(stream_id), 8)
         self.assertEqual(int(start), 10)
-        self.assertEqual(int(end), 100)
+        self.assertEqual(int(end), 210)
         # next message should be the output data
         mock_entry: MockDbEntry = self.msgs.get()
         np.testing.assert_array_equal(mock_entry.data[:len(blk1)], blk1)
         np.testing.assert_array_equal(mock_entry.data[len(blk1):], blk2)
+
         self.assertEqual(mock_entry.intervals, [[10, 19], [200, 209]])
 
         self.stop_server()
-        loop.close()
 
     def test_warns_before_data_removal(self):
         server = FakeJoule()

@@ -6,6 +6,8 @@ from joule import Pipe
 from joule.errors import ApiError, EmptyPipeError
 from scipy.interpolate import interp1d
 
+from icecream import ic
+
 ARGS_DESC = """
 ---
 :name:
@@ -102,6 +104,7 @@ class MergeFilter(FilterModule):
         # ---- END VERIFY ------
 
         if not await align_streams(master, slaves):
+            await output.close()  # no data overlap so nothing can be processed
             return
         while not self.stop_requested:
             try:
@@ -131,8 +134,6 @@ class MergeFilter(FilterModule):
                 # stay within the same interval until all streams catch up
                 if master.end_of_interval and len(master_data) > valid_rows:
                     master.reread_last()
-                    master.interval_break = False
-
                 if master.end_of_interval:
                     interval_break = True
                 for slave in slaves:
@@ -162,7 +163,6 @@ async def align_streams(master: Pipe, slaves: List[Pipe]):
     try:
         slave_datas = [await slave.read() for slave in slaves]
         master_data = await master.read()
-
         # get the maximum slave start time (we can't interpolate before this)
         latest_slave_start = np.max([data['timestamp'][0] for data in slave_datas])
         # make sure all streams have some data larger than the latest_slave_start
@@ -185,7 +185,6 @@ async def align_streams(master: Pipe, slaves: List[Pipe]):
         # consume the master before start_ts
         too_early = master_data['timestamp'][master_data['timestamp'] < start_ts]
         master.consume(len(too_early))
-
         # to preserve any interval breaks, reread the same data again
         master.reread_last()
         for slave in slaves:
@@ -201,6 +200,8 @@ async def get_data(source_pipe: Pipe, dest: np.ndarray, offset: int) -> float:
     max_ts = source['timestamp'][-1]
     f = interp1d(source['timestamp'], source['data'], axis=0, fill_value='extrapolate')
     resampled_data = f(ts[ts <= max_ts])
+    if len(resampled_data) == 0:
+        return 0  # nothing to do
     dest['data'][:len(resampled_data), offset:offset + source_pipe.width] = make2d(resampled_data)
     last_valid_ts = ts[len(resampled_data) - 1]
     dest_rows = np.argwhere(ts == last_valid_ts)[0][0] + 1

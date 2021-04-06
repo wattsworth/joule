@@ -3,9 +3,11 @@ import asyncio
 import logging
 from joule.models.pipes import Pipe
 from joule.models.pipes.errors import PipeError, EmptyPipe
+from icecream import ic
 
 Loop = asyncio.AbstractEventLoop
 log = logging.getLogger('joule')
+
 
 class LocalPipe(Pipe):
     """
@@ -27,7 +29,8 @@ class LocalPipe(Pipe):
         # tunable constants
         self.TIMEOUT_INTERVAL = 0.5
         self.debug = debug
-        self.interval_break = False
+
+        self._interval_break = False
         self.closed = False
         self.read_buffer = np.empty((0,), dtype=self.dtype)
         self.close_cb = close_cb
@@ -43,7 +46,8 @@ class LocalPipe(Pipe):
         self._cache_index = 0
         self._cache = None
 
-    async def read(self, flatten=False):
+    async def read(self, flatten=False) -> np.ndarray:
+
         if self._failed:
             await self.close()
             raise PipeError('pipe failed')
@@ -55,26 +59,36 @@ class LocalPipe(Pipe):
                 raise PipeError("No data left to reread")
             return self._format_data(self.read_buffer, flatten)
 
-        self.interval_break = False
+        self._interval_break = False
 
         # if the queue is empty and we have old data, just return the old data
         # THIS IS REMOVED, OTHERWISE THE WRITER CAN BE STARVED AND NEVER CLOSE THE PIPE
-        #if self.queue.empty() and len(self.read_buffer) > 0:
+        # if self.queue.empty() and len(self.read_buffer) > 0:
         #    await asyncio.sleep(self.TIMEOUT_INTERVAL)
         #    return self._format_data(self.read_buffer, flatten)
 
         # otherwise wait for at least one block
         while self.queue.empty():
-            if self._last_read:
-                raise EmptyPipe()  # trying to re-read old data
+            # if self._last_read:
+            #    raise EmptyPipe()  # trying to re-read old data
             # if the buffer is empty and the queue is empty and the pipe is closed
             if self.queue.empty() and self.closed:
-                self._last_read = True
-                break  # return unconsumed data one time
+                self._last_read = True  # from now on the is_empty flag will be set
+                # but an error will only be generated if all the remaining data is consumed
+                break  # return unconsumed data
 
             await asyncio.sleep(self.TIMEOUT_INTERVAL)
+        data_block = self._read(flatten)
 
-        return self._read(flatten)
+        # NOTE: There is a chance read will return an empty array-> if the producer simply closes the existing
+        # interval but all of the data is already consumed. This happens typically when a module fails and has to
+        # be restarted, then the inserter pipe will have no data (probably already has been read), but the terminating
+        # worker adds in an interval closing block [None] to the pipe. But if the producer also closes the pipe there
+        # is no reason to pass back empty data so raise an EmptyPipe exception instead
+
+        if len(data_block) == 0 and self.closed:
+            raise EmptyPipe()
+        return data_block
 
     def read_nowait(self, flatten=False):
         """
@@ -125,7 +139,7 @@ class LocalPipe(Pipe):
         while not self.queue.empty():
             block = self.queue.get_nowait()
             if block is None:
-                self.interval_break = True
+                self._interval_break = True
                 break
             end = start + len(block)
             buffer[start:end] = block
@@ -135,6 +149,7 @@ class LocalPipe(Pipe):
         self.read_buffer = buffer[:end]
         if self.debug:
             print("[%s:read] returning %d rows" % (self.name, len(self.read_buffer)))
+
         return self._format_data(self.read_buffer, flatten)
 
     def reread_last(self):
@@ -144,7 +159,7 @@ class LocalPipe(Pipe):
 
     @property
     def end_of_interval(self):
-        return self.interval_break
+        return self._interval_break
 
     def is_empty(self):
         if self._last_read:

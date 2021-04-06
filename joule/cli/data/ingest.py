@@ -11,7 +11,7 @@ import json
 import numpy as np
 from joule import errors
 from joule.utilities import timestamp_to_human
-
+from icecream import ic
 stop_requested = False
 
 BLOCK_SIZE = 10000  # insert blocks of datta
@@ -69,14 +69,14 @@ def ingest(config, stream_path, file):
                 ))
             # check if there is existing data in this time period
             if stream_info.rows > 0 and (
-                    start < stream_info.end and end > stream_info.start):
+                    start < stream_info.end and end >= stream_info.start):
                 # confirm overwrite
                 if not click.confirm("This will remove existing data between %s- %s" % (
                         timestamp_to_human(start),
                         timestamp_to_human(end))):
                     click.echo("Cancelled")
                     return
-                await config.node.data_delete(stream_obj, start, end)
+                await config.node.data_delete(stream_obj, start, end+1)
         except errors.ApiError as e:
             if '404' not in str(e):
                 raise click.ClickException(str(e))

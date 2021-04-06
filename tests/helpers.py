@@ -10,8 +10,9 @@ from sqlalchemy import create_engine, pool
 from sqlalchemy.orm import Session
 from collections import deque
 from typing import Optional
-
+from icecream import ic
 from joule.models import DataStream, Element, Base, Pipe
+from joule.models.pipes import LocalPipe
 from joule.models.pipes.errors import PipeError
 from joule.errors import EmptyPipeError
 
@@ -47,7 +48,7 @@ def create_stream(name, layout, id=0) -> DataStream:
 
     return DataStream(name=name, datatype=datatype, id=id,
                       elements=[Element(name="e%d" % j, index=j,
-                                    display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(lcount)])
+                                        display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(lcount)])
 
 
 def to_chunks(data, chunk_size):
@@ -147,11 +148,69 @@ class DbTestCase(unittest.TestCase):
 
 class TestingPipe(Pipe):
     # reads come out in the same blocks as the writes
+    # ...wraps LocalPipe
+
+    def __init__(self, layout: str, name: str = None, stream=None):
+        super().__init__(name=name, layout=layout, stream=stream)
+
+        self._pipe = LocalPipe(layout, name, stream)
+        self._closed = False
+        self.data_blocks: deque = deque()
+
+    async def write(self, data):
+        if self._closed:
+            raise PipeError("Cannot write to a closed pipe")
+        self.data_blocks.append(data)
+
+    def write_nowait(self, data):
+        if self._closed:
+            raise PipeError("Cannot write to a closed pipe")
+        self.data_blocks.append(data)
+
+    def close_interval_no_wait(self):
+        self.data_blocks.append(None)
+
+    async def close_interval(self):
+        self.data_blocks.append(None)
+
+    def consume(self, rows):
+        return self._pipe.consume(rows)
+
+    def reread_last(self):
+        self._pipe.reread_last()
+
+    @property
+    def end_of_interval(self):
+        return self._pipe.end_of_interval
+
+    async def read(self, flatten=False):
+        # first write a block to the pipe if there are any waiting
+        if len(self.data_blocks) > 0:
+            block = self.data_blocks.popleft()
+            if block is None:
+                await self._pipe.close_interval()
+            else:
+                await self._pipe.write(block)
+        elif self._closed:
+            await self._pipe.close()
+        # now return the result of the inner pipe's read
+        return await self._pipe.read(flatten)
+
+    def is_empty(self):
+        return self._pipe.is_empty()
+
+    async def close(self):
+        self._closed = True
+
+
+class TestingPipeOld(Pipe):
+    # reads come out in the same blocks as the writes
 
     def __init__(self, layout: str, name: str = None, stream=None):
         super().__init__(name=name, layout=layout, stream=stream)
         self.data_blocks: deque = deque()
         self.last_block: Optional[np.ndarray] = None
+        self._last_read = False  # flag to indicate pipe only has previously read data (see input_pipe.py)
         self.interval_break = False
         self._reread = False
 
@@ -192,7 +251,7 @@ class TestingPipe(Pipe):
             raise Exception("Not Implemented")
         if self._reread:
             self._reread = False
-            if self.last_block is None or len(self.last_block)==0:
+            if self.last_block is None or len(self.last_block) == 0:
                 raise PipeError("No data left to reread")
             return self.last_block
 
@@ -202,6 +261,7 @@ class TestingPipe(Pipe):
             block = self.data_blocks.popleft()
             if len(self.data_blocks) == 0:
                 self.interval_break = True
+                self._last_read = True
             elif self.data_blocks[0] is None:
                 self.data_blocks.popleft()
                 self.interval_break = True
@@ -213,3 +273,12 @@ class TestingPipe(Pipe):
             else:
                 self.last_block = block
         return self.last_block
+
+    def is_empty(self):
+        if self._reread:
+            return False
+        if self._last_read:
+            return True
+        if len(self.data_blocks) == 0 and self.last_block is None:
+            return True
+        return False

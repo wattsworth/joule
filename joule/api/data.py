@@ -2,6 +2,7 @@ from typing import Union, Optional, List
 import asyncio
 import aiohttp
 import numpy as np
+from icecream import ic
 
 from .session import BaseSession
 from .data_stream import (DataStream,
@@ -278,7 +279,7 @@ async def _send_data(session: BaseSession,
                     yield interval_token(stream.layout).tobytes()
                 pipe.consume(len(data))
         except EmptyPipe:
-            pass
+            yield interval_token(stream.layout).tobytes()
         output_complete = True
 
     try:

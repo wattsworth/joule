@@ -32,7 +32,7 @@ class InputPipe(Pipe):
         self.buffer = np.zeros(self.BUFFER_SIZE * 2, dtype=self.dtype)
         self.last_index = 0
 
-    async def read(self, flatten=False):
+    async def read(self, flatten=False) -> np.ndarray:
         if self.reader is None:
             self.reader, self._reader_close = await self.reader_factory()
         if self.closed:
@@ -60,12 +60,15 @@ class InputPipe(Pipe):
         while True:
             new_data = b''
             if self.reader.at_eof():
-                if self._last_read:
-                    raise EmptyPipe()  # this data has already been read once
+                # do not raise an exception, but is_empty() will return True
+                #if self._last_read:
+                #    raise EmptyPipe()  # this data has already been read once
                 if (len(self.unprocessed_np_buffer) == 0 and
                         self.last_index == 0):
                     raise EmptyPipe()
                 if len(self.unprocessed_np_buffer) == 0:
+                    # no new data is coming in, read() will just return
+                    # previously viewed data
                     self._last_read = True
                 break
             try:

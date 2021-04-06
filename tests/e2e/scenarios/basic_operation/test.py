@@ -72,13 +72,10 @@ async def check_data(node: api.BaseNode):
         else:
             assert pipe.layout == "float64_1"
         len_data = 0
-        while True:
-            try:
-                data = await pipe.read()
-                len_data += len(data)
-                if len_data > 50:
-                    break
-            except EmptyPipe:
+        while not pipe.is_empty():
+            data = await pipe.read()
+            len_data += len(data)
+            if len_data > 50:
                 break
             pipe.consume(len(data))
         await pipe.close()
@@ -91,7 +88,7 @@ async def check_data(node: api.BaseNode):
             path, intervals)
     intervals = await node.data_intervals(broken_path)
     assert len(intervals) > 1, 'path [%s] intervals %r' % (
-        path, intervals)
+        broken_path, intervals)
 
     # read historic data to check if is correct
 

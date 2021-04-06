@@ -2,9 +2,9 @@ from tests import helpers
 from unittest import mock
 import numpy as np
 import asyncio
-
+from icecream import ic
 from joule.models.pipes import LocalPipe, PipeError, OutputPipe
-
+from joule.errors import EmptyPipeError
 
 class TestLocalPipe(helpers.AsyncTestCase):
 
@@ -21,6 +21,8 @@ class TestLocalPipe(helpers.AsyncTestCase):
         my_pipe.subscribe(subscriber_pipe)
         my_pipe.subscribe(subscriber_pipe2)
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
+        reader_rx_data = np.empty(test_data.shape, test_data.dtype)
+        subscriber_rx_data = np.empty(test_data.shape, test_data.dtype)
 
         #    print(test_data['data'][:,1])
 
@@ -28,38 +30,30 @@ class TestLocalPipe(helpers.AsyncTestCase):
             for block in helpers.to_chunks(test_data, 270):
                 await asyncio.sleep(0.1)
                 await my_pipe.write(block)
+            await my_pipe.close()
 
         async def reader():
+            # note this is kind of delicate, you can only read data twice
+            # if the pipe is closed so it might look like you didn't finish all
+            # the data if the last read ignores data past blk_size
             blk_size = 357
-            data_cursor = 0  # index into test_data
-            while data_cursor != len(test_data):
-                # consume all data in pipe
-                data = await my_pipe.read()
-                rows_used = min(len(data), blk_size)
-                used_data = data[:rows_used]
-                # print(used_data['data'][:,1])
+            rx_idx = 0
+            while not my_pipe.is_empty():
+                # consume data in pipe
+                data_chunk = await my_pipe.read()
+                rows_used = min(len(data_chunk), blk_size)
+                reader_rx_data[rx_idx:rx_idx + rows_used] = data_chunk[:rows_used]
+                rx_idx += rows_used
                 my_pipe.consume(rows_used)
-                start_pos = data_cursor
-                end_pos = data_cursor + len(used_data)
-                np.testing.assert_array_equal(used_data,
-                                              test_data[start_pos:end_pos])
-                data_cursor += len(used_data)
 
         async def subscriber():
-            blk_size = 493
-            data_cursor = 0  # index into test_data
-            while data_cursor != len(test_data):
-                # consume all data in pipe
-                data = await subscriber_pipe.read()
-                rows_used = min(len(data), blk_size)
-                used_data = data[:rows_used]
-                # print(used_data['data'][:,1])
-                subscriber_pipe.consume(rows_used)
-                start_pos = data_cursor
-                end_pos = data_cursor + len(used_data)
-                np.testing.assert_array_equal(used_data,
-                                              test_data[start_pos:end_pos])
-                data_cursor += len(used_data)
+            rx_idx = 0
+            while not subscriber_pipe.is_empty():
+                # consume data in pipe
+                data_chunk = await subscriber_pipe.read()
+                subscriber_rx_data[rx_idx:rx_idx + len(data_chunk)] = data_chunk
+                rx_idx += len(data_chunk)
+                subscriber_pipe.consume(len(data_chunk))
 
         loop = asyncio.get_event_loop()
         tasks = [asyncio.ensure_future(writer()),
@@ -70,31 +64,55 @@ class TestLocalPipe(helpers.AsyncTestCase):
 
         data = subscriber_pipe2.read_nowait()
         np.testing.assert_array_equal(test_data, data)
+        np.testing.assert_array_equal(test_data, reader_rx_data)
+        np.testing.assert_array_equal(test_data, subscriber_rx_data)
 
     def test_read_data_must_be_consumed(self):
-        """writes to pipe sends data to reader and any subscribers"""
+        #writes to pipe sends data to reader and any subscribers
         LAYOUT = "float32_2"
         LENGTH = 500
         UNCONSUMED_ROWS = 4
-        # test that the default event loop is used if loop is not specified
         my_pipe = LocalPipe(LAYOUT)
-        test_data = helpers.create_data(LAYOUT, length=LENGTH)
-        #    print(test_data['data'][:,1])
-        my_pipe.write_nowait(test_data)
+        chunk1 = helpers.create_data(LAYOUT, length=LENGTH)
+        chunk2 = helpers.create_data(LAYOUT, length=LENGTH)
+        chunk3 = helpers.create_data(LAYOUT, length=LENGTH)
+
+        my_pipe.write_nowait(chunk1)
 
         async def reader():
-            data = await my_pipe.read()
+            await my_pipe.read()
             my_pipe.consume(0)
-            # should get the same data back
-            repeat = await my_pipe.read()
-            np.testing.assert_array_equal(data, repeat)
-            my_pipe.consume(len(data) - UNCONSUMED_ROWS)
-            next_data = await my_pipe.read()
-            np.testing.assert_array_equal(data[-UNCONSUMED_ROWS:],
-                                          next_data[:UNCONSUMED_ROWS + 1])
+            # should get the same data back on the next read
+            # add a second copy of the test data
+            await my_pipe.write(chunk2)
+            rx_data = await my_pipe.read()
+            # two copies of the data now
+            np.testing.assert_array_equal(chunk1, rx_data[:len(chunk1)])
+            np.testing.assert_array_equal(chunk2, rx_data[len(chunk1):])
+            # write another copy but consume the first
+            my_pipe.consume(len(chunk1))
+            await my_pipe.write(chunk3)
+            rx_data = await my_pipe.read()
+            # two copies of the data now
+            np.testing.assert_array_equal(chunk2, rx_data[:len(chunk2)])
+            np.testing.assert_array_equal(chunk3, rx_data[len(chunk2):])
+            my_pipe.consume(len(chunk2))
+            await my_pipe.close()
+            # now a read should return immediately with the unconsumed data
+            rx_data = await my_pipe.read()
+            np.testing.assert_array_equal(chunk3, rx_data)
+            # the pipe should be empty but still return the old data
+            rx_data = await my_pipe.read()
+            np.testing.assert_array_equal(chunk3, rx_data)
+            # only after consuming the remaining data does it raise an exception
+            my_pipe.consume(len(rx_data))
+            # another read should cause an exception (even if the data hasn't been consumed)
+            with self.assertRaises(EmptyPipeError):
+                await my_pipe.read()
+            # the pipe should be empty
+            self.assertTrue(my_pipe.is_empty())
 
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(reader())
+        asyncio.run(reader())
 
     def test_nowait_read_writes(self):
         LAYOUT = "int8_2"
@@ -239,8 +257,8 @@ class TestLocalPipe(helpers.AsyncTestCase):
         return
 
     def test_handles_flat_and_structured_arrays(self):
-        """converts flat arrays to structured arrays and returns
-           either flat or structured arrays depending on [flatten] parameter"""
+        # converts flat arrays to structured arrays and returns
+        #   either flat or structured arrays depending on [flatten] parameter
         LAYOUT = "float64_1"
         LENGTH = 1000
         my_pipe = LocalPipe(LAYOUT)
@@ -257,10 +275,9 @@ class TestLocalPipe(helpers.AsyncTestCase):
             np.testing.assert_array_almost_equal(fdata, flat_data)
             np.testing.assert_array_almost_equal(fdata, flat_data)
 
-        loop = asyncio.get_event_loop()
-        tasks = [asyncio.ensure_future(my_pipe.write(flat_data)),
-                 asyncio.ensure_future(reader())]
-        loop.run_until_complete(asyncio.gather(*tasks))
+        asyncio.run(my_pipe.write(flat_data))
+        asyncio.run(my_pipe.close())
+        asyncio.run(reader())
 
     def test_raises_consume_errors(self):
         LAYOUT = "int32_3"
