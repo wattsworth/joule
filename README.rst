@@ -83,4 +83,18 @@ Then control the daemon as a system service:
   $> sudo systemctl [enable|disable|start|stop|status] joule
 
 
+Tests
+-----
+
+To run unittests and collect coverage information:
+
+    $> coverage run -m unittest
+    $> coverage html
+    $> python3 -m http.server --directory htmlcov
+
+To run integration tests you must have Docker and access to the nilmdb image (for nilmdb tests)
+
+    $ joule/tests/e2e> ./runner.sh [timescale|nilmdb]
+
+
 

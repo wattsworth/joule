@@ -80,7 +80,7 @@ class Element(Base):
             'units': self.units,
             'scale_factor': self.scale_factor,
             'offset': self.offset,
-            'plottable': True,  #TODO: check why elements have NULL fields here?
+            'plottable': True,  # TODO: check why elements have NULL fields here?
             'discrete': False,
             'default_min': self.default_min,
             'default_max': self.default_max
@@ -150,19 +150,33 @@ def from_config(config: configparser.ConfigParser) -> Element:
                    default_min=default_min)
 
 
-def from_nilmdb_metadata(config: Dict) -> Element:
+def from_nilmdb_metadata(config: Dict, default_index) -> Element:
+    # cannot assume any structure to the config dict
+    default_config = {
+        "name": "elem%d" % default_index,
+        "units": None,
+        "plottable": True,
+        "offset": 0,
+        "scale_factor": 1.0,
+        "default_max": None,
+        "default_min": None,
+        "index": default_index,
+        "discrete": False
+    }
+    merged_config = {**default_config, **config}
     display_type = Element.DISPLAYTYPE.CONTINUOUS
-    if config['discrete']:
+    if merged_config['discrete']:
         display_type = Element.DISPLAYTYPE.EVENT
-    return Element(name=config['name'],
+
+    return Element(name=merged_config["name"],
                    display_type=display_type,
-                   units=config['units'],
-                   plottable=config['plottable'],
-                   offset=config['offset'],
-                   scale_factor=config['scale_factor'],
-                   default_max=config['default_max'],
-                   default_min=config['default_min'],
-                   index=config['column'])
+                   units=merged_config['units'],
+                   plottable=merged_config['plottable'],
+                   offset=merged_config['offset'],
+                   scale_factor=merged_config['scale_factor'],
+                   default_max=merged_config['default_max'],
+                   default_min=merged_config['default_min'],
+                   index=merged_config['column'])
 
 
 def validate_name(name: str) -> str:

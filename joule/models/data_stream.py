@@ -291,14 +291,16 @@ def from_nilmdb_metadata(config_data: Dict, layout: str) -> DataStream:
     if 'streams' in config_data:
         elements = config_data['streams']
     else:
-        elements = [{'column': i, 'name': "Element%d" % (i+1), 'units': None,
+        elements = [{'column': i, 'name': "Element%d" % (i + 1), 'units': None,
                      'scale_factor': 1.0, 'offset': 0.0, 'plottable': True,
                      'discrete': False, 'default_min': None, 'default_max': None} for
                     i in range(nelem)]
     stream = DataStream(name=config_data['name'], description='', datatype=datatype,
                         keep_us=DataStream.KEEP_ALL, decimate=True)
+    idx = 0
     for metadata in elements:
-        elem = element.from_nilmdb_metadata(metadata)
+        elem = element.from_nilmdb_metadata(metadata, idx)
+        idx += 1
         stream.elements.append(elem)
     return stream
 
