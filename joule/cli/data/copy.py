@@ -368,10 +368,7 @@ async def _retrieve_nilmdb_stream(server: str, path: str) -> Tuple[Optional[Data
             config_data = {'name': default_name}
             try:
                 metadata = await resp.json()
-                config_data = json.loads(metadata['config_key__'])
-                if config_data['name'] == '':
-                    # use the path name unless there is a specifically configured value
-                    config_data['name'] = path.split("/")[-1]
+                config_data = {**config_data, **(json.loads(metadata['config_key__']))}
             except (KeyError, ValueError):
                 # missing or corrupt configuration data
                 pass

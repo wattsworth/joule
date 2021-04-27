@@ -295,7 +295,9 @@ def from_nilmdb_metadata(config_data: Dict, layout: str) -> DataStream:
                      'scale_factor': 1.0, 'offset': 0.0, 'plottable': True,
                      'discrete': False, 'default_min': None, 'default_max': None} for
                     i in range(nelem)]
-    stream = DataStream(name=config_data['name'], description='', datatype=datatype,
+    # make sure the name is valid
+    name = config_data["name"].replace("/", "_")
+    stream = DataStream(name=name, description='', datatype=datatype,
                         keep_us=DataStream.KEEP_ALL, decimate=True)
     idx = 0
     for metadata in elements:
