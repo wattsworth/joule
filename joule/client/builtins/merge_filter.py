@@ -5,7 +5,6 @@ from typing import Dict, List
 from joule import Pipe
 from joule.errors import ApiError, EmptyPipeError
 from scipy.interpolate import interp1d
-
 from icecream import ic
 
 ARGS_DESC = """
@@ -21,18 +20,18 @@ ARGS_DESC = """
 :description:
   combine multiple input streams into a single output stream
 :usage:
-  Specify a master stream and one or more additional streams.
-  The output will have timestamps from the master stream and linearly
+  Specify a primary stream and one or more additional streams.
+  The output will have timestamps from the primary stream and linearly
   interpolated data from all the additional streams
   
   
     | Arguments | Description        |
     |-----------|--------------------|
-    |``master`` | name of master stream |
+    |``primary`` | name of primary stream |
 
   ```
 :inputs:
-  master
+  primary
   : N elements
   additional
   : M elements
@@ -64,7 +63,7 @@ ARGS_DESC = """
     exec_cmd = joule-merge-filter
 
     [Arguments]
-    master = input1 
+    primary = input1 
 
     [Inputs]
     input1 = /path/to/input1
@@ -83,65 +82,66 @@ class MergeFilter(FilterModule):
     def custom_args(self, parser):  # pragma: no cover
         grp = parser.add_argument_group("module",
                                         "module specific arguments")
-        grp.add_argument("--master", type=str, required=True,
-                         help="name of master input stream")
+        grp.add_argument("--primary", type=str, required=True,
+                         help="name of primary input stream")
         parser.description = textwrap.dedent(ARGS_DESC)
 
     async def run(self, parsed_args, inputs: Dict[str, Pipe], outputs):
-        master_name = parsed_args.master
+        primary_name = parsed_args.primary
 
         # ---- VERIFY PARAMETERS and STREAM FORMATS -----
-        if master_name not in inputs:
-            raise Exception("the specified master [%s] is not in the inputs" % parsed_args.master)
-        master = inputs[master_name]
-        slaves = [inputs[name] for name in inputs.keys() if name != master_name]
+        if primary_name not in inputs:
+            raise Exception("the specified primary [%s] is not in the inputs" % parsed_args.primary)
+        primary = inputs[primary_name]
+        secondaries = [inputs[name] for name in inputs.keys() if name != primary_name]
         if len(outputs) != 1:
             raise Exception("must specify one output stream")
         output = list(outputs.values())[0]
-        input_width = np.sum([slave.width for slave in slaves]) + master.width
+        input_width = np.sum([secondary.width for secondary in secondaries]) + primary.width
         if input_width != output.width:
             raise Exception("output must have %d elements" % input_width)
         # ---- END VERIFY ------
 
-        if not await align_streams(master, slaves):
+        if not await align_streams(primary, secondaries):
             await output.close()  # no data overlap so nothing can be processed
             return
         while not self.stop_requested:
             try:
-                master_data = await master.read()
+                primary_data = await primary.read()
                 # allocate the output array (we won't have any *more* data than this)
-                output_data = np.empty(len(master_data), dtype=output.dtype)
-                # put in the master data and the timestamps
-                output_data['timestamp'] = master_data['timestamp']
-                output_data['data'][:, :master.width] = make2d(master_data['data'])
+                output_data = np.empty(len(primary_data), dtype=output.dtype)
+                # put in the primary data and the timestamps
+                output_data['timestamp'] = primary_data['timestamp']
+                output_data['data'][:, :primary.width] = make2d(primary_data['data'])
                 valid_rows = len(output_data)
-                offset = master.width
-                for slave in slaves:
-                    valid_rows = min(await get_data(slave, output_data, offset),
+                offset = primary.width
+                for secondary in secondaries:
+                    valid_rows = min(await get_data(secondary, output_data, offset),
                                      valid_rows)
-                    offset += slave.width
-                # consume the right amount from each slave based on the last valid timestamp
-                for slave in slaves:
-                    await consume_data(slave, output_data['timestamp'][valid_rows - 1])
+                    offset += secondary.width
+                # consume the right amount from each secondary based on the last valid timestamp
+                for secondary in secondaries:
+                    await consume_data(secondary, output_data['timestamp'][valid_rows - 1])
 
                 # write the output
                 await output.write(output_data[:valid_rows])
 
                 # consume the used data and check for interval breaks
                 interval_break = False
-                master.consume(valid_rows)
+                primary.consume(valid_rows)
 
                 # stay within the same interval until all streams catch up
-                if master.end_of_interval and len(master_data) > valid_rows:
-                    master.reread_last()
-                if master.end_of_interval:
+                if primary.end_of_interval and len(primary_data) > valid_rows:
+                    primary.reread_last()
+                if primary.end_of_interval:
                     interval_break = True
-                for slave in slaves:
-                    if slave.end_of_interval:
-                        interval_break = True
+                for secondary in secondaries:
+                    if secondary.end_of_interval:
+                        # stay within the same interval until all streams catch up
+                        secondary.reread_last()
                 if interval_break:
                     await output.close_interval()
-                    if not await align_streams(master, slaves):
+                    if not await align_streams(primary, secondaries):
                         break
             except EmptyPipeError:
                 break
@@ -158,37 +158,41 @@ def make2d(arr: np.ndarray) -> np.ndarray:
         return arr
 
 
-async def align_streams(master: Pipe, slaves: List[Pipe]):
-    # we need a previous sample of every slave
+async def align_streams(primary: Pipe, secondaries: List[Pipe]):
+    # we need a previous sample of every secondary
     try:
-        slave_datas = [await slave.read() for slave in slaves]
-        master_data = await master.read()
-        # get the maximum slave start time (we can't interpolate before this)
-        latest_slave_start = np.max([data['timestamp'][0] for data in slave_datas])
-        # make sure all streams have some data larger than the latest_slave_start
-        while master_data['timestamp'][-1] < latest_slave_start:
-            master.consume(len(master_data))
-            master_data = await master.read()
-        for i in range(len(slaves)):
-            while slave_datas[i]['timestamp'][-1] < latest_slave_start:
-                slaves[i].consume(len(slave_datas[i]))
-                slave_datas[i] = await slaves[i].read()
-        # find the closest ts in master that is larger than latest_slave_start
-        start_ts = master_data['timestamp'][master_data['timestamp'] >= latest_slave_start][0]
+        secondary_data = [await secondary.read() for secondary in secondaries]
+        primary_data = await primary.read()
+        # get the maximum secondary start time (we can't interpolate before this)
+        try:
+            latest_secondary_start = np.max([data['timestamp'][0] for data in secondary_data])
+        except IndexError as e:
+            breakpoint()
+            print(e)
+        # make sure all streams have some data larger than the latest_secondary_start
+        while primary_data['timestamp'][-1] < latest_secondary_start:
+            primary.consume(len(primary_data))
+            primary_data = await primary.read()
+        for i in range(len(secondaries)):
+            while secondary_data[i]['timestamp'][-1] < latest_secondary_start:
+                secondaries[i].consume(len(secondary_data[i]))
+                secondary_data[i] = await secondaries[i].read()
+        # find the closest ts in primary that is larger than latest_secondary_start
+        start_ts = primary_data['timestamp'][primary_data['timestamp'] >= latest_secondary_start][0]
         i = 0
-        for data in slave_datas:
-            # find the closest ts in slaves that is smaller than latest_slave_start
+        for data in secondary_data:
+            # find the closest ts in secondaries that is smaller than latest_secondary_start
             idx = np.argmax(data['timestamp'][data['timestamp'] <= start_ts])
             # consume up to this point
-            slaves[i].consume(idx)
+            secondaries[i].consume(idx)
             i += 1
-        # consume the master before start_ts
-        too_early = master_data['timestamp'][master_data['timestamp'] < start_ts]
-        master.consume(len(too_early))
+        # consume the primary before start_ts
+        too_early = primary_data['timestamp'][primary_data['timestamp'] < start_ts]
+        primary.consume(len(too_early))
         # to preserve any interval breaks, reread the same data again
-        master.reread_last()
-        for slave in slaves:
-            slave.reread_last()
+        primary.reread_last()
+        for secondary in secondaries:
+            secondary.reread_last()
     except ApiError:
         return False
     return True

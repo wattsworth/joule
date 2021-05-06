@@ -4,6 +4,14 @@ import heapq
 # Adapted from Jim Paris
 
 def interval_difference(src, dest):
+    return _interval_math_helper(src, dest, (lambda src, dest: src and not dest))
+
+
+def interval_intersection(src, dest):
+    return _interval_math_helper(src, dest, (lambda src, dest: src and dest))
+
+
+def _interval_math_helper(src, dest, op):
     """Helper for set_difference, intersection functions,
     to compute interval subsets based on a math operator on ranges
     present in A and B.  Subsets are computed from A, or new intervals
@@ -37,7 +45,7 @@ def interval_difference(src, dest):
             in_src = False
         elif k == 3:
             in_dest = False
-        include = in_src and not in_dest
+        include = op(in_src, in_dest)
         if include and out_start is None:
             out_start = ts
         elif not include:
@@ -46,6 +54,7 @@ def interval_difference(src, dest):
             out_start = None
 
     return result
+
 
 # Iterator merging, based on http://code.activestate.com/recipes/491285/
 def imerge(*iterables):
@@ -72,11 +81,11 @@ def imerge(*iterables):
     while 1:
         try:
             while 1:
-                v, next = s = h[0]      # raises IndexError when h is empty
+                v, next = s = h[0]  # raises IndexError when h is empty
                 yield v
-                s[0] = next()           # raises StopIteration when exhausted
-                siftup(h, 0)            # restore heap condition
+                s[0] = next()  # raises StopIteration when exhausted
+                siftup(h, 0)  # restore heap condition
         except _Stop:
-            heappop(h)                  # remove empty iterator
+            heappop(h)  # remove empty iterator
         except IndexError:
             return
