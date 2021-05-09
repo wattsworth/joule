@@ -5,6 +5,8 @@ from .remove import data_remove
 from .intervals import intervals
 from .consolidate import consolidate
 from .merge import merge
+from .mean import mean
+from .median import median
 from .ingest import ingest
 
 @click.group(name="data")
@@ -12,6 +14,10 @@ def data():
     """Manage Joule data"""
     pass  # pragma: no cover
 
+@click.group(name="filter")
+def filter():
+    """Filter data"""
+    pass  # pragma: no cover
 
 data.add_command(data_copy)
 data.add_command(merge)
@@ -20,3 +26,7 @@ data.add_command(data_remove)
 data.add_command(intervals)
 data.add_command(consolidate)
 data.add_command(ingest)
+
+filter.add_command(mean)
+filter.add_command(median)
+data.add_command(filter)

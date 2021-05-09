@@ -101,17 +101,16 @@ async def _run(start, end, destination, primary, secondaries, node):
             for e in secondary_streams[i].elements:
                 e.name = prefix + e.name
                 elements.append(e)
-        print(', '.join([e.name for e in elements]))
         dest_stream = joule.api.DataStream(name=dest_name, elements=elements, datatype='float32')
         try:
-            await node.data_stream_create(dest_stream, '/'.join(dest_path))
+            dest_stream = await node.data_stream_create(dest_stream, '/'.join(dest_path))
         except joule.errors.ApiError as e:
             raise click.ClickException(f"Creating destination: {str(e)}")
 
     # --- READY TO GO ---
-    common_intervals = await node.data_intervals(primary_stream)
+    common_intervals = await node.data_intervals(primary_stream, start=start, end=end)
     for s in secondary_streams:
-        s_intervals = await node.data_intervals(s)
+        s_intervals = await node.data_intervals(s, start=start, end=end)
         common_intervals = interval_intersection(common_intervals, s_intervals)
     for interval in common_intervals:
         start = interval[0]
