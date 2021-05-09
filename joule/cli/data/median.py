@@ -6,13 +6,13 @@ import joule.errors
 from joule import errors
 from joule.cli.config import Config, pass_config
 from joule.utilities import timestamp_to_human, human_to_timestamp
-from joule.client.builtins.mean_filter import MeanFilter
+from joule.client.builtins.median_filter import MedianFilter
 
 
 @click.command(name="median")
 @click.argument("source")
 @click.argument("destination")
-@click.option("-w", "--window", help="window size", required=True)
+@click.option("-w", "--window", help="window size", required=True, type=int)
 @click.option("--start", help="timestamp or descriptive string")
 @click.option("--end", help="timestamp or descriptive string")
 @pass_config
@@ -60,6 +60,7 @@ async def _run(start, end, source, destination, window, node):
 
     except joule.errors.ApiError as e:
         dest_exists = False
+    click.echo("Median filter with window size %d" % window)
 
     click.echo(f"Source Stream: \n\t{source}")
     if dest_exists:
@@ -89,8 +90,9 @@ async def _run(start, end, source, destination, window, node):
         start = interval[0]
         end = interval[1]
         click.echo("Processing [%s] -> [%s]" % (timestamp_to_human(start), timestamp_to_human(end)))
-        mean_filter = MeanFilter()
-        inputs = {'source': await node.data_read(source_stream, start, end)}
-        outputs = {'destination': await node.data_write(dest_stream, start, end)}
+        median_filter = MedianFilter()
+        inputs = {'input': await node.data_read(source_stream, start, end)}
+        outputs = {'output': await node.data_write(dest_stream, start, end)}
         args = argparse.Namespace(window=window)
-        await mean_filter.run(args, inputs, outputs)
+        await median_filter.run(args, inputs, outputs)
+        await outputs['output'].close()

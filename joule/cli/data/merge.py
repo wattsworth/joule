@@ -123,3 +123,4 @@ async def _run(start, end, destination, primary, secondaries, node):
         outputs = {'destination': await node.data_write(dest_stream, start, end)}
         args = argparse.Namespace(primary="primary")
         await merge_filter.run(args, inputs, outputs)
+        await outputs['destination'].close()
