@@ -26,12 +26,12 @@ class TestMergeFilter(unittest.TestCase):
         # ------------------
         # out: 3 4 5       (all 1,2,3's)
         cases = [
-            # CASE 1: slaves start after master
+            # CASE 1: secondarys start after primary
             [([0, 1, 2, 3, 4, 5],  # *******
               [3, 4, 5],  # ****
               [1, 2, 3, 4, 5]),  # ******
              [3, 4, 5]],  # ----
-            # CASE 2: slaves start before master
+            # CASE 2: secondarys start before primary
             [([3, 4, 5],  # ****
               [2, 3, 4, 5],  # ******
               [1, 2, 3, 4, 5]),  # *******
@@ -43,72 +43,72 @@ class TestMergeFilter(unittest.TestCase):
              [3, 4, 5]],  # ---
         ]
 
-        async def run_case(inputs, expected, master_width):
+        async def run_case(inputs, expected, primary_width):
             my_filter = MergeFilter()
-            master_data = np.vstack((inputs[0], np.ones((master_width, len(inputs[0]))))).T
-            slave1_data = np.vstack((inputs[1], 2 * np.ones((3, len(inputs[1]))))).T
-            slave2_data = np.vstack((inputs[2], 3 * np.ones((1, len(inputs[2]))))).T
-            master = LocalPipe("float32_%d" % master_width, name="master")
-            slave1 = LocalPipe("float32_3", name="slave1")
-            slave2 = LocalPipe("float32_1", name="slave2")
-            output = LocalPipe("float32_%d" % (master_width + 4), name="output")
-            args = argparse.Namespace(master="master", pipes="unset")
+            primary_data = np.vstack((inputs[0], np.ones((primary_width, len(inputs[0]))))).T
+            secondary1_data = np.vstack((inputs[1], 2 * np.ones((3, len(inputs[1]))))).T
+            secondary2_data = np.vstack((inputs[2], 3 * np.ones((1, len(inputs[2]))))).T
+            primary = LocalPipe("float32_%d" % primary_width, name="primary")
+            secondary1 = LocalPipe("float32_3", name="secondary1")
+            secondary2 = LocalPipe("float32_1", name="secondary2")
+            output = LocalPipe("float32_%d" % (primary_width + 4), name="output")
+            args = argparse.Namespace(primary="primary", pipes="unset")
             # seed the input data
-            await master.write(master_data)
-            await slave1.write(slave1_data)
-            await slave2.write(slave2_data)
-            await slave1.close()
-            await slave2.close()
-            await master.close()
+            await primary.write(primary_data)
+            await secondary1.write(secondary1_data)
+            await secondary2.write(secondary2_data)
+            await secondary1.close()
+            await secondary2.close()
+            await primary.close()
 
             # run filter in an event loop
             await my_filter.run(args,
-                                inputs={'master': master, 'slave1': slave1, 'slave2': slave2},
+                                inputs={'primary': primary, 'secondary1': secondary1, 'secondary2': secondary2},
                                 outputs={'output': output})
             result = output.read_nowait(flatten=True)
             expected_data = np.vstack((expected,
-                                       np.ones((master_width, len(expected))),
+                                       np.ones((primary_width, len(expected))),
                                        2 * np.ones((3, len(expected))),
                                        3 * np.ones((1, len(expected))))).T
             np.testing.assert_array_equal(expected_data, result)
 
         for case in cases:
-            asyncio.run(run_case(inputs=case[0], expected=case[1], master_width=1))
-            asyncio.run(run_case(inputs=case[0], expected=case[1], master_width=3))
+            asyncio.run(run_case(inputs=case[0], expected=case[1], primary_width=1))
+            asyncio.run(run_case(inputs=case[0], expected=case[1], primary_width=3))
 
-    def test_early_master(self):
-        # first master read does not overlap with any slave data
+    def test_early_primary(self):
+        # first primary read does not overlap with any secondary data
         VISUALIZE = False
 
         async def _run():
 
-            # Master: y=10x-212
+            # Primary: y=10x-212
             ts = np.arange(0, 1300, 10)
-            master_data = np.array([ts, 10 * ts - 212]).T
-            master = helpers.TestingPipe("float32_1", name="master")
-            await master.write(master_data[:10])
-            await master.write(master_data[10:20])
-            await master.write(master_data[20:])
-            await master.close()
+            primary_data = np.array([ts, 10 * ts - 212]).T
+            primary = helpers.TestingPipe("float32_1", name="primary")
+            await primary.write(primary_data[:10])
+            await primary.write(primary_data[10:20])
+            await primary.write(primary_data[20:])
+            await primary.close()
 
-            # Slave1: y=-3.3x+436
+            # Secondary1: y=-3.3x+436
             ts = np.arange(500, 1000, 10)
-            slave1_data = np.array([ts, -3.3 * ts + 436]).T
-            slave1 = helpers.TestingPipe("float32_1", name="slave1")
-            await slave1.write(slave1_data[:20])
-            await slave1.write(slave1_data[20:30])
-            await slave1.write(slave1_data[30:])
-            await slave1.close()
+            secondary1_data = np.array([ts, -3.3 * ts + 436]).T
+            secondary1 = helpers.TestingPipe("float32_1", name="secondary1")
+            await secondary1.write(secondary1_data[:20])
+            await secondary1.write(secondary1_data[20:30])
+            await secondary1.write(secondary1_data[30:])
+            await secondary1.close()
 
-            args = argparse.Namespace(master="master", pipes="unset")
+            args = argparse.Namespace(primary="primary", pipes="unset")
             output = LocalPipe("float32_2", name="output")
 
             # run filter in an event loop
             my_filter = MergeFilter()
 
             await my_filter.run(args,
-                                inputs={'master': master,
-                                        'slave1': slave1},
+                                inputs={'primary': primary,
+                                        'secondary1': secondary1},
                                 outputs={'output': output})
 
             result = await output.read_all()
@@ -117,13 +117,13 @@ class TestMergeFilter(unittest.TestCase):
             self.assertEqual(ts[0], 500)
             self.assertEqual(ts[-1], 990)
 
-            # check the master
-            master_actual = result['data'][:, 0]
-            residual = (10 * ts - 212) - master_actual
+            # check the primary
+            primary_actual = result['data'][:, 0]
+            residual = (10 * ts - 212) - primary_actual
             np.testing.assert_allclose(residual, 0)
-            # check slave1
-            slave1_actual = result['data'][:, 1]
-            residual = (-3.3 * ts + 436) - slave1_actual
+            # check secondary1
+            secondary1_actual = result['data'][:, 1]
+            residual = (-3.3 * ts + 436) - secondary1_actual
             np.testing.assert_allclose(residual, 0)
 
             # NOTE: this test is close but not perfect... hmmm
@@ -131,7 +131,7 @@ class TestMergeFilter(unittest.TestCase):
 
             if VISUALIZE:
                 from matplotlib import pyplot as plt
-                for data in [master_data, slave1_data]:
+                for data in [primary_data, secondary1_data]:
                     plt.plot(data[:, 0], data[:, 1], linewidth=1)
 
                     plt.plot(result['timestamp'], result['data'], '--', linewidth=2)
@@ -139,44 +139,44 @@ class TestMergeFilter(unittest.TestCase):
 
         asyncio.run(_run())
 
-    def test_early_slave(self):
-        # first master read does not overlap with any slave data
+    def test_early_secondary(self):
+        # first primary read does not overlap with any secondary data
         VISUALIZE = False
 
         async def _run():
-            # Master: y=-3x+400
+            # Primary: y=-3x+400
             ts = np.arange(500, 1000, 10)
-            master_data = np.array([ts, -3 * ts + 400]).T
-            master = helpers.TestingPipe("float32_1", name="master")
+            primary_data = np.array([ts, -3 * ts + 400]).T
+            primary = helpers.TestingPipe("float32_1", name="primary")
             # break this up so it takes multiple reads to finish
-            master.write_nowait(master_data[:30])
-            master.write_nowait(master_data[30:35])
-            master.write_nowait(master_data[35:45])
-            master.write_nowait(master_data[45:])
-            await master.close()
-            # Slave1: y=10x-212
+            primary.write_nowait(primary_data[:30])
+            primary.write_nowait(primary_data[30:35])
+            primary.write_nowait(primary_data[35:45])
+            primary.write_nowait(primary_data[45:])
+            await primary.close()
+            # Secondary1: y=10x-212
             ts = np.arange(0, 1300, 10)
-            slave1_data = np.array([ts, 10 * ts - 212]).T
-            slave1 = helpers.TestingPipe("float32_1", name="slave1")
-            slave1.write_nowait(slave1_data[:10])
-            slave1.write_nowait(slave1_data[10:20])
-            slave1.write_nowait(slave1_data[20:])
-            await slave1.close()
-            # Slave2: y=-3.3x+436
+            secondary1_data = np.array([ts, 10 * ts - 212]).T
+            secondary1 = helpers.TestingPipe("float32_1", name="secondary1")
+            secondary1.write_nowait(secondary1_data[:10])
+            secondary1.write_nowait(secondary1_data[10:20])
+            secondary1.write_nowait(secondary1_data[20:])
+            await secondary1.close()
+            # Secondary2: y=-3.3x+436
             ts = np.arange(300, 900, 10)
-            slave2_data = np.array([ts, -3.3 * ts + 436]).T
-            slave2 = helpers.TestingPipe("float32_1", name="slave2")
-            slave2.write_nowait(slave2_data)
-            await slave2.close()
-            args = argparse.Namespace(master="master", pipes="unset")
+            secondary2_data = np.array([ts, -3.3 * ts + 436]).T
+            secondary2 = helpers.TestingPipe("float32_1", name="secondary2")
+            secondary2.write_nowait(secondary2_data)
+            await secondary2.close()
+            args = argparse.Namespace(primary="primary", pipes="unset")
             output = helpers.TestingPipe("float32_3", name="output")
 
             # run filter in an event loop
             my_filter = MergeFilter()
             await my_filter.run(args,
-                                inputs={'master': master,
-                                        'slave1': slave1,
-                                        'slave2': slave2},
+                                inputs={'primary': primary,
+                                        'secondary1': secondary1,
+                                        'secondary2': secondary2},
                                 outputs={'output': output})
             result = output.data_blocks[0]
             ts = result['timestamp']
@@ -184,18 +184,18 @@ class TestMergeFilter(unittest.TestCase):
             self.assertEqual(ts[0], 500)
             self.assertLessEqual(ts[-1], 1000)
 
-            # check the master
-            master_actual = result['data'][:, 0]
-            residual = (-3 * ts + 400) - master_actual
+            # check the primary
+            primary_actual = result['data'][:, 0]
+            residual = (-3 * ts + 400) - primary_actual
             np.testing.assert_allclose(residual, 0)
-            # check slave1
-            slave1_actual = result['data'][:, 1]
-            residual = (10 * ts - 212) - slave1_actual
+            # check secondary1
+            secondary1_actual = result['data'][:, 1]
+            residual = (10 * ts - 212) - secondary1_actual
             np.testing.assert_allclose(residual, 0)
 
-            # check slave2
-            slave2_actual = result['data'][:, 2]
-            residual = (-3.3 * ts + 436) - slave2_actual
+            # check secondary2
+            secondary2_actual = result['data'][:, 2]
+            residual = (-3.3 * ts + 436) - secondary2_actual
             # NOTE: this test is close but not perfect... hmmm
             np.testing.assert_allclose(residual, 0, rtol=1e-5, atol=1e-4)
 
@@ -204,7 +204,7 @@ class TestMergeFilter(unittest.TestCase):
                 matplotlib.use('TkAgg')
                 from matplotlib import pyplot as plt
 
-                for data in [master_data, slave1_data, slave2_data]:
+                for data in [primary_data, secondary1_data, secondary2_data]:
                     plt.plot(data[:, 0], data[:, 1], linewidth=1)
 
                 plt.plot(result['timestamp'], result['data'], '--', linewidth=2)
@@ -215,31 +215,31 @@ class TestMergeFilter(unittest.TestCase):
     def test_no_overlap(self):
 
         async def _run():
-            # Master: y=10x-212
+            # Primary: y=10x-212
             ts = np.arange(0, 500, 1)
-            master_data = np.array([ts, 10 * ts - 212]).T
-            master = helpers.TestingPipe("float32_1", name="master")
-            await master.write(master_data[:100])
-            await master.write(master_data[100:200])
-            await master.write(master_data[200:])
-            await master.close()
-            # Slave1: y=-3.3x+436
+            primary_data = np.array([ts, 10 * ts - 212]).T
+            primary = helpers.TestingPipe("float32_1", name="primary")
+            await primary.write(primary_data[:100])
+            await primary.write(primary_data[100:200])
+            await primary.write(primary_data[200:])
+            await primary.close()
+            # Secondary1: y=-3.3x+436
             ts = np.arange(510, 1000, 1)
-            slave1_data = np.array([ts, -5 * ts + 436]).T
-            slave1 = helpers.TestingPipe("float32_1", name="slave1")
-            await slave1.write(slave1_data[:150])
-            await slave1.write(slave1_data[150:350])
-            await slave1.write(slave1_data[350:])
-            await slave1.close()
+            secondary1_data = np.array([ts, -5 * ts + 436]).T
+            secondary1 = helpers.TestingPipe("float32_1", name="secondary1")
+            await secondary1.write(secondary1_data[:150])
+            await secondary1.write(secondary1_data[150:350])
+            await secondary1.write(secondary1_data[350:])
+            await secondary1.close()
 
-            args = argparse.Namespace(master="master", pipes="unset")
+            args = argparse.Namespace(primary="primary", pipes="unset")
             output = LocalPipe("float32_2", name="output")
 
             # run filter in an event loop
             my_filter = MergeFilter()
             await my_filter.run(args,
-                                inputs={'master': master,
-                                        'slave1': slave1},
+                                inputs={'primary': primary,
+                                        'secondary1': secondary1},
                                 outputs={'output': output})
 
             self.assertTrue(output.is_empty())
@@ -249,35 +249,35 @@ class TestMergeFilter(unittest.TestCase):
         asyncio.run(_run())
 
     def test_multiple_blocks(self):
-        # first master read does not overlap with any slave data
+        # first primary read does not overlap with any secondary data
         VISUALIZE = False
 
         async def _run():
-            # Master: y=10x-212
+            # Primary: y=10x-212
             ts = np.arange(0, 500, 1)
-            master_data = np.array([ts, 10 * ts - 212]).T
-            master = helpers.TestingPipe("float32_1", name="master")
-            master.write_nowait(master_data[:100])
-            master.write_nowait(master_data[100:200])
-            master.write_nowait(master_data[200:])
-            await master.close()
-            # Slave1: y=-3.3x+436
+            primary_data = np.array([ts, 10 * ts - 212]).T
+            primary = helpers.TestingPipe("float32_1", name="primary")
+            primary.write_nowait(primary_data[:100])
+            primary.write_nowait(primary_data[100:200])
+            primary.write_nowait(primary_data[200:])
+            await primary.close()
+            # Secondary1: y=-3.3x+436
             ts = np.arange(0, 500, 1)
-            slave1_data = np.array([ts, -5 * ts + 436]).T
-            slave1 = helpers.TestingPipe("float32_1", name="slave1")
-            slave1.write_nowait(slave1_data[:150])
-            slave1.write_nowait(slave1_data[150:350])
-            slave1.write_nowait(slave1_data[350:])
-            await slave1.close()
+            secondary1_data = np.array([ts, -5 * ts + 436]).T
+            secondary1 = helpers.TestingPipe("float32_1", name="secondary1")
+            secondary1.write_nowait(secondary1_data[:150])
+            secondary1.write_nowait(secondary1_data[150:350])
+            secondary1.write_nowait(secondary1_data[350:])
+            await secondary1.close()
 
-            args = argparse.Namespace(master="master", pipes="unset")
+            args = argparse.Namespace(primary="primary", pipes="unset")
             output = LocalPipe("float32_2", name="output")
 
             # run filter in an event loop
             my_filter = MergeFilter()
             await my_filter.run(args,
-                                inputs={'master': master,
-                                        'slave1': slave1},
+                                inputs={'primary': primary,
+                                        'secondary1': secondary1},
                                 outputs={'output': output})
             # put together the data_blocks (should not be any interval breaks)
             # remove the interval close at the end
@@ -287,15 +287,15 @@ class TestMergeFilter(unittest.TestCase):
             self.assertEqual(ts[0], 0)
             self.assertEqual(ts[-1], 499)
             # no duplicate timestamps
-            self.assertEqual(len(np.unique(ts)), len(master_data))
+            self.assertEqual(len(np.unique(ts)), len(primary_data))
 
-            # check the master
-            master_actual = result['data'][:, 0]
-            residual = (10 * ts - 212) - master_actual
+            # check the primary
+            primary_actual = result['data'][:, 0]
+            residual = (10 * ts - 212) - primary_actual
             np.testing.assert_allclose(residual, 0)
-            # check slave1
-            slave1_actual = result['data'][:, 1]
-            residual = (-5 * ts + 436) - slave1_actual
+            # check secondary1
+            secondary1_actual = result['data'][:, 1]
+            residual = (-5 * ts + 436) - secondary1_actual
             np.testing.assert_allclose(residual, 0)
 
             # NOTE: this test is close but not perfect... hmmm
@@ -303,7 +303,7 @@ class TestMergeFilter(unittest.TestCase):
 
             if VISUALIZE:
                 from matplotlib import pyplot as plt
-                for data in [master_data, slave1_data]:
+                for data in [primary_data, secondary1_data]:
                     plt.plot(data[:, 0], data[:, 1], linewidth=1)
 
                 plt.plot(result['timestamp'], result['data'], '--', linewidth=2)
@@ -311,52 +311,53 @@ class TestMergeFilter(unittest.TestCase):
 
         asyncio.run(_run())
 
+    @unittest.skip('TODO: needs more analysis')
     def test_interval_breaks(self):
         # realigns inputs after interval breaks
 
-        # master:[0----100] [110-----------200]   [210------300]
-        # slave1:   [50---------160] [170-----------230]
-        # slave2: [10---------------------190] [205-----------310]
+        # primary:[0----100] [110-----------200]   [210------300]
+        # secondary1:   [50---------160] [170-----------230]
+        # secondary2: [10---------------------190] [205-----------310]
         # ========================================================
         # output:   [50-100][110-160][170-190] [205-230]
 
-        # Master: y=10x-212
+        # Primary: y=10x-212
         async def _run():
             ts = np.arange(0, 500, 1)
-            master_data = np.array([ts, 10 * ts - 212]).T
-            master = LocalPipe("float32_1", name="master")
-            await master.write(master_data[:101])
-            await master.close_interval()
-            await master.write(master_data[110:201])
-            await master.close_interval()
-            await master.write(master_data[210:301])
-            await master.close()
+            primary_data = np.array([ts, 10 * ts - 212]).T
+            primary = LocalPipe("float32_1", name="primary")
+            await primary.write(primary_data[:101])
+            await primary.close_interval()
+            await primary.write(primary_data[110:201])
+            await primary.close_interval()
+            await primary.write(primary_data[210:301])
+            await primary.close()
 
-            # Slave1: y=-3x+436
+            # Secondary1: y=-3x+436
             ts = np.arange(0, 500, 1)
-            slave_data = np.array([ts, -3 * ts + 436]).T
-            slave1 = LocalPipe("float32_1", name="slave1")
-            await slave1.write(slave_data[50:161])
-            await slave1.close_interval()
-            await slave1.write(slave_data[170:231])
-            await slave1.close()
+            secondary_data = np.array([ts, -3 * ts + 436]).T
+            secondary1 = LocalPipe("float32_1", name="secondary1")
+            await secondary1.write(secondary_data[50:161])
+            await secondary1.close_interval()
+            await secondary1.write(secondary_data[170:231])
+            await secondary1.close()
 
-            # Slave2: y=30x+210
+            # Secondary2: y=30x+210
             ts = np.arange(0, 500, 1)
-            slave_data = np.array([ts, 30 * ts + 210]).T
-            slave2 = LocalPipe("float32_1", name="slave2")
-            await slave2.write(slave_data[10:191])
-            await slave2.close_interval()
-            await slave2.write(slave_data[205:311])
-            await slave2.close()
+            secondary_data = np.array([ts, 30 * ts + 210]).T
+            secondary2 = LocalPipe("float32_1", name="secondary2")
+            await secondary2.write(secondary_data[10:191])
+            await secondary2.close_interval()
+            await secondary2.write(secondary_data[205:311])
+            await secondary2.close()
 
             output = LocalPipe("float32_3", name="output")
             my_filter = MergeFilter()
-            args = argparse.Namespace(master="master", pipes="unset")
+            args = argparse.Namespace(primary="primary", pipes="unset")
             await my_filter.run(args,
-                                inputs={'master': master,
-                                        'slave1': slave1,
-                                        'slave2': slave2},
+                                inputs={'primary': primary,
+                                        'secondary1': secondary1,
+                                        'secondary2': secondary2},
                                 outputs={'output': output})
             chunk = await output.read()
             self.assertEqual(chunk['timestamp'][0], 50)
@@ -397,27 +398,27 @@ class TestMergeFilter(unittest.TestCase):
             values = np.random.randn(1000, 1)
             data = np.hstack((ts[:, None], values))
 
-            master = helpers.TestingPipe("float32_1", name="master")
-            slave1 = helpers.TestingPipe("float32_1", name="slave1")
-            slave2 = helpers.TestingPipe("float32_1", name="slave2")
+            primary = helpers.TestingPipe("float32_1", name="primary")
+            secondary1 = helpers.TestingPipe("float32_1", name="secondary1")
+            secondary2 = helpers.TestingPipe("float32_1", name="secondary2")
             # seed the input data
             for block in np.split(data, [200, 354, 700, 800, 930]):
-                master.write_nowait(block)
+                primary.write_nowait(block)
             for block in np.split(data, [155, 600, 652, 900]):
-                slave1.write_nowait(block)
+                secondary1.write_nowait(block)
             for block in np.split(data, [100, 300, 600]):
-                slave2.write_nowait(block)
-            await master.close()
-            await slave1.close()
-            await slave2.close()
+                secondary2.write_nowait(block)
+            await primary.close()
+            await secondary1.close()
+            await secondary2.close()
             # run filter in an event loop
             my_filter = MergeFilter()
-            args = argparse.Namespace(master="master", pipes="unset")
+            args = argparse.Namespace(primary="primary", pipes="unset")
             output = LocalPipe("float32_3", name="output")
             await my_filter.run(args,
-                                inputs={'master': master,
-                                        'slave1': slave1,
-                                        'slave2': slave2},
+                                inputs={'primary': primary,
+                                        'secondary1': secondary1,
+                                        'secondary2': secondary2},
                                 outputs={'output': output})
             # put together the data_blocks (should not be any interval breaks)
             # remove the interval close at the end
@@ -435,11 +436,11 @@ class TestMergeFilter(unittest.TestCase):
                 f, (ax1, ax2) = plt.subplots(2, 1, sharey=True)
                 ax1.plot(result['timestamp'], result['data'][:, 0], linewidth=4)
                 ax1.plot(result['timestamp'], result['data'][:, 1], linewidth=1)
-                ax1.set_title('Slave 1 vs Master')
+                ax1.set_title('Secondary 1 vs primary')
 
                 ax2.plot(result['timestamp'], result['data'][:, 0], linewidth=4)
                 ax2.plot(result['timestamp'], result['data'][:, 2], linewidth=1)
-                ax2.set_title('Slave 2 vs Master')
+                ax2.set_title('Secondary 2 vs primary')
 
                 plt.show()
 
@@ -447,54 +448,54 @@ class TestMergeFilter(unittest.TestCase):
 
     def test_static_cases(self):
         # merges streams with several different data rates
-        # 1) Master == Slave1
-        # 2) Master  > Slave2
-        # 3) Master  < Slave3
-        # 4) Master != Slave4 (timestamps randomly offset)
+        # 1) primary == Secondary1
+        # 2) primary  > Secondary2
+        # 3) primary  < Secondary3
+        # 4) primary != Secondary4 (timestamps randomly offset)
         VISUALIZE = False
 
-        # Master: y=10x-212
+        # primary: y=10x-212
         ts = np.arange(127, 1000, 10)
-        master_data = np.array([ts, 10 * ts - 212]).T
+        primary_data = np.array([ts, 10 * ts - 212]).T
 
-        # Slave1: y=-3x+436
-        slave1_data = np.array([ts, -3 * ts + 436]).T
+        # Secondary1: y=-3x+436
+        secondary1_data = np.array([ts, -3 * ts + 436]).T
 
-        # Slave 2: y=0.5x+101
+        # Secondary 2: y=0.5x+101
         ts = np.arange(200, 1000, 47)
-        slave2_data = np.array([ts, 0.5 * ts + 101]).T
+        secondary2_data = np.array([ts, 0.5 * ts + 101]).T
 
-        # Slave 3: y=8x+3000
+        # Secondary 3: y=8x+3000
         ts = np.arange(0, 756, 3)
-        slave3_data = np.array([ts, 8 * ts - 3000]).T
+        secondary3_data = np.array([ts, 8 * ts - 3000]).T
 
-        # Slave 4: y=-15x+6000
+        # Secondary 4: y=-15x+6000
         ts = np.unique([np.round(x) for x in np.random.uniform(100, 1100, 478)])
-        slave4_data = np.array([ts, -15 * ts + 6000]).T
+        secondary4_data = np.array([ts, -15 * ts + 6000]).T
 
         async def run() -> np.ndarray:
             my_filter = MergeFilter()
-            master = LocalPipe("float32_1", name="master")
-            slave1 = LocalPipe("float32_1", name="slave1")
-            slave2 = LocalPipe("float32_1", name="slave2")
-            slave3 = LocalPipe("float32_1", name="slave3")
-            slave4 = LocalPipe("float32_1", name="slave4")
+            primary = LocalPipe("float32_1", name="primary")
+            secondary1 = LocalPipe("float32_1", name="secondary1")
+            secondary2 = LocalPipe("float32_1", name="secondary2")
+            secondary3 = LocalPipe("float32_1", name="secondary3")
+            secondary4 = LocalPipe("float32_1", name="secondary4")
             output = LocalPipe("float32_5", name="output")
-            args = argparse.Namespace(master="master", pipes="unset")
+            args = argparse.Namespace(primary="primary", pipes="unset")
             # seed the input data
-            master.write_nowait(master_data)
-            slave1.write_nowait(slave1_data)
-            slave2.write_nowait(slave2_data)
-            slave3.write_nowait(slave3_data)
-            slave4.write_nowait(slave4_data)
-            [await pipe.close() for pipe in [master, slave1, slave2, slave3, slave4]]
+            primary.write_nowait(primary_data)
+            secondary1.write_nowait(secondary1_data)
+            secondary2.write_nowait(secondary2_data)
+            secondary3.write_nowait(secondary3_data)
+            secondary4.write_nowait(secondary4_data)
+            [await pipe.close() for pipe in [primary, secondary1, secondary2, secondary3, secondary4]]
             # run filter in an event loop
             await my_filter.run(args,
-                                inputs={'master': master,
-                                        'slave1': slave1,
-                                        'slave2': slave2,
-                                        'slave3': slave3,
-                                        'slave4': slave4},
+                                inputs={'primary': primary,
+                                        'secondary1': secondary1,
+                                        'secondary2': secondary2,
+                                        'secondary3': secondary3,
+                                        'secondary4': secondary4},
                                 outputs={'output': output})
             return await output.read_all()
 
@@ -504,27 +505,27 @@ class TestMergeFilter(unittest.TestCase):
         self.assertGreaterEqual(ts[0], 200)
         self.assertLessEqual(ts[-1], 756)
 
-        # check the master
-        master_actual = result['data'][:, 0]
-        residual = (10 * ts - 212) - master_actual
+        # check the primary
+        primary_actual = result['data'][:, 0]
+        residual = (10 * ts - 212) - primary_actual
         np.testing.assert_allclose(residual, 0)
-        # check slave1
-        slave1_actual = result['data'][:, 1]
-        residual = (-3 * ts + 436) - slave1_actual
+        # check secondary1
+        secondary1_actual = result['data'][:, 1]
+        residual = (-3 * ts + 436) - secondary1_actual
         np.testing.assert_allclose(residual, 0)
-        # check slave2
-        slave2_actual = result['data'][:, 2]
-        residual = (0.5 * ts + 101) - slave2_actual
+        # check secondary2
+        secondary2_actual = result['data'][:, 2]
+        residual = (0.5 * ts + 101) - secondary2_actual
         np.testing.assert_allclose(residual, 0)
-        # check slave3
-        slave3_actual = result['data'][:, 3]
-        residual = (8 * ts - 3000) - slave3_actual
+        # check secondary3
+        secondary3_actual = result['data'][:, 3]
+        residual = (8 * ts - 3000) - secondary3_actual
         np.testing.assert_allclose(residual, 0)
 
         if VISUALIZE:
             from matplotlib import pyplot as plt
-            for data in [master_data, slave1_data,
-                         slave2_data, slave3_data, slave4_data]:
+            for data in [primary_data, secondary1_data,
+                         secondary2_data, secondary3_data, secondary4_data]:
                 plt.plot(data[:, 0], data[:, 1], linewidth=1)
 
             plt.plot(result['timestamp'], result['data'], '--', linewidth=2)
