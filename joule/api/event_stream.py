@@ -207,8 +207,10 @@ async def event_stream_write(session: BaseSession,
         data["path"] = stream
     else:
         raise errors.ApiError("Invalid stream datatype. Must be EventStream, Path, or ID")
-    data['events'] = [e.to_json() for e in events]
-    await session.post("/event/data.json", data)
+    # post events in blocks
+    for idx in range(0, len(events), 500):
+        data['events'] = [e.to_json() for e in events[idx:idx+500]]
+        await session.post("/event/data.json", data)
 
 
 async def event_stream_read(session: BaseSession,
