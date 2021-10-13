@@ -40,7 +40,9 @@ class TimescaleStore(DataStore):
 
         inserter = Inserter(self.pool, stream,
                             insert_period, self.cleanup_period)
-        return asyncio.create_task(inserter.run(pipe))
+        t = asyncio.create_task(inserter.run(pipe))
+        t.set_name("Timescale Inserter for [%s]" % stream.name)
+        return t
 
     async def insert(self, stream: 'DataStream',
                      data: np.ndarray, start: int, end: int):

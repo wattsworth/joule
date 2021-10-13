@@ -40,7 +40,9 @@ class Supervisor:
         tasks: Tasks = []
         for worker in self._workers:
             await self._connect_remote_outputs(worker)
-            tasks.append(asyncio.create_task(worker.run(self.subscribe)))
+            t = asyncio.create_task(worker.run(self.subscribe))
+            t.set_name("Supervising worker [%s]" % worker.name)
+            tasks.append(t)
         self.task = asyncio.gather(*tasks)
 
     async def stop(self):

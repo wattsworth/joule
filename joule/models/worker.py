@@ -284,6 +284,7 @@ class Worker:
         popen_lock.release()
 
         logger_task = asyncio.create_task(self._logger())
+        logger_task.set_name("worker [%s]: logger" % self.name)
         await self.process.wait()
         # Unwind the tasks
         await self._close_connections()
@@ -320,8 +321,10 @@ class Worker:
                                    reader_factory=rf)
             self.output_connections.append(DataConnection(
                 name, w, stream, pipe))
-            tasks.append(asyncio.create_task(
-                self._output_handler(pipe, self.subscribers[stream])))
+            t = asyncio.create_task(
+                self._output_handler(pipe, self.subscribers[stream]))
+            t.set_name("worker [%s]: output [%s]" % (self.module.name, stream.name))
+            tasks.append(t)
 
         return asyncio.gather(*tasks)
 

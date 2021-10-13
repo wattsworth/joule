@@ -94,6 +94,7 @@ class RandomReader(ReaderModule):
         BLOCK_SIZE = rate/OUTPUT_RATE
         fraction_remaining = 0
         i = 0
+
         # print("Starting random stream: %d elements @ %0.1fHz" % (width, rate))
         while not self.stop_requested:
             float_block_size = BLOCK_SIZE+fraction_remaining

@@ -38,6 +38,7 @@ faulthandler.enable()
 
 SQL_DIR = os.path.join(os.path.dirname(__file__), 'sql')
 
+
 class Daemon(object):
 
     def __init__(self, my_config: config.JouleConfig):
@@ -184,18 +185,18 @@ class Daemon(object):
             if not stream.is_destination:
                 continue  # only subscribe to active streams
             try:
-                task = self._spawn_inserter(stream)
+                task = asyncio.create_task(self._spawn_inserter(stream))
+                task.set_name("Daemon: spawn_inserter [%s]" % stream.name)
                 inserter_tasks.append(task)
             except SubscriptionError as e:
                 logging.warning(e)
         inserter_task_grp = asyncio.gather(*inserter_tasks)
-
         # start the API server
         middlewares = [
             joule.middleware.sql_rollback,
             joule.middleware.authorize(
                 exemptions=joule.controllers.insecure_routes),
-            ]
+        ]
         app = web.Application(middlewares=middlewares)
 
         app['module-connection-info'] = self.module_connection_info
@@ -327,7 +328,32 @@ def main(argv=None):
     loop.add_signal_handler(signal.SIGINT, daemon.stop)
     loop.add_signal_handler(signal.SIGTERM, daemon.stop)
 
-    loop.run_until_complete(daemon.run())
+    async def debugger():
+        run_count = 0
+        while True:
+            for t in asyncio.all_tasks():
+                name = t.get_name()
+                if "Task" in name:
+                    if "aiohttp" in str(t.get_stack()):
+                        t.set_name("aiohttp")
+                    elif "StreamReader.read" in str(t.get_coro()):
+                        t.set_name("StreamReader.read")
+                    else:
+                        t.print_stack()
+                print(t.get_name())
+            print("-----")
+            await asyncio.sleep(2)
+
+    debug = loop.create_task(debugger())
+    daemon_task = loop.create_task(daemon.run())
+    daemon_task.set_name("daemon")
+    debug.set_name("debugger")
+    loop.run_until_complete(daemon_task)
+    debug.cancel()
+    try:
+        loop.run_until_complete(debug)
+    except asyncio.CancelledError:
+        pass
     loop.close()
 
     # clear out the socket directory
