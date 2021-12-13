@@ -7,8 +7,9 @@ from joule import api, errors
 
 @click.command(name="authorize")
 @click.option("-c", "--config", help="main configuration file", default="/etc/joule/main.conf")
-@click.option("-u", "--url", help="joule API URL")
+@click.option("-u", "--url", help="joule API URL (optional)")
 def admin_authorize(config, url):
+    """Grant a local user CLI access."""
     # expensive imports so only execute if the function is called
     from joule.services import load_config
     from joule.models import (Base, master)

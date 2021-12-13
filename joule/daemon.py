@@ -329,19 +329,40 @@ def main(argv=None):
     loop.add_signal_handler(signal.SIGTERM, daemon.stop)
 
     async def debugger():
-        run_count = 0
+        task_list = []
         while True:
             for t in asyncio.all_tasks():
                 name = t.get_name()
+
                 if "Task" in name:
                     if "aiohttp" in str(t.get_stack()):
                         t.set_name("aiohttp")
                     elif "StreamReader.read" in str(t.get_coro()):
                         t.set_name("StreamReader.read")
                     else:
-                        t.print_stack()
-                print(t.get_name())
-            print("-----")
+                        t.set_name(f"UNK {t.get_coro()}")
+
+                if t not in task_list:
+                    task_list.append(t)
+                    # print(f"New Task[{id(t)}]: {t.get_name()}")
+
+            for t in task_list:
+                if t.done():
+                    # print(f"DONE: {t.get_name()}: ", end="")
+                    # if t.cancelled():
+                    #    print("cancelled")
+                    if not t.cancelled():
+                        exception = t.exception()
+                        if exception is not None:
+                            print("Got exception", t.exception())
+                            print("----Cancelling Daemon----")
+                            daemon_task.cancel()
+                        # else:
+                        #    print("completed")
+                    task_list.remove(t)
+                # else:
+                #    print(f"RUNNING: {t.get_name()}")
+
             await asyncio.sleep(2)
 
     debug = loop.create_task(debugger())

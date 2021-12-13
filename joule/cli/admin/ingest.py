@@ -34,6 +34,7 @@ if typing.TYPE_CHECKING:
 @click.option('-s', "--start", help="timestamp or descriptive string")
 @click.option('-e', "--end", help="timestamp or descriptive string")
 def admin_ingest(config, backup, node, map, pgctl_binary, yes, start, end):
+    """Restore data from a backup."""
     # expensive imports so only execute if the function is called
     from joule.services import load_config
     import sqlalchemy

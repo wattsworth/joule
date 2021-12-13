@@ -10,6 +10,7 @@ from joule.cli.config import pass_config
 @click.command(name="list")
 @pass_config
 def cli_list(config):
+    """Display all configured proxies"""
     loop = asyncio.get_event_loop()
 
     try:

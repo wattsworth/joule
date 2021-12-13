@@ -10,6 +10,7 @@ from joule.cli.config import pass_config
 @click.argument("name")
 @pass_config
 def follower_delete(config, name):
+    """Remove a follower"""
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(config.node.follower_delete(name))

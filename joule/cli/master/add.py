@@ -7,10 +7,15 @@ from joule.api import BaseNode
 
 
 @click.command(name="add")
-@click.argument("type", type=click.Choice(['user', 'joule', 'lumen']))
-@click.argument("identifier")
+@click.argument("type", type=click.Choice(['user', 'joule', 'lumen']))#, help="type of master")
+@click.argument("identifier")# help="username or URL for joule/lumen masters")
 @pass_config
 def cli_add(config, type, identifier):
+    """Authorize a new node master.
+
+    For users specify a username (for documentation only).
+    For joule/lumen masters specify an domain name or IP address. If the master node is not
+    hosted at the default location, specify the full URL."""
     loop = asyncio.get_event_loop()
     try:
         if type == 'user':

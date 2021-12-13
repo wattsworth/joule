@@ -8,6 +8,7 @@ from .default import node_default
 
 @click.group(name="node")
 def node():
+    """Configure local settings."""
     pass  # pragma: no cover
 
 

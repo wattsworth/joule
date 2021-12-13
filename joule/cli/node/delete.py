@@ -8,6 +8,7 @@ from joule import errors
 @click.argument("name")
 @pass_config
 def node_delete(config, name):
+    """Remove a node."""
     try:
         api.delete_node(name)
     except errors.ApiError as e:

@@ -14,6 +14,7 @@ from joule.api.data_stream import DataStream
 @click.argument("destination")
 @pass_config
 def move(config: Config, source: str, destination: str):
+    """Move a folder to a new location."""
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(
@@ -32,6 +33,7 @@ def move(config: Config, source: str, destination: str):
 @click.argument("name")
 @pass_config
 def rename(config: Config, folder, name):
+    """Rename a folder."""
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(
@@ -56,6 +58,7 @@ async def _run_rename(node: BaseNode, folder_path: str, name: str):
 @click.argument("folder")
 @pass_config
 def delete(config, folder, recursive):
+    """Delete a folder and all contents."""
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(
@@ -76,6 +79,7 @@ def delete(config, folder, recursive):
 @click.option("--id", "-i", is_flag=True, help="show ID's")
 @pass_config
 def list(config, path, layout, status, id):
+    """Display folder hierarchy (directory layout)."""
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(
@@ -147,7 +151,7 @@ def _process_event_stream(tree: Tree, stream: DataStream, parent_id, showid: boo
 
 @click.group(name="folder")
 def folders():
-    """Manage Joule folders"""
+    """Manage folders."""
     pass  # pragma: no cover
 
 

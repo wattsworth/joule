@@ -6,6 +6,7 @@ from .logs import cli_logs
 
 @click.group(name="module")
 def module():
+    """Retrieve module information."""
     pass  # pragma: no cover
 
 

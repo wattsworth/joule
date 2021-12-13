@@ -46,7 +46,7 @@ async def add(request: web.Request):  # pragma: no cover
                                    key=make_key())
                 grantor_key = request.headers["X-API-KEY"]
                 my_master.grantor_id = db.query(Master.id).filter(
-                    Master.key == grantor_key).one()
+                    Master.key == grantor_key).one()[0]
                 db.add(my_master)
                 db.commit()
             return web.json_response({"key": my_master.key,
@@ -62,7 +62,7 @@ async def add(request: web.Request):  # pragma: no cover
             grantor_key = request.headers["X-API-KEY"]
 
             my_master.grantor_id = db.query(Master.id).filter(
-                Master.key == grantor_key).one()
+                Master.key == grantor_key).one()[0]
             # make a temporary name
             my_master.name = "pending_%s" % secrets.token_hex(5)
             db.add(my_master)

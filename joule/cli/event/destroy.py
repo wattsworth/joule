@@ -9,6 +9,7 @@ from joule.cli.config import pass_config
 @click.argument("stream")
 @pass_config
 def cli_delete(config, stream):
+    """Delete an event stream."""
     if not click.confirm("Delete event stream [%s]?" % stream):
         click.echo("Aborted!")
         return

@@ -70,6 +70,7 @@ async def start_standalone_procs2(node: api.BaseNode):
                         stderr=subprocess.PIPE,
                         universal_newlines=True,
                         timeout=3)
+    print(p3.stderr)
     assert p3.stderr.find("layout") != -1
 
     #  proc4 reads /counting/base and writes to /counting/plus3

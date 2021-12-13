@@ -12,6 +12,7 @@ from joule.utilities import timestamp_to_human, human_to_timestamp
 @click.argument("stream")
 @pass_config
 def intervals(config: Config, start, end, stream: str):
+    """Display time intervals with data."""
     if start is not None:
         try:
             start = human_to_timestamp(start)

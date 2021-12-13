@@ -17,6 +17,7 @@ from joule.client.builtins.median_filter import MedianFilter
 @click.option("--end", help="timestamp or descriptive string")
 @pass_config
 def median(config: Config, start, end, source, destination,  window):
+    """Apply a median filter."""
     if start is not None:
         try:
             start = human_to_timestamp(start)

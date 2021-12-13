@@ -8,6 +8,7 @@ from joule import errors
 @click.command(name="list")
 @pass_config
 def node_list(config):
+    """Display authorized nodes."""
     try:
         nodes = api.get_nodes()
         default_node = api.get_node()

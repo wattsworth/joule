@@ -6,6 +6,7 @@ from .add import cli_add
 
 @click.group(name="master")
 def master():
+    """Manage node access."""
     pass  # pragma: no cover
 
 

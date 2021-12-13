@@ -25,6 +25,7 @@ stop_requested = False
 @click.argument("stream")
 @pass_config
 def cmd(config, start, end, live, max_rows, show_bounds, mark_intervals, elements, file, stream):
+    """Read data from a stream."""
     signal.signal(signal.SIGTERM, handler)
     signal.signal(signal.SIGINT, handler)
 

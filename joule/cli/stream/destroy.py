@@ -9,6 +9,7 @@ from joule.cli.config import pass_config
 @click.argument("stream")
 @pass_config
 def cli_delete(config, stream):
+    """Delete a data stream"""
     # make sure the stream exists
     asyncio.run(run(config, stream))
 

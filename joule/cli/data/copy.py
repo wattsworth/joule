@@ -27,6 +27,7 @@ Interval = Tuple[int, int]
 @click.argument("destination")
 @pass_config
 def data_copy(config, start, end, new, destination_node, source_url, source, destination):
+    """Copy data between two streams."""
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(_run(config, start, end, new, destination_node,

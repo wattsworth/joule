@@ -75,7 +75,7 @@ def main():
 
     # override to run only particular test(s)
     # tests = [("multinodes", "/joule/tests/e2e/scenarios/multiple_node_tests")]
-
+    # tests = [("standalone modules", "/joule/tests/e2e/scenarios/standalone_modules")]
     first_test = True
     for (test_name, test_path) in tests:
         if os.path.exists("/etc/joule/"):

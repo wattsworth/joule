@@ -8,7 +8,7 @@ from .rename import cli_rename
 
 @click.group(name="stream")
 def streams():
-    """Manage Joule data streams"""
+    """Manage data streams."""
     pass  # pragma: no cover
 
 

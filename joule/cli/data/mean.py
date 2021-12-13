@@ -17,6 +17,7 @@ from joule.client.builtins.mean_filter import MeanFilter
 @click.option("--end", help="timestamp or descriptive string")
 @pass_config
 def mean(config: Config, start, end, source, destination, window):
+    """Apply a moving average (mean) filter."""
     if start is not None:
         try:
             start = human_to_timestamp(start)

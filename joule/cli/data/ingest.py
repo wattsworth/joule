@@ -22,6 +22,7 @@ BLOCK_SIZE = 10000  # insert blocks of datta
 @click.option("-s", "--stream", "stream_path", help="stream path")
 @pass_config
 def ingest(config, stream_path, file):
+    """Add data from an HD5 file to a stream."""
     signal.signal(signal.SIGTERM, handler)
     signal.signal(signal.SIGINT, handler)
 

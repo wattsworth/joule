@@ -13,6 +13,7 @@ from joule.utilities import timestamp_to_human, human_to_timestamp
 @click.argument("stream")
 @pass_config
 def consolidate(config: Config, start, end, max_gap, stream: str):
+    """Remove gaps in a data stream."""
     if start is not None:
         try:
             start = human_to_timestamp(start)

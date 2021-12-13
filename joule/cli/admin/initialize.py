@@ -15,6 +15,7 @@ import secrets
 @click.option("--port", help="TCP port (default is 8080)")
 @click.option("--nilmdb", help="NilmDB URL")
 def admin_initialize(dsn, bind, port, nilmdb):  # pragma: no cover
+    """Run initial system configuration."""
     import pkg_resources
 
     # check arguments

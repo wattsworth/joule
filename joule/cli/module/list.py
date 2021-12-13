@@ -11,6 +11,7 @@ from joule.cli.config import pass_config
 @click.option('--statistics', '-s', is_flag=True, help="include memory and CPU statistics")
 @pass_config
 def cli_list(config, statistics):
+    """List currently executing modules"""
     loop = asyncio.get_event_loop()
 
     try:

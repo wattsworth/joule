@@ -8,6 +8,7 @@ from .ingest import admin_ingest
 
 @click.group(name="admin")
 def admin():
+    """Administer the local node."""
     pass  # pragma: no cover
 
 

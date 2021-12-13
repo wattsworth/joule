@@ -3,7 +3,7 @@ import asyncio
 import argparse
 
 import joule.errors
-from joule.utilities.interval_tools import interval_intersection
+from joule.utilities.interval_tools import interval_intersection, interval_difference
 from joule import errors
 from joule.cli.config import Config, pass_config
 from joule.utilities import timestamp_to_human, human_to_timestamp
@@ -18,6 +18,7 @@ from joule.client.builtins.merge_filter import MergeFilter
 @click.option('-d', "--destination", help="destination stream", required=True)
 @pass_config
 def merge(config: Config, start, end, primary, secondary, destination):
+    """Merge two or more data streams."""
     if start is not None:
         try:
             start = human_to_timestamp(start)
@@ -112,7 +113,20 @@ async def _run(start, end, destination, primary, secondaries, node):
     for s in secondary_streams:
         s_intervals = await node.data_intervals(s, start=start, end=end)
         common_intervals = interval_intersection(common_intervals, s_intervals)
-    for interval in common_intervals:
+    copied_intervals = await node.data_intervals(dest_stream, start=start, end=end)
+    # do not copy intervals that we already have
+    pending_intervals = interval_difference(common_intervals, copied_intervals)
+    #for interval in pending_intervals:
+    #    print(f"{joule.utilities.timestamp_to_human(interval[0])}=>{joule.utilities.timestamp_to_human(interval[1])}")
+    #breakpoint()
+    if len(pending_intervals) == 0:
+        click.echo("Destination already has all the data, nothing to do")
+    else:
+        start_time = joule.utilities.timestamp_to_human(pending_intervals[0][0])
+        end_time = joule.utilities.timestamp_to_human(pending_intervals[-1][0])
+        click.echo(
+            f"Merging from {start_time} to {end_time} ({len(pending_intervals)} intervals)")
+    for interval in pending_intervals:
         start = interval[0]
         end = interval[1]
         click.echo("Processing [%s] -> [%s]" % (timestamp_to_human(start), timestamp_to_human(end)))

@@ -67,7 +67,9 @@ class NilmdbStore(DataStore):
         inserter = Inserter(self.server, stream,
                             insert_period, self.cleanup_period, self._get_client,
                             retry_interval=retry_interval)
-        return asyncio.create_task(inserter.run(pipe))
+        t = asyncio.create_task(inserter.run(pipe))
+        t.set_name("NilmDB Inserter for [%s]" % stream.name)
+        return t
 
     async def extract(self, stream: DataStream, start: Optional[int], end: Optional[int],
                       callback: Callable[[np.ndarray, str, int], Coroutine], max_rows: int = None,

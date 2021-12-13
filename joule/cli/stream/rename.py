@@ -11,6 +11,7 @@ from joule.api import BaseNode
 @click.argument("name")
 @pass_config
 def cli_rename(config: Config, stream, name):
+    """Rename a data stream."""
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(

@@ -8,6 +8,7 @@ from joule import errors
 @click.command(name="list")
 @pass_config
 def cli_list(config):
+    """Display node followers"""
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(

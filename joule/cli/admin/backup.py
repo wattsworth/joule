@@ -15,6 +15,7 @@ import aiohttp
 @click.option("-c", "--config", help="main configuration file", default="/etc/joule/main.conf")
 @click.option("-f", "--folder", help="backup folder name", default="joule_backup_NODE_DATE")
 def admin_backup(config, folder):
+    """Archive entire contents of the local node."""
     # expensive imports so only execute if the function is called
     from joule.services import load_config
 

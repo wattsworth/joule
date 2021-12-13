@@ -32,12 +32,12 @@ See the :ref:`quick-start` for a hands-on introduction with an example data pipe
 Contributing & Running Tests
 ----------------------------
 Contribution is always welcome. Please include tests with your pull request.
-Unittests can be run using nose2, see **joule/htmlcov** for code coverage.
+Unittests can be run using unittest, see **joule/htmlcov** for code coverage.
 
 .. code-block:: bash
 
     $> cd joule
-    $> nose2 # run all unittests
+    $> python3 -m unittest
 
 
 .. toctree::

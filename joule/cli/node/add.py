@@ -10,7 +10,9 @@ from joule import errors, api, utilities
 @click.argument("key")
 @pass_config
 def node_add(config, name: str, url: str, key: str):
+    """Add a new node (requires API key)
 
+    Use the information provided by 'joule master add user' """
     loop = asyncio.get_event_loop()
     my_node = None
     try:

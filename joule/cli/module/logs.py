@@ -10,6 +10,7 @@ from joule.cli.config import pass_config
 @click.argument("name")
 @pass_config
 def cli_logs(config, name):
+    """Display a module's log output"""
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(

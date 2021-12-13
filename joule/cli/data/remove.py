@@ -13,6 +13,7 @@ from joule import errors
 @click.argument("stream")
 @pass_config
 def data_remove(config, start, end, all, stream):
+    """Remove data from a stream."""
     loop = asyncio.get_event_loop()
     if all:
         if start is not None or end is not None:

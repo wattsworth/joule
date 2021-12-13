@@ -16,8 +16,8 @@ Node
         :url: Joule node (default: http://localhost:8088)
         :loop: Event Loop (default: current event loop)
 
-A node represents a Joule instance and is the only means to access API methods. Joule modules have a node attribute
-created automatically that can be accessed from any coroutine.
+A node represents a Joule instance and is the only means to access API methods. Joule modules have a node instance
+created automatically that refers to the node where it is running.
 
 .. code-block:: python
 
@@ -26,10 +26,10 @@ created automatically that can be accessed from any coroutine.
         node_info = await self.node.info()
         # other run code
 
-Standalone scripts may create a node object manually:
+Standalone scripts may connect to any authorized node using the ``api.get_node`` function:
 
     >>> import joule
-    >>> my_node = joule.api.Node()
+    >>> my_node = joule.api.get_node()
 
 The rest of this section describes class methods separated by category.
 

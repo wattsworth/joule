@@ -8,6 +8,7 @@ from joule import errors
 @click.command(name="info")
 @pass_config
 def node_info(config):
+    """Display information about a node."""
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(

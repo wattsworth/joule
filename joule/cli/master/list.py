@@ -8,6 +8,7 @@ from joule import errors
 @click.command(name="list")
 @pass_config
 def cli_list(config):
+    """Display all users and nodes with access to the current node."""
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(

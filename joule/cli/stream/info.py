@@ -13,6 +13,7 @@ from joule.cli.config import pass_config
 @click.argument("path")
 @pass_config
 def cli_info(config, elements, path):
+    """Display stream information."""
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(

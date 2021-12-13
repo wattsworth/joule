@@ -10,6 +10,7 @@ from joule.cli.config import Config, pass_config
 @click.argument("destination")
 @pass_config
 def cli_move(config: Config, source, destination):
+    """Move a data stream to a different folder"""
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(

@@ -22,6 +22,7 @@ def abort_if_false(ctx, param, value):
               expose_value=False,
               prompt='Are you sure you want to wipe the local node?')
 def admin_erase(config, links):
+    """Erase the local node."""
     from joule.services import load_config
     from joule.errors import ConfigurationError
     # make sure joule is not running

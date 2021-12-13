@@ -11,30 +11,46 @@ are optional. The documentation uses the following conventions:
     * Curly braces ({}) indicate a list of mutually-exclusive argument choices.
 
 Usage
-    joule ~ [--help] [-u] [-v] {module, stream, folder, data} ...
+    joule ~ [--help] [--node|-n] [--version] {subcommand} ...
+
 
 Arguments
-    -u URL, --url URL: default http://localhost:8088 Joule node URL. Must be specified before the subcommand
+    --node Node: Specify a different node than the default (see ''node list'' for available nodes)
     --help: Print a help message with usage information on all supported command-line arguments. This can also be specified after the subcommand in which case the usage and arguments of the subcommand are shown instead
-    -v, --version: print the joule CLI version
+    --version: print the joule CLI version
     subcommand: The subcommand followed by its arguments. This is required
 
-base
+node
 ++++
 
 info
 ''''
 
-show information about the joule service
+show information about the selected node
 
 Usage
-    joule info ~ [--help]
+    joule node info ~ [--help]
 Arguments
     none
 Example
-    $> joule info
-    Server Version: 0.8.2
-    Status: online
+    $> joule node info
+    --connecting to [XXXX]--
+    Server Version:         0.9.XX
+    Database Location:      /var/lib/postgresql/12/main
+    Database Size:          2GiB
+    Space Available:        20GiB
+
+list
+''''
+
+add
+'''
+
+delete
+''''''
+
+default
+'''''''
 
 module
 ++++++

@@ -11,12 +11,12 @@ from .ingest import ingest
 
 @click.group(name="data")
 def data():
-    """Manage Joule data"""
+    """Interact with data streams."""
     pass  # pragma: no cover
 
 @click.group(name="filter")
 def filter():
-    """Filter data"""
+    """Filter stream data."""
     pass  # pragma: no cover
 
 data.add_command(data_copy)
@@ -26,7 +26,7 @@ data.add_command(data_remove)
 data.add_command(intervals)
 data.add_command(consolidate)
 data.add_command(ingest)
+data.add_command(filter)
 
 filter.add_command(mean)
 filter.add_command(median)
-data.add_command(filter)

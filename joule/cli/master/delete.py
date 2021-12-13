@@ -10,6 +10,11 @@ from joule.cli.config import pass_config
 @click.argument("name")
 @pass_config
 def cli_delete(config, type, name):
+    """
+    Revoke access for a user or Joule/Lumen node.
+
+    Specify the type of master and the name as displayed by the 'master list' command
+    """
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(

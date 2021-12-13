@@ -16,6 +16,7 @@ from joule import utilities
 @click.option("--delete", is_flag=True, help="remove annotations for this stream")
 @pass_config
 def cli_annotations(config, stream, start, end, delete, csv):
+    """Display stream annotations."""
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(

@@ -3,6 +3,7 @@ import numpy as np
 import random
 import logging
 import asyncpg
+import socket
 
 from joule.models import DataStream, pipes
 from joule.models.data_store import psql_helpers
@@ -47,33 +48,37 @@ class Inserter:
                 await asyncio.sleep(self.insert_period)
                 data = await pipe.read()
                 # there might be an interval break and no new data
-                async with self.pool.acquire() as conn:
-                    if len(data) > 0:
-                        if first_insert:
-                            first_insert = False
-                            await psql_helpers.close_interval(conn, self.stream, data['timestamp'][0] - 1)
-                        last_ts = data['timestamp'][-1]
-                        # lazy initialization of decimator
-                        if self.stream.decimate and self.decimator is None:
-                            self.decimator = Decimator(self.stream, 1, 4)
-                        psql_bytes = psql_helpers.data_to_bytes(data)
-                        await conn.copy_to_table("stream%d" % self.stream.id,
-                                                 schema_name='data',
-                                                 format='binary',
-                                                 source=psql_bytes)
-                        # this was successful so consume the data
-                        pipe.consume(len(data))
-                        # decimate the data
-                        if self.decimator is not None:
-                            await self.decimator.process(conn, data)
-                    # check for interval breaks
-                    if pipe.end_of_interval and last_ts is not None:
-                        await psql_helpers.close_interval(conn, self.stream, last_ts)
-                        if self.decimator is not None:
-                            self.decimator.close_interval()
-                    ticks += 1
-                    if ticks % self.cleanup_interval == 0:
-                        await self.cleanup(conn)
+                try:
+                    async with self.pool.acquire() as conn:
+                        if len(data) > 0:
+                            if first_insert:
+                                first_insert = False
+                                await psql_helpers.close_interval(conn, self.stream, data['timestamp'][0] - 1)
+                            last_ts = data['timestamp'][-1]
+                            # lazy initialization of decimator
+                            if self.stream.decimate and self.decimator is None:
+                                self.decimator = Decimator(self.stream, 1, 4)
+                            psql_bytes = psql_helpers.data_to_bytes(data)
+                            await conn.copy_to_table("stream%d" % self.stream.id,
+                                                     schema_name='data',
+                                                     format='binary',
+                                                     source=psql_bytes)
+                            # this was successful so consume the data
+                            pipe.consume(len(data))
+                            # decimate the data
+                            if self.decimator is not None:
+                                await self.decimator.process(conn, data)
+                        # check for interval breaks
+                        if pipe.end_of_interval and last_ts is not None:
+                            await psql_helpers.close_interval(conn, self.stream, last_ts)
+                            if self.decimator is not None:
+                                self.decimator.close_interval()
+                        ticks += 1
+                        if ticks % self.cleanup_interval == 0:
+                            await self.cleanup(conn)
+                except (asyncpg.exceptions.PostgresConnectionError, socket.error) as e:
+                    log.error(f"Timescale inserter: [{str(e)}, trying again in 2 seconds")
+                    await asyncio.sleep(2)
 
         except (pipes.EmptyPipe, asyncio.CancelledError):
             pass

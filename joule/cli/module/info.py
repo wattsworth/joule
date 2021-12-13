@@ -11,6 +11,7 @@ from joule.cli.config import Config, pass_config
 @click.argument("name")
 @pass_config
 def cli_info(config: Config, name: str):
+    """Display module information"""
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(

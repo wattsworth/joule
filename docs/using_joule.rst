@@ -28,8 +28,8 @@ Joule is a system service. Use the ``joule`` command to interact with the servic
     ... journalctl output
 
     # use the joule CLI to interact with the service
-    $> joule info
-    whatever is produced by joule info
+    $> joule --help
+    Usage: joule [OPTIONS] COMMAND [ARGS]...
 
     </div>
 

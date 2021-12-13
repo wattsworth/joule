@@ -7,7 +7,7 @@ from .rename import cli_rename
 
 @click.group(name="event")
 def events():
-    """Manage Joule event streams"""
+    """Manage event streams."""
     pass  # pragma: no cover
 
 

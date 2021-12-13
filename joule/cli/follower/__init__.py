@@ -5,6 +5,7 @@ from .delete import follower_delete
 
 @click.group(name="follower")
 def follower():
+    """Manage node followers."""
     pass  # pragma: no cover
 
 
