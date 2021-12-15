@@ -32,6 +32,7 @@ class TcpSession(BaseSession):
     async def get_session(self):
         if self._session is None:
             self._session = aiohttp.ClientSession(
+                connector=aiohttp.TCPConnector(force_close=True),
                 timeout=aiohttp.ClientTimeout(total=None),
                 headers={"X-API-KEY": self.key})
         return self._session

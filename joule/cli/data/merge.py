@@ -116,9 +116,10 @@ async def _run(start, end, destination, primary, secondaries, node):
     copied_intervals = await node.data_intervals(dest_stream, start=start, end=end)
     # do not copy intervals that we already have
     pending_intervals = interval_difference(common_intervals, copied_intervals)
-    #for interval in pending_intervals:
-    #    print(f"{joule.utilities.timestamp_to_human(interval[0])}=>{joule.utilities.timestamp_to_human(interval[1])}")
-    #breakpoint()
+    # only copy intervals with at least 1 second of data- there are issues with 1 sample offsets
+    # that cause merge to think there is missing data when there is not any- this is probably due to
+    # the backend not having the data boundaries stored exactly correctly
+    pending_intervals = [i for i in pending_intervals if (i[1]-i[0]) > 1e6]
     if len(pending_intervals) == 0:
         click.echo("Destination already has all the data, nothing to do")
     else:

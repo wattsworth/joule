@@ -3,7 +3,7 @@ import aiohttp
 import numpy as np
 import random
 import time
-from typing import List, Callable
+from typing import List, Callable, Optional
 import logging
 from icecream import ic
 
@@ -42,10 +42,10 @@ class Inserter:
         except asyncio.CancelledError:
             return
 
-        cleaner_task: asyncio.Task = None
+        cleaner_task: Optional[asyncio.Task] = None
         if self.stream.keep_us != DataStream.KEEP_ALL:
             cleaner_task = asyncio.create_task(self._clean())
-
+            cleaner_task.set_name("NilmDB Clean Task for [%s]" % self.path)
         while True:
             try:
                 async with self._get_client() as session:
