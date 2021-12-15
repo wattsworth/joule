@@ -1,6 +1,6 @@
 import ssl
 import aiohttp
-
+import asyncio
 from .base_session import BaseSession
 from joule import errors
 
@@ -40,30 +40,41 @@ class TcpSession(BaseSession):
         session = await self.get_session()
         try:
             # logging.warning("requesting: "+self.url+path)
-            async with session.request(method,
-                                       self.url + path,
-                                       data=data,
-                                       params=params,
-                                       json=json,
-                                       chunked=chunked,
-                                       ssl=self.ssl_context) as resp:
-                if resp.status != 200:
-                    msg = await resp.text()
-                    raise errors.ApiError("%s [%d]" % (msg, resp.status))
-                if resp.content_type != 'application/json':
-                    body = await resp.text()
-                    if body.lower() != "ok":
-                        raise errors.ApiError("Invalid node response: %s" % body)
-                    else:
-                        return None
-                try:
-                    # logging.warning("\trequest is done")
-                    return await resp.json()
-                except ValueError:
-                    raise errors.ApiError("Invalid node response (not json)")
+            i = 0
+            MAX_RETRY_COUNT = 4
+            RETRY_DELAY = 2
+            while i < MAX_RETRY_COUNT:
+                async with session.request(method,
+                                           self.url + path,
+                                           data=data,
+                                           params=params,
+                                           json=json,
+                                           chunked=chunked,
+                                           ssl=self.ssl_context) as resp:
+                    if resp.status != 200:
+                        msg = await resp.text()
+                        if resp.status > 500:
+                            print("API Error: [%d], retrying %d/%d" % (resp.status, i, MAX_RETRY_COUNT))
+                            i += 1
+                            await asyncio.sleep(RETRY_DELAY)
+                            continue  # retry
+                        raise errors.ApiError("%s [%d]" % (msg, resp.status))
+                    if resp.content_type != 'application/json':
+                        body = await resp.text()
+                        if body.lower() != "ok":
+                            raise errors.ApiError("Invalid node response: %s" % body)
+                        else:
+                            return None
+                    try:
+                        # logging.warning("\trequest is done")
+                        return await resp.json()
+                    except ValueError:
+                        raise errors.ApiError("Invalid node response (not json)")
 
         except ssl.CertificateError as e:
             raise errors.ApiError("the specified certificate authority did not validate this server")
 
         except aiohttp.ClientError as e:
             raise errors.ApiError("Cannot contact node at [%s]" % self.url) from e
+
+        raise errors.ApiError("API Error [%d]: max retry count exceeded" % resp.status)
