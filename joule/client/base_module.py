@@ -216,6 +216,9 @@ class BaseModule:
         # --node: node to connect to for isolated execution
         grp.add_argument("--node", default="",
                          help="joule node for isolated execution")
+        # --new: historical isolation mode
+        grp.add_argument("--new", action="store_true",
+                         help="process historic data newer than the most recent destination data")
         # --start_time: historical isolation mode
         grp.add_argument("--start_time", default=None,
                          help="input start time for historic isolation")
@@ -255,7 +258,8 @@ class BaseModule:
             if parsed_args.stream_configs != "unset":
                 configured_streams = helpers.read_stream_configs(parsed_args.stream_configs)
             pipes_in, pipes_out = await build_network_pipes(
-                inputs, outputs, configured_streams, self.node, start, end, parsed_args.force)
+                inputs, outputs, configured_streams, self.node, start, end,
+                parsed_args.new, parsed_args.force)
         else:
             # run the module within joule
             (pipes_in, pipes_out) = await helpers.build_fd_pipes(pipe_args, self.node)

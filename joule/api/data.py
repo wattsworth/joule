@@ -197,7 +197,7 @@ async def _live_reader(session: BaseSession, my_stream: DataStream,
                                    ssl=session.ssl_context) as response:
             if response.status != 200:  # pragma: no cover
                 msg = await response.text()
-                log.error("Error reading input [%s]: " % my_stream.name, msg)
+                log.error("Error reading input [%s]: %s" % (my_stream.name, msg))
                 await pipe_out.close()
                 return
             pipe_out.change_layout(response.headers['joule-layout'])

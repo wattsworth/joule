@@ -53,6 +53,7 @@ async def build_network_pipes(inputs: Dict[str, str],
                               my_node: BaseNode,
                               start_time: Optional[int],
                               end_time: Optional[int],
+                              new=False,
                               force=False):
     if not force:
         _display_warning(outputs.values(), start_time, end_time)
@@ -62,6 +63,15 @@ async def build_network_pipes(inputs: Dict[str, str],
     try:
         for name in inputs:
             my_stream = await _parse_stream(my_node, inputs[name], configured_streams)
+            if new:
+                if start_time is not None:
+                    raise errors.ConfigurationError("Cannot specify [start] and [new], pick one")
+                # determine start time based on last time stamp in outputs
+                start_time, end_time = await _compute_new_interval(my_node, inputs, outputs)
+                print("Running from [%s] to [%s]" %(
+                    timestamp_to_human(start_time),
+                    timestamp_to_human(end_time)
+                ))
             if start_time is None and end_time is None:
                 # subscribe to live data
                 pipes_in[name] = await my_node.data_subscribe(my_stream)
@@ -103,7 +113,8 @@ def _display_warning(paths, start_time, end_time):
             exit(1)
 
 
-async def _parse_stream(node: BaseNode, pipe_config, configured_streams: Dict[str, data_stream.DataStream]) -> data_stream.DataStream:
+async def _parse_stream(node: BaseNode, pipe_config,
+                        configured_streams: Dict[str, data_stream.DataStream]) -> data_stream.DataStream:
     (path, name, inline_config) = parse_pipe_config(pipe_config)
     full_path = "/".join([path, name])
     configured_stream = None
@@ -155,3 +166,23 @@ async def _parse_stream(node: BaseNode, pipe_config, configured_streams: Dict[st
         else:
             raise e
     return remote_stream
+
+
+async def _compute_new_interval(node, inputs, outputs) -> Optional[Tuple[int, int]]:
+    last_input = None
+    last_output = None
+    for name in inputs:
+        stream_info = await node.data_stream_info(inputs[name])
+        if last_input is None:
+            last_input = stream_info.end
+        else:
+            last_input = max(last_input, stream_info.end)
+    for name in outputs:
+        stream_info = await node.data_stream_info(outputs[name])
+        if last_output is None:
+            last_output = stream_info.end
+        else:
+            last_output = max(last_output, stream_info.end)
+    if last_input is None or last_output is None:
+        return None
+    return last_output, last_input
