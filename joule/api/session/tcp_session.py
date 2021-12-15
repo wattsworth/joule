@@ -41,7 +41,7 @@ class TcpSession(BaseSession):
         try:
             # logging.warning("requesting: "+self.url+path)
             i = 0
-            MAX_RETRY_COUNT = 4
+            MAX_RETRY_COUNT = 8
             RETRY_DELAY = 2
             while i < MAX_RETRY_COUNT:
                 async with session.request(method,
