@@ -18,7 +18,9 @@ from joule.client.builtins.merge_filter import MergeFilter
 @click.option('-d', "--destination", help="destination stream", required=True)
 @pass_config
 def merge(config: Config, start, end, primary, secondary, destination):
-    """Merge two or more data streams."""
+    """Merge two or more data streams. Elements will be prefixed with source stream name or a custom prefix
+       using a : such as /source/streamA would create elements streamA E1, streamA E2, etc and /source/streamA:A
+       would create elements A E1, A E2, etc"""
     if start is not None:
         try:
             start = human_to_timestamp(start)
@@ -92,15 +94,19 @@ async def _run(start, end, destination, primary, secondaries, node):
         prefix = ""
         if ':' in primary:
             prefix = primary.split(':')[-1]
+        else:
+            prefix = primary_stream.name
         for e in primary_stream.elements:
-            e.name = prefix + e.name
+            e.name = prefix + ' ' + e.name
             elements.append(e)
         for i in range(len(secondaries)):
             prefix = ""
             if ':' in secondaries[i]:
                 prefix = secondaries[i].split(':')[-1]
+            else:
+                prefix = secondary_streams[i].name
             for e in secondary_streams[i].elements:
-                e.name = prefix + e.name
+                e.name = prefix +' '+ e.name
                 elements.append(e)
         dest_stream = joule.api.DataStream(name=dest_name, elements=elements, datatype='float32')
         try:

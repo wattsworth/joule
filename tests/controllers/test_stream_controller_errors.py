@@ -100,6 +100,16 @@ class TestStreamControllerErrors(AioHTTPTestCase):
                                        display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(3)]
         resp = await self.client.post("/stream.json", json={"stream": new_stream.to_json()})
         self.assertEqual(resp.status, 400)
+        # element names must be unique
+        e1_name = new_stream.elements[1].name
+        new_stream.elements[1].name = new_stream.elements[2].name
+        resp = await self.client.post("/stream.json", json={
+            "dest_path": "/folder2/deeper",
+            "stream": new_stream.to_json()})
+        self.assertEqual(resp.status, 400)
+        self.assertIn("names must be unique", await resp.text())
+        new_stream.elements[1].name = e1_name  # restore the original name
+
         # stream must have a unique name in the folder
         new_stream.name = "stream1"
         resp = await self.client.post("/stream.json", json={"stream": new_stream.to_json(),

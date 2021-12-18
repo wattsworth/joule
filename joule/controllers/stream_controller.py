@@ -92,6 +92,10 @@ async def create(request):
         new_stream.is_configured = False
         new_stream.is_destination = False
         new_stream.is_source = False
+        # make sure element names are unique
+        element_names = [e.name for e in new_stream.elements]
+        if len(set(element_names)) != len(element_names):
+            raise ConfigurationError("element names must be unique")
         # clear out the id's
         new_stream.id = None
         for elem in new_stream.elements:
