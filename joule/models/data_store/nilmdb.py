@@ -146,7 +146,7 @@ class NilmdbStore(DataStore):
         small_gaps = [gap for gap in gaps if (gap[1] - gap[0]) <= max_gap]
         # spawn an inserter to close each gap
 
-        info = await self._path_info()
+        info = await self._path_info([stream])
         all_paths = info.keys()
         path = compute_path(stream)
         insert_url = "{server}/stream/insert".format(server=self.server)
@@ -167,7 +167,7 @@ class NilmdbStore(DataStore):
     async def remove(self, stream, start: Optional[int] = None,
                      end: Optional[int] = None):
         """ remove [start,end] in path and all decimations """
-        info = await self._path_info()
+        info = await self._path_info([stream])
         all_paths = info.keys()
         base_path = compute_path(stream)
         regex = re.compile(r"%s~decim-(\d)+$" % base_path)
@@ -176,14 +176,14 @@ class NilmdbStore(DataStore):
             await self._remove_by_path(path, start, end)
 
     async def info(self, streams: List[DataStream]) -> Dict[int, StreamInfo]:
-        info_dict = await self._path_info()
+        info_dict = await self._path_info(streams)
         # go through each stream and compute the effective DataStreamInfo
         # object by looking at the raw and decimated paths
         streams_info = {}
         for s in streams:
             base_info_list = [info for (path, info) in info_dict.items() if path == compute_path(s)]
             if len(base_info_list) == 0:
-                # thie stream has no data records, just make up an empty result
+                # this stream has no data records, just make up an empty result
                 streams_info[s.id] = StreamInfo(None, None, 0, 0, 0)
                 continue
             stream_info: StreamInfo = base_info_list[0]
@@ -211,7 +211,7 @@ class NilmdbStore(DataStore):
     async def destroy(self, stream: DataStream):
         await self.remove(stream)
         url = "{server}/stream/destroy".format(server=self.server)
-        info = await self._path_info()
+        info = await self._path_info([stream])
         all_paths = info.keys()
         base_path = compute_path(stream)
         regex = re.compile(r'%s~decim-(\d)+$' % base_path)
@@ -310,10 +310,14 @@ class NilmdbStore(DataStore):
                 await check_for_error(resp)
                 return int(await resp.text())
 
-    async def _path_info(self) -> Dict[str, StreamInfo]:
+    async def _path_info(self, streams: List[DataStream]) -> Dict[str, StreamInfo]:
         """ set path to None to list all streams """
         url = "{server}/stream/list".format(server=self.server)
-        params = {"extended": 1}
+        paths = []
+        for stream in streams:
+            paths += [f'/joule/{stream.id}', f'/joule/{stream.id}~decim%']
+        params = {"extended": 1,
+                  "path": paths}
         async with self._get_client() as session:
             async with session.get(url, params=params) as resp:
                 body = await resp.text()

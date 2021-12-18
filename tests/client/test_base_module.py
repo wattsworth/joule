@@ -147,8 +147,7 @@ class TestBaseModule(helpers.AsyncTestCase):
                                           start_time='1 hour ago', end_time=None, force=True,
                                           module_config=f.name,
                                           stream_configs='unset',
+                                          new=False,
                                           url='http://localhost:8088')
                 module.start(args)
                 self.assertTrue(built_pipes)
-
-
