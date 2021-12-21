@@ -1,10 +1,9 @@
-#from joule.services.parse_pipe_config import parse_inline_config
+from joule.services.parse_pipe_config import parse_inline_config
 
-#from joule.api.data_stream import DataStream, Element
+from joule.api.data_stream import DataStream, Element
 
 
-def build_stream(name, inline_config: str):# -> DataStream:
-    assert(False, 'deprecated')
+def build_stream(name, inline_config: str) -> DataStream:
     s = DataStream()
     s.name = name
     (datatype, names) = parse_inline_config(inline_config)

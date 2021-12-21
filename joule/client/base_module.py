@@ -7,18 +7,24 @@ from aiohttp import web
 import socket
 import logging
 import os
-import uvloop
+import json
 
+import joule.utilities
 from joule.api import node
 from joule import api
+from joule.api.data_stream import DataStream, Element
 from joule.client import helpers
 # import directly so it can be mocked easily in unit tests
-from joule.errors import ConfigurationError, EmptyPipeError
-from joule.models import pipes, data_stream
+from joule.errors import ConfigurationError, EmptyPipeError, ApiError
+from joule.models import pipes
+from joule.services.parse_pipe_config import parse_pipe_config, parse_inline_config
+from joule.utilities.interval_tools import interval_intersection, interval_difference
 
 Pipes = Dict[str, 'pipes.Pipe']
 Loop = asyncio.AbstractEventLoop
 log = logging.getLogger('joule')
+
+DataStreams = Dict[str, api.DataStream]
 
 
 class BaseModule:
@@ -32,7 +38,7 @@ class BaseModule:
         self.pipes: List[pipes.Pipe] = []
         self.STOP_TIMEOUT = 2
         self.runner = None
-        self.node = None
+        self.node: node.BaseNode = None
 
     async def run_as_task(self, parsed_args, app: web.Application) -> asyncio.Task:
         assert False, "implement in child class"  # pragma: no cover
@@ -165,13 +171,12 @@ class BaseModule:
         loop.add_signal_handler(signal.SIGTERM, stop_task)
         try:
             loop.run_until_complete(task)
-        except (asyncio.CancelledError, pipes.EmptyPipe, EmptyPipeError):
+        except (asyncio.CancelledError, pipes.EmptyPipe, EmptyPipeError) as e:
             pass
         finally:
             self._cleanup(loop)
 
     def _cleanup(self, loop: Loop):
-
         if self.runner is not None:
             loop.run_until_complete(self.runner.cleanup())
         for pipe in self.pipes:
@@ -219,6 +224,9 @@ class BaseModule:
         # --new: historical isolation mode
         grp.add_argument("--new", action="store_true",
                          help="process historic data newer than the most recent destination data")
+        # --live: subscribe to inputs (inputs must be actively produced)
+        grp.add_argument("--live", action="store_true",
+                         help="process live input data")
         # --start_time: historical isolation mode
         grp.add_argument("--start_time", default=None,
                          help="input start time for historic isolation")
@@ -232,6 +240,160 @@ class BaseModule:
         parser.formatter_class = argparse.RawDescriptionHelpFormatter
         self.custom_args(parser)
 
+    async def _parse_streams(self, parsed_args) -> Tuple[DataStreams, DataStreams]:
+        inputs = {}
+        outputs = {}
+        # if this is running in Joule use the pipe args structure with API calls
+        if parsed_args.pipes != 'unset':
+            try:
+                pipe_json = json.loads(json.loads(parsed_args.pipes))
+                # if debugging, pycharm escapes the outer JSON
+                # pipe_json = json.loads(pipe_args.encode('utf-8').decode('unicode_escape'))
+                output_args = pipe_json['outputs']
+                input_args = pipe_json['inputs']
+                for name, config in input_args.items():
+                    inputs[name] = await self.node.data_stream_get(config['id'])
+                for name, config in output_args.items():
+                    outputs[name] = await self.node.data_stream_get(config['id'])
+            except (KeyError, json.JSONDecodeError):
+                raise ConfigurationError(f"invalid pipes argument: {parsed_args.pipes}")
+        # otherwise use the specified module configuration file
+        else:
+            if parsed_args.module_config == "unset":
+                raise ConfigurationError("module_config parameter missing")
+            module_config = helpers.read_module_config(parsed_args.module_config)
+            if parsed_args.stream_configs != "unset":
+                configured_streams = helpers.read_stream_configs(parsed_args.stream_configs)
+            else:
+                configured_streams = {}
+            if 'Inputs' in module_config:
+                for name, path in module_config['Inputs'].items():
+                    stream = await self._validate_or_create_stream(configured_streams, path)
+                    inputs[name] = stream
+            if 'Outputs' in module_config:
+                for name, path in module_config['Outputs'].items():
+                    stream = await self._validate_or_create_stream(configured_streams, path)
+                    outputs[name] = stream
+        return inputs, outputs
+
+    async def _validate_or_create_stream(self, configured_streams, raw_path):
+        # process inline configuration if present
+        path = await self._process_inline_configuration(raw_path, configured_streams)
+        # try to get the actual stream from Joule
+        try:
+            stream = await self.node.data_stream_get(path)
+            # validate that the local configuration matches the actual one
+            if path in configured_streams:
+                if configured_streams[path].layout != stream.layout:
+                    raise ConfigurationError("Stream [%s] exists with layout [%s], not [%s]" % (
+                        path, stream.layout, configured_streams[path].layout
+                    ))
+            return stream
+        except ApiError:
+            pass
+        # create the stream
+        if path not in configured_streams:
+            raise ConfigurationError(f"{path} does not exist, provide config file or inline configuration")
+        folder_path = '/'.join(path.split('/')[:-1])
+        return await self.node.data_stream_create(configured_streams[path], folder_path)
+
+    async def _process_inline_configuration(self, pipe_config, configured_streams):
+        # if there is an inline configuration add it to the configured streams dict
+        # returns the full path to the stream
+        (path, name, inline_config) = parse_pipe_config(pipe_config)
+        if inline_config == '':
+            return pipe_config  # the pipe config is just the full path
+        full_path = "/".join([path, name])
+        # inline config exists
+        (datatype, element_names) = parse_inline_config(inline_config)
+        datatype = datatype.name.lower()  # API models are plain text attributes
+        # make sure inline config agrees with stream config if present
+        if full_path in configured_streams:
+            stream = configured_streams[full_path]
+            if datatype != stream.datatype.lower() or \
+                    len(stream.elements) != len(element_names):
+                raise ConfigurationError(
+                    f"Invalid configuration: [{name}] inline format does not match config file")
+        # otherwise create a stream object from the inline config
+        stream = DataStream()
+        stream.name = name
+        stream.decimate = True
+        stream.datatype = datatype
+        for i in range(len(element_names)):
+            e = Element()
+            e.name = element_names[i]
+            e.index = i
+            stream.elements.append(e)
+        configured_streams[full_path] = stream
+        return full_path
+
+    async def _compute_missing_intervals(self, input_streams, output_streams, parsed_args):
+        # 1) If live is specified, don't do anything else- no intervals to process
+        if parsed_args.live or parsed_args.pipes != 'unset':
+            return [None]
+        # 2) Convert string time arguments into Optional[timestamp] types
+        start, end = helpers.validate_time_bounds(parsed_args.start_time,
+                                                  parsed_args.end_time)
+        # 3) Find the effective input and output intervals (intersection of the streams)
+        input_intervals = None
+        for stream in input_streams.values():
+            intervals = await self.node.data_intervals(stream, start, end)
+            if input_intervals is not None:
+                input_intervals = interval_intersection(input_intervals, intervals)
+            else:
+                input_intervals = intervals
+        output_intervals = None
+        for stream in output_streams.values():
+            intervals = await self.node.data_intervals(stream, start, end)
+            if output_intervals is not None:
+                output_intervals = interval_intersection(output_intervals, intervals)
+            else:
+                output_intervals = intervals
+        missing_intervals = interval_difference(input_intervals, output_intervals)
+        # filter out intervals shorter than 1 second (boundary error with intervals)
+        missing_intervals = [i for i in missing_intervals if (i[1]-i[0]) > 1e6]
+        return missing_intervals
+
+    async def _build_pipes_new(self, interval, input_streams, output_streams, pipe_args) -> Tuple[Pipes, Pipes]:
+        input_pipes = {}
+        output_pipes = {}
+        # use network sockets for connection to inputs and outputs
+        if pipe_args == 'unset':
+            for (name, stream) in input_streams.items():
+                if interval is None:  # subscribe to live data
+                    input_pipes[name] = await self.node.data_subscribe(stream)
+                else:
+                    input_pipes[name] = await self.node.data_read(stream, interval[0], interval[1])
+            for (name, stream) in output_streams.items():
+                if interval is None:
+                    output_pipes[name] = await self.node.data_write(stream)
+                else:
+                    output_pipes[name] = await self.node.data_write(stream, interval[0], interval[1])
+        # use file descriptors provided by joule for connection to inputs and outputs
+        else:
+            try:
+                pipe_json = json.loads(json.loads(pipe_args))
+                # if debugging, pycharm escapes the outer JSON
+                # pipe_json = json.loads(pipe_args.encode('utf-8').decode('unicode_escape'))
+                output_args = pipe_json['outputs']
+                input_args = pipe_json['inputs']
+            except (KeyError, json.JSONDecodeError):
+                raise ConfigurationError(f"invalid pipes argument: {pipe_args}")
+
+            for name, arg in output_args.items():
+                wf = pipes.writer_factory(arg['fd'])
+                output_pipes[name] = pipes.OutputPipe(stream=output_streams[name],
+                                                      layout=arg['layout'],
+                                                      writer_factory=wf)
+            for name, arg in input_args.items():
+                rf = pipes.reader_factory(arg['fd'])
+                input_pipes[name] = pipes.InputPipe(stream=input_streams[name],
+                                                    layout=arg['layout'],
+                                                    reader_factory=rf)
+        # keep track of the pipes so they can be closed
+        self.pipes = list(input_pipes.values()) + list(output_pipes.values())
+        return input_pipes, output_pipes
+
     async def _build_pipes(self, parsed_args) -> Tuple[Pipes, Pipes]:
         # for unit testing mocks
         from joule.client.helpers.pipes import build_network_pipes
@@ -240,10 +402,13 @@ class BaseModule:
 
         # figure out whether we should run with fd's or network sockets
         if pipe_args == 'unset':
-            start, end = helpers.validate_time_bounds(parsed_args.start_time,
-                                                      parsed_args.end_time)
             if parsed_args.module_config == 'unset':
                 raise ConfigurationError('must specify --module_config')
+
+            # 1) Convert string time arguments into Optional[timestamp] types
+            start, end = helpers.validate_time_bounds(parsed_args.start_time,
+                                                      parsed_args.end_time)
+            # 2) Parse module config to find input and output streams
             inputs = {}
             outputs = {}
             module_config = helpers.read_module_config(parsed_args.module_config)
@@ -253,10 +418,11 @@ class BaseModule:
             if 'Outputs' in module_config:
                 for name, path in module_config['Outputs'].items():
                     outputs[name] = path
-
+            # 3) Parse all stream config files in case they are needed
             configured_streams = {}
             if parsed_args.stream_configs != "unset":
                 configured_streams = helpers.read_stream_configs(parsed_args.stream_configs)
+            # 4) Build the input and output pipes using network sockets
             pipes_in, pipes_out = await build_network_pipes(
                 inputs, outputs, configured_streams, self.node, start, end,
                 parsed_args.new, parsed_args.force)

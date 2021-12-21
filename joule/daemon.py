@@ -355,8 +355,8 @@ def main(argv=None):
                         exception = t.exception()
                         if exception is not None:
                             print("Got exception", t.exception())
-                            print("----Cancelling Daemon----")
-                            daemon_task.cancel()
+                            #print("----Cancelling Daemon----")
+                            #daemon_task.cancel()
                         # else:
                         #    print("completed")
                     task_list.remove(t)

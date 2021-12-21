@@ -76,6 +76,7 @@ class TcpSession(BaseSession):
             raise errors.ApiError("the specified certificate authority did not validate this server")
 
         except aiohttp.ClientError as e:
+            breakpoint()
             raise errors.ApiError("Cannot contact node at [%s]" % self.url) from e
 
         raise errors.ApiError("API Error [%d]: max retry count exceeded" % resp.status)

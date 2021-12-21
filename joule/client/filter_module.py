@@ -1,6 +1,7 @@
 import asyncio
 import logging
 
+import joule.utilities
 from . import base_module
 from joule import errors
 
@@ -49,11 +50,30 @@ class FilterModule(base_module.BaseModule):
         assert False, "implement in child class"  # pragma: no cover
 
     async def run_as_task(self, parsed_args, app) -> asyncio.Task:
-        try:
-            (pipes_in, pipes_out) = await self._build_pipes(parsed_args)
-        except errors.ApiError as e:
-            logging.error(str(e))
-            return asyncio.create_task(asyncio.sleep(0))
-        await self.setup(parsed_args, app, pipes_in, pipes_out)
-        return asyncio.create_task(
-            self.run(parsed_args, pipes_in, pipes_out))
+        (input_streams, output_streams) = await self._parse_streams(parsed_args)
+        missing_intervals = await self._compute_missing_intervals(input_streams, output_streams, parsed_args)
+        return asyncio.create_task(self._task(missing_intervals, input_streams, output_streams, parsed_args, app))
+
+    async def _task(self, pending_intervals, input_streams, output_streams, parsed_args, app):
+        if len(pending_intervals) == 0:
+            print("Nothing to do, data is already filtered")
+        # if an interval is None this indicates the pipes should be live
+        for interval in pending_intervals:
+            if interval is not None:
+                print("%s => %s" % (joule.utilities.timestamp_to_human(interval[0]),
+                                    joule.utilities.timestamp_to_human(interval[1])))
+            elif parsed_args.live:
+                print("Running filter on live input data")
+            try:
+                (pipes_in, pipes_out) = await self._build_pipes_new(interval, input_streams,
+                                                                    output_streams, parsed_args.pipes)
+            except errors.ApiError as e:
+                logging.error(str(e))
+                return asyncio.create_task(asyncio.sleep(0))
+            await self.setup(parsed_args, app, pipes_in, pipes_out)
+            try:
+                await self.run(parsed_args, pipes_in, pipes_out)
+            except (asyncio.CancelledError, errors.EmptyPipeError):
+                pass
+            for pipe in pipes_out.values():
+                await pipe.close()

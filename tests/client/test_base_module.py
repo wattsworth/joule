@@ -107,9 +107,10 @@ class TestBaseModule(helpers.AsyncTestCase):
 
     # builds network pipes if pipe arg is 'unset'
     def test_builds_network_pipes(self):
+        #### THIS TESTS OLD CODE, MIGRATE TO BUILD_PIPES_NEW (still used by composite module) ####
         built_pipes = False
 
-        async def mock_builder(inputs, outputs, streams, node, start_time, end_time, force):
+        async def mock_builder(inputs, outputs, streams, node, start_time, end_time, live, force):
             nonlocal built_pipes
             built_pipes = True
             self.assertEqual(len(inputs), 2)
@@ -148,6 +149,7 @@ class TestBaseModule(helpers.AsyncTestCase):
                                           module_config=f.name,
                                           stream_configs='unset',
                                           new=False,
+                                          live=False,
                                           url='http://localhost:8088')
                 module.start(args)
                 self.assertTrue(built_pipes)

@@ -6,7 +6,7 @@ from joule import errors
 
 from joule.api.data_stream import DataStream
 from joule.api.folder import Folder
-from joule.utilities import build_stream
+from .helpers import build_stream
 
 
 class TestStreamApi(asynctest.TestCase):

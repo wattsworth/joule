@@ -314,8 +314,11 @@ class NilmdbStore(DataStore):
         """ set path to None to list all streams """
         url = "{server}/stream/list".format(server=self.server)
         paths = []
-        for stream in streams:
-            paths += [f'/joule/{stream.id}', f'/joule/{stream.id}~decim%']
+        if len(streams) > 6:
+            paths = "/joule/%"
+        else:
+            for stream in streams:
+                paths += [f'/joule/{stream.id}', f'/joule/{stream.id}~decim%']
         params = {"extended": 1,
                   "path": paths}
         async with self._get_client() as session:

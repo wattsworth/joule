@@ -53,6 +53,7 @@ async def build_network_pipes(inputs: Dict[str, str],
                               my_node: BaseNode,
                               start_time: Optional[int],
                               end_time: Optional[int],
+                              live=False,
                               new=False,
                               force=False):
     if not force:
