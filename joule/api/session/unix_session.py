@@ -29,7 +29,7 @@ class UnixSession(BaseSession):
                                        params=params,
                                        json=json) as resp:
                 if resp.status != 200:
-                    raise errors.ApiError("%s [%d]" % (await resp.text(),
+                    raise errors.ApiError("%s %s [%d]" % (path, await resp.text(),
                                                        resp.status))
                 if resp.content_type != 'application/json':
                     body = await resp.text()
@@ -43,4 +43,4 @@ class UnixSession(BaseSession):
                     raise errors.ApiError("Invalid node response (not json)")
 
         except aiohttp.ClientError as e:
-            raise errors.ApiError("Cannot contact node at [%s]" % self.url) from e
+            raise errors.ApiError("Cannot contact node at [%s]" % self.path) from e

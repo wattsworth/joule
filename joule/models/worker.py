@@ -99,6 +99,8 @@ class Worker:
         self.SUBSCRIBER_TIMEOUT = 1
         # how long to try restarting if worker is currently missing inputs
         self.RESTART_AFTER_MISSING_INPUTS = 5
+        # repeat constant here to facilitate testing mocks
+        self.API_SOCKET = API_SOCKET
 
     async def statistics(self) -> Statistics:
         # gather process statistics
@@ -414,7 +416,7 @@ class Worker:
                 os.unlink(self.interface_name)
 
         # API access
-        cmd += ["--api-socket", API_SOCKET]
+        cmd += ["--api-socket", self.API_SOCKET]
         for (arg, value) in self.module.arguments.items():
             cmd += ["--" + arg, value]
         return cmd

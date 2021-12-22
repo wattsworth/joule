@@ -15,7 +15,6 @@ class SimpleFilter(FilterModule):
         # input2 ----( *3 )---> output2
         input2 = inputs['input2']
         output2 = outputs['output2']
-        print("here!!")
         while True:
             try:
                 data = await input1.read()

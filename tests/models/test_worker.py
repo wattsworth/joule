@@ -1,4 +1,5 @@
 import asyncio
+import tempfile
 import unittest
 from unittest import mock
 import logging
@@ -14,6 +15,7 @@ import argparse
 from unittest.mock import Mock
 from contextlib import contextmanager
 import warnings
+from aiohttp import web
 
 from joule.models import Module, DataStream, Worker, Element
 from joule.models.supervisor import Supervisor
@@ -45,11 +47,11 @@ class TestWorker(unittest.TestCase):
         asyncio.set_event_loop(self.loop)
         # generic float32_4 streams
         streams = [DataStream(name="str%d" % n, datatype=DataStream.DATATYPE.FLOAT32,
-                              elements=[Element(name="e%d" % j, index=j,
-                                            display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(3)]) for n in
+                              id=n, elements=[Element(name="e%d" % j, index=j,
+                                                      display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(3)])
+                   for n in
                    range(5)]  # 5th stream is not produced
         self.streams = streams
-
         # [producer0] --<str0>--,-------------,-<str0,str2>--[consumer0]
         #                       +---[module]--+
         # [producer1] --<str1>--`             `--<str2,str3>--[consumer1]
@@ -311,6 +313,26 @@ class TestWorker(unittest.TestCase):
         interval1_data = helpers.create_data('float32_3', start=1000, step=100, length=100)
         interval2_data = helpers.create_data('float32_3', start=1001 + 100 * 100, step=100, length=100)
 
+        # create a stub server to respond to API calls as the module starts up
+        app = web.Application()
+
+        node_stream_info_api_call_count = 0
+
+        async def stub_stream_info(request):
+            nonlocal node_stream_info_api_call_count
+            node_stream_info_api_call_count += 1
+            stream_id = int(request.query['id'])
+            return web.json_response(self.streams[stream_id].to_json())
+
+        app.add_routes([web.get('/stream.json', stub_stream_info)])
+        runner = web.AppRunner(app)
+        loop.run_until_complete(runner.setup())
+        tmp_dir = tempfile.TemporaryDirectory()
+        sock_file = os.path.join(tmp_dir.name, 'testing')
+        sock_site = web.UnixSite(runner, sock_file)
+        loop.run_until_complete(sock_site.start())
+        self.worker.API_SOCKET = sock_file
+
         async def mock_producers():
             # await asyncio.sleep(0.5)
             subscribers = self.producers[0].subscribers[self.streams[0]]
@@ -363,6 +385,13 @@ class TestWorker(unittest.TestCase):
             loop.run_until_complete(asyncio.gather(
                 self.worker.run(self.supervisor.subscribe, restart=False),
                 mock_producers()))
+        loop.run_until_complete(asyncio.gather(
+            runner.shutdown(),
+            runner.cleanup()
+        ))
+        # make sure the module queried the API endpoint for each stream
+        self.assertEqual(node_stream_info_api_call_count, 4)
+        tmp_dir.cleanup()  # remove socket file and directory
         log_dump = '\n'.join(log.output)
         self.assertIn("subscriber write error", log_dump)
         self.assertIn("timed out", log_dump)

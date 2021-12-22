@@ -137,7 +137,7 @@ class BaseModule:
             module_args = helpers.module_args()
             parsed_args = parser.parse_args(module_args)
 
-        #asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+        # asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
         loop = asyncio.get_event_loop()
         self.stop_requested = False
         if parsed_args.api_socket != "unset":
@@ -252,9 +252,15 @@ class BaseModule:
                 output_args = pipe_json['outputs']
                 input_args = pipe_json['inputs']
                 for name, config in input_args.items():
-                    inputs[name] = await self.node.data_stream_get(config['id'])
+                    if config['id'] is None:  # remote stream, no information available
+                        inputs[name] = self._create_stub_stream(name, config['layout'])
+                    else:
+                        inputs[name] = await self.node.data_stream_get(config['id'])
                 for name, config in output_args.items():
-                    outputs[name] = await self.node.data_stream_get(config['id'])
+                    if config['id'] is None:  # remote stream, no information available
+                        outputs[name] = self._create_stub_stream(name, config['layout'])
+                    else:
+                        outputs[name] = await self.node.data_stream_get(config['id'])
             except (KeyError, json.JSONDecodeError):
                 raise ConfigurationError(f"invalid pipes argument: {parsed_args.pipes}")
         # otherwise use the specified module configuration file
@@ -275,6 +281,16 @@ class BaseModule:
                     stream = await self._validate_or_create_stream(configured_streams, path)
                     outputs[name] = stream
         return inputs, outputs
+
+    def _create_stub_stream(self, name, layout):
+        # if API information is not available (coming from a remote node) then
+        # create a stream with the right layout to use as a substitute
+        # NOTE: this could be improved but since the remote capability isn't
+        # really used this should be fine for now
+        (dtype, num_elements) = layout.split('_')
+        return DataStream(name=f"STUB:{name}", description="automatically generated stub",
+                          datatype=dtype,
+                          elements=[Element(name=f"E{i}") for i in range(int(num_elements))])
 
     async def _validate_or_create_stream(self, configured_streams, raw_path):
         # process inline configuration if present
@@ -351,7 +367,7 @@ class BaseModule:
                 output_intervals = intervals
         missing_intervals = interval_difference(input_intervals, output_intervals)
         # filter out intervals shorter than 1 second (boundary error with intervals)
-        missing_intervals = [i for i in missing_intervals if (i[1]-i[0]) > 1e6]
+        missing_intervals = [i for i in missing_intervals if (i[1] - i[0]) > 1e6]
         return missing_intervals
 
     async def _build_pipes_new(self, interval, input_streams, output_streams, pipe_args) -> Tuple[Pipes, Pipes]:

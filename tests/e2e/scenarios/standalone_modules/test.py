@@ -51,26 +51,22 @@ def start_standalone_procs1():
                          stderr=subprocess.PIPE,
                          universal_newlines=True)
     assert p1a.stderr.find("plus3") != -1
-
     # proc2 tries to read from /bad/path but fails
     p2 = subprocess.run(build_standalone_args("proc2"),
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,
                         universal_newlines=True)
     assert p2.stderr.find("not being produced") != -1
-
     return [p1]
 
 
 async def start_standalone_procs2(node: api.BaseNode):
     # proc3 tries to write to /counting/plus3 with wrong dtype
-
     p3 = subprocess.run(build_standalone_args("proc3"),
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,
                         universal_newlines=True,
                         timeout=3)
-    print(p3.stderr)
     assert p3.stderr.find("layout") != -1
 
     #  proc4 reads /counting/base and writes to /counting/plus3
@@ -100,7 +96,7 @@ def build_standalone_args(proc_dir):
     scenario_dir = "/joule/tests/e2e/scenarios/standalone_modules/"
     base_dir = scenario_dir + "standalone_modules/" + proc_dir + "/"
     return ["/joule/tests/e2e/module_scripts/adder.py",
-            "3",
+            "3", "--live",
             "--module_config", base_dir + "module.conf",
             "--stream_configs", base_dir + "stream_configs"]
 
