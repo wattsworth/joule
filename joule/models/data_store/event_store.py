@@ -32,6 +32,22 @@ class EventStore:
                                              schema_name='data',
                                              records=mapper)
 
+    async def count(self, stream: 'EventStream',
+                    start: Optional[int] = None, end: Optional[int] = None) -> int:
+        if end is not None and start is not None and end <= start:
+            raise ValueError("Invalid time bounds start [%d] must be < end [%d]" % (start, end))
+        query = "SELECT count(*) FROM data.events "
+        where_clause = psql_helpers.query_time_bounds(start, end)
+        if len(where_clause) == 0:
+            where_clause = "WHERE "
+        else:
+            where_clause += " AND "
+        where_clause += "event_stream_id=%d" % stream.id
+        query += where_clause
+        async with self.pool.acquire() as conn:
+            record = await conn.fetch(query)
+            return record[0]['count']
+
     async def extract(self, stream: 'EventStream',
                       start: Optional[int] = None, end: Optional[int] = None) -> List[Dict]:
         if end is not None and start is not None and end <= start:

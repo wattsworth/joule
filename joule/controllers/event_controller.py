@@ -188,7 +188,7 @@ async def read_events(request):
         return web.Response(text="stream does not exist", status=404)
 
     # parse optional parameters
-    params = {'start': None, 'end': None}
+    params = {'start': None, 'end': None, 'limit': None}
     param = ""  # to appease type checker
     try:
         for param in params:
@@ -201,8 +201,18 @@ async def read_events(request):
     if ((params['start'] is not None and params['end'] is not None) and
             (params['start'] >= params['end'])):
         return web.Response(text="[start] must be < [end]", status=400)
+
+    # handle limit parameter
+    if params['limit'] is not None:
+        if params['limit'] <= 0:
+            return web.Response(text="[limit] must be > 0", status=400)
+        event_count = await event_store.count(my_stream, params['start'], params['end'])
+        if event_count > params['limit']:
+            # too many events, just send the count parameter
+            return web.json_response(data={'count': event_count, 'events': []})
+
     events = await event_store.extract(my_stream, params['start'], params['end'])
-    return web.json_response(data=events)
+    return web.json_response(data={'count': len(events), 'events': events})
 
 
 async def remove_events(request):
