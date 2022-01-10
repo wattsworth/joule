@@ -33,7 +33,7 @@ class Module:
     """
     API Module model. See :ref:`sec-node-module-actions` for details on using the API to
     query modules. See :ref:`modules` for details on writing new modules. See :ref:`sec-modules`
-    for details on adding modules to Joule. Use :meth:`Node.stream_get` to retrieve the associated stream from the path string
+    for details on adding modules to Joule. Use :meth:`Node.data_stream_get` to retrieve the associated stream from the path string
     in the ``inputs`` and ``outputs`` dictionaries.
 
     Parameters:

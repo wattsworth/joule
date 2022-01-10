@@ -172,7 +172,7 @@ def elem_from_json(json) -> Element:
 
 class DataStreamInfo:
     """
-        API DataStreamInfo model. Received from :meth:`Node.stream_info` and should not be created directly.
+        API DataStreamInfo model. Received from :meth:`Node.data_stream_info` and should not be created directly.
 
         .. warning::
             Rows and Bytes values are approximate
