@@ -38,7 +38,9 @@ def admin_initialize(dsn, bind, port, nilmdb):  # pragma: no cover
     service_file = pkg_resources.resource_filename(
         "joule", "resources/joule.service")
     try:
-        shutil.copy(service_file, "/etc/systemd/system")
+        # don't overwrite existing service file
+        if not os.path.exists("/etc/systemd/system/joule.service"):
+            shutil.copy(service_file, "/etc/systemd/system")
         subprocess.run("systemctl enable joule.service".split(" "), stderr=subprocess.PIPE)
         subprocess.run("systemctl start joule.service".split(" "), stderr=subprocess.PIPE)
     except PermissionError:

@@ -365,7 +365,10 @@ class BaseModule:
                 output_intervals = interval_intersection(output_intervals, intervals)
             else:
                 output_intervals = intervals
-        missing_intervals = interval_difference(input_intervals, output_intervals)
+        if output_intervals is None:
+            missing_intervals = input_intervals
+        else:
+            missing_intervals = interval_difference(input_intervals, output_intervals)
         # filter out intervals shorter than 1 second (boundary error with intervals)
         missing_intervals = [i for i in missing_intervals if (i[1] - i[0]) > 1e6]
         return missing_intervals
