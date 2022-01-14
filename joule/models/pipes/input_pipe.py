@@ -144,7 +144,12 @@ class InputPipe(Pipe):
         # 0.) if the read() has already signaled its finished the pipe is empty
         if self._last_read:
             return True
-        # 1.) make sure the sender is closed
+        # 1.) make sure the sender is closed, reader may be None if no reads have happened yet
+        if self.reader is None:
+            if self.closed:
+                return True
+            else:
+                return False
         if not self.reader.at_eof():
             return False
         # 2.) make sure there is no data left in the buffer
