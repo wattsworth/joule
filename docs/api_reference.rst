@@ -367,6 +367,48 @@ Annotation Actions
         "Demo Annotation"
 
 
+.. _sec-node-event-stream-actions:
+
+Event Stream Actions
+''''''''''''''''''''
+
+.. function:: Node.event_stream_get(stream: Union[EventStream, str, int]) -> EventStream
+
+        Notes
+
+.. function:: Node.event_stream_move(stream: Union[DataStream, str, int], folder: Union[Folder, str, int]) -> None
+
+        Notes
+
+.. function:: Node.event_stream_update(stream: EventStream) -> None
+
+        Notes
+
+.. function:: Node.event_stream_delete(stream: Union[EventStream, str, int]) -> None
+
+        Notes
+
+.. function:: Node.event_stream_create(stream: EventStream, folder: Union[Folder, str, int]) -> EventStream
+
+        Notes
+
+.. function:: Node.event_stream_info(stream: Union[EventStream, str, int]) -> EventStreamInfo
+
+        Notes
+
+.. function:: Node.event_stream_write(stream: Union[EventStream, str, int], events: List[Event]) -> None
+
+        Notes
+
+.. function:: Node.event_stream_read(stream: Union[EventStream, str, int], start: Optional[int] = None, end: Optional[int] = None) -> List[Event]
+
+        Notes
+
+.. function:: Node.event_stream_remove(stream: Union[EventStream, str, int], start: Optional[int] = None, end: Optional[int] = None)
+
+        Notes
+
+
 .. _sec-node-module-actions:
 
 Module Actions

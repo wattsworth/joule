@@ -98,7 +98,7 @@ def info_from_json(json) -> EventStreamInfo:
 
 
 async def event_stream_delete(session: BaseSession,
-                              stream: Union[EventStream, str, int]):
+                              stream: Union[EventStream, str, int]) -> None:
     data = {}
     if type(stream) is EventStream:
         data["id"] = stream.id
@@ -196,7 +196,7 @@ async def event_stream_move(session: BaseSession,
 
 async def event_stream_write(session: BaseSession,
                              stream: Union[EventStream, str, int],
-                             events: List[Event]):
+                             events: List[Event]) -> None:
     data = {}
 
     if type(stream) is EventStream:
