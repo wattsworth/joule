@@ -4,8 +4,15 @@ API Reference
 .. note::
 
     The Joule Application Programming Interface (API) uses asynchronous coroutines and must be run inside an event loop.
-    The examples in this documentation are from aioconsole sessions (https://aioconsole.readthedocs.io) and cannot
-    be run in a standard interactive python session.
+    To run the examples in this documentation interactively use the asyncio module:
+
+    .. code-block:: bash
+
+        $> python3 -m asyncio
+        asyncio REPL 3.8.10
+        ...
+        >>> import asyncio
+        >>>
 
 Node
 ++++
@@ -374,35 +381,99 @@ Event Stream Actions
 
 .. function:: Node.event_stream_get(stream: Union[EventStream, str, int]) -> EventStream
 
+    Retrieve the specified stream. EventStream may be specified by a :class:`joule.api.EventStream` object,
+    a path, or a numeric ID. Raises :exc:`joule.errors.ApiError` if stream specification is invalid.
+
+    Examples:
+
         Notes
 
 .. function:: Node.event_stream_move(stream: Union[DataStream, str, int], folder: Union[Folder, str, int]) -> None
 
-        Notes
+    Move a stream into a different folder. The stream and folder may be
+    specified by objects, paths, or numeric ID's. The stream name must be unique in the destination.
+    Raises :exc:`joule.errors.ApiError` if stream or folder specifications are invalid or the requested
+    move cannot be performed. The destination is automatically created if it does not exist.
+
+    Examples:
+        >>> await node.event_stream_move("/parent1/my_folder/stream","/parent2")
+        >>> parent2 = await node.folder_get("/parent2")
+        >>> parent2.event_streams
+        [<joule.api.DataStream id=2627 name='stream' description='' datatype='int32'
+         is_configured=False is_source=False is_destination=False locked=False decimate=True>]
+
+        >>> await node.event_stream_move("/does/not/exist","/parent2") # raises ApiError
+        joule.errors.ApiError: stream does not exist [404]
 
 .. function:: Node.event_stream_update(stream: EventStream) -> None
 
-        Notes
+    Update the event stream name and/or description. Raises :exc:`joule.errors.ApiError` if
+    the specification is invalid.
+
+    Example:
+        >>> stream = await node.event_stream_get("/parent/my_folder/stream")
+        >>> stream.elements # Element name is "Element1"
+        [<joule.api.Element id=3192 index=0, name='Element1' units=None
+         plottable=True display_type='CONTINUOUS'>]
+        >>> stream.elements[0].name="New Name"
+        >>> await node.data_stream_update(stream) # send updated values to Joule
+        >>> updated_stream = await node.data_stream_get(stream) # refresh local copy
+        >>> updated_stream.elements # Element name is now "New Name"
+        [<joule.api.Element id=3192 index=0, name='New Name' units=None
+         plottable=True display_type='CONTINUOUS'>]
 
 .. function:: Node.event_stream_delete(stream: Union[EventStream, str, int]) -> None
 
-        Notes
+    Delete a stream. EventStream may be specified by a :class:`joule.api.EventStream` object,
+    a path, or numeric ID. Raises :exc:`joule.errors.ApiError` if the stream specification
+    is invalid or if the stream is locked. To remove data within a stream see :meth:`Node.event_stream_remove`.
+
+    Example:
+        >>> folder = await node.folder_get("/parent/my_folder")
+        >>> folder.event_streams # my_folder has one stream
+        [<joule.api.EventStream id=39 name='stream' description='example'>
+        >>> await node.event_stream_delete("/parent/my_folder/stream") # delete the stream
+        >>> folder = await node.folder_get("/parent/my_folder")
+        >>> folder.event_streams # my_folder is now empty
+        []
 
 .. function:: Node.event_stream_create(stream: EventStream, folder: Union[Folder, str, int]) -> EventStream
 
-        Notes
+    Create an event stream and place in the specified folder. Folder may be specified by object, path or numeric ID.
+    See :class:`joule.api.EventStream` for details on creating EventStream objects. Raises :exc:`joule.errors.ApiError` if the
+    stream or folder specification is invalid. If the folder is specified by path it will be created if it does not exist.
+
+    Example:
+        >>> new_stream = joule.api.EventStream(name="New Stream")
+        >>> await node.event_stream_create(new_stream,"/parent/new_folder")
+        <joule.api.EventStream id=38 name='New Stream' description=''>
 
 .. function:: Node.event_stream_info(stream: Union[EventStream, str, int]) -> EventStreamInfo
 
-        Notes
+    Get information about a stream as a :class:`joule.api.EventStreamInfo` object. EventStream may be specified
+    by a :class:`joule.api.EventStream` object, a path, or numeric ID. Raises :exc:`joule.errors.ApiError`
+    if the stream specification is invalid.
+
+    Example:
+        >>> await node.event_stream_info("/parent/my_folder/stream")
+        <joule.api.EventStreamInfo start=1643858892000000 end=1643891982000000
+            events=10, total_time=33090000000>
 
 .. function:: Node.event_stream_write(stream: Union[EventStream, str, int], events: List[Event]) -> None
 
-        Notes
+    Add events to an existing stream. EventStream may be specified by a :class:`joule.api.EventStream` object,
+    a path, or numeric ID. Events is a list of :class:`joule.api.Event` objects.
+
+    Example:
+        >>> from joule.utilities import time_now
+        >>> e1 = Event(start_time=time_now()-1e6, end_time = time_now(), content={'name': 'event1'})
+        >>> await asyncio.sleep(2)
+        >>> e2 = Event(start_time=time_now()-1e6, end_time = time_now(), content={'name': 'event2'})
+        >>> await joule.api.even_stream_write("/plugs/events",[e1,e2])
 
 .. function:: Node.event_stream_read(stream: Union[EventStream, str, int], start: Optional[int] = None, end: Optional[int] = None) -> List[Event]
 
-        Notes
+         <joule.api.Event start_time: 1644768175404800, end_time: 1644768176404808, content: {"name": "event1"}>, <joule.api.Event start_time: 1644768182208903, end_time: 1644768183208914, content: {"name": "event2"}>]
 
 .. function:: Node.event_stream_remove(stream: Union[EventStream, str, int], start: Optional[int] = None, end: Optional[int] = None)
 

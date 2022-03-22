@@ -37,7 +37,7 @@ class TestEventStore(asynctest.TestCase):
         self.psql_dir.cleanup()
 
     async def test_runner(self):
-        tests = [self._test_basic_insert_extract_remove,
+        tests = [self._test_basic_upsert_extract_remove,
                  self._test_time_bound_queries,
                  self._test_remove_bound_queries]
         for test in tests:
@@ -55,26 +55,34 @@ class TestEventStore(asynctest.TestCase):
             await self.store.close()
             sys.stdout.flush()
 
-    async def _test_basic_insert_extract_remove(self):
+    async def _test_basic_upsert_extract_remove(self):
         event_stream1 = EventStream(id=1, name='test_stream1')
         events1 = [{'start_time': i * 100,
                     'end_time': i * 100 + 10,
                     'content': {'title': "Event%d" % i,
                                 'stream': event_stream1.name}
                     } for i in range(20)]
-        await self.store.insert(event_stream1, events1)
+        await self.store.upsert(event_stream1, events1)
         event_stream2 = EventStream(id=2, name='test_stream2')
         events2 = [{'start_time': (i * 100) + 3,
                     'end_time': (i * 100) + 13,
                     'content': {'title': "Event%d" % i,
                                 'stream': event_stream2.name}
                     } for i in range(20)]
-        await self.store.insert(event_stream2, events2)
+        await self.store.upsert(event_stream2, events2)
         # now try to read them back
         rx_events = await self.store.extract(event_stream1)
-        self.assertListEqual(events1, rx_events)
+        # they should match but now have an id field
+        ids = set([e["id"] for e in rx_events])
+        self.assertEqual(len(ids), len(events1))
+        # update the first event
+        rx_events[0]['content']['title'] = 'updated'
+        await self.store.upsert(event_stream1, rx_events)
+        rx2_events = await self.store.extract(event_stream1)
+        self.assertListEqual(rx_events, rx2_events)
         # ...the two event streams are independent
         rx_events = await self.store.extract(event_stream2)
+        # they should match but now have an id field
         self.assertListEqual(events2, rx_events)
         # now remove them
         await self.store.remove(event_stream1)
@@ -101,7 +109,7 @@ class TestEventStore(asynctest.TestCase):
                         'content': {'title': "Event%d" % i,
                                     'stream': event_stream1.name}
                         } for i in range(50, 60)]
-        await self.store.insert(event_stream1, early_events + mid_events + late_events)
+        await self.store.upsert(event_stream1, early_events + mid_events + late_events)
 
         # now try to read them back
         rx_events = await self.store.extract(event_stream1, start=3000, end=4500)
@@ -129,13 +137,12 @@ class TestEventStore(asynctest.TestCase):
                         'content': {'title': "Event%d" % i,
                                     'stream': event_stream1.name}
                         } for i in range(50, 60)]
-        await self.store.insert(event_stream1, early_events + mid_events + late_events)
-
+        await self.store.upsert(event_stream1, early_events + mid_events + late_events)
 
         # remove the middle
         await self.store.remove(event_stream1, start=3000, end=4500)
         rx_events = await self.store.extract(event_stream1)
-        self.assertListEqual(rx_events, early_events+late_events)
+        self.assertListEqual(rx_events, early_events + late_events)
         # remove the beginning
         await self.store.remove(event_stream1, end=3000)
         rx_events = await self.store.extract(event_stream1)
@@ -146,3 +153,6 @@ class TestEventStore(asynctest.TestCase):
         self.assertListEqual(rx_events, [])
 
 
+# from https://stackoverflow.com/questions/5844672/delete-an-element-from-a-dictionary
+#def _remove_id(events):
+#    return [{i: e[i] for i in e if i != 'id'} for e in events]

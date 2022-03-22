@@ -25,6 +25,7 @@ tzlocal==2.1
 urllib3==1.26.5
 yarl==1.6.3
 Jinja2==2.11.3
+markupsafe==2.0.1 #breaking change in latest version
 aiohttp-jinja2==1.4.2
 asyncpg==0.22.0
 psycopg2-binary==2.8.6

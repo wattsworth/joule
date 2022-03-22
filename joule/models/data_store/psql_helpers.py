@@ -103,9 +103,10 @@ def query_time_bounds(start, end):
 
 async def create_event_table(conn: asyncpg.Connection):
     sql = """CREATE TABLE IF NOT EXISTS data.events (
+    id SERIAL PRIMARY KEY,
     time TIMESTAMP NOT NULL,
-    end_Time TIMESTAMP,
-    event_stream_id INTEGER NOT NULL,
+    end_time TIMESTAMP,
+    event_stream_id INTEGER,
     content JSONB
     )"""
     await conn.execute(sql)

@@ -196,7 +196,7 @@ async def event_stream_move(session: BaseSession,
 
 async def event_stream_write(session: BaseSession,
                              stream: Union[EventStream, str, int],
-                             events: List[Event]) -> None:
+                             events: List[Event]) -> List[Event]:
     data = {}
 
     if type(stream) is EventStream:
@@ -208,9 +208,12 @@ async def event_stream_write(session: BaseSession,
     else:
         raise errors.ApiError("Invalid stream datatype. Must be EventStream, Path, or ID")
     # post events in blocks
+    rx_events = []
     for idx in range(0, len(events), 500):
         data['events'] = [e.to_json() for e in events[idx:idx+500]]
-        await session.post("/event/data.json", data)
+        resp = await session.post("/event/data.json", data)
+        rx_events += [event_from_json(e) for e in resp["events"]]
+    return rx_events
 
 
 async def event_stream_read(session: BaseSession,
@@ -230,8 +233,8 @@ async def event_stream_read(session: BaseSession,
         params['start'] = int(start_time)
     if end_time is not None:
         params['end'] = int(end_time)
-    json_events = await session.get("/event/data.json", params)
-    return [event_from_json(e) for e in json_events]
+    resp = await session.get("/event/data.json", params)
+    return [event_from_json(e) for e in resp["events"]]
 
 
 async def event_stream_remove(session: BaseSession,

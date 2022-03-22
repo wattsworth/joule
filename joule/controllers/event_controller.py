@@ -169,8 +169,8 @@ async def write_events(request):
         return web.Response(text="stream does not exist", status=404)
     if 'events' not in body:
         return web.Response(text="specify events to add", status=400)
-    await event_store.insert(my_stream, body['events'])
-    return web.Response(text="ok")
+    events = await event_store.upsert(my_stream, body['events'])
+    return web.json_response(data={'count': len(events), 'events': events})
 
 
 async def read_events(request):

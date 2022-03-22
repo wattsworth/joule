@@ -25,12 +25,28 @@ class EventStore:
         async with self.pool.acquire() as conn:
             await psql_helpers.create_event_table(conn)
 
-    async def insert(self, stream: 'EventStream', events: List):
-        mapper = map(event_to_record_mapper(stream), events)
+    async def upsert(self, stream: 'EventStream', events: List):
+        updated_events = list(filter(lambda event: "id" in event and event["id"] is not None, events))
+        new_events = list(filter(lambda event: "id" not in event or event["id"] is None, events))
         async with self.pool.acquire() as conn:
+            query = await conn.fetch("select nextval('data.events_id_seq')")
+            serial = query[0]["nextval"]
+            for e in new_events:
+                e["id"] = serial
+                serial += 1
+            mapper = map(event_to_record_mapper(stream), new_events)
             await conn.copy_records_to_table("events",
+                                             columns=['id', 'time', 'end_time', 'event_stream_id', 'content'],
                                              schema_name='data',
                                              records=mapper)
+            await conn.execute(f"alter sequence data.events_id_seq restart with {serial}")
+            mapper = map(event_to_record_mapper(stream), updated_events)
+            for e in mapper:
+                await conn.execute("UPDATE data.events SET time=$2, "
+                                   "end_time=$3, event_stream_id=$4, "
+                                   "content=$5 WHERE id=$1",
+                                   *e)
+        return new_events + updated_events
 
     async def count(self, stream: 'EventStream',
                     start: Optional[int] = None, end: Optional[int] = None) -> int:
@@ -52,7 +68,7 @@ class EventStore:
                       start: Optional[int] = None, end: Optional[int] = None) -> List[Dict]:
         if end is not None and start is not None and end <= start:
             raise ValueError("Invalid time bounds start [%d] must be < end [%d]" % (start, end))
-        query = "SELECT time, end_time, content FROM data.events "
+        query = "SELECT id, time, end_time, content FROM data.events "
         where_clause = psql_helpers.query_time_bounds(start, end)
         if len(where_clause) == 0:
             where_clause = "WHERE "
@@ -140,7 +156,8 @@ def event_to_record_mapper(stream: 'EventStream') -> Callable[[Dict], Tuple]:
             end = joule.utilities.timestamp_to_datetime(event['end_time'])
         else:
             end = None
-        return start, end, stream_id, json.dumps(event['content'])
+        return event["id"], start, end, stream_id, json.dumps(event['content'])
+
 
     return mapper
 
@@ -150,6 +167,8 @@ def record_to_event(record: asyncpg.Record) -> Dict:
         end = joule.utilities.datetime_to_timestamp(record['end_time'])
     else:
         end = None
-    return {'start_time': joule.utilities.datetime_to_timestamp(record['time']),
-            'end_time': end,
-            'content': json.loads(record['content'])}
+    return {
+        'id': record['id'],
+        'start_time': joule.utilities.datetime_to_timestamp(record['time']),
+        'end_time': end,
+        'content': json.loads(record['content'])}

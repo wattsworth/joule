@@ -3,9 +3,12 @@ import json
 
 
 class Event:
-    def __init__(self, start_time: int,
+    def __init__(self,
+                 start_time: int,
                  end_time: Optional[int] = None,
-                 content: Optional[Dict] = None):
+                 content: Optional[Dict] = None,
+                 id: Optional[int] = None):
+        self.id = id
         self.start_time = int(start_time)
         self.end_time = int(end_time)
         if content is None:
@@ -15,6 +18,7 @@ class Event:
 
     def to_json(self):
         return {
+            'id': self.id,
             'start_time': self.start_time,
             'end_time': self.end_time,
             'content': self.content
@@ -36,7 +40,9 @@ class Event:
             return False
         return True
 
+
 def from_json(json):
     return Event(start_time=json['start_time'],
                  end_time=json['end_time'],
-                 content=json['content'])
+                 content=json['content'],
+                 id=json['id'])
