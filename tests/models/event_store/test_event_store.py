@@ -77,9 +77,10 @@ class TestEventStore(asynctest.TestCase):
         self.assertEqual(len(ids), len(events1))
         # update the first event
         rx_events[0]['content']['title'] = 'updated'
-        await self.store.upsert(event_stream1, rx_events)
-        rx2_events = await self.store.extract(event_stream1)
+        rx2_events = await self.store.upsert(event_stream1, rx_events)
+        rx3_events = await self.store.extract(event_stream1)
         self.assertListEqual(rx_events, rx2_events)
+        self.assertListEqual(rx2_events, rx3_events)
         # ...the two event streams are independent
         rx_events = await self.store.extract(event_stream2)
         # they should match but now have an id field

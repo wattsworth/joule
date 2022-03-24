@@ -198,7 +198,6 @@ async def event_stream_write(session: BaseSession,
                              stream: Union[EventStream, str, int],
                              events: List[Event]) -> List[Event]:
     data = {}
-
     if type(stream) is EventStream:
         data["id"] = stream.id
     elif type(stream) is int:
@@ -210,10 +209,14 @@ async def event_stream_write(session: BaseSession,
     # post events in blocks
     rx_events = []
     for idx in range(0, len(events), 500):
-        data['events'] = [e.to_json() for e in events[idx:idx+500]]
+        chunk = events[idx:idx + 500]
+        data['events'] = [e.to_json() for e in events[idx:idx + 500]]
         resp = await session.post("/event/data.json", data)
         rx_events += [event_from_json(e) for e in resp["events"]]
-    return rx_events
+        # copy the ids over
+        for i in range(len(chunk)):
+            chunk[i].id = rx_events[i].id
+    return events
 
 
 async def event_stream_read(session: BaseSession,

@@ -46,7 +46,7 @@ class EventStore:
                                    "end_time=$3, event_stream_id=$4, "
                                    "content=$5 WHERE id=$1",
                                    *e)
-        return new_events + updated_events
+        return events
 
     async def count(self, stream: 'EventStream',
                     start: Optional[int] = None, end: Optional[int] = None) -> int:

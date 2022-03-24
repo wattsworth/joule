@@ -178,7 +178,7 @@ class BaseNode:
 
     async def event_stream_write(self,
                                  stream: Union[EventStream, str, int],
-                                 events: List[Event]) -> None:
+                                 events: List[Event]) -> List[Event]:
         return await event_stream_write(self.session, stream, events)
 
     async def event_stream_read(self,
