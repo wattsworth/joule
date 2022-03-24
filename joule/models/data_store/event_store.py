@@ -29,23 +29,27 @@ class EventStore:
         updated_events = list(filter(lambda event: "id" in event and event["id"] is not None, events))
         new_events = list(filter(lambda event: "id" not in event or event["id"] is None, events))
         async with self.pool.acquire() as conn:
-            query = await conn.fetch("select nextval('data.events_id_seq')")
-            serial = query[0]["nextval"]
-            for e in new_events:
-                e["id"] = serial
-                serial += 1
-            mapper = map(event_to_record_mapper(stream), new_events)
-            await conn.copy_records_to_table("events",
-                                             columns=['id', 'time', 'end_time', 'event_stream_id', 'content'],
-                                             schema_name='data',
-                                             records=mapper)
-            await conn.execute(f"alter sequence data.events_id_seq restart with {serial}")
-            mapper = map(event_to_record_mapper(stream), updated_events)
-            for e in mapper:
-                await conn.execute("UPDATE data.events SET time=$2, "
-                                   "end_time=$3, event_stream_id=$4, "
-                                   "content=$5 WHERE id=$1",
-                                   *e)
+            if len(new_events) > 0:
+                seq = "'data.events_id_seq'"
+                query = await conn.fetch(
+                    f"select setval({seq},nextval({seq}) + {len(new_events)} -1) as stop")
+                serial = query[0]["stop"] - len(events)
+                for e in new_events:
+                    serial += 1
+                    e["id"] = serial
+                assert serial, query[0]["stop"]
+                mapper = map(event_to_record_mapper(stream), new_events)
+                await conn.copy_records_to_table("events",
+                                                 columns=['id', 'time', 'end_time', 'event_stream_id', 'content'],
+                                                 schema_name='data',
+                                                 records=mapper)
+            if len(updated_events) > 0:
+                mapper = map(event_to_record_mapper(stream), updated_events)
+                for e in mapper:
+                    await conn.execute("UPDATE data.events SET time=$2, "
+                                       "end_time=$3, event_stream_id=$4, "
+                                       "content=$5 WHERE id=$1",
+                                       *e)
         return events
 
     async def count(self, stream: 'EventStream',
