@@ -184,8 +184,10 @@ class BaseNode:
     async def event_stream_read(self,
                                 stream: Union[EventStream, str, int],
                                 start: Optional[int] = None,
-                                end: Optional[int] = None) -> List[Event]:
-        return await event_stream_read(self.session, stream, start, end)
+                                end: Optional[int] = None,
+                                limit: Optional[int] = None,
+                                json_filter: Optional[Dict[str, str]] = None) -> List[Event]:
+        return await event_stream_read(self.session, stream, start, end, limit, json_filter)
 
     async def event_stream_remove(self,
                                   stream: Union[EventStream, str, int],

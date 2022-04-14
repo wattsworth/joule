@@ -71,7 +71,10 @@ class EventStore:
             return record[0]['count']
 
     async def extract(self, stream: 'EventStream',
-                      start: Optional[int] = None, end: Optional[int] = None) -> List[Dict]:
+                      start: Optional[int] = None,
+                      end: Optional[int] = None,
+                      json=None,
+                      limit=None) -> List[Dict]:
         if end is not None and start is not None and end <= start:
             raise ValueError("Invalid time bounds start [%d] must be < end [%d]" % (start, end))
         query = "SELECT id, time, end_time, content FROM data.events "
@@ -81,10 +84,23 @@ class EventStore:
         else:
             where_clause += " AND "
         where_clause += "event_stream_id=%d" % stream.id
-        query += where_clause + " ORDER BY time ASC"
+        if json is not None:
+            where_clause += " AND " + psql_helpers.query_event_json(json)
+        query += where_clause
+        if limit is not None:
+            assert limit > 0, "limit must be > 0"
+            if start is None and end is not None:
+                query += " ORDER BY time DESC"
+            else:
+                query += " ORDER BY time ASC"
+            query += f" LIMIT {limit}"
+        else:
+            query += " ORDER BY time ASC"
         async with self.pool.acquire() as conn:
             records = await conn.fetch(query)
-            return list(map(record_to_event, records))
+            events = list(map(record_to_event, records))
+            events.sort(key=lambda e: e["start_time"])
+            return events
 
     async def remove(self, stream: 'EventStream', start: Optional[int] = None, end: Optional[int] = None):
         query = "DELETE FROM data.events "

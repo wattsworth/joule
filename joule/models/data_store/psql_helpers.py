@@ -3,8 +3,10 @@ import io
 from struct import pack
 import datetime
 import asyncpg
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict
 import logging
+
+import psycopg2.sql
 
 from joule.errors import DataError
 from joule.models.data_stream import DataStream
@@ -99,6 +101,15 @@ def query_time_bounds(start, end):
         return 'WHERE ' + ' AND '.join(limits)
     else:
         return ''
+
+
+def query_event_json(json: Dict[str, str]):
+    clauses = []
+    for key, value in json.items():
+        key_safe = key.replace("'", "''")
+        value_safe = value.replace("'", "''")
+        clauses.append(f"content->>'{key_safe}'='{value_safe}'")
+    return " AND ".join(clauses)
 
 
 async def create_event_table(conn: asyncpg.Connection):

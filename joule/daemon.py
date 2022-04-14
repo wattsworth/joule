@@ -284,20 +284,25 @@ class Daemon(object):
 def main(argv=None):
     parser = argparse.ArgumentParser("Joule Daemon")
     parser.add_argument("--config", default="/etc/joule/main.conf")
-    args = parser.parse_args(argv)
+
+    xargs = parser.parse_args(argv)
+
     log.addFilter(LogDedupFilter())
     logging.basicConfig(
         format='%(asctime)s %(levelname)s:%(message)s',
         level=logging.WARNING)
-    if args.config is not None:
-        if os.path.isfile(args.config) is False:
-            log.error("Invalid configuration: cannot load file [%s]" % args.config)
+    if xargs.config is not None:
+        if os.path.isfile(xargs.config) is False:
+            log.error("Invalid configuration: cannot load file [%s]" % xargs.config)
             exit(1)
-    parser = configparser.ConfigParser()
-    parser.read(args.config)
+
     my_config = None
     try:
-        my_config = load_config.run(custom_values=parser)
+        cparser = configparser.ConfigParser()
+        r = cparser.read(xargs.config)
+        if len(r) != 1:
+            raise ConfigurationError(f"cannot read {xargs.config}")
+        my_config = load_config.run(custom_values=cparser)
     except ConfigurationError as e:
         log.error("Invalid configuration: %s" % e)
         exit(1)
@@ -355,8 +360,8 @@ def main(argv=None):
                         exception = t.exception()
                         if exception is not None:
                             print("Got exception", t.exception())
-                            #print("----Cancelling Daemon----")
-                            #daemon_task.cancel()
+                            # print("----Cancelling Daemon----")
+                            # daemon_task.cancel()
                         # else:
                         #    print("completed")
                     task_list.remove(t)

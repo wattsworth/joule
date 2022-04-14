@@ -1,4 +1,5 @@
 from aiohttp import web
+import json
 from sqlalchemy.orm import Session
 from joule.models import EventStream, EventStore, event_stream
 
@@ -202,16 +203,36 @@ async def read_events(request):
             (params['start'] >= params['end'])):
         return web.Response(text="[start] must be < [end]", status=400)
 
-    # handle limit parameter
-    if params['limit'] is not None:
+    # handle limit parameter, default is HARD, do not return unless count < limit
+    if params['limit'] is not None and 'return-subset' not in request.query:
         if params['limit'] <= 0:
             return web.Response(text="[limit] must be > 0", status=400)
         event_count = await event_store.count(my_stream, params['start'], params['end'])
         if event_count > params['limit']:
             # too many events, just send the count parameter
             return web.json_response(data={'count': event_count, 'events': []})
+    # if return-subset, limit is SOFT, return just that many events
+    limit = None
+    if params['limit'] is not None and 'return-subset' in request.query:
+        if params['limit'] <= 0:
+            return web.Response(text="[limit] must be > 0", status=400)
+        limit = params['limit']
 
-    events = await event_store.extract(my_stream, params['start'], params['end'])
+    # sanitize json parameter
+    json_filter = None
+    if 'json' in request.query:
+        try:
+            raw_json = json.loads(request.query['json'])
+            if type(raw_json) is not dict:
+                raise ValueError
+            json_filter = {}
+            for key, value in raw_json.items():
+                if type(key) is not str or type(value) is not str:
+                    raise ValueError
+                json_filter[str(key)] = str(value)
+        except (json.decoder.JSONDecodeError, ValueError):
+            return web.Response(text="invalid json filter parameter", status=400)
+    events = await event_store.extract(my_stream, params['start'], params['end'], limit=limit, json=json_filter)
     return web.json_response(data={'count': len(events), 'events': events})
 
 

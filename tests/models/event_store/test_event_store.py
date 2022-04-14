@@ -39,7 +39,9 @@ class TestEventStore(asynctest.TestCase):
     async def test_runner(self):
         tests = [self._test_basic_upsert_extract_remove,
                  self._test_time_bound_queries,
-                 self._test_remove_bound_queries]
+                 self._test_remove_bound_queries,
+                 self._test_json_queries,
+                 self._test_limit_queries]
         for test in tests:
             conn: asyncpg.Connection = await asyncpg.connect(self.db_url)
             await conn.execute("DROP SCHEMA IF EXISTS data CASCADE")
@@ -120,6 +122,14 @@ class TestEventStore(asynctest.TestCase):
         rx_events = await self.store.extract(event_stream1, start=3000)
         self.assertListEqual(rx_events, mid_events + late_events)
 
+        # now try limited queries
+        rx_events = await self.store.extract(event_stream1, start=3000, limit=10)
+        self.assertListEqual(rx_events, mid_events[:10])
+        rx_events = await self.store.extract(event_stream1, end=4500, limit=10)
+        self.assertListEqual(rx_events, mid_events[-10:])
+
+
+
     async def _test_remove_bound_queries(self):
         event_stream1 = EventStream(id=20, name='test_stream1')
 
@@ -153,6 +163,46 @@ class TestEventStore(asynctest.TestCase):
         rx_events = await self.store.extract(event_stream1)
         self.assertListEqual(rx_events, [])
 
+    async def _test_json_queries(self):
+        event_stream1 = EventStream(id=20, name='test_stream1')
+
+        early_events = [{'start_time': i * 100,
+                         'end_time': i * 100 + 10,
+                         'content': {'title': "Event%d" % i,
+                                     'type': 'early',
+                                     'stream': event_stream1.name}
+                         } for i in range(20)]
+        mid_events = [{'start_time': i * 100,
+                       'end_time': i * 100 + 10,
+                       'content': {'title': "Event%d" % i,
+                                   'type': 'middle',
+                                   'stream': event_stream1.name}
+                       } for i in range(30, 40)]
+        late_events = [{'start_time': i * 100,
+                        'end_time': i * 100 + 10,
+                        'content': {'title': "Event%d" % i,
+                                    'stream': event_stream1.name}
+                        } for i in range(50, 60)]
+        await self.store.upsert(event_stream1, early_events + mid_events + late_events)
+
+        middle_events = await self.store.extract(event_stream1, json={'type': "middle"})
+        self.assertListEqual(mid_events, middle_events)
+        specific_event = await self.store.extract(event_stream1, json={'type': "middle", 'title': "Event30"})
+        self.assertEqual(mid_events[0], specific_event[0])
+
+    async def _test_limit_queries(self):
+        event_stream1 = EventStream(id=20, name='test_stream1')
+
+        events = [{'start_time': i * 100,
+                         'end_time': i * 100 + 10,
+                         'content': {'title': "Event%d" % i,
+                                     'type': 'early',
+                                     'stream': event_stream1.name}
+                         } for i in range(20)]
+        await self.store.upsert(event_stream1, events)
+
+        first_events = await self.store.extract(event_stream1, limit=5)
+        self.assertListEqual(events[:5], first_events)
 
 # from https://stackoverflow.com/questions/5844672/delete-an-element-from-a-dictionary
 #def _remove_id(events):

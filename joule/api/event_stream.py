@@ -222,7 +222,9 @@ async def event_stream_write(session: BaseSession,
 async def event_stream_read(session: BaseSession,
                             stream: Union[EventStream, str, int],
                             start_time: Optional[int] = None,
-                            end_time: Optional[int] = None) -> List[Event]:
+                            end_time: Optional[int] = None,
+                            limit=None,
+                            json_filter=None) -> List[Event]:
     params = {}
     if type(stream) is EventStream:
         params["id"] = stream.id
@@ -236,6 +238,19 @@ async def event_stream_read(session: BaseSession,
         params['start'] = int(start_time)
     if end_time is not None:
         params['end'] = int(end_time)
+    if limit is not None:
+        if limit <= 0:
+            raise errors.ApiError("Limit must be > 0")
+        params['limit'] = limit
+        params['return-subset'] = 1
+    if json_filter is not None:
+        if type(json_filter) is not dict:
+            raise errors.ApiError("json parameter must be a type Dict[str,str]")
+        json_safe = {}
+        for key, value in json_filter.items():
+            json_safe[str(key)] = str(value)
+        params['json'] = json.dumps(json_safe)
+    print(params)
     resp = await session.get("/event/data.json", params)
     return [event_from_json(e) for e in resp["events"]]
 
