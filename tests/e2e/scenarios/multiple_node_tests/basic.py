@@ -1,4 +1,6 @@
 import asynctest
+
+import joule.api
 from joule import api, errors
 
 
@@ -29,11 +31,24 @@ class TestBasicAPI(asynctest.TestCase):
         base_stream = await self.node2.data_stream_get("/main/folder/base")
         # make sure added_stream has data
         added_data = await self.node1.data_subscribe(added_stream)
-        base_data =await self.node2.data_subscribe(base_stream)
+        base_data = await self.node2.data_subscribe(base_stream)
         base_block = await base_data.read()
         added_block = await added_data.read()
         # align the time stamps
-        diff = base_block['timestamp'][0]-added_block['timestamp'][0]
+        diff = base_block['timestamp'][0] - added_block['timestamp'][0]
         print("the diff is %d" % diff)
         await added_data.close()
         await base_data.close()
+
+    async def test_copies_events(self):
+        events = []
+        for i in range(1000, 2000, 100):
+            events.append(joule.api.Event(start_time=i, end_time=i + 50,
+                                          content={'name': f"Event{i}"}))
+        event_stream = joule.api.EventStream("Test Events")
+        await self.node1.event_stream_create(event_stream, "/event streams")
+        await self.node1.event_stream_write(event_stream, events)
+
+
+
+

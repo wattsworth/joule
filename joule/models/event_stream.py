@@ -1,17 +1,19 @@
 from sqlalchemy.orm import relationship
 from sqlalchemy import (Column, Integer, String,
                         Boolean, ForeignKey)
-from sqlalchemy.dialects.postgresql import BIGINT
+from sqlalchemy.dialects.postgresql import BIGINT, JSONB
 from typing import TYPE_CHECKING, Dict
 
 from joule.errors import ConfigurationError
 
 from joule.models.meta import Base
-#from joule.models.data_store.event_store import StreamInfo
+
+# from joule.models.data_store.event_store import StreamInfo
 
 if TYPE_CHECKING:
     from joule.models import (Folder)  # pragma: no cover
     from joule.models.data_store.event_store import StreamInfo
+
 
 class EventStream(Base):
     """
@@ -27,8 +29,7 @@ class EventStream(Base):
 
     id: int = Column(Integer, primary_key=True)
     name: str = Column(String, nullable=False)
-
-    decimate: bool = Column(Boolean, default=True)
+    event_fields: Dict[str:str] = Column(JSONB)
 
     KEEP_ALL = -1
     KEEP_NONE = 0
@@ -43,6 +44,8 @@ class EventStream(Base):
             self.name = validate_name(attrs['name'])
         if 'description' in attrs:
             self.description = attrs['description']
+        if 'event_fields' in attrs:
+            self.event_fields = validate_event_fields(attrs['event_fields'])
 
     def to_json(self, info: Dict[int, 'StreamInfo'] = None) -> Dict:
         """
@@ -62,6 +65,7 @@ class EventStream(Base):
             'id': self.id,
             'name': self.name,
             'description': self.description,
+            'event_fields': self.event_fields,
             'data_info': data_info
         }
 
@@ -86,7 +90,16 @@ def from_json(data: Dict) -> EventStream:
 
     return EventStream(id=data["id"],
                        name=validate_name(data["name"]),
-                       description=data["description"])
+                       description=data["description"],
+                       event_fields=data["event_fields"])
+
+
+def validate_event_fields(fields: Dict[str, str]) -> Dict[str, str]:
+    # make sure values are either string or numeric
+    for field in fields:
+        if fields[field] not in ['string', 'numeric']:
+            raise ConfigurationError("invalid event field type, must be numeric or string")
+    return fields
 
 
 def validate_name(name: str) -> str:

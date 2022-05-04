@@ -18,10 +18,11 @@ class EventStream:
             description (str): optional field
     """
 
-    def __init__(self, name: str = "", description: str = ""):
+    def __init__(self, name: str = "", description: str = "", event_fields: Optional[Dict[str, str]] = None):
         self._id = None
         self.name = name
         self.description = description
+        self.event_fields = self._validate_event_fields(event_fields)
 
     @property
     def id(self) -> int:
@@ -38,6 +39,7 @@ class EventStream:
             "id": self._id,
             "name": self.name,
             "description": self.description,
+            "event_fields": self.event_fields
         }
 
     def __repr__(self):
@@ -45,12 +47,22 @@ class EventStream:
             self._id, self.name, self.description
         )
 
+    def _validate_event_fields(self, fields: Optional[Dict[str, str]]) -> Dict[str, str]:
+        # make sure values are either string or numeric
+        if fields is None:
+            return {}
+        for field in fields:
+            if fields[field] not in ['string', 'numeric']:
+                raise errors.ApiError("invalid event field type, must be numeric or string")
+        return fields
+
 
 def from_json(json) -> EventStream:
     my_stream = EventStream()
     my_stream.id = json['id']
     my_stream.name = json['name']
     my_stream.description = json['description']
+    my_stream.event_fields = json['event_fields']
     return my_stream
 
 
@@ -250,7 +262,6 @@ async def event_stream_read(session: BaseSession,
         for key, value in json_filter.items():
             json_safe[str(key)] = str(value)
         params['json'] = json.dumps(json_safe)
-    print(params)
     resp = await session.get("/event/data.json", params)
     return [event_from_json(e) for e in resp["events"]]
 

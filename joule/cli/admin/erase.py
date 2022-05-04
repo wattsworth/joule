@@ -59,7 +59,7 @@ async def run(config, delete_links):
     from sqlalchemy import create_engine
     from sqlalchemy.orm import Session
 
-    from joule.models import (DataStream, Element,
+    from joule.models import (DataStream, Element, EventStream,
                               Master, Follower, Annotation,
                               Folder, Base, TimescaleStore)
     from joule.errors import DataError
@@ -75,6 +75,7 @@ async def run(config, delete_links):
     db.query(Element).delete()
     db.query(Annotation).delete()
     db.query(DataStream).delete()
+    db.query(EventStream).delete()
     db.query(Folder).delete()
     if delete_links:
         db.query(Master).delete()
