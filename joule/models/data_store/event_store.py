@@ -73,7 +73,7 @@ class EventStore:
     async def extract(self, stream: 'EventStream',
                       start: Optional[int] = None,
                       end: Optional[int] = None,
-                      json=None,
+                      json_filter=None,
                       limit=None) -> List[Dict]:
         if end is not None and start is not None and end <= start:
             raise ValueError("Invalid time bounds start [%d] must be < end [%d]" % (start, end))
@@ -84,8 +84,8 @@ class EventStore:
         else:
             where_clause += " AND "
         where_clause += "event_stream_id=%d" % stream.id
-        if json is not None:
-            where_clause += " AND " + psql_helpers.query_event_json(json)
+        if json_filter is not None and len(json_filter)>0:
+            where_clause += " AND " + psql_helpers.query_event_json(json_filter)
         query += where_clause
         if limit is not None:
             assert limit > 0, "limit must be > 0"

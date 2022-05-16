@@ -103,13 +103,47 @@ def query_time_bounds(start, end):
         return ''
 
 
-def query_event_json(json: Dict[str, str]):
-    clauses = []
-    for key, value in json.items():
-        key_safe = key.replace("'", "''")
-        value_safe = value.replace("'", "''")
-        clauses.append(f"content->>'{key_safe}'='{value_safe}'")
-    return " AND ".join(clauses)
+EventFilter = Tuple[str, str, str]
+EventFilterGroup = List[EventFilter]  # AND clauses
+EventFilterGroups = List[EventFilterGroup]  # OR between groups
+
+
+def query_event_json(filter_groups: EventFilter) -> str:
+    groups = []
+    for group in filter_groups:
+        clauses = []
+        for clause in group:
+            if len(clause) != 3:
+                raise ValueError("invalid clause, must be [key,comparison,value]")
+            key, comparison, value = clause
+            key_safe = key.replace("'", "''")
+            if comparison in ['is', 'not', 'like', 'unlike']:
+                value_safe = value.replace("'", "''")
+                if comparison == 'is':
+                    clauses.append(f"(content->>'{key_safe}'='{value_safe}')")
+                elif comparison == 'not':
+                    clauses.append(f"(NOT (content->>'{key_safe}'='{value_safe}'))")
+                elif comparison == 'like':
+                    clauses.append(f"(content->>'{key_safe}' like '{value_safe}')")
+                elif comparison == 'unlike':
+                    clauses.append(f"(content->>'{key_safe}' not like '{value_safe}')")
+            elif comparison == 'gt':
+                clauses.append(f"(CAST (content->>'{key_safe}' AS FLOAT)>{float(value)})")
+            elif comparison == 'gte':
+                clauses.append(f"(CAST (content->>'{key_safe}' AS FLOAT)>={float(value)})")
+            elif comparison == 'lt':
+                clauses.append(f"(CAST (content->>'{key_safe}' AS FLOAT)<{float(value)})")
+            elif comparison == 'lte':
+                clauses.append(f"(CAST (content->>'{key_safe}' AS FLOAT)<={float(value)})")
+            elif comparison == 'eq':
+                clauses.append(f"(CAST (content->>'{key_safe}' AS FLOAT)={float(value)})")
+            elif comparison == 'neq':
+                clauses.append(f"(NOT CAST (content->>'{key_safe}' AS FLOAT)={float(value)})")
+            else:
+                raise ValueError(f"Invalid comparison {comparison}, must be [gt|gte|lt|lte|eq|neq|is|not|like|unlike]")
+        groups.append(' AND '.join(clauses))
+    sql_query = " OR ".join(groups)
+    return sql_query
 
 
 async def create_event_table(conn: asyncpg.Connection):

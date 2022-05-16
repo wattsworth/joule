@@ -119,12 +119,14 @@
          "id":1,
          "name":"events0",
          "description":"",
+         "event_fields": {},
          "data_info":null
       },
       {
          "id":2,
          "name":"events1",
          "description":"",
+         "event_fields": {},
          "data_info":null
       }
    ]

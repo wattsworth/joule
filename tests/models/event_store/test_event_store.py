@@ -128,8 +128,6 @@ class TestEventStore(asynctest.TestCase):
         rx_events = await self.store.extract(event_stream1, end=4500, limit=10)
         self.assertListEqual(rx_events, mid_events[-10:])
 
-
-
     async def _test_remove_bound_queries(self):
         event_stream1 = EventStream(id=20, name='test_stream1')
 
@@ -185,25 +183,26 @@ class TestEventStore(asynctest.TestCase):
                         } for i in range(50, 60)]
         await self.store.upsert(event_stream1, early_events + mid_events + late_events)
 
-        middle_events = await self.store.extract(event_stream1, json={'type': "middle"})
+        middle_events = await self.store.extract(event_stream1, json_filter=[[['type', 'is', 'middle']]])
         self.assertListEqual(mid_events, middle_events)
-        specific_event = await self.store.extract(event_stream1, json={'type': "middle", 'title': "Event30"})
+        specific_event = await self.store.extract(event_stream1,  json_filter=[[['type', 'is', 'middle'],
+                                                                                ['title', 'is', 'Event30']]])
         self.assertEqual(mid_events[0], specific_event[0])
 
     async def _test_limit_queries(self):
         event_stream1 = EventStream(id=20, name='test_stream1')
 
         events = [{'start_time': i * 100,
-                         'end_time': i * 100 + 10,
-                         'content': {'title': "Event%d" % i,
-                                     'type': 'early',
-                                     'stream': event_stream1.name}
-                         } for i in range(20)]
+                   'end_time': i * 100 + 10,
+                   'content': {'title': "Event%d" % i,
+                               'type': 'early',
+                               'stream': event_stream1.name}
+                   } for i in range(20)]
         await self.store.upsert(event_stream1, events)
 
         first_events = await self.store.extract(event_stream1, limit=5)
         self.assertListEqual(events[:5], first_events)
 
 # from https://stackoverflow.com/questions/5844672/delete-an-element-from-a-dictionary
-#def _remove_id(events):
+# def _remove_id(events):
 #    return [{i: e[i] for i in e if i != 'id'} for e in events]

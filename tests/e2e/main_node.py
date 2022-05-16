@@ -122,6 +122,7 @@ def main():
 
         # clear the existing database (keeping master/follower tables)
         subprocess.run("joule admin erase --yes".split(" "))
+        subprocess.run("joule admin authorize".split(" "))
 
         jouled = subprocess.Popen(["jouled", "--config",
                                    main_conf],

@@ -29,7 +29,7 @@ class EventStream(Base):
 
     id: int = Column(Integer, primary_key=True)
     name: str = Column(String, nullable=False)
-    event_fields: Dict[str:str] = Column(JSONB)
+    event_fields: Dict[str, str] = Column(JSONB)
 
     KEEP_ALL = -1
     KEEP_NONE = 0
@@ -60,7 +60,6 @@ class EventStream(Base):
             data_info = info[self.id].to_json()
         else:
             data_info = None
-
         return {
             'id': self.id,
             'name': self.name,

@@ -7,6 +7,7 @@ from joule.cli.config import Config, pass_config
 from joule.api import BaseNode
 from joule.api.folder import (Folder, folder_root)
 from joule.api.data_stream import DataStream
+from joule.api.event_stream import EventStream
 
 
 @click.command(name="move")
@@ -140,7 +141,7 @@ def _process_data_stream(tree: Tree, stream: DataStream, parent_id,
     tree.create_node(tag, identifier, parent_id)
 
 
-def _process_event_stream(tree: Tree, stream: DataStream, parent_id, showid: bool):
+def _process_event_stream(tree: Tree, stream: EventStream, parent_id, showid: bool):
     tag = stream.name
     if showid:
         tag += " (%d)" % stream.id

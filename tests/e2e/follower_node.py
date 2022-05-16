@@ -1,10 +1,11 @@
-#!/usr/bin/python3
+#!/usr/bin/python3 -u
 
 """
 Run the configuration in follower
 """
 
 import os
+import sys
 import subprocess
 import time
 import shlex
@@ -25,7 +26,6 @@ def run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL):
 
 
 def main():
-
     prep_system()
 
     config_file = os.path.join(JOULE_CONF_DIR, "main.conf")
@@ -39,15 +39,14 @@ def main():
         subprocess.run(("joule admin authorize --config %s" % config_file).split(" "),
                        stdout=devnull)
 
-    jouled = subprocess.Popen(["jouled", "--config",
-                               config_file],
-                              stdout=subprocess.PIPE,
-                              stderr=subprocess.STDOUT,
+    jouled = subprocess.Popen(["jouled", "--config", config_file],
+                              stdout=sys.stdout,
+                              stderr=sys.stderr,
                               universal_newlines=True)
     # wait until local node is online
     max_tries = 6
     num_tries = 0
-    while num_tries<max_tries:
+    while num_tries < max_tries:
         num_tries += 1
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -58,7 +57,7 @@ def main():
         time.sleep(0.5)
     # local node failure, print the log
     if num_tries == max_tries:
-        exit(dump_logs(jouled))
+        exit()
 
     # wait until the master node is online
     max_tries = 10
@@ -76,23 +75,18 @@ def main():
     # remote node failure, print the log
     if num_tries == max_tries:
         print("Cannot find node1.joule, exiting follower")
-        exit(dump_logs(jouled))
+        exit()
 
     # follow node1.joule
-#    with open(os.devnull, 'w') as devnull:
-    subprocess.run("joule master add joule https://node1.joule:8088".split(" "))#,
-#                       #stderr=devnull, stdout=devnull)
-
+    #    with open(os.devnull, 'w') as devnull:
+    subprocess.run("joule master add joule https://node1.joule:8088".split(" "))  # ,
+    #                       #stderr=devnull, stdout=devnull)
+    # subprocess.run(f"jouled --config {config_file})")
     # this will just hang, node1 exits and terminates this container
     stdout, _ = jouled.communicate()
-    # execution should not reach here
+
     return 0
 
-def dump_logs(proc):
-    proc.send_signal(signal.SIGINT)
-    stdout, _ = proc.communicate()
-    for line in stdout.rstrip().split('\n'):
-        print("> %s" % line)
 
 if __name__ == "__main__":
     exit(main())

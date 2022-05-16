@@ -143,6 +143,7 @@
                      "id":1,
                      "name":"events0",
                      "description":"",
+                     "event_fields": {},
                      "data_info":{
                         "start":null,
                         "end":null,
@@ -155,6 +156,7 @@
                      "id":2,
                      "name":"events1",
                      "description":"",
+                     "event_fields": {},
                      "data_info":{
                         "start":1611421200000000,
                         "end":1611422190000000,
@@ -254,6 +256,7 @@
                      "id":3,
                      "name":"events2",
                      "description":"",
+                     "event_fields": {},
                      "data_info":{
                         "start":null,
                         "end":null,

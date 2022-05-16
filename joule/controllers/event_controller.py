@@ -220,19 +220,13 @@ async def read_events(request):
 
     # sanitize json parameter
     json_filter = None
-    if 'json' in request.query:
+    if 'filter' in request.query and request.query['filter'] is not None:
         try:
-            raw_json = json.loads(request.query['json'])
-            if type(raw_json) is not dict:
-                raise ValueError
-            json_filter = {}
-            for key, value in raw_json.items():
-                if type(key) is not str or type(value) is not str:
-                    raise ValueError
-                json_filter[str(key)] = str(value)
+            json_filter = json.loads(request.query['filter'])
+            # TODO verify syntax
         except (json.decoder.JSONDecodeError, ValueError):
-            return web.Response(text="invalid json filter parameter", status=400)
-    events = await event_store.extract(my_stream, params['start'], params['end'], limit=limit, json=json_filter)
+            return web.Response(text="invalid filter parameter", status=400)
+    events = await event_store.extract(my_stream, params['start'], params['end'], limit=limit, json_filter=json_filter)
     return web.json_response(data={'count': len(events), 'events': events})
 
 
