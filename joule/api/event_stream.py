@@ -256,7 +256,7 @@ async def event_stream_read(session: BaseSession,
         params['limit'] = limit
         params['return-subset'] = 1
     if json_filter is not None:
-        params['json'] = json_filter
+        params['filter'] = json_filter
     resp = await session.get("/event/data.json", params)
     return [event_from_json(e) for e in resp["events"]]
 
