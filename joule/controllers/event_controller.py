@@ -203,11 +203,20 @@ async def read_events(request):
             (params['start'] >= params['end'])):
         return web.Response(text="[start] must be < [end]", status=400)
 
+    # sanitize json parameter
+    json_filter = None
+    if 'filter' in request.query and request.query['filter'] is not None and len(request.query['filter'])>0:
+        try:
+            json_filter = json.loads(request.query['filter'])
+            # TODO verify syntax
+        except (json.decoder.JSONDecodeError, ValueError):
+            return web.Response(text="invalid filter parameter", status=400)
+
     # handle limit parameter, default is HARD, do not return unless count < limit
     if params['limit'] is not None and 'return-subset' not in request.query:
         if params['limit'] <= 0:
             return web.Response(text="[limit] must be > 0", status=400)
-        event_count = await event_store.count(my_stream, params['start'], params['end'])
+        event_count = await event_store.count(my_stream, params['start'], params['end'], json_filter=json_filter)
         if event_count > params['limit']:
             # too many events, just send the count parameter
             return web.json_response(data={'count': event_count, 'events': []})
@@ -218,14 +227,7 @@ async def read_events(request):
             return web.Response(text="[limit] must be > 0", status=400)
         limit = params['limit']
 
-    # sanitize json parameter
-    json_filter = None
-    if 'filter' in request.query and request.query['filter'] is not None:
-        try:
-            json_filter = json.loads(request.query['filter'])
-            # TODO verify syntax
-        except (json.decoder.JSONDecodeError, ValueError):
-            return web.Response(text="invalid filter parameter", status=400)
+
     events = await event_store.extract(my_stream, params['start'], params['end'], limit=limit, json_filter=json_filter)
     return web.json_response(data={'count': len(events), 'events': events})
 

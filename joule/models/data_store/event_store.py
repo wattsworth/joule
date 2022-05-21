@@ -55,7 +55,8 @@ class EventStore:
         return events
 
     async def count(self, stream: 'EventStream',
-                    start: Optional[int] = None, end: Optional[int] = None) -> int:
+                    start: Optional[int] = None, end: Optional[int] = None,
+                    json_filter=None) -> int:
         if end is not None and start is not None and end <= start:
             raise ValueError("Invalid time bounds start [%d] must be < end [%d]" % (start, end))
         query = "SELECT count(*) FROM data.events "
@@ -65,6 +66,8 @@ class EventStore:
         else:
             where_clause += " AND "
         where_clause += "event_stream_id=%d" % stream.id
+        if json_filter is not None and len(json_filter)>0:
+            where_clause += " AND " + psql_helpers.query_event_json(json_filter)
         query += where_clause
         async with self.pool.acquire() as conn:
             record = await conn.fetch(query)
