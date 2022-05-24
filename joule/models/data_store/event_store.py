@@ -105,7 +105,9 @@ class EventStore:
             events.sort(key=lambda e: e["start_time"])
             return events
 
-    async def remove(self, stream: 'EventStream', start: Optional[int] = None, end: Optional[int] = None):
+    async def remove(self, stream: 'EventStream', start: Optional[int] = None,
+                     end: Optional[int] = None,
+                     json_filter = None):
         query = "DELETE FROM data.events "
         where_clause = psql_helpers.query_time_bounds(start, end)
         if len(where_clause) == 0:
@@ -113,6 +115,8 @@ class EventStore:
         else:
             where_clause += " AND "
         where_clause += "event_stream_id=%d" % stream.id
+        if json_filter is not None and len(json_filter)>0:
+            where_clause += " AND " + psql_helpers.query_event_json(json_filter)
         query += where_clause
         async with self.pool.acquire() as conn:
             return await conn.execute(query)

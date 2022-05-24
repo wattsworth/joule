@@ -192,8 +192,9 @@ class BaseNode:
     async def event_stream_remove(self,
                                   stream: Union[EventStream, str, int],
                                   start: Optional[int] = None,
-                                  end: Optional[int] = None) -> None:
-        return await event_stream_remove(self.session, stream, start, end)
+                                  end: Optional[int] = None,
+                                  json_filter=None) -> None:
+        return await event_stream_remove(self.session, stream, start, end, json_filter)
 
     # Data actions
 

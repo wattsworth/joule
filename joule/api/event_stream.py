@@ -264,7 +264,8 @@ async def event_stream_read(session: BaseSession,
 async def event_stream_remove(session: BaseSession,
                               stream: Union[EventStream, str, int],
                               start_time: Optional[int] = None,
-                              end_time: Optional[int] = None) -> None:
+                              end_time: Optional[int] = None,
+                              json_filter=None) -> None:
     params = {}
     if type(stream) is EventStream:
         params["id"] = stream.id
@@ -278,4 +279,6 @@ async def event_stream_remove(session: BaseSession,
         params['start'] = int(start_time)
     if end_time is not None:
         params['end'] = int(end_time)
-    json_events = await session.delete("/event/data.json", params)
+    if json_filter is not None:
+        params['filter'] = json_filter
+    await session.delete("/event/data.json", params)
