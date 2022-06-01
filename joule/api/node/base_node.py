@@ -150,8 +150,11 @@ class BaseNode:
     # EventStream actions
 
     async def event_stream_get(self,
-                               stream: Union[EventStream, str, int]) -> EventStream:
-        return await event_stream_get(self.session, stream)
+                               stream: Union[EventStream, str, int],
+                               create: bool = False,
+                               description: str = "",
+                               event_fields=None) -> EventStream:
+        return await event_stream_get(self.session, stream, create, description, event_fields)
 
     async def event_stream_move(self,
                                 stream: Union[DataStream, str, int],

@@ -9,6 +9,8 @@ import sys
 from joule.models.data_store.event_store import EventStore
 from joule.models.event_stream import EventStream
 
+SQL_DIR = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'joule', 'sql')
+
 
 class TestEventStore(asynctest.TestCase):
     use_default_loop = False
@@ -29,6 +31,12 @@ class TestEventStore(asynctest.TestCase):
         self.db_url = self.postgresql.url()
         # self.db_url = "postgresql://joule:joule@127.0.0.1:5432/joule"
         conn: asyncpg.Connection = await asyncpg.connect(self.db_url)
+        await conn.execute("CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE ")
+        # load custom functions
+        for file in os.listdir(SQL_DIR):
+            file_path = os.path.join(SQL_DIR, file)
+            with open(file_path, 'r') as f:
+                await conn.execute(f.read())
 
         await conn.close()
 

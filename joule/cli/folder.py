@@ -1,9 +1,13 @@
 import click
 import asyncio
 from treelib import Tree
+from typing import Optional
 
+import joule.api
 from joule import errors
 from joule.cli.config import Config, pass_config
+from joule.cli.data.copy import _run as run_data_copy
+from joule.cli.event.copy import _run as run_event_copy
 from joule.api import BaseNode
 from joule.api.folder import (Folder, folder_root)
 from joule.api.data_stream import DataStream
@@ -84,7 +88,7 @@ def list(config, path, layout, status, id):
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(
-            _run(config.node, path, layout, status, id))
+            _run_list(config.node, path, layout, status, id))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
@@ -93,7 +97,7 @@ def list(config, path, layout, status, id):
         loop.close()
 
 
-async def _run(node: BaseNode, path: str, layout: bool, status: bool, showid: bool):
+async def _run_list(node: BaseNode, path: str, layout: bool, status: bool, showid: bool):
     tree = Tree()
     if path == "/":
         root = await node.folder_root()
@@ -102,7 +106,7 @@ async def _run(node: BaseNode, path: str, layout: bool, status: bool, showid: bo
         root = await node.folder_get(path)
     _process_folder(tree, root, None, layout, status, showid)
     click.echo("Legend: [" + click.style("Folder", bold=True) + "] [Data Stream] ["
-               + click.style("Event Stream", fg='cyan')+"]")
+               + click.style("Event Stream", fg='cyan') + "]")
     if status:
         click.echo("\t" + click.style("\u25CF ", fg="green") + "active  " +
                    click.style("\u25CF ", fg="cyan") + "configured")
@@ -150,12 +154,56 @@ def _process_event_stream(tree: Tree, stream: EventStream, parent_id, showid: bo
     tree.create_node(tag, identifier, parent_id)
 
 
+@click.command(name="copy")
+@click.argument("source")
+@click.argument("destination")
+@click.option('-s', "--start", help="timestamp or descriptive string")
+@click.option('-e', "--end", help="timestamp or descriptive string")
+@click.option('-n', '--new', help="copy starts at the last timestamp of the destination", is_flag=True)
+@click.option("-d", "--destination-node")
+@pass_config
+def copy(config, source, destination, start, end, new, destination_node):
+    """Recursively copy a folder to a new location"""
+    loop = asyncio.get_event_loop()
+    try:
+        if destination_node is not None:
+            destination_node = joule.api.get_node(destination_node)
+        else:
+            destination_node = config.node
+        loop.run_until_complete(
+            _run_copy(config.node, source, destination, start, end, new, destination_node))
+    except errors.ApiError as e:
+        raise click.ClickException(str(e)) from e
+    finally:
+        loop.run_until_complete(
+            config.close_node())
+        loop.close()
+
+
+async def _run_copy(source_node, source, destination, start, end, new, destination_node) -> None:
+    if type(source) is str:
+        source_folder = await source_node.folder_get(source)
+    else:
+        source_folder = source
+    for child in source_folder.children:
+        await _run_copy(source_node, source_folder, f"{destination}/{child.name}", start, end, new, destination_node)
+    for data_stream in source_folder.data_streams:
+        click.echo(f"Writing Data Stream {destination}/{data_stream.name}")
+        await run_data_copy(source_node, start, end, new, destination_node, data_stream,
+                            f"{destination}/{data_stream.name}")
+    for event_stream in source_folder.event_streams:
+        click.echo(f"Writing Event Stream {destination}/{event_stream.name}")
+        await run_event_copy(source_node, destination_node, start, end, new, False, event_stream,
+                             f"{destination}/{event_stream.name}")
+
+
 @click.group(name="folder")
 def folders():
     """Manage folders."""
     pass  # pragma: no cover
 
 
+folders.add_command(copy)
 folders.add_command(move)
 folders.add_command(delete)
 folders.add_command(rename)

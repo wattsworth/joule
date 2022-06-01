@@ -30,8 +30,8 @@ def data_copy(config, start, end, new, destination_node, source_url, source, des
     """Copy data between two streams."""
     loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(_run(config, start, end, new, destination_node,
-                                     source_url, source, destination))
+        loop.run_until_complete(_run(config.node, start, end, new, destination_node,
+                                     source, destination, source_url))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
@@ -40,10 +40,10 @@ def data_copy(config, start, end, new, destination_node, source_url, source, des
         loop.close()
 
 
-async def _run(config, start, end, new, destination_node, source_url, source, destination):
+async def _run(config_node, start, end, new, destination_node, source, destination, source_url=None):
     # determine if the source node is NilmDB or Joule
     if source_url is None:
-        source_node = config.node
+        source_node = config_node
         nilmdb_source = False
     else:
         source_node = source_url
@@ -55,9 +55,11 @@ async def _run(config, start, end, new, destination_node, source_url, source, de
 
     try:
         if destination_node is None:
-            dest_node = config.node
-        else:
+            dest_node = config_node
+        elif type(destination_node) is str:
             dest_node = get_node(destination_node)
+        else:
+            dest_node = destination_node
     except errors.ApiError:
         nilmdb_dest = True
         dest_node = destination_node
@@ -250,7 +252,7 @@ async def _run(config, start, end, new, destination_node, source_url, source, de
         for interval in existing_intervals:
             await _copy_annotations(interval[0], interval[1])
         await _copy(new_intervals)
-        click.echo("OK")
+        click.echo("\tOK")
     # this should be caught by the stream info requests
     # it is only generated if the joule server stops during the
     # data read/write
@@ -321,7 +323,7 @@ async def _retrieve_destination(server: Union[str, BaseNode], path: str, templat
 
 
 async def _create_joule_stream(node: BaseNode, path: str, template: DataStream) -> DataStream:
-    click.echo("creating destination stream")
+    click.echo("\tcreating destination stream")
     # split the destination into the path and stream name
     dest_stream = data_stream.from_json(template.to_json())
     dest_stream.keep_us = DataStream.KEEP_ALL
@@ -331,7 +333,7 @@ async def _create_joule_stream(node: BaseNode, path: str, template: DataStream) 
 
 
 async def _create_nilmdb_stream(server: str, path: str, template: DataStream):
-    click.echo("creating destination stream")
+    click.echo("\tcreating destination stream")
     dest_stream = data_stream.from_json(template.to_json())
     dest_stream.keep_us = DataStream.KEEP_ALL
     dest_stream.name = path.split("/")[-1]

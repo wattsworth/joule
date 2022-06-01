@@ -159,7 +159,10 @@ async def event_stream_info(session: BaseSession,
 
 
 async def event_stream_get(session: BaseSession,
-                           stream: Union[EventStream, str, int]) -> EventStream:
+                           stream: Union[EventStream, str, int],
+                           create: bool = False,
+                           description: str = "",
+                           event_fields=None) -> EventStream:
     data = {}
 
     if type(stream) is EventStream:
@@ -171,7 +174,16 @@ async def event_stream_get(session: BaseSession,
     else:
         raise errors.ApiError("Invalid stream datatype. Must be EventStream, Path, or ID")
 
-    resp = await session.get("/event.json", data)
+    try:
+        resp = await session.get("/event.json", data)
+    except errors.ApiError as e:
+        # pass the error if the stream should not or cannot be created
+        if not create or type(stream) is not str:
+            raise e
+        name = stream.split('/')[-1]
+        path = '/'.join(stream.split('/')[:-1])
+        event_stream = EventStream(name, description, event_fields)
+        return await event_stream_create(session, event_stream, path)
     return from_json(resp)
 
 

@@ -148,12 +148,15 @@ def query_event_json(filter_groups: EventFilter) -> str:
 
 async def create_event_table(conn: asyncpg.Connection):
     sql = """CREATE TABLE IF NOT EXISTS data.events (
-    id SERIAL PRIMARY KEY,
+    id SERIAL,
     time TIMESTAMP NOT NULL,
     end_time TIMESTAMP,
     event_stream_id INTEGER,
     content JSONB
     )"""
+    await conn.execute(sql)
+    sql = """SELECT create_hypertable('data.events', 'time',
+    chunk_time_interval => INTERVAL '1 day', if_not_exists=> TRUE)"""
     await conn.execute(sql)
 
 
