@@ -186,7 +186,7 @@ async def _run_copy(source_node, source, destination, start, end, new, destinati
     else:
         source_folder = source
     for child in source_folder.children:
-        await _run_copy(source_node, source_folder, f"{destination}/{child.name}", start, end, new, destination_node)
+        await _run_copy(source_node, child, f"{destination}/{child.name}", start, end, new, destination_node)
     for data_stream in source_folder.data_streams:
         click.echo(f"Writing Data Stream {destination}/{data_stream.name}")
         await run_data_copy(source_node, start, end, new, destination_node, data_stream,
