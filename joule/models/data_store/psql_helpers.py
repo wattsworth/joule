@@ -143,7 +143,7 @@ def query_event_json(filter_groups: EventFilter) -> str:
                 raise ValueError(f"Invalid comparison {comparison}, must be [gt|gte|lt|lte|eq|neq|is|not|like|unlike]")
         groups.append(' AND '.join(clauses))
     sql_query = " OR ".join(groups)
-    return sql_query
+    return f"({sql_query})"
 
 
 async def create_event_table(conn: asyncpg.Connection):
