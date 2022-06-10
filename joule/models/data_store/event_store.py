@@ -66,7 +66,7 @@ class EventStore:
         else:
             where_clause += " AND "
         where_clause += "event_stream_id=%d" % stream.id
-        if json_filter is not None and len(json_filter)>0:
+        if json_filter is not None and len(json_filter) > 0:
             where_clause += " AND " + psql_helpers.query_event_json(json_filter)
         query += where_clause
         async with self.pool.acquire() as conn:
@@ -87,7 +87,7 @@ class EventStore:
         else:
             where_clause += " AND "
         where_clause += "event_stream_id=%d" % stream.id
-        if json_filter is not None and len(json_filter)>0:
+        if json_filter is not None and len(json_filter) > 0:
             where_clause += " AND " + psql_helpers.query_event_json(json_filter)
         query += where_clause
         if limit is not None:
@@ -107,7 +107,7 @@ class EventStore:
 
     async def remove(self, stream: 'EventStream', start: Optional[int] = None,
                      end: Optional[int] = None,
-                     json_filter = None):
+                     json_filter=None):
         query = "DELETE FROM data.events "
         where_clause = psql_helpers.query_time_bounds(start, end)
         if len(where_clause) == 0:
@@ -115,7 +115,7 @@ class EventStore:
         else:
             where_clause += " AND "
         where_clause += "event_stream_id=%d" % stream.id
-        if json_filter is not None and len(json_filter)>0:
+        if json_filter is not None and len(json_filter) > 0:
             where_clause += " AND " + psql_helpers.query_event_json(json_filter)
         query += where_clause
         async with self.pool.acquire() as conn:
@@ -125,25 +125,24 @@ class EventStore:
         await self.remove(stream)
 
     async def info(self, streams: List['EventStream']) -> Dict[int, 'StreamInfo']:
-        results = {}
+        info_objects = {s.id: StreamInfo(None, None, 0, 0, 0) for s in streams}
         async with self.pool.acquire() as conn:
-            for my_stream in streams:
-                rows = await conn.fetchval("SELECT COUNT(*) FROM data.events WHERE event_stream_id=%d" % my_stream.id)
-                query = "SELECT time FROM data.events WHERE event_stream_id=%d ORDER BY time ASC LIMIT 1" % my_stream.id
-                start_time = await conn.fetchval(query)
-                if start_time is not None:
-                    start_time = joule.utilities.datetime_to_timestamp(start_time)
-                query = "SELECT time FROM data.events WHERE event_stream_id=%d ORDER BY time DESC LIMIT 1" % my_stream.id
-                end_time = await conn.fetchval(query)
-                if end_time is not None:
-                    end_time = joule.utilities.datetime_to_timestamp(end_time)
-                if start_time is not None:
+            query = "select count(*), event_stream_id, max(time) as end_time," \
+                    " min(time) as start_time from data.events "
+            if len(streams) < 10:
+                stream_ids = ','.join([str(s.id) for s in streams])
+                query += f"where event_stream_id in ({stream_ids}) "
+            query += "group by event_stream_id"
+            rows = await conn.fetch(query)
+            for row in rows:
+                if row['event_stream_id'] in info_objects.keys():
+                    end_time = joule.utilities.datetime_to_timestamp(row['end_time'])
+                    start_time = joule.utilities.datetime_to_timestamp(row['start_time'])
                     total_time = end_time - start_time
-                else:
-                    total_time = 0
-                total_bytes = 0  # TODO
-                results[my_stream.id] = StreamInfo(start_time, end_time, rows, total_time, total_bytes)
-        return results
+                    total_bytes = 0  # TODO
+                    info_objects[row['event_stream_id']] = StreamInfo(start_time, end_time, row['count'],
+                                                                      total_time, total_bytes)
+        return info_objects
 
     async def close(self):
         await self.pool.close()
@@ -161,6 +160,13 @@ class StreamInfo:
     def __repr__(self):
         return "<DataStreamInfo start=%r end=%r event_count=%r, total_time=%r>" % (
             self.start, self.end, self.event_count, self.total_time)
+
+    def __eq__(self, other):
+        return self.start == other.start and \
+               self.end == other.end and \
+               self.event_count == other.event_count and \
+               self.bytes == other.bytes and \
+               self.total_time == other.total_time
 
     def to_json(self):
         return {

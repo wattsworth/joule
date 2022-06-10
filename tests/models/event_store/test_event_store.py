@@ -6,7 +6,7 @@ import shutil
 import os
 import sys
 
-from joule.models.data_store.event_store import EventStore
+from joule.models.data_store.event_store import EventStore, StreamInfo
 from joule.models.event_stream import EventStream
 
 SQL_DIR = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'joule', 'sql')
@@ -49,7 +49,8 @@ class TestEventStore(asynctest.TestCase):
                  self._test_time_bound_queries,
                  self._test_remove_bound_queries,
                  self._test_json_queries,
-                 self._test_limit_queries]
+                 self._test_limit_queries,
+                 self._test_info]
         for test in tests:
             conn: asyncpg.Connection = await asyncpg.connect(self.db_url)
             await conn.execute("DROP SCHEMA IF EXISTS data CASCADE")
@@ -64,6 +65,45 @@ class TestEventStore(asynctest.TestCase):
             sys.stdout.write('o')
             await self.store.close()
             sys.stdout.flush()
+
+    async def _test_info(self):
+        streams = []
+        for i in range(20):
+            event_stream = EventStream(id=i, name=f'test_stream{i}')
+            streams.append(event_stream)
+            if i % 2 == 0:  # only half the streams have events
+                events = [{'start_time': j * 100,
+                           'end_time': j * 100 + 10,
+                           'content': {'title': "Event%d" % j,
+                                       'stream': event_stream.name}
+                           } for j in range(i * 1000, i * 1000 + 20 + i)]
+            else:
+                events = []
+            await self.store.upsert(event_stream, events)
+
+        def _expected_info(stream_ids):
+            results = {}
+            for x in stream_ids:
+                if x % 2 != 0:
+                    results[x] = StreamInfo(None, None, 0, 0, 0)
+                else:
+                    start = x * 1000 * 100
+                    end = (x * 1000 + 20 + x - 1) * 100
+                    if x == 10:  # handle rounding error in conversion between postgres and int timestamp
+                        end -= 1
+                    results[x] = StreamInfo(start, end, 20 + x, end - start, 0)
+            return results
+
+        # info from one stream
+        stream_info = await self.store.info([streams[4]])
+        self.assertDictEqual(stream_info, _expected_info([4]))
+        # info about multiple streams
+        stream_info = await self.store.info(streams[:2])
+        self.assertDictEqual(stream_info, _expected_info([0, 1]))
+        # info about a lot of streams (trigger bulk select)
+        stream_info = await self.store.info(streams[1:-1])
+        ids = [s.id for s in streams[1:-1]]
+        self.assertDictEqual(stream_info, _expected_info(ids))
 
     async def _test_basic_upsert_extract_remove(self):
         event_stream1 = EventStream(id=1, name='test_stream1')
@@ -193,8 +233,8 @@ class TestEventStore(asynctest.TestCase):
 
         middle_events = await self.store.extract(event_stream1, json_filter=[[['type', 'is', 'middle']]])
         self.assertListEqual(mid_events, middle_events)
-        specific_event = await self.store.extract(event_stream1,  json_filter=[[['type', 'is', 'middle'],
-                                                                                ['title', 'is', 'Event30']]])
+        specific_event = await self.store.extract(event_stream1, json_filter=[[['type', 'is', 'middle'],
+                                                                               ['title', 'is', 'Event30']]])
         self.assertEqual(mid_events[0], specific_event[0])
 
     async def _test_limit_queries(self):
