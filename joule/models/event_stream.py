@@ -1,6 +1,5 @@
 from sqlalchemy.orm import relationship
-from sqlalchemy import (Column, Integer, String,
-                        Boolean, ForeignKey)
+from sqlalchemy import (Column, Integer, String, ForeignKey)
 from sqlalchemy.dialects.postgresql import BIGINT, JSONB
 from typing import TYPE_CHECKING, Dict
 

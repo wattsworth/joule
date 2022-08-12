@@ -121,6 +121,10 @@ def find(path: str, db: Session, create=False, parent=None) -> Optional[Folder]:
     path_chunks = list(reversed(path.split('/')[1:]))
     # if len(path_chunks) == 0: # never used
     #    return parent
+    # make sure there are no empty chunks like /root//bad/path
+    empty_chunks = [chunk for chunk in path_chunks if chunk == ""]
+    if len(empty_chunks) > 0:
+        raise ConfigurationError("invalid path [%s]" % path)
     name = path_chunks.pop()
     folder: Folder = db.query(Folder).filter_by(parent=parent, name=name). \
         one_or_none()

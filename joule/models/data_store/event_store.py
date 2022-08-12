@@ -60,7 +60,9 @@ class EventStore:
         if end is not None and start is not None and end <= start:
             raise ValueError("Invalid time bounds start [%d] must be < end [%d]" % (start, end))
         query = "SELECT count(*) FROM data.events "
-        where_clause = psql_helpers.query_time_bounds(start, end)
+        where_clause = psql_helpers.query_time_bounds(start, end,
+                                                      start_col_name='time',
+                                                      end_col_name='end_time')
         if len(where_clause) == 0:
             where_clause = "WHERE "
         else:
@@ -81,7 +83,9 @@ class EventStore:
         if end is not None and start is not None and end <= start:
             raise ValueError("Invalid time bounds start [%d] must be < end [%d]" % (start, end))
         query = "SELECT id, time, end_time, content FROM data.events "
-        where_clause = psql_helpers.query_time_bounds(start, end)
+        where_clause = psql_helpers.query_time_bounds(start, end,
+                                                      start_col_name='time',
+                                                      end_col_name='end_time')
         if len(where_clause) == 0:
             where_clause = "WHERE "
         else:
@@ -109,7 +113,9 @@ class EventStore:
                      end: Optional[int] = None,
                      json_filter=None):
         query = "DELETE FROM data.events "
-        where_clause = psql_helpers.query_time_bounds(start, end)
+        where_clause = psql_helpers.query_time_bounds(start, end,
+                                                      start_col_name='time',
+                                                      end_col_name='end_time')
         if len(where_clause) == 0:
             where_clause = "WHERE "
         else:

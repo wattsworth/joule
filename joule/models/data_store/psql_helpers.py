@@ -86,17 +86,20 @@ def bytes_to_data(buffer: io.BytesIO, dtype: np.dtype) -> np.ndarray:
     return rx_data
 
 
-def query_time_bounds(start, end):
+def query_time_bounds(start, end, start_col_name='time', end_col_name=None):
     # bounds are [ --- )
     limits = []
     if start is not None:
         if type(start) is not datetime.datetime:
             start = datetime.datetime.fromtimestamp(start / 1e6, tz=datetime.timezone.utc)
-        limits.append("time >= '%s'" % start)
+        if end_col_name is not None:  # interval query
+            limits.append(f"{end_col_name} >= '{start}'")
+        else: # point query
+            limits.append(f"{start_col_name} >= '{start}'")
     if end is not None:
         if type(end) is not datetime.datetime:
             end = datetime.datetime.fromtimestamp(end / 1e6, tz=datetime.timezone.utc)
-        limits.append("time < '%s'" % end)
+        limits.append(f"{start_col_name} < '{end}'")
     if len(limits) > 0:
         return 'WHERE ' + ' AND '.join(limits)
     else:
