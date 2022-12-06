@@ -6,6 +6,7 @@ from icecream import ic
 from joule.models.pipes import LocalPipe, PipeError, OutputPipe
 from joule.errors import EmptyPipeError
 
+
 class TestLocalPipe(helpers.AsyncTestCase):
 
     def test_pipes_numpy_arrays(self):
@@ -68,7 +69,7 @@ class TestLocalPipe(helpers.AsyncTestCase):
         np.testing.assert_array_equal(test_data, subscriber_rx_data)
 
     def test_read_data_must_be_consumed(self):
-        #writes to pipe sends data to reader and any subscribers
+        # writes to pipe sends data to reader and any subscribers
         LAYOUT = "float32_2"
         LENGTH = 500
         UNCONSUMED_ROWS = 4
@@ -111,6 +112,24 @@ class TestLocalPipe(helpers.AsyncTestCase):
                 await my_pipe.read()
             # the pipe should be empty
             self.assertTrue(my_pipe.is_empty())
+
+        asyncio.run(reader())
+
+    def test_consumes_data(self):
+        LAYOUT = "int8_2"
+        LENGTH = 500
+        test_data = helpers.create_data(LAYOUT, length=LENGTH)
+        my_pipe = LocalPipe("int8_2")
+        my_pipe.write_nowait(test_data)
+        my_pipe.close_nowait()
+        async def reader():
+            data = await my_pipe.read()
+            assert len(data) == LENGTH
+            my_pipe.consume(100)
+            data = await my_pipe.read()
+            assert len(data) == LENGTH - 100
+            my_pipe.consume_all()
+            assert my_pipe.is_empty()
 
         asyncio.run(reader())
 

@@ -180,6 +180,9 @@ class LocalPipe(Pipe):
             print("[%s:read] consumed %d rows" % (self.name, num_rows))
         self.read_buffer = self.read_buffer[num_rows:]
 
+    def consume_all(self):
+        return self.consume(len(self.read_buffer))
+
     async def write(self, data: np.ndarray):
         if self._failed:
             await self.close()

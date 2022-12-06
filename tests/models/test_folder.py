@@ -20,12 +20,11 @@ class TestFolder(helpers.DbTestCase):
     def test_find_or_create(self):
         my_folder = folder.find("/new/folder/path", self.db, create=True)
         self.assertEqual(self.db.query(Folder).count(), 4)
-        # trailing slash is ignored
-        same_folder = folder.find("/new/folder/path/", self.db, create=True)
-        self.assertEqual(self.db.query(Folder).count(), 4)
-        self.assertEqual(my_folder, same_folder)
+        # trailing slash raises an error
+        with self.assertRaisesRegex(ConfigurationError, 'invalid path'):
+            folder.find("/new/folder/path/", self.db, create=True)
         # does not create folder if create flag is false
-        result = folder.find("/new/different/path/", self.db)
+        result = folder.find("/new/different/path", self.db)
         self.assertIsNone(result)
         self.assertEqual(self.db.query(Folder).count(), 4)
 

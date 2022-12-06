@@ -177,6 +177,15 @@ class Pipe:
             raise PipeError("cannot consume from an output pipe")
         raise PipeError("abstract method must be implemented by child")
 
+    def consume_all(self):
+        """
+        Flush all data from the read buffer. The next call to :meth:`read` will
+        only return new incoming data.
+        """
+        if self.direction == Pipe.DIRECTION.OUTPUT:
+            raise PipeError("cannot consume from an output pipe")
+        raise PipeError("abstract method must be implemented by child")
+
     def is_empty(self):
         raise PipeError("not implemented")
 
