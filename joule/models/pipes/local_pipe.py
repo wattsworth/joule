@@ -265,6 +265,9 @@ class LocalPipe(Pipe):
         if self._caching:
             await self.flush_cache()
         await self.queue.put(None)
+        # close intervals in any subscribers
+        for pipe in self.subscribers:
+            await pipe.close_interval()
 
     def close_interval_nowait(self):
         """
@@ -277,6 +280,9 @@ class LocalPipe(Pipe):
         if self.debug:
             print("[%s:write] closing interval" % self.name)
         self.queue.put_nowait(None)
+        # close intervals in any subscribers
+        for pipe in self.subscribers:
+            pipe.close_interval_nowait()
 
     def change_layout(self, layout: str):
         self._layout = layout
