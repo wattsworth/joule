@@ -3,7 +3,7 @@ asynctest==0.13.0
 async-timeout==3.0.1
 attrs==20.3.0
 beautifulsoup4==4.9.3
-certifi==2020.12.5
+certifi==2022.12.7
 chardet <4.0,>=2.0
 click==7.1.2
 dateparser==1.0.0
