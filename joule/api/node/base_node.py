@@ -268,8 +268,10 @@ class BaseNode:
     async def master_delete(self, master_type: str, name: str) -> None:
         return await master_delete(self.session, master_type, name)
 
-    async def master_add(self, master_type, identifier, lumen_parameters: Optional[Dict] = None) -> Master:
-        return await master_add(self.session, master_type, identifier, lumen_parameters)
+    async def master_add(self, master_type, identifier,
+                         lumen_parameters: Optional[Dict] = None,
+                         api_key=None) -> Master:
+        return await master_add(self.session, master_type, identifier, lumen_parameters, api_key)
 
     # Follower actions
     async def follower_list(self) -> List['BaseNode']:

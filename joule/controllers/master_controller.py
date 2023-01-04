@@ -39,16 +39,24 @@ async def add(request: web.Request):  # pragma: no cover
             my_master = db.query(Master). \
                 filter(Master.type == Master.TYPE.USER). \
                 filter(Master.name == identifier).first()
-            if my_master is None:
-                # create a new user API key
-                my_master = Master(name=identifier,
-                                   type=Master.TYPE.USER,
-                                   key=make_key())
-                grantor_key = request.headers["X-API-KEY"]
-                my_master.grantor_id = db.query(Master.id).filter(
-                    Master.key == grantor_key).one()[0]
-                db.add(my_master)
-                db.commit()
+            if my_master is not None:
+                return web.Response(text="User already exists", status=400)
+            # see if API key was included in request
+            if 'api_key' in body and body['api_key'] is not None:
+                key = body['api_key']
+                if len(key) < 32:
+                    return web.Response(text="API Key must be at least 32 characters", status=400)
+            else:
+                key = make_key()  # make a new key
+            # create a new user API key
+            my_master = Master(name=identifier,
+                               type=Master.TYPE.USER,
+                               key=key)
+            grantor_key = request.headers["X-API-KEY"]
+            my_master.grantor_id = db.query(Master.id).filter(
+                Master.key == grantor_key).one()[0]
+            db.add(my_master)
+            db.commit()
             return web.json_response({"key": my_master.key,
                                       "name": local_name})
         elif master_type == 'joule' or master_type == 'lumen':

@@ -13,6 +13,7 @@ class TestFolderControllerErrors(AioHTTPTestCase):
     async def tearDownAsync(self):
         self.app["db"].close()
         self.app["psql"].stop()
+        await self.client.close()
 
     async def get_application(self):
         app = web.Application()

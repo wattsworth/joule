@@ -12,6 +12,7 @@ class TestMasterController(AioHTTPTestCase):
     async def tearDownAsync(self):
         self.app["db"].close()
         self.app["psql"].stop()
+        await self.client.close()
 
     async def get_application(self):
         app = web.Application()
@@ -46,12 +47,14 @@ class TestMasterController(AioHTTPTestCase):
         self.assertEqual(m.grantor_id, self.grantor.id)
         self.assertEqual(json['key'], m.key)
 
-        # adding johndoe again returns the same key
+        # adding johndoe again returns an error and does not change the key
         resp = await self.client.post("/master.json", json=payload,
                                       headers={'X-API-KEY': "grantor_key"})
-        self.assertEqual(resp.status, 200)
-        json = await resp.json()
-        self.assertEqual(json['key'], m.key)
+        old_key = m.key
+        m = db.query(Master).filter(Master.name == "johndoe").one_or_none()
+        new_key = m.key
+        self.assertEqual(old_key, new_key)
+        self.assertEqual(resp.status, 400)
 
     @unittest_run_loop
     async def test_removes_master_user(self):
