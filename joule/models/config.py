@@ -47,7 +47,7 @@ class JouleConfig:
                  cleanup_period: int,
                  max_log_lines: int,
                  nilmdb_url: Optional[str],
-
+                 users_file: Optional[str],
                  proxies: List[Proxy],
                  security: Optional[SecurityConfig]):
         self.name = name
@@ -63,3 +63,4 @@ class JouleConfig:
         self.proxies = proxies
         self.security = security
         self.socket_directory = socket_directory
+        self.users_file = users_file
