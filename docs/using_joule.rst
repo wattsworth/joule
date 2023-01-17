@@ -145,7 +145,7 @@ attempts to connect an output pipe to a stream that already has a producer, Joul
 .. _sec-streams:
 
 DataStream Configuration
---------------------
+------------------------
 
 Streams are timestamped data flows. They are composed of one or more elements as shown
 below. Timestamps are in Unix microseconds (elapsed time since January 1, 1970).
@@ -283,6 +283,9 @@ full set of options and their default settings:
     # Keep the most recent N lines in each module log
     MaxLogLines = 100
 
+    # Manage user access with a specific file, optional
+    UsersFile = /etc/joule/users.conf
+
   </div>
 
 See the list below for information on each setting.
@@ -299,3 +302,34 @@ See the list below for information on each setting.
   * ``InsertionPeriod`` -- how often to send stream data to NilmDB (in seconds)
   * ``CleanupPeriod`` -- how often to remove old data (in seconds) as specified by stream **keep** parameters
   * ``MaxLogLines`` -- max number of lines to keep in a module log file (automatically rolls)
+  * ``UsersFile`` -- control access using the specified file (example below), no reload is required.
+
+Example Users File Syntax:
+
+.. raw:: html
+
+    <div class="users-file">
+
+      : /etc/joule/users.conf
+
+        # Specify user name and key separated by a ,
+        # Keys must be unique and at least 32 characters long
+        # If the user exists with a different key, the key is updated.
+        # ----------------------------------------------
+        # Name, Key
+        alice, 044b1a5153e5f736cd787870cc949f2a
+        bob, f5b37cd7207ac314a74d57d9c2ff8bb0
+        charlie, 126374f04d61ea485883f6fb287defc0
+
+        # Remove users using DELETE, add LIKE for SQL wildcard match (%,_)
+        # ----------------------------------------------------------------
+
+        # remove any users with names that begin with temp
+        DELETE LIKE temp%
+
+        # remove the user named remote_admin
+        DELETE remote_admin
+
+
+      </div>
+
