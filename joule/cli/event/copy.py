@@ -70,17 +70,24 @@ async def _run(source_node,  dest_node, start, end, new, replace, source, destin
     event_count = stream_info.event_count
     num_copied_events = 0
     with click.progressbar(length=event_count) as bar:
+        seen_event_ids = set()
         while True:
             events = await source_node.event_stream_read(source, start=start, end=end,
                                                          limit=1000)
-            # remove the event id's so it inserts as a new event
+
+            new_events = []
             for event in events:
-                event.id = None
-            if len(events) == 0:
+                if event.id not in seen_event_ids:
+                    seen_event_ids.add(event.id)
+                    event.id = None # remove the event id's so it inserts as a new event
+                    new_events.append(event)
+
+            if len(new_events) == 0:
                 break
-            await dest_node.event_stream_write(destination, events)
-            num_copied_events += len(events)
-            bar.update(len(events))
-            start = events[-1].start_time + 1
+
+            await dest_node.event_stream_write(destination, new_events)
+            num_copied_events += len(new_events)
+            bar.update(len(new_events))
+            start = new_events[-1].start_time + 1
         # bring bar up to 100%
         bar.update(event_count-num_copied_events)
