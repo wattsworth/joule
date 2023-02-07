@@ -469,7 +469,7 @@ Event Stream Actions
         >>> e1 = Event(start_time=time_now()-1e6, end_time = time_now(), content={'name': 'event1'})
         >>> await asyncio.sleep(2)
         >>> e2 = Event(start_time=time_now()-1e6, end_time = time_now(), content={'name': 'event2'})
-        >>> await node.even_stream_write("/plugs/events",[e1,e2])
+        >>> await node.event_stream_write("/plugs/events",[e1,e2])
 
 .. function:: Node.event_stream_read(stream: Union[EventStream, str, int], start: Optional[int] = None, end: Optional[int] = None, limit: Optional[int] = None, json_filter: Optional[string]=None) -> List[Event]
 
