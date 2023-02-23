@@ -93,7 +93,8 @@ class Daemon(object):
                                                      password=password,
                                                      port=parsed_dsn.port,
                                                      host=parsed_dsn.host,
-                                                     database=parsed_dsn.database)
+                                                     database=parsed_dsn.database,
+                                                     nilmdb_url=self.config.nilmdb_url)
         # NOTE: joule user must be able to create a role and grant access to db
         # ALTER ROLE joule WITH CREATEROLE;
         # GRANT ALL PRIVILEGES ON DATABASE joule TO joule WITH GRANT OPTION;

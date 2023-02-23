@@ -7,14 +7,15 @@ class ConnectionInfo:
     Encapsulates database connection information
     """
 
-    def __init__(self, username: str, password: str, port: int, database: str, host: str):
+    def __init__(self, username: str, password: str, port: int, database: str, host: str, nilmdb_url):
         """
         Attributes:
             username (str): database username
             password (str): database password
             port (int): database port
-            database (str): database namne
+            database (str): database name
             host (str): hostname
+            nilmdb_url (str): NilmDB URL (empty if unused)
 
         """
         self.username = username
@@ -22,6 +23,7 @@ class ConnectionInfo:
         self.port = port
         self.database = database
         self.host = host
+        self.nilmdb_url = nilmdb_url
 
     def to_json(self) -> Dict:
         """
@@ -34,7 +36,8 @@ class ConnectionInfo:
             "password": self.password,
             "port": self.port,
             "database": self.database,
-            "host": self.host
+            "host": self.host,
+            "nilmdb_url": self.nilmdb_url
         }
 
     def to_dsn(self) -> str:
@@ -48,12 +51,16 @@ class ConnectionInfo:
 
 
 def from_json(data: Dict) -> 'ConnectionInfo':
+    # keep client backwards compatible with earlier jouled versions
+    if "nilmdb_url" not in data:
+        data["nilmdb_url"] = ""
     try:
         info = ConnectionInfo(username=data["username"],
-                       password=data["password"],
-                       port=data["port"],
-                       database=data["database"],
-                       host=data["host"])
+                              password=data["password"],
+                              port=data["port"],
+                              database=data["database"],
+                              host=data["host"],
+                              nilmdb_url=data["nilmdb_url"])
     except KeyError as e:
         raise ApiError("invalid connection info, missing [%s]" % str(e))
     return info

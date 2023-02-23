@@ -110,7 +110,7 @@ class Pipe:
 
         raise PipeError("Not Implemented")
 
-    async def read_all(self, flatten=False, maxrows=1e5, error_on_overflow=False) -> np.ndarray:
+    async def read_all(self, flatten=False, maxrows=int(1e5), error_on_overflow=False) -> np.ndarray:
         """
                 Read stream data. By default this method returns a structured
                 array with ``timestamp`` and ``data`` fields. The pipe is automatically closed.
@@ -131,6 +131,7 @@ class Pipe:
             raise PipeError("cannot read from an output pipe")
 
         data = None
+        maxrows = int(maxrows) # make sure this is an integer
         while True:
             try:
                 new_data = await self.read(flatten)

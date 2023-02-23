@@ -43,6 +43,7 @@ from joule.api.event import Event
 
 from joule.api.data import (data_write,
                             data_read,
+                            data_read_array,
                             data_subscribe,
                             data_delete,
                             data_intervals,
@@ -208,6 +209,18 @@ class BaseNode:
                         max_rows: Optional[int] = None) -> Pipe:
         return await data_read(self.session, stream, start, end,
                                max_rows)
+
+    async def data_read_array(self,
+                              stream: Union[DataStream, str, int],
+                              start: Optional[int] = None,
+                              end: Optional[int] = None,
+                              max_rows: int = 10000,
+                              flatten: bool = False
+                              ):
+        return await data_read_array(self.session, stream, start, end, max_rows, flatten)
+
+    def set_nilmdb_url(self, nilmdb_url):
+        self.session.set_nilmdb_url(nilmdb_url)
 
     async def data_subscribe(self,
                              stream: Union[DataStream, str, int]) -> Pipe:
