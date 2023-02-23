@@ -25,10 +25,12 @@ def from_json(json) -> Master:
 
 
 async def master_add(session: BaseSession, master_type: str,
-                     identifier: str, parameters: Optional[Dict] = None) -> Master:
+                     identifier: str, parameters: Optional[Dict] = None,
+                     api_key: Optional[str] = None) -> Master:
     data = {"master_type": master_type,
             "identifier": identifier,
-            "lumen_params": parameters}
+            "lumen_params": parameters,
+            "api_key": api_key}
     resp = await session.post("/master.json", json=data)
     if master_type == "user":
         return Master(master_type, resp["name"], resp["key"])

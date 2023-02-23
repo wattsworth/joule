@@ -140,6 +140,14 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
     except ValueError:
         raise ConfigurationError("MaxLogLines must be a postive number")
 
+    # Authorized Users File
+    users_file = None
+    if 'UsersFile' in main_config:
+        users_file = main_config['UsersFile']
+        if not os.path.isfile(users_file) and verify:
+            raise ConfigurationError(
+                "UsersFile [%s] does not exist" % users_file)
+
     # Security configuration
     if 'Security' in my_configs:
         security = config.SecurityConfig(my_configs['Security']['Certificate'],
@@ -175,7 +183,8 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
         max_log_lines=max_log_lines,
         nilmdb_url=nilmdb_url,
         proxies=proxies,
-        security=security
+        security=security,
+        users_file=users_file
     )
 
 

@@ -469,15 +469,41 @@ Event Stream Actions
         >>> e1 = Event(start_time=time_now()-1e6, end_time = time_now(), content={'name': 'event1'})
         >>> await asyncio.sleep(2)
         >>> e2 = Event(start_time=time_now()-1e6, end_time = time_now(), content={'name': 'event2'})
-        >>> await joule.api.even_stream_write("/plugs/events",[e1,e2])
+        >>> await node.event_stream_write("/plugs/events",[e1,e2])
 
-.. function:: Node.event_stream_read(stream: Union[EventStream, str, int], start: Optional[int] = None, end: Optional[int] = None) -> List[Event]
+.. function:: Node.event_stream_read(stream: Union[EventStream, str, int], start: Optional[int] = None, end: Optional[int] = None, limit: Optional[int] = None, json_filter: Optional[string]=None) -> List[Event]
 
-         <joule.api.Event start_time: 1644768175404800, end_time: 1644768176404808, content: {"name": "event1"}>, <joule.api.Event start_time: 1644768182208903, end_time: 1644768183208914, content: {"name": "event2"}>]
+    Read events from an existing stream. Returns a list of :class:`joule.api.Event` objects.
 
-.. function:: Node.event_stream_remove(stream: Union[EventStream, str, int], start: Optional[int] = None, end: Optional[int] = None)
+    Parameters:
+        :stream: Event stream, path, numeric ID, or :class:`joule.api.EventStream` object
+        :start: UNIX timestamp (microseconds). Omit to read from start of stream.
+        :end: UNIX timestamp (microseconds). Omit to read to end of stream.
+        :limit: Limit query to first N result.
+        :json_filter: Select events based on content, see below.
 
-        Notes
+    JSON Filter Format:
+        Specify a list of lists where each item is a tuple of ``[key,comparison,value]``
+        Outer lists are OR conditions, inner lists are AND conditions. Comparison must
+        be one of the following
+
+        * String Comparison: ``is, not, like, unlike``
+        * Numeric Comparison: ``gt, gte, lt, lte, eq, neq``
+
+    Example:
+        Retrieve the first 100 events where `name` is LIKE `sample` OR `value` is between 0 AND 10:
+
+        >>>  #       ((-------- test ----------)  OR (------test------ AND ------test-------))
+        >>> filter = [[['name','like','sample']]   , [['value','gt',0],    ['value','lt',10]]]
+        >>> await node.event_stream_read(stream,limit=100,json_filter=json.dumps(filter))
+
+
+.. function:: Node.event_stream_remove(stream: Union[EventStream, str, int], start: Optional[int] = None, end: Optional[int] = None, json_filter: Optional[string]=None)
+
+    Remove events from an existing stream. EventStream may be specified by a :class:`joule.api.EventStream` object,
+    a path, or numeric ID. Specify start and/or end timestamps to remove over events over a specific time range. Use
+    json_filter to remove events based on content.
+
 
 
 .. _sec-node-module-actions:

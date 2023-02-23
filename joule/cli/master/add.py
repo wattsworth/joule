@@ -7,10 +7,11 @@ from joule.api import BaseNode
 
 
 @click.command(name="add")
-@click.argument("type", type=click.Choice(['user', 'joule', 'lumen']))#, help="type of master")
-@click.argument("identifier")# help="username or URL for joule/lumen masters")
+@click.argument("type", type=click.Choice(['user', 'joule', 'lumen']))  # , help="type of master")
+@click.argument("identifier")  # help="username or URL for joule/lumen masters")
+@click.option('-k', "--key", help="desired API key, must be 32 characters, omit for a random key")
 @pass_config
-def cli_add(config, type, identifier):
+def cli_add(config, type, identifier, key):
     """Authorize a new node master.
 
     For users specify a username (for documentation only).
@@ -19,7 +20,7 @@ def cli_add(config, type, identifier):
     loop = asyncio.get_event_loop()
     try:
         if type == 'user':
-            coro = _add_user(config.node, identifier)
+            coro = _add_user(config.node, identifier, key)
         elif type == 'joule':
             coro = _add_node(config.node, identifier)
         elif type == 'lumen':
@@ -75,8 +76,8 @@ async def _add_node(node: BaseNode, host):
     click.echo("Access to [%s] granted to Joule Node [%s]" % (node.name, result.name))
 
 
-async def _add_user(node: BaseNode, name):
-    result = await node.master_add("user", name)
+async def _add_user(node: BaseNode, name, key):
+    result = await node.master_add("user", name, None, key)
     click.echo("Access to node [%s] granted to user [%s]" % (node.name, name))
     click.echo("")
     click.echo("Key:\t%s" % result.key)

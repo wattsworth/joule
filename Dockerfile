@@ -10,6 +10,7 @@ ADD requirements.txt /tmp
 WORKDIR tmp
 #RUN apt-get install libpq-dev libblas-dev liblapack-dev gfortran -y
 #RUN pip3 install psycopg2-binary
+RUN pip3 install --upgrade pip
 RUN pip3 install --trusted-host pypi.python.org  -r requirements.txt
 
 ENV LC_ALL en_US.UTF-8

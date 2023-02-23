@@ -28,6 +28,7 @@ from joule.services import (load_modules, load_streams, load_config)
 import joule.middleware
 import joule.controllers
 from joule.utilities import ConnectionInfo
+from joule.update_users import update_users_from_file
 import ssl
 
 log = logging.getLogger('joule')
@@ -263,6 +264,21 @@ class Daemon(object):
     def stop(self):
         self.stop_requested = True
 
+    async def watch_users_file(self):
+        if self.config.users_file is None:
+            return  # nothing to do
+        if not os.path.isfile(self.config.users_file):
+            print(f"ERROR: Cannot read authorized keys file [{self.config.users_file}]")
+        last_mtime = None
+        while True:
+            await asyncio.sleep(2)
+            mtime = os.path.getmtime(self.config.users_file)
+            if (last_mtime is not None) and (mtime <= last_mtime):  # == is probably fine too
+                continue
+            last_mtime = mtime
+            update_users_from_file(self.config.users_file, self.db)
+
+
     async def _spawn_inserter(self, stream: DataStream):
         while True:
             pipe = pipes.LocalPipe(layout=stream.layout, name='inserter:%s' % stream.name)
@@ -372,11 +388,16 @@ def main(argv=None):
             await asyncio.sleep(2)
 
     debug = loop.create_task(debugger())
+    debug.set_name("debugger")
+
     daemon_task = loop.create_task(daemon.run())
     daemon_task.set_name("daemon")
-    debug.set_name("debugger")
+
+    authorized_keys_task = loop.create_task(daemon.watch_users_file())
+    authorized_keys_task.set_name("authorized keys")
     loop.run_until_complete(daemon_task)
     debug.cancel()
+    authorized_keys_task.cancel()
     try:
         loop.run_until_complete(debug)
     except asyncio.CancelledError:

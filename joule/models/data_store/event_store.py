@@ -131,6 +131,8 @@ class EventStore:
         await self.remove(stream)
 
     async def info(self, streams: List['EventStream']) -> Dict[int, 'StreamInfo']:
+        if len(streams) == 0:
+            return {}  # no event streams
         info_objects = {s.id: StreamInfo(None, None, 0, 0, 0) for s in streams}
         async with self.pool.acquire() as conn:
             query = "select count(*), event_stream_id, max(time) as end_time," \

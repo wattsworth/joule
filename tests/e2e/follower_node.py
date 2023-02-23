@@ -84,7 +84,8 @@ def main():
     # subprocess.run(f"jouled --config {config_file})")
     # this will just hang, node1 exits and terminates this container
     stdout, _ = jouled.communicate()
-
+    print(stdout)
+    print(_)
     return 0
 
 

@@ -55,6 +55,27 @@ $(function(){
         $(this).html(html);
     });
 
+    //format user file
+    $(".users-file").each(function(_){
+        let html="<div class='header ini'>";
+        let file_name = "";
+        let content = "";
+        $(this).text().split('\n').forEach(function(line){
+            line = line.trim();
+            if(line.length==0){
+                content += "\n"
+            } else if(line[0]=='#') {
+                content += "<i>" + line + "</i>\n";
+            }else if(line[0]==':'){
+                file_name = line.slice(1).trim();
+            } else {
+                content += line + "\n";
+            }
+
+        });
+        html+=file_name+"</div><div class='code ini'>"+content.trim()+"</div>";
+        $(this).html(html);
+    })
     //format configuration files
     $(".config-file").each(function(_){
         let html="<div class='header ini'>";

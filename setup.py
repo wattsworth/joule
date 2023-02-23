@@ -14,7 +14,7 @@ except IOError:
 
 setup(
     name=PROJECT,
-    version = versioneer.get_version(),
+    version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
     description='Decentralized data processing for IoT platforms',
     long_description=long_description,
@@ -36,12 +36,13 @@ setup(
                       'numpy',
                       'scipy',
                       'psutil',
-                      'aiohttp',
+                      'aiohttp>=3,<4',
                       'markdown',
                       'BeautifulSoup4',
                       'dateparser',
                       'tabulate',
                       'sqlalchemy',
+                      'sqlalchemy>=1,<2',
                       'aiohttp-jinja2',
                       'jinja2',
                       'asyncpg',
@@ -59,7 +60,15 @@ setup(
                    'requests'],
     test_suite='tests',
     namespace_packages=[],
-    packages=find_packages(exclude=["tests","tests.*"]),
+    packages=find_packages(exclude=["tests", "tests.*"]) +
+             ["joule.client.builtins.assets",
+              "joule.client.builtins.assets.js",
+              "joule.client.builtins.assets.css",
+              "joule.client.builtins.assets.templates",
+              "joule.cli.admin.local_postgres_templates",
+              "joule.sql",
+              "joule.resources",
+              "joule.resources.templates"],
     include_package_data=True,
 
     entry_points={
@@ -74,10 +83,10 @@ setup(
             'joule-merge-filter = joule.client.builtins.merge_filter:main'
         ]
     },
-    #options={
+    # options={
     #    'build_scripts': {
     #        'executable': '/usr/local/bin/python3.5'
     #    }
-    #},
+    # },
     zip_safe=False,
 )
