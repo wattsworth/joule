@@ -1,6 +1,7 @@
 from aiohttp import web
 import datetime
 
+from sqlalchemy import desc
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -8,6 +9,42 @@ from joule.models.annotation import Annotation, from_json
 from joule.models.data_stream import DataStream
 from joule.models import folder
 from joule.errors import ApiError
+
+async def info(request):
+    db: Session = request.app["db"]
+
+    if 'stream_id' in request.query:
+        my_stream = db.query(DataStream).get(request.query["stream_id"])
+    elif 'stream_path' in request.query:
+        my_stream = folder.find_stream_by_path(request.query['stream_path'], db, stream_type=DataStream)
+    else:
+        return web.Response(text="specify a stream_id", status=400)
+    if my_stream is None:
+        return web.Response(text="stream does not exist", status=404)
+
+
+    count = db.query(Annotation.start).filter_by(stream_id=my_stream.id).count()
+    if count > 0:
+        start = db.query(Annotation.start)\
+            .filter_by(stream_id=my_stream.id)\
+            .order_by(desc(Annotation.start))\
+            .limit(1).scalar()
+        start_ts = int(start.replace(tzinfo=datetime.timezone.utc).timestamp() * 1e6)
+        end = db.query(Annotation.start)\
+            .filter_by(stream_id=my_stream.id)\
+            .order_by(desc(Annotation.start))\
+            .limit(1).scalar()
+        end_ts = int(end.replace(tzinfo=datetime.timezone.utc).timestamp() * 1e6)
+
+    else:
+        start_ts = None
+        end_ts = None
+
+    return web.json_response({
+        'start': start_ts,
+        'end': end_ts,
+        'count': count
+    })
 
 
 async def index(request):

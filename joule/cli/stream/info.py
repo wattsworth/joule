@@ -43,6 +43,9 @@ async def _run(node, path, show_elements):
     click.echo("\tStart:        %s" % _display_time(my_info.start))
     click.echo("\tEnd:          %s" % _display_time(my_info.end))
     click.echo("\tRows:         %d" % my_info.rows)
+    # display annotation information
+    annotation_info = await node.annotation_info(path)
+    click.echo("\tAnnotation:   %d" % annotation_info.count)
     click.echo()
     # display element information
     if show_elements:

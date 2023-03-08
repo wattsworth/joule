@@ -62,7 +62,9 @@ from joule.api.annotation import (annotation_create,
                                   annotation_delete,
                                   annotation_update,
                                   annotation_get,
-                                  Annotation)
+                                  annotation_info,
+                                  Annotation,
+                                  AnnotationInfo)
 
 from joule.api.db import (db_connect,
                           db_connection_info)
@@ -317,6 +319,10 @@ class BaseNode:
     async def annotation_update(self,
                                 annotation: Annotation):
         return await annotation_update(self.session, annotation)
+
+    async def annotation_info(self,
+                              stream: Union[int, str, DataStream], ) -> AnnotationInfo:
+        return await annotation_info(self.session, stream)
 
     # Database actions
     async def db_connect(self) -> sqlalchemy.engine.Engine:

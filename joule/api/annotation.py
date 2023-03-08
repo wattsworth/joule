@@ -1,10 +1,11 @@
 from typing import Union, List, Optional, TYPE_CHECKING
+from dataclasses import dataclass
 
 from joule import errors
 from .session import BaseSession
 
-if TYPE_CHECKING:
-    from .data_stream import DataStream
+#if TYPE_CHECKING:
+from .data_stream import DataStream
 
 
 class Annotation:
@@ -51,6 +52,13 @@ class Annotation:
             'content': self.content,
             'id': self.id
         }
+
+
+@dataclass
+class AnnotationInfo:
+    start: int
+    end: int
+    count: int
 
 
 def from_json(json) -> Annotation:
@@ -104,6 +112,22 @@ async def annotation_update(session: BaseSession,
             }
     json = await session.put("/annotation.json", json=data)
     return from_json(json)
+
+
+async def annotation_info(session: BaseSession,
+                          stream: Union['DataStream', str, int]):
+    data = {}
+    if type(stream) is DataStream:
+        data["stream_id"] = stream.id
+    elif type(stream) is int:
+        data["stream_id"] = stream
+    elif type(stream) is str:
+        data["stream_path"] = stream
+    else:
+        raise errors.ApiError("Invalid stream datatype. Must be DataStream, Path, or ID")
+
+    json = await session.get("/annotations/info.json", data)
+    return AnnotationInfo(**json)
 
 
 async def annotation_get(session: BaseSession,

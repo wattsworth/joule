@@ -68,6 +68,7 @@ routes = [
     web.post('/follower.json', follower_controller.add),
     web.delete('/follower.json', follower_controller.delete),
     # -- annotation routes --
+    web.get('/annotations/info.json', annotation_controller.info),
     web.get('/annotations.json', annotation_controller.index),
     web.put('/annotation.json', annotation_controller.update),
     web.post('/annotation.json', annotation_controller.create),
