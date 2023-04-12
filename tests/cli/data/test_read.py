@@ -76,7 +76,7 @@ class TestDataRead(FakeJouleTestCase):
             else:
                 expected = "%d %s" % (row['timestamp'], ' '.join('%f' % x for x in row['data']))
             # import pdb; pdb.set_trace()
-            self.assertTrue(expected in output[x + 1])
+            self.assertTrue(expected in output[x + 2])
 
         # create a new event loop for the next run
         loop = asyncio.new_event_loop()
@@ -99,7 +99,7 @@ class TestDataRead(FakeJouleTestCase):
                 continue
             else:
                 expected = "%d %s" % (row['timestamp'], ' '.join('%f' % x for x in row['data'][:3]))
-            self.assertTrue(expected in output[x - offset + 1])
+            self.assertTrue(expected in output[x - offset + 2])
 
         self.stop_server()
 
@@ -133,7 +133,7 @@ class TestDataRead(FakeJouleTestCase):
             else:
                 data = row['data'][[0, 2, 3, 5, 6, 8]]
                 expected = "%d %s" % (row['timestamp'], ' '.join('%f' % x for x in data))
-            self.assertTrue(expected in output[x + 1])
+            self.assertTrue(expected in output[x + 2])
 
         # create a new event loop for the next run
         loop = asyncio.new_event_loop()
@@ -156,7 +156,7 @@ class TestDataRead(FakeJouleTestCase):
                 continue
             else:
                 expected = "%d %s" % (row['timestamp'], ' '.join('%f' % x for x in row['data'][:3]))
-            self.assertTrue(expected in output[x - offset + 1])
+            self.assertTrue(expected in output[x - offset + 2])
 
         self.stop_server()
 

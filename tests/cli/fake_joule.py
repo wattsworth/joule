@@ -70,6 +70,7 @@ class FakeJoule:
                 web.get('/masters.json', self.stub_get),
                 web.post('/master.json', self.create_master),
                 web.delete('/master.json', self.delete_master),
+                web.get('/annotations/info.json', self.get_annotation_info),
                 web.get('/annotations.json', self.get_annotations),
                 web.put('/annotation.json', self.update_annotation),
                 web.post('/annotation.json', self.create_annotation),
@@ -330,6 +331,16 @@ class FakeJoule:
             return web.Response(text=self.response, status=self.http_code)
         self.msgs.put(request.query['name'])
         return web.Response(text="ok")
+
+    async def get_annotation_info(self, request: web.Request):
+        # stub annotation info
+        info = {
+            'start': 0,
+            'end': 10e6,
+            'count': 10
+        }
+        return web.Response(text=json.dumps(info), status=self.http_code,
+                            content_type='application/json')
 
     async def get_annotations(self, request: web.Request):
         self.msgs.put(dict(request.query))
