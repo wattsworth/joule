@@ -231,6 +231,9 @@ async def write(request: web.Request):
         task = await data_store.spawn_inserter(stream, pipe, insert_period=0)
         await task
     except DataError as e:
+        stream.is_destination = False
+        db.commit()
+        print("closing stream due to error")
         return web.Response(text=str(e), status=400)
     except asyncio.CancelledError as e:
         raise e
