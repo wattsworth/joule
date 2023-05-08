@@ -26,13 +26,13 @@ services:
   #    driver: none
   #   stop_signal: SIGKILL
   timescale:
-    image: timescale/timescaledb:latest-pg12
+    image: timescale/timescaledb:latest-pg14
     environment:
       POSTGRES_PASSWORD: password
     logging:
       driver: none
   timescale_follower:
-    image: timescale/timescaledb:latest-pg12
+    image: timescale/timescaledb:latest-pg14
     environment:
       POSTGRES_PASSWORD: password
     logging:

@@ -10,6 +10,7 @@ import json
 from joule import errors
 from joule.utilities import human_to_timestamp
 from icecream import ic
+
 stop_requested = False
 
 
@@ -103,34 +104,37 @@ def cmd(config, start, end, live, max_rows, show_bounds, mark_intervals, element
                 continue
             # ===== Write to HDF File ======
             if write_to_file:
-                data_width = len(element_indices)
-                target_indices = element_indices #[0] + [idx + 1 for idx in element_indices]
-                if hdf_file is None:
-                    # create dataset and populate it with current data
-                    hdf_data, hdf_timestamps, hdf_file = _create_hdf_dataset(config, stream_obj, stream,
-                                                                             element_indices,
-                                                                             file, pipe, data_width,
-                                                                             initial_size=len(sdata),
-                                                                             )
-                    hdf_data[...] = sdata['data'][:, target_indices]
-                    hdf_timestamps[...] = sdata['timestamp'][:, None]
-                    bar_ctx = click.progressbar(length=total_time, label='reading data')
-                    # print("total_time: %d" % total_time)
-                    bar = bar_ctx.__enter__()
-                    chunk_duration = sdata['timestamp'][-1] - sdata['timestamp'][0]
-                    bar.update(chunk_duration)
-                    # print(chunk_duration)
+                if len(sdata) > 0:  # ignore empty chunks
+                    data_width = len(element_indices)
+                    target_indices = element_indices  # [0] + [idx + 1 for idx in element_indices]
+                    if hdf_file is None:
+                        # create dataset and populate it with current data
+                        hdf_data, hdf_timestamps, hdf_file = _create_hdf_dataset(config, stream_obj, stream,
+                                                                                 element_indices,
+                                                                                 file, pipe, data_width,
+                                                                                 initial_size=len(sdata),
+                                                                                 )
+                        hdf_data[...] = sdata['data'][:, target_indices]
+                        hdf_timestamps[...] = sdata['timestamp'][:, None]
+                        bar_ctx = click.progressbar(length=total_time, label='reading data')
+                        # print("total_time: %d" % total_time)
+                        bar = bar_ctx.__enter__()
+                        chunk_duration = sdata['timestamp'][-1] - sdata['timestamp'][0]
+                        bar.update(chunk_duration)
+                        # print(chunk_duration)
+                    else:
+                        # expand dataset, append new data
+                        cur_size = len(hdf_data)
+                        chunk_duration = sdata['timestamp'][-1] - sdata['timestamp'][0]
+                        # print("[%d-%d ==> %d]" % (data[-1, 0], hdf_dataset[-1, 0], cum_time))
+                        bar.update(chunk_duration)
+                        hdf_data.resize((cur_size + len(sdata), data_width))
+                        hdf_data[cur_size:, :] = sdata['data'][:, target_indices]
+                        hdf_timestamps.resize((cur_size + len(sdata), 1))
+                        hdf_timestamps[cur_size:] = sdata['timestamp'][:, None]
+                        # update with the new chunk of time
                 else:
-                    # expand dataset, append new data
-                    cur_size = len(hdf_data)
-                    chunk_duration = sdata['timestamp'][-1] - sdata['timestamp'][0]
-                    # print("[%d-%d ==> %d]" % (data[-1, 0], hdf_dataset[-1, 0], cum_time))
-                    bar.update(chunk_duration)
-                    hdf_data.resize((cur_size + len(sdata), data_width))
-                    hdf_data[cur_size:, :] = sdata['data'][:, target_indices]
-                    hdf_timestamps.resize((cur_size + len(sdata), 1))
-                    hdf_timestamps[cur_size:] = sdata['timestamp'][:,None]
-                    # update with the new chunk of time
+                    print("ignoring empty chunk")
             # ===== Write to stdout (Terminal) ======
             else:
                 ts = sdata['timestamp']
