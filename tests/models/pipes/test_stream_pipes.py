@@ -4,7 +4,7 @@ from joule.models.pipes.factories import reader_factory, writer_factory
 import os
 import numpy as np
 import asyncio
-from asynctest import CoroutineMock
+import unittest.mock
 from tests import helpers
 
 """
@@ -18,7 +18,7 @@ class TestStreamingPipes(helpers.AsyncTestCase):
         LAYOUT = "int8_2"
         LENGTH = 1000
         (fd_r, fd_w) = os.pipe()
-        loop = asyncio.get_event_loop()
+        ''
         npipe_in = InputPipe(layout=LAYOUT, reader_factory=reader_factory(fd_r))
         npipe_out = OutputPipe(layout=LAYOUT, writer_factory=writer_factory(fd_w))
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
@@ -50,20 +50,18 @@ class TestStreamingPipes(helpers.AsyncTestCase):
             # make sure the reads are broken up (otherwise test is lame...)
             self.assertGreater(run_count, 2)
 
-        tasks = [asyncio.ensure_future(writer()),
-                 asyncio.ensure_future(reader())]
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(asyncio.gather(*tasks))
+        async def runner():
+            await asyncio.gather(writer(),reader())
+            await npipe_in.close()
+            await npipe_out.close()
 
-        # close the pipes
-        loop.run_until_complete(asyncio.gather(npipe_in.close(),
-                                               npipe_out.close()))
+        asyncio.run(runner())
 
     def test_reconstructs_fragmented_data(self):
         LAYOUT = "int8_2"
         LENGTH = 1000
         (fd_r, fd_w) = os.pipe()
-        loop = asyncio.get_event_loop()
+        ''
         # wrap the file descriptors in numpypipes
         npipe_in = InputPipe(layout=LAYOUT, reader_factory=reader_factory(fd_r))
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
@@ -95,11 +93,11 @@ class TestStreamingPipes(helpers.AsyncTestCase):
             # make sure the reads are broken up (otherwise test is lame...)
             self.assertGreater(run_count, 2)
 
-        tasks = [asyncio.ensure_future(writer()),
-                 asyncio.ensure_future(reader())]
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(asyncio.gather(*tasks))
-        loop.run_until_complete(npipe_in.close())
+        async def runner():
+            await asyncio.gather(writer(), reader())
+            await npipe_in.close()
+
+        asyncio.run(runner())
 
     def test_read_data_must_be_consumed(self):
         """writes to pipe sends data to reader and any subscribers"""
@@ -109,7 +107,7 @@ class TestStreamingPipes(helpers.AsyncTestCase):
         BUFFER_SIZE = 100
         (fd_r, fd_w) = os.pipe()
         # wrap the file descriptors in numpypipes
-        loop = asyncio.get_event_loop()
+        ''
         npipe_in = InputPipe(layout=LAYOUT, reader_factory=reader_factory(fd_r),
                              buffer_size=BUFFER_SIZE)
         npipe_out = OutputPipe(layout=LAYOUT, writer_factory=writer_factory(fd_w))
@@ -131,29 +129,32 @@ class TestStreamingPipes(helpers.AsyncTestCase):
             np.testing.assert_array_equal(data[-UNCONSUMED_ROWS:],
                                           next_data[:UNCONSUMED_ROWS])
 
-        tasks = [asyncio.ensure_future(writer()),
-                 asyncio.ensure_future(reader())]
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(asyncio.gather(*tasks))
+        async def runner():
+            await asyncio.gather(writer(), reader())
+            await npipe_in.close()
+            await npipe_out.close()
 
-        # close the pipes
-        loop.run_until_complete(asyncio.gather(npipe_in.close(),
-                                               npipe_out.close()))
+        asyncio.run(runner())
 
     def test_raises_consume_errors(self):
         LAYOUT = "float32_2"
         LENGTH = 100
         (fd_r, fd_w) = os.pipe()
-        loop = asyncio.get_event_loop()
+        ''
         npipe_in = InputPipe(layout=LAYOUT, reader_factory=reader_factory(fd_r))
         npipe_out = OutputPipe(layout=LAYOUT, writer_factory=writer_factory(fd_w))
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
 
         # cannot consume more data than is in the pipe
 
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(npipe_out.write(test_data))
-        read_data = loop.run_until_complete(npipe_in.read())
+        async def runner():
+            await npipe_out.write(test_data)
+            read_data = await npipe_in.read()
+            await npipe_in.close()
+            await npipe_out.close()
+            return read_data
+        read_data = asyncio.run(runner())
+
         # can't consume more than was read
         with self.assertRaises(PipeError) as e:
             npipe_in.consume(len(read_data)+1)
@@ -165,16 +166,12 @@ class TestStreamingPipes(helpers.AsyncTestCase):
         npipe_in.consume(0)
         self.assertTrue('negative' in str(e.exception))
 
-        # close the pipes
-        loop.run_until_complete(asyncio.gather(npipe_in.close(),
-                                               npipe_out.close()))
-
     def test_caching(self):
         LAYOUT = "float32_2"
         LENGTH = 128
         CACHE_SIZE = 40
         (fd_r, fd_w) = os.pipe()
-        loop = asyncio.get_event_loop()
+        ''
         npipe_in = InputPipe(layout=LAYOUT, reader_factory=reader_factory(fd_r))
         npipe_in.TIMEOUT_INTERVAL = 2
         npipe_out = OutputPipe(layout=LAYOUT, writer_factory=writer_factory(fd_w))
@@ -213,36 +210,42 @@ class TestStreamingPipes(helpers.AsyncTestCase):
             data = await npipe_in.read(flatten=True)
             np.testing.assert_array_equal(data, np.ones((35, 3)))
 
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(asyncio.gather(reader(), writer()))
+        async def runner():
+            await asyncio.gather(reader(), writer())
+            await npipe_in.close()
+            await npipe_out.close()
+        asyncio.run(runner())
         self.assertLessEqual(num_reads, np.ceil(LENGTH/CACHE_SIZE))
-        # close the pipes
-        loop.run_until_complete(asyncio.gather(npipe_in.close(),
-                                               npipe_out.close()))
+
 
     def test_sends_data_to_subscribers(self):
         LAYOUT = "float32_2"
         (fd_r, fd_w) = os.pipe()
-        loop = asyncio.get_event_loop()
-        output_cb = CoroutineMock()
-        input_cb = CoroutineMock()
-        subscriber_cb = CoroutineMock()
+        ''
+        output_cb = unittest.mock.AsyncMock()
+        input_cb = unittest.mock.AsyncMock()
+        subscriber_cb = unittest.mock.AsyncMock()
         npipe_out = OutputPipe(layout=LAYOUT, writer_factory=writer_factory(fd_w),
                                close_cb=output_cb)
         subscriber = LocalPipe(layout=LAYOUT, close_cb=subscriber_cb)
         npipe_out.subscribe(subscriber)
         test_data = helpers.create_data(LAYOUT)
-        loop.run_until_complete(npipe_out.write(test_data))
-        # data should be available on the InputPipe side
         npipe_in = InputPipe(layout=LAYOUT, reader_factory=reader_factory(fd_r),
                              close_cb=input_cb)
-        rx_data = loop.run_until_complete(npipe_in.read())
+        async def runner():
+            await npipe_out.write(test_data)
+            rx_data = await npipe_in.read()
+            await npipe_in.close()
+            await npipe_out.close()
+            return rx_data
+        rx_data = asyncio.run(runner())
+        # data should be available on the InputPipe side
+
         np.testing.assert_array_equal(test_data, rx_data)
         # data should also be available on the Subscriber output
         rx_data = subscriber.read_nowait()
         np.testing.assert_array_equal(test_data, rx_data)
-        loop.run_until_complete(asyncio.gather(npipe_in.close(),
-                                               npipe_out.close()))
+
         # subscriber should be closed
         self.assertTrue(subscriber.closed)
         # make sure all of the callbacks have been executed
@@ -252,7 +255,7 @@ class TestStreamingPipes(helpers.AsyncTestCase):
 
     def test_invalid_write_inputs(self):
         LAYOUT = "int8_2"
-        loop = asyncio.get_event_loop()
+        ''
         my_pipe = OutputPipe(layout=LAYOUT)
 
         async def test():
@@ -261,4 +264,4 @@ class TestStreamingPipes(helpers.AsyncTestCase):
             with self.assertRaises(PipeError):
                 await my_pipe.write(np.array([1, 2, 3]))
 
-        loop.run_until_complete(test())
+        asyncio.run(test())

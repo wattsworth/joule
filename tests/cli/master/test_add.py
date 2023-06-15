@@ -60,8 +60,8 @@ class TestMasterAdd(FakeJouleTestCase):
         self.assertEqual(params["email"], "johndoe@email.com")
         self.assertEqual(params["password"], "password")
 
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        #loop = asyncio.new_event_loop()
+        #asyncio.set_event_loop(loop)
         # Subsequent nodes need an auth key
         result = runner.invoke(main, "master add lumen node2".split(" "),
                                input="AC3412\n")

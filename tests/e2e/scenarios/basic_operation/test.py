@@ -8,11 +8,10 @@ from joule import api
 
 def main():
     time.sleep(8)  # wait for jouled to boot and collect data
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(_run(loop))
+    asyncio.run(_run())
 
 
-async def _run(loop: asyncio.AbstractEventLoop):
+async def _run():
     node = api.get_node()
     await check_modules(node)
     await check_logs(node)

@@ -42,7 +42,6 @@ def admin_ingest(config, backup, node, map, pgctl_binary, yes, start, end):
     from joule.models import Base, TimescaleStore, NilmdbStore
 
     parser = configparser.ConfigParser()
-    loop = asyncio.get_event_loop()
     # make sure either a backup or a node is specified
     if (((backup is None) and (node is None)) or
             ((backup is not None) and (node is not None))):
@@ -143,7 +142,7 @@ def admin_ingest(config, backup, node, map, pgctl_binary, yes, start, end):
     # determine if the source is a backup or a node
     if node is not None:
         live_restore = True
-        src_dsn = loop.run_until_complete(get_dsn(node))
+        src_dsn = asyncio.run(get_dsn(node))
         # check whether the source uses nilmdb
         click.echo("WARNING: Nilmdb sources are not supported yet")
         src_datastore = TimescaleStore(src_dsn, 0, 0, loop)
@@ -188,7 +187,7 @@ def admin_ingest(config, backup, node, map, pgctl_binary, yes, start, end):
     src_db = Session(bind=src_engine)
 
     try:
-        loop.run_until_complete(run(src_db, dest_db,
+        asyncio.run(run(src_db, dest_db,
                                     src_datastore, dest_datastore,
                                     stream_map, yes,
                                     start, end))
@@ -199,8 +198,8 @@ def admin_ingest(config, backup, node, map, pgctl_binary, yes, start, end):
         # close connections
         dest_db.close()
         src_db.close()
-        loop.run_until_complete(dest_datastore.close())
-        loop.run_until_complete(src_datastore.close())
+        asyncio.run(dest_datastore.close())
+        asyncio.run(src_datastore.close())
         # clean up database if not a live_restore
         if not live_restore:
             args = ["-D", os.path.join(backup)]

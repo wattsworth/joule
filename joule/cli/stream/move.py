@@ -11,14 +11,12 @@ from joule.cli.config import Config, pass_config
 @pass_config
 def cli_move(config: Config, source, destination):
     """Move a data stream to a different folder"""
-    loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(
+        asyncio.run(
             config.node.data_stream_move(source, destination))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
-        loop.run_until_complete(
+        asyncio.run(
             config.close_node())
-        loop.close()
     click.echo("OK")

@@ -17,7 +17,7 @@ class TestModuleController(AioHTTPTestCase):
         app["supervisor"] = Supervisor([wreader, wfilter], [], None)  # type: ignore
         return app
 
-    @unittest_run_loop
+
     async def test_module_list(self):
         resp: aiohttp.ClientResponse = await self.client.request("GET", "/modules.json?statistics=1")
         workers = await resp.json()
@@ -32,7 +32,7 @@ class TestModuleController(AioHTTPTestCase):
                 self.assertEqual(worker['inputs']['input'], '/reader/path')
             self.assertTrue('statistics' in worker)
 
-    @unittest_run_loop
+
     async def test_module_info(self):
         resp = await self.client.request("GET", "/module.json",
                                          params={'name': 'filter'})
@@ -41,7 +41,7 @@ class TestModuleController(AioHTTPTestCase):
         self.assertEqual(worker['inputs']['input'], '/reader/path')
         self.assertTrue('statistics' in worker)
 
-    @unittest_run_loop
+
     async def test_module_logs(self):
         resp = await self.client.request("GET", "/module/logs.json",
                                          params={'name': 'reader'})

@@ -24,19 +24,15 @@ def intervals(config: Config, start, end, stream: str):
         except ValueError:
             raise click.ClickException("invalid end time: [%s]" % end)
 
-    loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(_run(config.node, start, end, stream))
-
+        asyncio.run(_run(config.node, start, end, stream))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     except Exception as e:
         import traceback
         traceback.print_exc()
     finally:
-        loop.run_until_complete(
-            config.close_node())
-        loop.close()
+        asyncio.run(config.close_node())
 
 
 async def _run(node, start, end, stream):

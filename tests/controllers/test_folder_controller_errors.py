@@ -2,7 +2,7 @@ from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 from aiohttp import web
 from sqlalchemy.orm import Session
 import json
-
+import asyncio
 from joule.models import folder, DataStream, Folder
 import joule.controllers
 from tests.controllers.helpers import create_db, MockStore, MockEventStore
@@ -18,6 +18,9 @@ class TestFolderControllerErrors(AioHTTPTestCase):
     async def get_application(self):
         app = web.Application()
         app.add_routes(joule.controllers.routes)
+        # this takes a while, adjust the expected coroutine execution time
+        loop = asyncio.get_running_loop()
+        loop.slow_callback_duration = 2.0
         app["db"], app["psql"] = create_db(["/top/leaf/stream1:float32[x, y, z]",
                                             "/top/same_name/stream3:float32[x, y, z]",
                                             "/top/middle/leaf/stream2:int8[val1, val2]"])
@@ -25,7 +28,7 @@ class TestFolderControllerErrors(AioHTTPTestCase):
         app["event-store"] = MockEventStore()
         return app
 
-    @unittest_run_loop
+
     async def test_folder_info(self):
         # must specify an id or path
         resp = await self.client.get("/folder.json", params={})
@@ -37,7 +40,7 @@ class TestFolderControllerErrors(AioHTTPTestCase):
         self.assertEqual(resp.status, 404)
         self.assertIn("does not exist", await resp.text())
 
-    @unittest_run_loop
+
     async def test_folder_move(self):
         db: Session = self.app["db"]
 
@@ -85,7 +88,7 @@ class TestFolderControllerErrors(AioHTTPTestCase):
         self.assertEqual(resp.status, 400)
         self.assertTrue('locked' in await resp.text())
 
-    @unittest_run_loop
+
     async def test_folder_delete(self):
         db: Session = self.app["db"]
 
@@ -111,7 +114,7 @@ class TestFolderControllerErrors(AioHTTPTestCase):
         self.assertIn("locked", await resp.text())
 
 
-    @unittest_run_loop
+
     async def test_folder_update(self):
         db: Session = self.app["db"]
         my_folder = folder.find("/top/middle", db)

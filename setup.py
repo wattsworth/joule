@@ -31,6 +31,8 @@ setup(
     platforms=['Any'],
     scripts=[],
     provides=[],
+    #TODO: add timescale repositories to puppet
+    # sudo apt install timescaledb-2-postgresql-14 timescaledb-toolkit-postgresql-14 timescaledb-tools
     install_requires=['click',
                       'treelib',
                       'numpy',

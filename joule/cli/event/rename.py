@@ -12,16 +12,14 @@ from joule.api import BaseNode
 @pass_config
 def cli_rename(config: Config, stream, name):
     """Rename an event stream."""
-    loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(
+        asyncio.run(
             _run(config.node, stream, name))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
-        loop.run_until_complete(
+        asyncio.run(
             config.close_node())
-        loop.close()
     click.echo("OK")
 
 

@@ -20,16 +20,16 @@ from joule.api.event_stream import EventStream
 @pass_config
 def move(config: Config, source: str, destination: str):
     """Move a folder to a new location."""
-    loop = asyncio.get_event_loop()
+
     try:
-        loop.run_until_complete(
+        asyncio.run(
             config.node.folder_move(source, destination))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
-        loop.run_until_complete(
+        asyncio.run(
             config.close_node())
-        loop.close()
+        
     click.echo("OK")
 
 
@@ -39,16 +39,16 @@ def move(config: Config, source: str, destination: str):
 @pass_config
 def rename(config: Config, folder, name):
     """Rename a folder."""
-    loop = asyncio.get_event_loop()
+
     try:
-        loop.run_until_complete(
+        asyncio.run(
             _run_rename(config.node, folder, name))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
-        loop.run_until_complete(
+        asyncio.run(
             config.close_node())
-        loop.close()
+        
     click.echo("OK")
 
 
@@ -64,17 +64,17 @@ async def _run_rename(node: BaseNode, folder_path: str, name: str):
 @pass_config
 def delete(config, folder, recursive):
     """Delete a folder and all contents."""
-    loop = asyncio.get_event_loop()
+
     try:
-        loop.run_until_complete(
+        asyncio.run(
             config.node.folder_delete(folder, recursive))
         click.echo("OK")
     except errors.ApiError as e:
         raise click.ClickException(str(e))
     finally:
-        loop.run_until_complete(
+        asyncio.run(
             config.close_node())
-        loop.close()
+        
 
 
 @click.command(name="list")
@@ -85,16 +85,16 @@ def delete(config, folder, recursive):
 @pass_config
 def list(config, path, layout, status, id):
     """Display folder hierarchy (directory layout)."""
-    loop = asyncio.get_event_loop()
+
     try:
-        loop.run_until_complete(
+        asyncio.run(
             _run_list(config.node, path, layout, status, id))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
-        loop.run_until_complete(
+        asyncio.run(
             config.close_node())
-        loop.close()
+        
 
 
 async def _run_list(node: BaseNode, path: str, layout: bool, status: bool, showid: bool):
@@ -164,20 +164,20 @@ def _process_event_stream(tree: Tree, stream: EventStream, parent_id, showid: bo
 @pass_config
 def copy(config, source, destination, start, end, new, destination_node):
     """Recursively copy a folder to a new location"""
-    loop = asyncio.get_event_loop()
+
     try:
         if destination_node is not None:
             destination_node = joule.api.get_node(destination_node)
         else:
             destination_node = config.node
-        loop.run_until_complete(
+        asyncio.run(
             _run_copy(config.node, source, destination, start, end, new, destination_node))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
-        loop.run_until_complete(
+        asyncio.run(
             config.close_node())
-        loop.close()
+        
 
 
 async def _run_copy(source_node, source, destination, start, end, new, destination_node) -> None:

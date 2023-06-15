@@ -50,9 +50,7 @@ def admin_erase(config, links):
     except ConfigurationError as e:
         raise click.ClickException("Invalid configuration: %s" % e)
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(run(joule_config,links))
-    loop.close()
+    asyncio.run(run(joule_config,links))
 
 
 async def run(config, delete_links):

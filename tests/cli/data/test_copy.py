@@ -21,7 +21,7 @@ class TestDataCopy(FakeJouleTestCase):
     def test_copies_all_data(self):
         server = FakeJoule()
         # create the source and destination streams
-        src_data = create_source_data(server)  # helpers.create_data(src.layout)
+        src_data = create_source_data(server, break_into_intervals=False)  # helpers.create_data(src.layout)
         # dest is empty
         dest = DataStream(id=1, name="dest", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32)
         dest.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in
@@ -33,10 +33,20 @@ class TestDataCopy(FakeJouleTestCase):
         result = runner.invoke(main, ['data', 'copy', '/test/source', '/test/destination'])
         _print_result_on_error(result)
         self.assertEqual(result.exit_code, 0)
+        # wait for the copy to complete
         while self.msgs.empty():
             time.sleep(0.1)
-            print("waiting...")
-        mock_entry = self.msgs.get()
+        max_msgs = 40
+        num_msgs = 0
+        mock_entry = MockDbEntry(None,None,np.array([]))
+        while num_msgs<max_msgs:
+            num_msgs+=1
+            msg = self.msgs.get()
+            if type(msg)==MockDbEntry:
+                mock_entry = msg
+            if len(mock_entry.data)==len(src_data) and self.msgs.empty():
+                break
+        #print(self.msgs.get())
         np.testing.assert_array_equal(src_data, mock_entry.data)
         # self.assertEqual(len(mock_entry.intervals), 3)
         self.stop_server()
@@ -195,9 +205,6 @@ class TestDataCopy(FakeJouleTestCase):
         runner.invoke(main, ['data', 'copy', '/test/source', '/test/destination'])
         self.assertTrue(self.msgs.empty())
         # copies with confirmation
-        loop = asyncio.new_event_loop()
-        loop.set_debug(True)
-        asyncio.set_event_loop(loop)
         result = runner.invoke(main, ['data', 'copy', '/test/source', '/test/destination'],
                                input='y\n')
         mock_entry = self.msgs.get()
@@ -253,26 +260,30 @@ def _print_result_on_error(result):
         print("exception: ", result.exception)
 
 
-def create_source_data(server):
+def create_source_data(server, break_into_intervals=True):
     # create the source stream
     src = DataStream(id=0, name="source", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32)
     src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
 
     # source has 100 rows of data in four intervals between [0, 100]
     src_data = helpers.create_data(src.layout, length=100, start=0, step=1)
-    # insert the intervals
-    pipe_data = np.hstack((src_data[:25],
-                           pipes.interval_token(src.layout),
-                           src_data[25:50],
-                           pipes.interval_token(src.layout),
-                           src_data[50:75],
-                           pipes.interval_token(src.layout),
-                           src_data[75:]))
-    ts = src_data['timestamp']
-    intervals = [[ts[0], ts[24]],
-                 [ts[25], ts[49]],
-                 [ts[50], ts[74]],
-                 [ts[75], ts[99]]]
+    if break_into_intervals:
+        # insert the intervals
+        pipe_data = np.hstack((src_data[:25],
+                               pipes.interval_token(src.layout),
+                               src_data[25:50],
+                               pipes.interval_token(src.layout),
+                               src_data[50:75],
+                               pipes.interval_token(src.layout),
+                               src_data[75:]))
+        ts = src_data['timestamp']
+        intervals = [[ts[0], ts[24]],
+                     [ts[25], ts[49]],
+                     [ts[50], ts[74]],
+                     [ts[75], ts[99]]]
+    else:
+        pipe_data = src_data
+        intervals = [[src_data['timestamp'][0],src_data['timestamp'][-1]]]
     src_info = StreamInfo(int(src_data['timestamp'][0]), int(src_data['timestamp'][-1]), len(src_data))
     server.add_stream('/test/source', src, src_info, pipe_data, intervals)
     return src_data

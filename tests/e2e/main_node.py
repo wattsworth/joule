@@ -113,8 +113,8 @@ def main():
                                       stdout=subprocess.PIPE,
                                       stderr=subprocess.STDOUT,
                                       universal_newlines=True)
-            loop = asyncio.get_event_loop()
-            result = loop.run_until_complete(wait_for_follower())
+
+            result = asyncio.run(wait_for_follower())
             jouled.send_signal(signal.SIGINT)
             stdout, _ = jouled.communicate()
             if result != 0:

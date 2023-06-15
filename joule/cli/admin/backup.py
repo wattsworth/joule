@@ -82,8 +82,7 @@ def admin_backup(config, folder):
 
     click.echo("Copying nilmdb database...")
     # retrieve the nilmdb data folder
-    loop = asyncio.get_event_loop()
-    nilmdb_folder = loop.run_until_complete(get_nilmdb_dir(config.nilmdb_url))
+    nilmdb_folder = asyncio.run(get_nilmdb_dir(config.nilmdb_url))
     nilmdb_backup = os.path.join(folder, "nilmdb")
     shutil.copytree(nilmdb_folder, nilmdb_backup, ignore=print_progress)
     click.echo("\nOK")

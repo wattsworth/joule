@@ -21,11 +21,11 @@ class TestMeanFilter(helpers.AsyncTestCase):
         # timestamps is just an increasing index
 
         my_filter = MeanFilter()
-        loop = asyncio.get_event_loop()
         pipe_in = LocalPipe("float32_%d" % WIDTH, name="input")
         pipe_out = LocalPipe("float32_%d" % WIDTH, name="output")
         args = argparse.Namespace(window=WINDOW, pipes="unset")
         base = np.array([np.arange(x, WINDOW + x) for x in range(WIDTH)]).T
+
         async def writer():
             prev_ts = 0
             for block in range(NUM_BLOCKS):
@@ -33,19 +33,22 @@ class TestMeanFilter(helpers.AsyncTestCase):
                 ts = np.arange(prev_ts, prev_ts + len(data))
                 input_block = np.hstack((ts[:, None], data))
                 pipe_in.write_nowait(input_block)
-                #await asyncio.sleep(0.1)
+                # await asyncio.sleep(0.1)
                 prev_ts = ts[-1] + 1
             # now put in an extra block after an interval break
             await pipe_in.close_interval()
             # all 1's (even timestamps)
             await pipe_in.write(np.ones((100, WIDTH + 1)))
-            #await asyncio.sleep(0.2)
+            # await asyncio.sleep(0.2)
             await pipe_in.close()
 
         # run reader in an event loop
-        loop.run_until_complete(asyncio.ensure_future(writer()))
-        loop.run_until_complete(my_filter.run(args, {"input": pipe_in},
-                               {"output": pipe_out}))
+        async def runner():
+            await asyncio.gather(writer(),
+                           my_filter.run(args,
+                                         {"input": pipe_in},
+                                         {"output": pipe_out}))
+        asyncio.run(runner())
         # check the results
         result = pipe_out.read_nowait()
         # expect the output to be a constant (WINDOW-1)/2
@@ -59,4 +62,3 @@ class TestMeanFilter(helpers.AsyncTestCase):
         # now read the extra block and make sure it has all the data
         result = pipe_out.read_nowait(flatten=True)
         self.assertEqual(len(result), 100 - WINDOW + 1)
-        loop.close()

@@ -95,8 +95,8 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
     if 'NilmdbUrl' in main_config and main_config['NilmdbUrl'] != '':
         nilmdb_url = main_config['NilmdbUrl']
         if verify:
-            loop = asyncio.get_event_loop()
-            loop.run_until_complete(verify_nilmdb_url(nilmdb_url))
+
+            asyncio.run(verify_nilmdb_url(nilmdb_url))
 
     else:
         nilmdb_url = None

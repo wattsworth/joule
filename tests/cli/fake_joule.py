@@ -41,7 +41,6 @@ class MockDbEntry:
 class FakeJoule:
 
     def __init__(self):
-        self.loop = None
         self.runner = None
         self.app = web.Application(middlewares=[self._authorize])
 
@@ -108,8 +107,9 @@ class FakeJoule:
         #with redirect_stdout(f):
         #web.run_app(self.app, host='127.0.0.1', port=port,
         #                handle_signals=True)
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self._run_server(port, inbound_msgs))
+        #''
+        #asyncio.run(self._run_server(port, inbound_msgs))
+        asyncio.run(self._run_server(port, inbound_msgs))
         msgs.close()
         inbound_msgs.close()
         msgs.join_thread()

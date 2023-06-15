@@ -41,10 +41,6 @@ class TestModuleInfo(FakeJouleTestCase):
         module2 = copy.deepcopy(orig_model_data)
         module2['outputs'] = []
         for module in [module1, module2]:
-            # create a new event loop for the next run
-            loop = asyncio.new_event_loop()
-            loop.set_debug(True)
-            asyncio.set_event_loop(loop)
 
             server.response = json.dumps(module)
 

@@ -21,8 +21,6 @@ class TestMedianFilter(helpers.AsyncTestCase):
         # timestamps is just an increasing index
 
         my_filter = MedianFilter()
-        loop = asyncio.get_event_loop()
-
         pipe_in = LocalPipe("float32_%d" % WIDTH, name="input")
         pipe_out = LocalPipe("float32_%d" % WIDTH, name="output")
         args = argparse.Namespace(window=WINDOW, pipes="unset")
@@ -44,12 +42,13 @@ class TestMedianFilter(helpers.AsyncTestCase):
             #await asyncio.sleep(0.2)
             await pipe_in.close()
 
-        loop.run_until_complete(asyncio.ensure_future(writer()))
 
-        loop.run_until_complete(my_filter.run(args, {"input": pipe_in},
-                               {"output": pipe_out}))
-
-
+        async def runner():
+            await asyncio.gather(writer(),
+                           my_filter.run(args,
+                                         {"input": pipe_in},
+                                         {"output": pipe_out}))
+        asyncio.run(runner())
         result = pipe_out.read_nowait()
         # expect the output to be a constant (WINDOW-1)/2
         # expect the output to be a constant (WINDOW-1)/2
@@ -63,4 +62,4 @@ class TestMedianFilter(helpers.AsyncTestCase):
         # now read the extra block and make sure it has all the data
         result = pipe_out.read_nowait(flatten=True)
         self.assertEqual(len(result), 100 - WINDOW + 1)
-        loop.close()
+        

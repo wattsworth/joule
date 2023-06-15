@@ -46,7 +46,6 @@ class TestDataIntervals(FakeJouleTestCase):
         result = runner.invoke(main, ['data', 'intervals',
                                       '--start', '1 hour ago', '--end', 'now',
                                       '/test/source'])
-
         self.assertEqual(result.exit_code, 0)
         # make sure the intervals are displayed (one per line)
         output = result.output.split('\n')

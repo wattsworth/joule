@@ -55,7 +55,6 @@ class OutputPipe(Pipe):
     async def _write(self, sdata):
         if self.writer is None:
             self.writer = await self.writer_factory()
-
         # send data to subscribers
         for pipe in self.subscribers:
             await pipe.write(sdata)

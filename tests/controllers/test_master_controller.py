@@ -1,7 +1,7 @@
 from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 from aiohttp import web
 from sqlalchemy.orm import Session
-
+import asyncio
 from joule.models import master, Master
 import joule.controllers
 from tests.controllers.helpers import create_db, MockStore
@@ -17,6 +17,10 @@ class TestMasterController(AioHTTPTestCase):
     async def get_application(self):
         app = web.Application()
         app.add_routes(joule.controllers.routes)
+        # this takes a while, adjust the expected coroutine execution time
+        loop = asyncio.get_running_loop()
+        loop.slow_callback_duration = 2.0
+
         app["db"], app["psql"] = create_db([])
         app["data-store"] = MockStore()
         app["name"] = "test"
@@ -31,7 +35,7 @@ class TestMasterController(AioHTTPTestCase):
         app["db"].commit()
         return app
 
-    @unittest_run_loop
+
     async def test_adds_master_user(self):
         db: Session = self.app["db"]
         # add user to johndoe
@@ -56,7 +60,7 @@ class TestMasterController(AioHTTPTestCase):
         self.assertEqual(old_key, new_key)
         self.assertEqual(resp.status, 400)
 
-    @unittest_run_loop
+
     async def test_removes_master_user(self):
         db: Session = self.app["db"]
         db.add(Master(name="johndoe", key=master.make_key(), type=Master.TYPE.USER))
@@ -74,7 +78,7 @@ class TestMasterController(AioHTTPTestCase):
         m = db.query(Master).filter(Master.name == "johndoe").one_or_none()
         self.assertIsNone(m)
 
-    @unittest_run_loop
+
     async def test_lists_masters(self):
         db: Session = self.app["db"]
         db.add(Master(name="johndoe", key=master.make_key(), type=Master.TYPE.USER))

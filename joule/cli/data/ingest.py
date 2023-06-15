@@ -26,7 +26,6 @@ def ingest(config, stream_path, file):
     signal.signal(signal.SIGTERM, handler)
     signal.signal(signal.SIGINT, handler)
 
-    loop = asyncio.get_event_loop()
 
     async def _run():
         nonlocal stream_path
@@ -101,13 +100,12 @@ def ingest(config, stream_path, file):
         bar_ctx.__exit__(None, None, None)
 
     try:
-        loop.run_until_complete(_run())
+        asyncio.run(_run())
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
-        loop.run_until_complete(
+        asyncio.run(
             config.close_node())
-        loop.close()
 
 
 async def _create_stream(stream_path, hdf_root, node):

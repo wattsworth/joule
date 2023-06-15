@@ -21,11 +21,11 @@ class TestFileReader(helpers.AsyncTestCase):
             for row in data:
                 f.write("%d %s\n" % (row['timestamp'], ' '.join(repr(x) for x in row['data'])))
         my_reader = FileReader()
-        loop = asyncio.get_event_loop()
+        ''
         pipe = LocalPipe("float32_8", name="output")
         args = argparse.Namespace(file=path, delimiter=" ",
                                   timestamp=False)
-        loop.run_until_complete(my_reader.run(args, pipe))
+        asyncio.run(my_reader.run(args, pipe))
         # check the results
         result = pipe.read_nowait()
         np.testing.assert_array_almost_equal(data['timestamp'], result['timestamp'])
@@ -39,11 +39,11 @@ class TestFileReader(helpers.AsyncTestCase):
             for row in data:
                 f.write("%s\n" % ' '.join(repr(x) for x in row['data']))
         my_reader = FileReader()
-        loop = asyncio.get_event_loop()
+        ''
         pipe = LocalPipe("float32_8", name="output")
         args = argparse.Namespace(file=path, delimiter=" ",
                                   timestamp=True)
-        loop.run_until_complete(my_reader.run(args, pipe))
+        asyncio.run(my_reader.run(args, pipe))
         # check the results
         result = pipe.read_nowait()
         # timestamps should be close to now
@@ -61,12 +61,12 @@ class TestFileReader(helpers.AsyncTestCase):
             for row in data:
                 f.write("%d %s\n" % (row['timestamp'], ' '.join(repr(x) for x in row['data'])))
         my_reader = FileReader()
-        loop = asyncio.get_event_loop()
+        ''
         pipe = LocalPipe("float32_8", name="output")
         args = argparse.Namespace(file=path, delimiter=" ",
                                   timestamp=False)
         my_reader.stop()
-        loop.run_until_complete(my_reader.run(args, pipe))
+        asyncio.run(my_reader.run(args, pipe))
         # check the results
         result = pipe.read_nowait()
 

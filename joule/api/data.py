@@ -261,8 +261,8 @@ async def _historic_reader(session: BaseSession,
                 log.error("Error reading input [%s]: %s" % (my_stream.name, msg))
                 await pipe_out.close()
                 return
-            if pipe_out.layout != response.headers['joule-layout']:
-                print(f"WARNING: data pipe layout is incorrect, adjusting to {response.headers['joule-layout']}")
+            # Suppress this message since it interferes with command line tools
+            #print(f"WARNING: data pipe layout is incorrect, adjusting to {response.headers['joule-layout']}")
             pipe_out.change_layout(response.headers['joule-layout'])
             pipe_out.decimation_level = int(response.headers['joule-decimation'])
             pipe_in = InputPipe(layout=pipe_out.layout,

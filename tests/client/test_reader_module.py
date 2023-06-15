@@ -51,7 +51,7 @@ class TestReaderModule(helpers.AsyncTestCase):
     def test_writes_to_pipes(self):
         module = SimpleReader()
         (r, w) = os.pipe()
-        loop = asyncio.get_event_loop()
+
         rf = pipes.reader_factory(r)
         pipe = pipes.InputPipe(name="output", stream=self.stream, reader_factory=rf)
         pipe_arg = json.dumps(json.dumps({"outputs": {'output': {'fd': w, 'id': None, 'layout': self.stream.layout}},
@@ -62,18 +62,12 @@ class TestReaderModule(helpers.AsyncTestCase):
                                   node="", api_socket="",
                                   mock_data=data)
         # run the reader module
-        loop = asyncio.new_event_loop()
-        loop.set_debug(True)
-        asyncio.set_event_loop(loop)
 
         module.start(args)
-        asyncio.set_event_loop(self.loop)
         # check the output
-        received_data = self.loop.run_until_complete(pipe.read())
+        received_data = asyncio.run(pipe.read())
         np.testing.assert_array_equal(data, received_data)
-        self.loop.run_until_complete(pipe.close())
-        if not loop.is_closed():
-            loop.close()
+        asyncio.run(pipe.close())
 
     def test_writes_to_stdout(self):
         module = SimpleReader()
@@ -150,10 +144,9 @@ class TestReaderModule(helpers.AsyncTestCase):
 
         def get_page():
             time.sleep(0.5)
-            loop = asyncio.new_event_loop()
-            resp = loop.run_until_complete(get_page_task())
+            resp = asyncio.run(get_page_task())
             self.assertEqual(resp, 'Hello World')
-            loop.close()
+            
 
         async def get_page_task():
             conn = aiohttp.UnixConnector(socket_path)

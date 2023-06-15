@@ -13,7 +13,7 @@ class TestLocalPipe(helpers.AsyncTestCase):
         """writes to pipe sends data to reader and any subscribers"""
         LAYOUT = "int8_2"
         LENGTH = 1003
-        loop = asyncio.get_event_loop()
+        ''
         my_pipe = LocalPipe(LAYOUT, name="pipe")
         # test timeouts, since the writer is slow
         my_pipe.TIMEOUT_INTERVAL = 0.05
@@ -37,7 +37,7 @@ class TestLocalPipe(helpers.AsyncTestCase):
             # note this is kind of delicate, you can only read data twice
             # if the pipe is closed so it might look like you didn't finish all
             # the data if the last read ignores data past blk_size
-            blk_size = 357
+            blk_size = 600
             rx_idx = 0
             while not my_pipe.is_empty():
                 # consume data in pipe
@@ -56,12 +56,14 @@ class TestLocalPipe(helpers.AsyncTestCase):
                 rx_idx += len(data_chunk)
                 subscriber_pipe.consume(len(data_chunk))
 
-        loop = asyncio.get_event_loop()
-        tasks = [asyncio.ensure_future(writer()),
-                 asyncio.ensure_future(reader()),
-                 asyncio.ensure_future(subscriber())]
-
-        loop.run_until_complete(asyncio.gather(*tasks))
+        async def runner():
+            #await writer()
+            #await reader()
+            #await subscriber()
+            await asyncio.gather(writer(),
+                                 reader(),
+                                 subscriber())
+        asyncio.run(runner())
 
         data = subscriber_pipe2.read_nowait()
         np.testing.assert_array_equal(test_data, data)
@@ -136,7 +138,7 @@ class TestLocalPipe(helpers.AsyncTestCase):
     def test_nowait_read_writes(self):
         LAYOUT = "int8_2"
         LENGTH = 500
-        loop = asyncio.get_event_loop()
+        ''
         my_pipe = LocalPipe(LAYOUT)
         my_subscriber = LocalPipe(LAYOUT)
         my_pipe.subscribe(my_subscriber)
@@ -155,7 +157,7 @@ class TestLocalPipe(helpers.AsyncTestCase):
 
     def test_invalid_write_nowait_inputs(self):
         LAYOUT = "int8_2"
-        loop = asyncio.get_event_loop()
+        ''
         my_pipe = LocalPipe(LAYOUT, name="testpipe")
         with self.assertLogs(level="INFO"):
             my_pipe.write_nowait(np.array([[]]))
@@ -164,7 +166,7 @@ class TestLocalPipe(helpers.AsyncTestCase):
 
     def test_different_format_writes(self):
         LAYOUT = "int8_2"
-        loop = asyncio.get_event_loop()
+        ''
         my_pipe = LocalPipe(LAYOUT, name="testpipe")
 
         test_data = helpers.create_data(LAYOUT, length=4, step=1, start=106)
@@ -188,8 +190,8 @@ class TestLocalPipe(helpers.AsyncTestCase):
             # write structured numpy arrays
             await my_pipe.write(test_data)
 
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(write())
+        ''
+        asyncio.run(write())
         result = my_pipe.read_nowait(flatten=True)
         np.testing.assert_array_equal(result[:3], [[1, 1, 1],
                                                    [2, 2, 2],
@@ -236,14 +238,14 @@ class TestLocalPipe(helpers.AsyncTestCase):
             data = await my_pipe.read(flatten=True)
             np.testing.assert_array_equal(data, np.ones((35, 3)))
 
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(asyncio.gather(reader(), writer()))
+        async def runner():
+            await asyncio.gather(reader(), writer())
+        asyncio.run(runner())
         self.assertLessEqual(num_reads, np.ceil(LENGTH / CACHE_SIZE))
 
     def test_nowait_read_empties_queue(self):
         LAYOUT = "int8_2"
         LENGTH = 50
-        loop = asyncio.get_event_loop()
         my_pipe = LocalPipe(LAYOUT)
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
 
@@ -251,8 +253,8 @@ class TestLocalPipe(helpers.AsyncTestCase):
             for row in test_data:
                 await my_pipe.write(np.array([row]))
 
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(writer())
+        ''
+        asyncio.run(writer())
 
         result = my_pipe.read_nowait()
 
@@ -338,8 +340,7 @@ class TestLocalPipe(helpers.AsyncTestCase):
             my_pipe.consume(len(read_data))
             np.testing.assert_array_equal(test_data2, read_data[20:])
 
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(reader())
+        asyncio.run(reader())
 
     def test_nowait_function_exceptions(self):
         pipe = LocalPipe(layout="float32_3")

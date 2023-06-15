@@ -13,11 +13,10 @@ def node_add(config, name: str, url: str, key: str):
     """Add a new node (requires API key)
 
     Use the information provided by 'joule master add user' """
-    loop = asyncio.get_event_loop()
     my_node = None
     try:
         if not url.startswith("http"):
-            url = loop.run_until_complete(
+            url = asyncio.run(
                 utilities.misc.detect_url(url, 8088))
             if url is None:
                 raise click.ClickException(
@@ -29,6 +28,6 @@ def node_add(config, name: str, url: str, key: str):
         raise click.ClickException(str(e)) from e
     finally:
         if my_node is not None:
-            loop.run_until_complete(
+            asyncio.run(
                 my_node.close())
-        loop.close()
+        

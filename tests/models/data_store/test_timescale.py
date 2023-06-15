@@ -266,6 +266,7 @@ class TestTimescale(asynctest.TestCase):
                                                  test_data['timestamp'][0] - 100,
                                                  test_data['timestamp'][0] - 50)
         self.assertEqual(0, nrows)
+        await conn.close()
 
     async def _test_remove(self):
 

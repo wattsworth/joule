@@ -23,6 +23,7 @@ class TestBasicAPI(asynctest.TestCase):
         """
 
     async def tearDown(self):
+        await self.node2.master_delete("user","cli")
         await self.node1.close()
         await self.node2.close()
 

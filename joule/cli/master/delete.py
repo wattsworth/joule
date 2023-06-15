@@ -15,16 +15,15 @@ def cli_delete(config, type, name):
 
     Specify the type of master and the name as displayed by the 'master list' command
     """
-    loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(
+        asyncio.run(
             _run(config.node, type, name))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
-        loop.run_until_complete(
+        asyncio.run(
             config.close_node())
-        loop.close()
+        
 
 
 async def _run(node, master_type, name):

@@ -15,16 +15,13 @@ class SimpleFilter(FilterModule):
         # input2 ----( *3 )---> output2
         input2 = inputs['input2']
         output2 = outputs['output2']
-        while True:
-            try:
-                data = await input1.read()
-                input1.consume(len(data))
-                data['data'] *= 2.0
-                await output1.write(data)
-                if input1.end_of_interval:
-                    await output1.close_interval()
-            except EmptyPipe:
-                break
+        while not input1.is_empty():
+            data = await input1.read()
+            input1.consume(len(data))
+            data['data'] *= 2.0
+            await output1.write(data)
+            if input1.end_of_interval:
+                await output1.close_interval()
         while True:
             try:
                 data = await input2.read()

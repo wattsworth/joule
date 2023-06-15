@@ -9,16 +9,14 @@ from joule import errors
 @pass_config
 def cli_list(config):
     """Display all users and nodes with access to the current node."""
-    loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(
+        asyncio.run(
             _run(config.node))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
-        loop.run_until_complete(
+        asyncio.run(
             config.close_node())
-        loop.close()
 
 
 async def _run(node):

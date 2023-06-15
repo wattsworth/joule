@@ -15,7 +15,7 @@ class TestRootController(AioHTTPTestCase):
         app["name"] = "test_suite"
         return app
 
-    @unittest_run_loop
+
     async def test_index(self):
         resp: aiohttp.ClientResponse = await self.client.request("GET", "/")
         msg = await resp.text()
@@ -23,7 +23,7 @@ class TestRootController(AioHTTPTestCase):
         # 'joule' is somewhere in the response string
         self.assertTrue('joule' in msg.lower())
 
-    @unittest_run_loop
+
     async def test_version(self):
         resp: aiohttp.ClientResponse = await self.client.request("GET", "/version")
         version = await resp.text()
@@ -37,7 +37,7 @@ class TestRootController(AioHTTPTestCase):
         # version is some non-empty string
         self.assertTrue(len(data['version']) > 0)
 
-    @unittest_run_loop
+
     async def test_dbinfo(self):
         resp: aiohttp.ClientResponse = await self.client.request("GET", "/dbinfo")
         dbinfo = await resp.json()

@@ -24,10 +24,7 @@ class TestFolderDelete(FakeJouleTestCase):
         params = self.msgs.get()
         self.assertEqual(params['path'], '/the/folder')
 
-        # create a new event loop for the next run
-        loop = asyncio.new_event_loop()
-        loop.set_debug(True)
-        asyncio.set_event_loop(loop)
+
 
         # recursively deletes folders
         result = runner.invoke(main,

@@ -14,7 +14,6 @@ from joule import errors
 @pass_config
 def data_remove(config, start, end, all, stream):
     """Remove data from a stream."""
-    loop = asyncio.get_event_loop()
     if all:
         if start is not None or end is not None:
             raise click.ClickException("specify either --all or --start/--end")
@@ -32,7 +31,7 @@ def data_remove(config, start, end, all, stream):
             raise click.ClickException("invalid end time: [%s]" % end)
 
     try:
-        loop.run_until_complete(config.node.data_delete(
+        asyncio.run(config.node.data_delete(
             stream, start, end))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
@@ -40,7 +39,6 @@ def data_remove(config, start, end, all, stream):
         import traceback
         traceback.print_exc()
     finally:
-        loop.run_until_complete(
+        asyncio.run(
             config.close_node())
-        loop.close()
     click.echo("OK")

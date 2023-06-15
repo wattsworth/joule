@@ -1,7 +1,7 @@
 from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 from aiohttp import web
 from sqlalchemy.orm import Session
-
+import asyncio
 from joule.models import folder, DataStream, Folder, Element, StreamInfo
 import joule.controllers
 from tests.controllers.helpers import create_db, MockStore, MockEventStore
@@ -17,13 +17,15 @@ class TestFolderController(AioHTTPTestCase):
     async def get_application(self):
         app = web.Application()
         app.add_routes(joule.controllers.routes)
+        # this takes a while, adjust the expected coroutine execution time
+        loop = asyncio.get_running_loop()
+        loop.slow_callback_duration = 2.0
         app["db"], app["psql"] = create_db(["/top/leaf/stream1:float32[x, y, z]",
                                             "/top/middle/leaf/stream2:int8[val1, val2]"])
         app["data-store"] = MockStore()
         app["event-store"] = MockEventStore()
         return app
 
-    @unittest_run_loop
     async def test_stream_list(self):
         db: Session = self.app["db"]
         my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
@@ -37,7 +39,7 @@ class TestFolderController(AioHTTPTestCase):
         expected = folder.root(db).to_json({my_stream.id: mock_info})
         self.assertEqual(actual, expected)
 
-    @unittest_run_loop
+
     async def test_folder_info(self):
         # query by path
         params = {
@@ -56,7 +58,7 @@ class TestFolderController(AioHTTPTestCase):
         self.assertEqual(json["name"], "leaf")
         self.assertEqual(len(json["streams"]), 1)
 
-    @unittest_run_loop
+
     async def test_folder_move_by_path(self):
         db: Session = self.app["db"]
         # move stream1 into folder3
@@ -70,7 +72,7 @@ class TestFolderController(AioHTTPTestCase):
         self.assertEqual(f.data_streams[0].name, "stream1")
         self.assertIsNone(folder.find("/top/leaf", db))
 
-    @unittest_run_loop
+
     async def test_folder_move_by_id(self):
         db: Session = self.app["db"]
         # move stream1 into folder3
@@ -86,7 +88,7 @@ class TestFolderController(AioHTTPTestCase):
                          folder.find("/top/middle/leaf/leaf", db).id)
         self.assertIsNone(folder.find("/top/leaf", db))
 
-    @unittest_run_loop
+
     async def test_folder_delete_by_path(self):
         db: Session = self.app["db"]
         f = folder.find("/top/leaf", db)
@@ -100,7 +102,7 @@ class TestFolderController(AioHTTPTestCase):
         # keeps the parent folders
         self.assertIsNotNone(folder.find("/top", db))
 
-    @unittest_run_loop
+
     async def test_folder_delete_by_id(self):
         db: Session = self.app["db"]
         f_count = db.query(Folder).count()
@@ -115,7 +117,7 @@ class TestFolderController(AioHTTPTestCase):
         self.assertEqual(f_count + 2, db.query(Folder).count())
         self.assertIsNotNone(folder.find("/an/empty", db))
 
-    @unittest_run_loop
+
     async def test_folder_recursive_delete(self):
         db: Session = self.app["db"]
         f = folder.find("/top", db)
@@ -127,7 +129,7 @@ class TestFolderController(AioHTTPTestCase):
         self.assertEqual(0, db.query(DataStream).count())
         self.assertEqual(0, db.query(Element).count())
 
-    @unittest_run_loop
+
     async def test_folder_update(self):
         db: Session = self.app["db"]
         my_folder = folder.find("/top/middle/leaf", db)

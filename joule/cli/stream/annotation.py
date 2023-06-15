@@ -17,16 +17,14 @@ from joule import utilities
 @pass_config
 def cli_annotations(config, stream, start, end, delete, csv):
     """Display stream annotations."""
-    loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(
+        asyncio.run(
             _run(config.node, stream, start, end, delete, csv))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
-        loop.run_until_complete(
+        asyncio.run(
             config.close_node())
-        loop.close()
 
 
 async def _run(node: BaseNode, stream, start, end, delete, csv):

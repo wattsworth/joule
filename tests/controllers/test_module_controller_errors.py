@@ -17,7 +17,7 @@ class TestModuleControllerErrors(AioHTTPTestCase):
         app["supervisor"] = Supervisor([wreader, wfilter], [], None)  # type: ignore
         return app
 
-    @unittest_run_loop
+
     async def test_module_info(self):
         # must specify a name
         resp: aiohttp.ClientResponse = await self.client.request("GET", "/module.json")
@@ -27,7 +27,7 @@ class TestModuleControllerErrors(AioHTTPTestCase):
                                                                  params={'name': 'unknown'})
         self.assertEqual(resp.status, 404)
 
-    @unittest_run_loop
+
     async def test_module_logs(self):
         # must specify a name
         resp: aiohttp.ClientResponse = await self.client.request("GET", "/module/logs.json")

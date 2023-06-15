@@ -8,8 +8,8 @@ RUN apt-get update && apt-get install python3 python3-pip language-pack-en postg
 
 ADD requirements.txt /tmp
 WORKDIR tmp
-#RUN apt-get install libpq-dev libblas-dev liblapack-dev gfortran -y
-#RUN pip3 install psycopg2-binary
+RUN apt-get install libpq-dev libblas-dev liblapack-dev gfortran  libhdf5-dev -y
+RUN pip3 install psycopg2-binary
 RUN pip3 install --upgrade pip
 RUN pip3 install --trusted-host pypi.python.org  -r requirements.txt
 

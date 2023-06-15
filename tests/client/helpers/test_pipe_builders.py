@@ -25,7 +25,7 @@ class TestPipeHelpers(FakeJouleTestCase):
         src_data = create_source_data(server)
 
         self.start_server(server)
-        loop = asyncio.get_event_loop()
+        ''
         my_node = api.get_node()
 
         async def runner():
@@ -49,17 +49,17 @@ class TestPipeHelpers(FakeJouleTestCase):
             await my_node.close()
 
         with self.assertLogs(level='INFO') as log:
-            loop.run_until_complete(runner())
+            asyncio.run(runner())
         log_dump = ' '.join(log.output)
         self.stop_server()
-        loop.close()
+        
 
     def test_builds_live_input_pipes(self):
         server = FakeJoule()
         src_data = create_source_data(server, is_destination=True)
 
         self.start_server(server)
-        loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
         my_node = api.get_node()
 
         async def runner():
@@ -129,7 +129,7 @@ class TestPipeHelpers(FakeJouleTestCase):
         create_destination(server)
 
         self.start_server(server)
-        loop = asyncio.get_event_loop()
+        ''
 
         my_node = api.get_node()
 
@@ -182,14 +182,14 @@ class TestPipeHelpers(FakeJouleTestCase):
 
         # suppress "cancelled" notifications when program exits
         #with self.assertLogs(level='INFO'):
-        loop.run_until_complete(runner())
+        asyncio.run(runner())
         self.stop_server()
-        loop.close()
+        
 
     def test_creates_output_stream_if_necessary(self):
         server = FakeJoule()
         self.start_server(server)
-        loop = asyncio.get_event_loop()
+        ''
 
         my_node = api.get_node()
 
@@ -212,35 +212,35 @@ class TestPipeHelpers(FakeJouleTestCase):
             await my_node.close()
 
         with self.assertLogs(level='INFO') as log:
-            loop.run_until_complete(runner())
+            asyncio.run(runner())
         log_dump = ' '.join(log.output)
         self.assertIn('creating', log_dump)
         self.stop_server()
-        loop.close()
+        
 
     def test_configuration_errors(self):
         server = FakeJoule()
-        loop = asyncio.get_event_loop()
+        ''
         self.start_server(server)
         my_node = api.get_node()
 
         # must specify an inline configuration
         with self.assertRaises(ConfigurationError):
-            loop.run_until_complete(build_network_pipes({'input': '/test/source'},
+            asyncio.run(build_network_pipes({'input': '/test/source'},
                                                         {},
                                                         {},
                                                         my_node,
                                                         10, 20,
                                                         force=True))
-        loop.run_until_complete(my_node.close())
+        asyncio.run(my_node.close())
         self.stop_server()
-        loop.close()
+        
 
     def test_input_errors(self):
         server = FakeJoule()
         create_source_data(server, is_destination=False)
         self.start_server(server)
-        loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
         my_node = api.get_node()
 
         # errors on layout differences
@@ -269,7 +269,7 @@ class TestPipeHelpers(FakeJouleTestCase):
         create_destination(server)
         create_source_data(server, is_destination=True)
         self.start_server(server)
-        loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
         my_node = api.get_node()
 
         # errors on layout differences

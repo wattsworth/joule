@@ -14,16 +14,14 @@ def cli_delete(config, stream):
         click.echo("Aborted!")
         return
 
-    loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(
+        asyncio.run(
             config.node.event_stream_delete(stream))
         click.echo("OK")
 
     except errors.ApiError as e:
         raise click.ClickException(str(e))
     finally:
-        loop.run_until_complete(
+        asyncio.run(
             config.close_node())
-        loop.close()
 

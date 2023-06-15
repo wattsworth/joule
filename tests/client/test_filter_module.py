@@ -2,11 +2,10 @@ import os
 import argparse
 import asyncio
 import json
+import unittest
 import numpy as np
-from aiohttp import web
 
 from unittest import mock
-import asynctest
 from joule.api import BaseNode
 
 from joule.client import FilterModule
@@ -46,11 +45,11 @@ class TestFilterModule(helpers.AsyncTestCase):
     def test_writes_to_pipes(self):
         module = SimpleFilter()
         (r, w_module) = os.pipe()
-        loop = asyncio.get_event_loop()
+
         rf = pipes.reader_factory(r)
         from_filter = pipes.InputPipe(name="from_filter", stream=self.output, reader_factory=rf)
         (r_module, w) = os.pipe()
-        loop = asyncio.get_event_loop()
+
         wf = pipes.writer_factory(w)
         to_filter = pipes.OutputPipe(name="to_filter", stream=self.input, writer_factory=wf)
 
@@ -58,42 +57,34 @@ class TestFilterModule(helpers.AsyncTestCase):
             json.dumps({"outputs": {'from_filter': {'fd': w_module, 'id': 2, 'layout': self.output.layout}},
                         "inputs": {'to_filter': {'fd': r_module, 'id': 3, 'layout': self.input.layout}}}))
         data = helpers.create_data(self.input.layout)
-        self.loop.run_until_complete(to_filter.write(data))
-        self.loop.run_until_complete(to_filter.close())
+        async def runner():
+            await to_filter.write(data)
+            await to_filter.close()
+        asyncio.run(runner())
         args = argparse.Namespace(pipes=pipe_arg, socket="unset",
                                   node="", api_socket="", live=False,
                                   url='http://localhost:8080')
         # run the reader module
-        loop = asyncio.new_event_loop()
-        loop.set_debug(True)
-        asyncio.set_event_loop(loop)
 
         class MockNode(BaseNode):
             def __init__(self):
                 self.session = mock.Mock()
-                self.session.close = asynctest.CoroutineMock()
+                self.session.close = unittest.mock.AsyncMock()
                 pass
-
-            @property
-            def loop(self):
-                return asyncio.get_event_loop()
 
         with mock.patch('joule.client.base_module.node') as mock_node_pkg:
             node = MockNode()
-            node.data_stream_get = asynctest.CoroutineMock(return_value=self.output)
+            node.data_stream_get = unittest.mock.AsyncMock(return_value=self.output)
             mock_node_pkg.UnixNode = mock.Mock(return_value=node)
             module.start(args)
             # make sure the API was used to retrieve stream objects
             self.assertEqual(node.data_stream_get.await_count, 2)
 
-        asyncio.set_event_loop(self.loop)
         # check the output
-        received_data = self.loop.run_until_complete(from_filter.read())
+        received_data = asyncio.run(from_filter.read())
         np.testing.assert_array_equal(data['timestamp'], received_data['timestamp'])
         np.testing.assert_array_almost_equal(data['data'] * 2, received_data['data'])
-        self.loop.run_until_complete(from_filter.close())
-        if not loop.is_closed():
-            loop.close()
+        asyncio.run(from_filter.close())
 
     def test_error_on_invalid_params(self):
         # if pipes is not set, must specify a module_config
@@ -104,12 +95,7 @@ class TestFilterModule(helpers.AsyncTestCase):
                                   node="", api_socket="",
                                   start_time=None, end_time=None)
         # run the module
-        loop = asyncio.new_event_loop()
-        loop.set_debug(True)
-        asyncio.set_event_loop(loop)
         with self.assertLogs(level="ERROR") as logs:
             module.start(args)
         log_dump = ' '.join(logs.output).lower()
         self.assertTrue('module_config' in log_dump)
-        asyncio.set_event_loop(self.loop)
-        loop.close()

@@ -76,12 +76,8 @@ class TestDataRead(FakeJouleTestCase):
             else:
                 expected = "%d %s" % (row['timestamp'], ' '.join('%f' % x for x in row['data']))
             # import pdb; pdb.set_trace()
-            self.assertTrue(expected in output[x + 2])
+            self.assertTrue(expected in output[x + 1],msg=f"{output[x+2]}!={expected}")
 
-        # create a new event loop for the next run
-        loop = asyncio.new_event_loop()
-        loop.set_debug(True)
-        asyncio.set_event_loop(loop)
 
         # do not mark the intervals and hide the bounds
         runner = CliRunner()
@@ -99,7 +95,7 @@ class TestDataRead(FakeJouleTestCase):
                 continue
             else:
                 expected = "%d %s" % (row['timestamp'], ' '.join('%f' % x for x in row['data'][:3]))
-            self.assertTrue(expected in output[x - offset + 2])
+            self.assertTrue(expected in output[x - offset + 1])
 
         self.stop_server()
 
@@ -133,12 +129,7 @@ class TestDataRead(FakeJouleTestCase):
             else:
                 data = row['data'][[0, 2, 3, 5, 6, 8]]
                 expected = "%d %s" % (row['timestamp'], ' '.join('%f' % x for x in data))
-            self.assertTrue(expected in output[x + 2])
-
-        # create a new event loop for the next run
-        loop = asyncio.new_event_loop()
-        loop.set_debug(True)
-        asyncio.set_event_loop(loop)
+            self.assertTrue(expected in output[x + 1])
 
         # do not mark the intervals and hide the bounds
         runner = CliRunner()
@@ -156,7 +147,7 @@ class TestDataRead(FakeJouleTestCase):
                 continue
             else:
                 expected = "%d %s" % (row['timestamp'], ' '.join('%f' % x for x in row['data'][:3]))
-            self.assertTrue(expected in output[x - offset + 2])
+            self.assertTrue(expected in output[x - offset + 1])
 
         self.stop_server()
 

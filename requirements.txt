@@ -1,3 +1,5 @@
+## NOTE:
+## setup.py installs the latest versions, when these work in testings update this file with pip freeze
 aiohttp==3.7.4
 asynctest==0.13.0
 async-timeout==3.0.1
@@ -36,4 +38,4 @@ cchardet==2.1.7
 aiodns==2.0.0
 pyopenssl==23.0.0
 dsnparse==0.1.15
-h5py==3.1.0
+h5py #==3.1.0 use latest version so we don't have to rebuild the wheel

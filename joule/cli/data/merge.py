@@ -32,15 +32,13 @@ def merge(config: Config, start, end, primary, secondary, destination):
         except ValueError:
             raise click.ClickException("invalid end time: [%s]" % end)
 
-    loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(_run(start, end, destination, primary, secondary, config.node))
+        asyncio.run(_run(start, end, destination, primary, secondary, config.node))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
-        loop.run_until_complete(
+        asyncio.run(
             config.close_node())
-        loop.close()
 
 
 async def _run(start, end, destination, primary, secondaries, node):

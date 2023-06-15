@@ -17,7 +17,6 @@ def cli_add(config, type, identifier, key):
     For users specify a username (for documentation only).
     For joule/lumen masters specify an domain name or IP address. If the master node is not
     hosted at the default location, specify the full URL."""
-    loop = asyncio.get_event_loop()
     try:
         if type == 'user':
             coro = _add_user(config.node, identifier, key)
@@ -27,13 +26,13 @@ def cli_add(config, type, identifier, key):
             coro = _add_lumen(config.node, identifier)
         else:
             raise click.ClickException("invalid type [%s]" % type)
-        loop.run_until_complete(coro)
+        asyncio.run(coro)
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
-        loop.run_until_complete(
+        asyncio.run(
             config.close_node())
-        loop.close()
+        
 
 
 async def _add_lumen(node: BaseNode, host):

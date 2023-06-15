@@ -3,7 +3,7 @@ from aiohttp import web
 import aiohttp
 import numpy as np
 from sqlalchemy.orm import Session
-
+import asyncio
 from joule.models import DataStream, pipes
 import joule.controllers
 from tests.controllers.helpers import create_db, MockStore, MockSupervisor
@@ -20,6 +20,9 @@ class TestDataController(AioHTTPTestCase):
     async def get_application(self):
         app = web.Application()
         app.add_routes(joule.controllers.routes)
+        # this takes a while, adjust the expected coroutine execution time
+        loop = asyncio.get_running_loop()
+        loop.slow_callback_duration = 2.0
         app["db"], app["psql"] = create_db(["/folder1/stream1:float32[x, y, z]",
                                             "/folder2/deeper/stream2:int8[val1, val2]"])
         app["data-store"] = MockStore()
@@ -27,7 +30,7 @@ class TestDataController(AioHTTPTestCase):
         app["supervisor"] = self.supervisor
         return app
 
-    @unittest_run_loop
+
     async def test_read_binary_data(self):
         db: Session = self.app["db"]
         store: MockStore = self.app["data-store"]
@@ -53,7 +56,7 @@ class TestDataController(AioHTTPTestCase):
         self.assertEqual(resp.headers['joule-decimation'], '16')
         self.assertEqual(resp.headers['joule-layout'], stream.decimated_layout)
 
-    @unittest_run_loop
+
     async def test_read_json_data(self):
         db: Session = self.app["db"]
         store: MockStore = self.app["data-store"]
@@ -77,7 +80,7 @@ class TestDataController(AioHTTPTestCase):
         for interval in data['data']:
             self.assertEqual(len(interval), n_chunks * 25)
 
-    @unittest_run_loop
+
     async def test_subscribes_to_data(self):
         db: Session = self.app["db"]
         my_stream = db.query(DataStream).filter_by(name="stream1").one()
@@ -104,7 +107,7 @@ class TestDataController(AioHTTPTestCase):
                 await pipe.read()
         self.assertEqual(self.supervisor.unsubscribe_calls, 1)
 
-    @unittest_run_loop
+
     async def test_unsubscribes_terminated_connections(self):
         db: Session = self.app["db"]
         supervisor: MockSupervisor = self.app["supervisor"]
@@ -121,7 +124,7 @@ class TestDataController(AioHTTPTestCase):
         # we loose the reference so this assert fails. Not a problem but why??
         # self.assertEqual(self.supervisor.unsubscribe_calls, 1)
 
-    @unittest_run_loop
+
     async def test_write_data(self):
         db: Session = self.app["db"]
         store: MockStore = self.app['data-store']
@@ -142,7 +145,7 @@ class TestDataController(AioHTTPTestCase):
         self.assertEqual(resp.status, 200)
         self.assertTrue(store.inserted_data)
 
-    @unittest_run_loop
+
     async def test_remove_data(self):
         db: Session = self.app["db"]
         store: MockStore = self.app['data-store']
@@ -164,7 +167,7 @@ class TestDataController(AioHTTPTestCase):
         self.assertEqual(start, 800)
         self.assertEqual(end, 900)
 
-    @unittest_run_loop
+
     async def test_interval_data(self):
         db: Session = self.app["db"]
         stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()

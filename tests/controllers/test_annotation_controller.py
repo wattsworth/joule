@@ -1,3 +1,5 @@
+import asyncio
+
 from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 from aiohttp import web
 
@@ -6,12 +8,18 @@ from tests.controllers.helpers import create_db
 from joule.models import DataStream, Annotation
 from joule import utilities
 
+import time
+
 
 class TestAnnotationController(AioHTTPTestCase):
 
     async def get_application(self):
         app = web.Application()
         app.add_routes(joule.controllers.routes)
+
+        # this takes a while, adjust the expected coroutine execution time
+        loop = asyncio.get_running_loop()
+        loop.slow_callback_duration = 2.0
 
         db, app["psql"] = create_db(["/top/leaf/stream1:float32[x, y, z]",
                                      "/top/middle/leaf/stream2:int8[val1, val2]"])
@@ -35,7 +43,6 @@ class TestAnnotationController(AioHTTPTestCase):
         self.db = db
         return app
 
-    @unittest_run_loop
     async def test_annotation_list(self):
         # 1.) retreive all annotations
         resp = await self.client.request("GET", "/annotations.json",
@@ -70,7 +77,6 @@ class TestAnnotationController(AioHTTPTestCase):
         annotations_json = await resp.json()
         self.assertEqual(annotations_json, all_annotations_json)
 
-    @unittest_run_loop
     async def test_annotation_create_by_stream_id(self):
         annotation_json = {
             "title": "new_annotation",
@@ -90,7 +96,6 @@ class TestAnnotationController(AioHTTPTestCase):
         self.assertEqual(new_annotation.start, utilities.timestamp_to_datetime(900))
         self.assertEqual(new_annotation.end, utilities.timestamp_to_datetime(1000))
 
-    @unittest_run_loop
     async def test_annotation_create_by_stream_path(self):
         annotation_json = {
             "title": "new_annotation",
@@ -110,7 +115,6 @@ class TestAnnotationController(AioHTTPTestCase):
         self.assertEqual(new_annotation.start, utilities.timestamp_to_datetime(900))
         self.assertEqual(new_annotation.end, utilities.timestamp_to_datetime(1000))
 
-    @unittest_run_loop
     async def test_annotation_edit(self):
         old_annotation = self.db.query(Annotation).filter_by(stream_id=self.stream1.id).first()
         annotation_json = {
@@ -129,7 +133,6 @@ class TestAnnotationController(AioHTTPTestCase):
         self.assertEqual(new_annotation.start, old_annotation.start)
         self.assertEqual(new_annotation.end, old_annotation.end)
 
-    @unittest_run_loop
     async def test_annotation_delete(self):
         old_annotation = self.db.query(Annotation).filter_by(stream_id=self.stream1.id).first()
 
@@ -138,7 +141,6 @@ class TestAnnotationController(AioHTTPTestCase):
         self.assertEqual(resp.status, 200)
         self.assertIsNone(self.db.query(Annotation).filter_by(id=old_annotation.id).one_or_none())
 
-    @unittest_run_loop
     async def test_annotation_delete_cascade(self):
         # make sure annotation are deleted when streams are deleted
         for stream in self.db.query(DataStream).all():
@@ -146,7 +148,6 @@ class TestAnnotationController(AioHTTPTestCase):
         self.db.commit()
         self.assertEqual(0, self.db.query(Annotation).count())
 
-    @unittest_run_loop
     async def test_annotation_delete_all(self):
         # delete a time range
         self.assertEqual(5, self.db.query(Annotation).

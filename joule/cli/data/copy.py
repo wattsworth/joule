@@ -28,16 +28,14 @@ Interval = Tuple[int, int]
 @pass_config
 def data_copy(config, start, end, new, destination_node, source_url, source, destination):
     """Copy data between two streams."""
-    loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(_run(config.node, start, end, new, destination_node,
+        asyncio.run(_run(config.node, start, end, new, destination_node,
                                      source, destination, source_url))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
-        loop.run_until_complete(
+        asyncio.run(
             config.close_node())
-        loop.close()
 
 
 async def _run(config_node, start, end, new, destination_node, source, destination, source_url=None):

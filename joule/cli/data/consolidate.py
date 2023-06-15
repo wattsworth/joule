@@ -25,9 +25,8 @@ def consolidate(config: Config, start, end, max_gap, stream: str):
         except ValueError:
             raise click.ClickException("invalid end time: [%s]" % end)
 
-    loop = asyncio.get_event_loop()
     try:
-        num_removed = loop.run_until_complete(config.node.data_consolidate(stream, max_gap, start, end))
+        num_removed = asyncio.run(config.node.data_consolidate(stream, max_gap, start, end))
         if num_removed > 0:
             print("Consolidated %d intervals" % num_removed)
         else:
@@ -38,6 +37,4 @@ def consolidate(config: Config, start, end, max_gap, stream: str):
         import traceback
         traceback.print_exc()
     finally:
-        loop.run_until_complete(
-            config.close_node())
-        loop.close()
+        asyncio.run(config.close_node())

@@ -11,16 +11,14 @@ from joule.cli.config import pass_config
 @pass_config
 def cli_logs(config, name):
     """Display a module's log output"""
-    loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(
+        asyncio.run(
             _run(config.node, name))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
-        loop.run_until_complete(
+        asyncio.run(
             config.close_node())
-        loop.close()
 
 
 async def _run(node: BaseNode, name:str):

@@ -1,6 +1,6 @@
 from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 from aiohttp import web
-import aiohttp
+import asyncio
 from sqlalchemy.orm import Session
 
 from joule.models import folder, DataStream, Folder, Element, StreamInfo
@@ -18,12 +18,15 @@ class TestStreamController(AioHTTPTestCase):
     async def get_application(self):
         app = web.Application()
         app.add_routes(joule.controllers.routes)
+        # this takes a while, adjust the expected coroutine execution time
+        loop = asyncio.get_running_loop()
+        loop.slow_callback_duration = 2.0
         app["db"], app["psql"] = create_db(["/folder1/stream1:float32[x, y, z]",
                                             "/folder2/deeper/stream2:int8[val1, val2]"])
         app["data-store"] = MockStore()
         return app
 
-    @unittest_run_loop
+
     async def test_stream_info(self):
         db: Session = self.app["db"]
         my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
@@ -41,7 +44,7 @@ class TestStreamController(AioHTTPTestCase):
         actual = await resp.json()
         self.assertEqual(actual, expected)
 
-    @unittest_run_loop
+
     async def test_stream_move(self):
         db: Session = self.app["db"]
         # move stream1 into folder3
@@ -70,7 +73,7 @@ class TestStreamController(AioHTTPTestCase):
         # check the source
         self.assertEqual(len(folder3.data_streams), 0)
 
-    @unittest_run_loop
+
     async def test_stream_create(self):
         db: Session = self.app["db"]
         new_stream = DataStream(name="test", datatype=DataStream.DATATYPE.FLOAT32)
@@ -103,7 +106,7 @@ class TestStreamController(AioHTTPTestCase):
         self.assertEqual(len(created_stream.elements), len(new_stream.elements))
         self.assertEqual(created_stream.folder.name, "folder1")
 
-    @unittest_run_loop
+
     async def test_stream_delete_by_path(self):
         db: Session = self.app["db"]
         my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
@@ -116,7 +119,7 @@ class TestStreamController(AioHTTPTestCase):
         # and the metadata
         self.assertEqual(0, db.query(DataStream).filter_by(name="stream1").count())
 
-    @unittest_run_loop
+
     async def test_stream_delete_by_id(self):
         db: Session = self.app["db"]
         my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
@@ -129,7 +132,7 @@ class TestStreamController(AioHTTPTestCase):
         # and the metadata
         self.assertEqual(0, db.query(DataStream).filter_by(name="stream1").count())
 
-    @unittest_run_loop
+
     async def test_stream_update(self):
         db: Session = self.app["db"]
         my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()

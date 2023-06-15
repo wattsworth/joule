@@ -138,7 +138,7 @@ class BaseModule:
             parsed_args = parser.parse_args(module_args)
 
         # asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-        loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
         self.stop_requested = False
         if parsed_args.api_socket != "unset":
             # should be set by the joule daemon

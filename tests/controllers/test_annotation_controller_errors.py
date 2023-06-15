@@ -1,6 +1,6 @@
 from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 from aiohttp import web
-
+import asyncio
 import joule.controllers
 from tests.controllers.helpers import create_db
 from joule.models import DataStream, Annotation
@@ -12,6 +12,10 @@ class TestAnnotationControllerErrors(AioHTTPTestCase):
     async def get_application(self):
         app = web.Application()
         app.add_routes(joule.controllers.routes)
+
+        # this takes a while, adjust the expected coroutine execution time
+        loop = asyncio.get_running_loop()
+        loop.slow_callback_duration = 2.0
 
         db, app["psql"] = create_db(["/top/leaf/stream1:float32[x, y, z]",
                                      "/top/middle/leaf/stream2:int8[val1, val2]"])
@@ -35,7 +39,7 @@ class TestAnnotationControllerErrors(AioHTTPTestCase):
         self.db = db
         return app
 
-    @unittest_run_loop
+
     async def test_annotation_list(self):
         # errors on invalid timestamps
         resp = await self.client.request("GET", "/annotations.json",
@@ -62,7 +66,7 @@ class TestAnnotationControllerErrors(AioHTTPTestCase):
 
         self.assertEqual(resp.status, 404)
 
-    @unittest_run_loop
+
     async def test_annotation_update(self):
         # must be a json request
         resp = await self.client.request("PUT", "/annotation.json")
@@ -84,7 +88,7 @@ class TestAnnotationControllerErrors(AioHTTPTestCase):
         self.assertEqual(resp.status, 404)
         self.assertIn("does not exist", await resp.text())
 
-    @unittest_run_loop
+
     async def test_annotation_create(self):
         # must be a json request
         resp = await self.client.request("POST", "/annotation.json")
@@ -111,7 +115,7 @@ class TestAnnotationControllerErrors(AioHTTPTestCase):
         self.assertIn("invalid values", await resp.text())
         # NOTE: invalid id format is covered by middleware
 
-    @unittest_run_loop
+
     async def test_annotation_delete(self):
         # must specify an id
         resp = await self.client.request("DELETE", "/annotation.json")
@@ -123,7 +127,7 @@ class TestAnnotationControllerErrors(AioHTTPTestCase):
         self.assertEqual(resp.status, 404)
         self.assertIn("does not exist", await resp.text())
 
-    @unittest_run_loop
+
     async def test_annotation_delete_all(self):
         # must specify a stream_id
         resp = await self.client.request("DELETE", "/stream/annotations.json")

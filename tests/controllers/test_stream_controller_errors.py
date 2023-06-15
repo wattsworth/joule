@@ -2,7 +2,7 @@ from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 from sqlalchemy.orm import Session
 from aiohttp import web
 import aiohttp
-
+import asyncio
 from joule.models import DataStream, Element
 import joule.controllers
 from tests.controllers.helpers import create_db, MockStore
@@ -18,6 +18,9 @@ class TestStreamControllerErrors(AioHTTPTestCase):
     async def get_application(self):
         app = web.Application()
         app.add_routes(joule.controllers.routes)
+        # this takes a while, adjust the expected coroutine execution time
+        loop = asyncio.get_running_loop()
+        loop.slow_callback_duration = 2.0
         app["db"], app["psql"] = create_db(["/folder1/stream1:float32[x, y, z]",
                                             "/folder1/same_name:float32[x, y, z]",
                                             "/folder2/deeper/stream2:int8[val1, val2]",
@@ -27,7 +30,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         app["data-store"] = MockStore()
         return app
 
-    @unittest_run_loop
+
     async def test_stream_info(self):
         # must specify an id or a path
         resp: aiohttp.ClientResponse = await self.client.request("GET", "/stream.json")
@@ -40,7 +43,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         resp = await self.client.request("GET", "/stream.json", params=payload)
         self.assertEqual(resp.status, 404)
 
-    @unittest_run_loop
+
     async def test_stream_move(self):
         db: Session = self.app["db"]
 
@@ -82,7 +85,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         self.assertEqual(resp.status, 400)
         self.assertTrue('locked' in await resp.text())
 
-    @unittest_run_loop
+
     async def test_stream_create(self):
         # must be json
         resp = await self.client.post("/stream.json", data={"bad_values": "not_json"})
@@ -160,7 +163,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
                                                             "stream": '{"invalid": 2}'})
         self.assertEqual(resp.status, 400)
 
-    @unittest_run_loop
+
     async def test_stream_delete(self):
         db: Session = self.app["db"]
 
@@ -180,7 +183,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         self.assertTrue('locked' in await resp.text())
         self.assertIsNotNone(db.query(DataStream).filter_by(name="stream1").one())
 
-    @unittest_run_loop
+
     async def test_stream_update(self):
         db: Session = self.app["db"]
         my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()

@@ -61,7 +61,6 @@ def cmd(config, start, end, live, max_rows, show_bounds, mark_intervals, element
         write_to_file = False
     hdf_file = None
 
-    loop = asyncio.get_event_loop()
 
     async def _run():
         nonlocal element_indices
@@ -170,13 +169,12 @@ def cmd(config, start, end, live, max_rows, show_bounds, mark_intervals, element
             hdf_file.close()
 
     try:
-        loop.run_until_complete(_run())
+        asyncio.run(_run())
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
-        loop.run_until_complete(
+        asyncio.run(
             config.close_node())
-        loop.close()
 
 
 def handler(signum, frame):

@@ -63,9 +63,6 @@ class TestBaseModule(helpers.AsyncTestCase):
         # fire sigint
         t = threading.Thread(target=self.sigint)
         # run the module
-        loop = asyncio.new_event_loop()
-        loop.set_debug(True)
-        asyncio.set_event_loop(loop)
         t.start()
         with self.assertLogs(level="ERROR") as logs:
             module.start(args)
@@ -74,8 +71,7 @@ class TestBaseModule(helpers.AsyncTestCase):
         asyncio.set_event_loop(self.loop)
         t.join()
         self.assertTrue(module.completed)
-        if not loop.is_closed():
-            loop.close()
+
 
     # this test also checks for socket warnings if the module
     # has routes but joule doesn't provide a socket (b/c the is_app
@@ -91,9 +87,6 @@ class TestBaseModule(helpers.AsyncTestCase):
         # fire sigint
         t = threading.Thread(target=self.sigint)
         # run the module
-        loop = asyncio.new_event_loop()
-        loop.set_debug(True)
-        asyncio.set_event_loop(loop)
         t.start()
         with self.assertLogs(level="ERROR") as logs:
             module.start(args)
@@ -102,8 +95,7 @@ class TestBaseModule(helpers.AsyncTestCase):
         asyncio.set_event_loop(self.loop)
         t.join()
         self.assertFalse(module.completed)
-        if not loop.is_closed():
-            loop.close()
+
 
     # builds network pipes if pipe arg is 'unset'
     def test_builds_network_pipes(self):

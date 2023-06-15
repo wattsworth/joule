@@ -95,10 +95,7 @@ class TestStreamInfo(FakeJouleTestCase):
         stream2['is_destination'] = False
         stream2['is_configured'] = False
         for stream in [stream1, stream2]:
-            # create a new event loop for the next run
-            loop = asyncio.new_event_loop()
-            loop.set_debug(True)
-            asyncio.set_event_loop(loop)
+
 
             server.stub_stream_info = True  # use the response text
             server.response = json.dumps(stream)
