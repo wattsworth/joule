@@ -14,7 +14,7 @@ async def info(request):
     db: Session = request.app["db"]
 
     if 'stream_id' in request.query:
-        my_stream = db.query(DataStream).get(request.query["stream_id"])
+        my_stream = db.query(DataStream,request.query["stream_id"])
     elif 'stream_path' in request.query:
         my_stream = folder.find_stream_by_path(request.query['stream_path'], db, stream_type=DataStream)
     else:
@@ -97,7 +97,7 @@ async def update(request):
     body = await request.json()
 
     if 'id' in body:
-        my_annotation = db.query(Annotation).get(body["id"])
+        my_annotation = db.get(Annotation, body["id"])
     else:
         return web.Response(text="specify an id", status=400)
     if my_annotation is None:
@@ -116,7 +116,7 @@ async def create(request):
     body = await request.json()
 
     if 'stream_id' in body:
-        my_stream = db.query(DataStream).get(body["stream_id"])
+        my_stream = db.get(DataStream,body["stream_id"])
     elif 'stream_path' in body:
         my_stream = folder.find_stream_by_path(body['stream_path'], db, stream_type=DataStream)
     else:
@@ -140,7 +140,7 @@ async def create(request):
 async def delete(request):
     db: Session = request.app["db"]
     if 'id' in request.query:
-        my_annotation = db.query(Annotation).get(request.query["id"])
+        my_annotation = db.get(Annotation,request.query["id"])
     else:
         return web.Response(text="specify an id", status=400)
     if my_annotation is None:
@@ -155,7 +155,7 @@ async def delete_all(request):
 
     if "stream_id" in request.query:
         stream_id = request.query["stream_id"]
-        my_stream = db.query(DataStream).get(stream_id)
+        my_stream = db.get(DataStream,stream_id)
     elif "stream_path" in request.query:
         path = request.query["stream_path"]
         my_stream = folder.find_stream_by_path(path, db, stream_type=DataStream)

@@ -1,4 +1,4 @@
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, Mapped
 from sqlalchemy import (Column, Integer, String,
                         Boolean, Enum, ForeignKey)
 from sqlalchemy.dialects.postgresql import BIGINT
@@ -61,11 +61,11 @@ class DataStream(Base):
 
     description: str = Column(String)
     folder_id: int = Column(Integer, ForeignKey('metadata.folder.id'))
-    folder: "Folder" = relationship("Folder", back_populates="data_streams")
-    elements: List[element.Element] = relationship("Element",
+    folder: Mapped["Folder"] = relationship("Folder", back_populates="data_streams")
+    elements: Mapped[List[element.Element]] = relationship("Element",
                                                    cascade="all, delete-orphan",
                                                    back_populates="stream")
-    annotations: List[annotation.Annotation] = relationship("Annotation",
+    annotations: Mapped[List[annotation.Annotation]] = relationship("Annotation",
                                                             cascade="all, delete-orphan",
                                                             back_populates="stream")
 

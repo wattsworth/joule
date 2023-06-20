@@ -90,7 +90,7 @@ class TestAnnotationController(AioHTTPTestCase):
         values = await resp.json()
         new_id = values["id"]
         # make sure it was added
-        new_annotation = self.db.query(Annotation).get(new_id)
+        new_annotation = self.db.get(Annotation,new_id)
         self.assertEqual(new_annotation.title, "new_annotation")
         self.assertEqual(new_annotation.stream_id, self.stream1.id)
         self.assertEqual(new_annotation.start, utilities.timestamp_to_datetime(900))
@@ -109,7 +109,7 @@ class TestAnnotationController(AioHTTPTestCase):
         values = await resp.json()
         new_id = values["id"]
         # make sure it was added
-        new_annotation = self.db.query(Annotation).get(new_id)
+        new_annotation = self.db.get(Annotation,new_id)
         self.assertEqual(new_annotation.title, "new_annotation")
         self.assertEqual(new_annotation.stream_id, self.stream1.id)
         self.assertEqual(new_annotation.start, utilities.timestamp_to_datetime(900))
@@ -127,7 +127,7 @@ class TestAnnotationController(AioHTTPTestCase):
         resp = await self.client.request("PUT", "/annotation.json",
                                          json=annotation_json)
         self.assertEqual(resp.status, 200)
-        new_annotation = self.db.query(Annotation).get(old_annotation.id)
+        new_annotation = self.db.get(Annotation,old_annotation.id)
         self.assertEqual(new_annotation.title, "updated")
         self.assertEqual(new_annotation.content, "this is updated too")
         self.assertEqual(new_annotation.start, old_annotation.start)

@@ -1,10 +1,12 @@
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, Mapped
 from sqlalchemy import Column, Integer, String, ForeignKey, types
 import datetime
+from typing import TYPE_CHECKING
 
 from joule.models.meta import Base
 from joule.errors import ApiError
-
+if TYPE_CHECKING:
+    from joule.models.data_stream import DataStream
 
 class Annotation(Base):
     """
@@ -24,7 +26,7 @@ class Annotation(Base):
     end: datetime = Column(types.TIMESTAMP, default=None)
 
     stream_id: int = Column(Integer, ForeignKey('metadata.stream.id'))
-    stream: 'DataStream' = relationship("DataStream", back_populates="annotations")
+    stream: Mapped['DataStream'] = relationship("DataStream", back_populates="annotations")
 
     def __repr__(self):
         return "<Annotation(title='%s', content='%s', stream_id=%s)>" % (self.title, self.content, self.stream_id)

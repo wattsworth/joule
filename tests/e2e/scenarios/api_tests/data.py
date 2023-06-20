@@ -90,6 +90,12 @@ class TestDataMethods(asynctest.TestCase):
     async def test_data_delete(self):
         # copy data to a new stream
         src = await self.node.data_stream_get("/live/base")
+        # wait for source stream to have data in it
+        while True:
+            src_info = await self.node.data_stream_info(src)
+            if src_info.rows > 10:
+                break
+            await asyncio.sleep(1) # 10Hz rate so this should just happen once
         dest = await self.node.data_stream_create(src, "/tmp")
         data_in = await self.node.data_read(src)
         data_out = await self.node.data_write(dest)

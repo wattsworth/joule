@@ -1,4 +1,4 @@
-from sqlalchemy.orm import relationship, backref, Session
+from sqlalchemy.orm import relationship, backref, Session, Mapped
 from sqlalchemy import Column, Integer, String, ForeignKey
 from typing import List, TYPE_CHECKING, Optional, Dict, Union
 import logging
@@ -24,11 +24,11 @@ class Folder(Base):
     name: str = Column(String, nullable=False)
     description: str = Column(String, nullable=True)
     id: int = Column(Integer, primary_key=True)
-    children: List["Folder"] = relationship("Folder",
+    children: Mapped[List["Folder"]] = relationship("Folder",
                                             backref=backref('parent',
                                                             remote_side=[id]))
-    data_streams: List[DataStream] = relationship("DataStream", back_populates="folder")
-    event_streams: List[EventStream] = relationship("EventStream", back_populates="folder")
+    data_streams: Mapped[List[DataStream]] = relationship("DataStream", back_populates="folder")
+    event_streams: Mapped[List[EventStream]] = relationship("EventStream", back_populates="folder")
     parent_id: int = Column(Integer, ForeignKey('metadata.folder.id'))
     if TYPE_CHECKING:  # pragma: no cover
         parent: 'Folder'

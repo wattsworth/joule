@@ -13,6 +13,7 @@ from .data_stream import (DataStream,
 from joule.models.pipes import (Pipe,
                                 InputPipe,
                                 EmptyPipe,
+                                PipeError,
                                 LocalPipe,
                                 interval_token)
 from joule import errors
@@ -230,7 +231,7 @@ async def _live_reader(session: BaseSession, my_stream: DataStream,
                 if pipe_in.end_of_interval:
                     await pipe_out.close_interval()
 
-    except (asyncio.CancelledError, EmptyPipe, aiohttp.ClientError):
+    except (asyncio.CancelledError, EmptyPipe, aiohttp.ClientError, PipeError):
         pass
     except Exception as e:
         print("unexpected exception: ", e)

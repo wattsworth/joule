@@ -26,7 +26,7 @@ async def info(request: web.Request):
     if 'path' in request.query:
         my_folder = folder.find(request.query['path'], db)
     elif 'id' in request.query:
-        my_folder = db.query(Folder).get(request.query["id"])
+        my_folder = db.get(Folder,request.query["id"])
     else:
         return web.Response(text="specify an id or path", status=400)
     if my_folder is None:
@@ -43,7 +43,7 @@ async def move(request):
     if 'src_path' in body:
         my_folder = folder.find(body['src_path'], db)
     elif 'src_id' in body:
-        my_folder = db.query(folder.Folder).get(body["src_id"])
+        my_folder = db.get(folder.Folder,body["src_id"])
     else:
         return web.Response(text="specify an id or a path", status=400)
     if my_folder is None:
@@ -58,7 +58,7 @@ async def move(request):
         except ConfigurationError as e:
             return web.Response(text="Destination error: %s" % str(e), status=400)
     elif 'dest_id' in body:
-        destination = db.query(Folder).get(body["dest_id"])
+        destination = db.get(Folder,body["dest_id"])
     else:
         return web.Response(text="specify a destination", status=400)
     # make sure name is unique in the folder
@@ -91,7 +91,7 @@ async def update(request):
     if 'id' not in body:
         return web.Response(text="Invalid request: specify id", status=400)
 
-    my_folder: Folder = db.query(Folder).get(body['id'])
+    my_folder: Folder = db.get(Folder,body['id'])
     if my_folder is None:
         return web.Response(text="folder does not exist", status=404)
     if my_folder.locked:
@@ -125,7 +125,7 @@ async def delete(request):
     if 'path' in request.query:
         my_folder: Folder = folder.find(request.query['path'], db)
     elif 'id' in request.query:
-        my_folder = db.query(Folder).get(request.query["id"])
+        my_folder = db.get(Folder,request.query["id"])
     else:
         return web.Response(text="specify an id or a path", status=400)
     if my_folder is None:

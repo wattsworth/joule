@@ -1,4 +1,4 @@
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, Mapped
 from sqlalchemy import Column, Integer, Enum, Float, String, Boolean, ForeignKey
 import configparser
 import enum
@@ -46,7 +46,7 @@ class Element(Base):
     default_max: Optional[float] = Column(Float, default=None)
     default_min: Optional[float] = Column(Float, default=None)
     stream_id: int = Column(Integer, ForeignKey('metadata.stream.id'))
-    stream: 'DataStream' = relationship("DataStream", back_populates="elements")
+    stream: Mapped['DataStream'] = relationship("DataStream", back_populates="elements")
 
     def __repr__(self):
         return "<Element(name='%s', units='%s', display_type=%s)>" % (self.name, self.units, self.display_type)

@@ -13,7 +13,7 @@ def admin_authorize(config, url):
     # expensive imports so only execute if the function is called
     from joule.services import load_config
     from joule.models import (Base, master)
-    from sqlalchemy import create_engine
+    from sqlalchemy import create_engine, text
     from sqlalchemy.orm import Session
 
     parser = configparser.ConfigParser()
@@ -33,8 +33,9 @@ def admin_authorize(config, url):
     # create a connection to the database
     engine = create_engine(config.database)
     with engine.connect() as conn:
-        conn.execute('CREATE SCHEMA IF NOT EXISTS data')
-        conn.execute('CREATE SCHEMA IF NOT EXISTS metadata')
+        with conn.begin():
+            conn.execute(text('CREATE SCHEMA IF NOT EXISTS data'))
+            conn.execute(text('CREATE SCHEMA IF NOT EXISTS metadata'))
 
     Base.metadata.create_all(engine)
     db = Session(bind=engine)

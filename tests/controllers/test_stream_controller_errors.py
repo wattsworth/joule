@@ -206,7 +206,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         self.assertEqual(resp.status, 400)
         self.assertTrue('display_type' in await resp.text())
 
-        my_stream: DataStream = db.query(DataStream).get(my_stream.id)
+        my_stream: DataStream = db.get(DataStream, my_stream.id)
         self.assertEqual("stream1", my_stream.name)
         elem_0 = [e for e in my_stream.elements if e.index == 0][0]
         self.assertEqual(elem_0.display_type, Element.DISPLAYTYPE.CONTINUOUS)

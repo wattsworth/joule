@@ -1,4 +1,4 @@
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, Mapped
 from sqlalchemy import (Column, Integer, String, ForeignKey)
 from sqlalchemy.dialects.postgresql import BIGINT, JSONB
 from typing import TYPE_CHECKING, Dict
@@ -36,7 +36,7 @@ class EventStream(Base):
 
     description: str = Column(String)
     folder_id: int = Column(Integer, ForeignKey('metadata.folder.id'))
-    folder: "Folder" = relationship("Folder", back_populates="event_streams")
+    folder: Mapped["Folder"] = relationship("Folder", back_populates="event_streams")
 
     def update_attributes(self, attrs: Dict) -> None:
         if 'name' in attrs:

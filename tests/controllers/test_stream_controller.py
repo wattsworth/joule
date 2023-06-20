@@ -143,5 +143,5 @@ class TestStreamController(AioHTTPTestCase):
         }
         resp = await self.client.put("/stream.json", json=payload)
         self.assertEqual(resp.status, 200)
-        my_stream: DataStream = db.query(DataStream).get(my_stream.id)
+        my_stream: DataStream = db.get(DataStream, my_stream.id)
         self.assertEqual("new name", my_stream.name)

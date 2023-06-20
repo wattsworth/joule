@@ -100,33 +100,34 @@ class Daemon(object):
         # ALTER ROLE joule WITH CREATEROLE;
         # GRANT ALL PRIVILEGES ON DATABASE joule TO joule WITH GRANT OPTION;
         with engine.connect() as conn:
-            conn.execute('CREATE SCHEMA IF NOT EXISTS data')
-            conn.execute('CREATE SCHEMA IF NOT EXISTS metadata')
+            with conn.begin():
+                conn.execute(text('CREATE SCHEMA IF NOT EXISTS data'))
+                conn.execute(text('CREATE SCHEMA IF NOT EXISTS metadata'))
 
-            # create a module user
-            cmd = """
-            DO $$
-            BEGIN
-                IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'joule_module') THEN
-                CREATE USER joule_module;
-            END IF;
-            END
-            $$;"""
-            conn.execute(cmd)
-            conn.execute("ALTER ROLE joule_module WITH PASSWORD '%s'" % password)
-            conn.execute("GRANT CONNECT ON DATABASE %s TO joule_module" % parsed_dsn.database)
-            conn.execute("GRANT USAGE ON SCHEMA data TO joule_module")
-            conn.execute("GRANT USAGE ON SCHEMA metadata TO joule_module")
-            conn.execute("GRANT SELECT ON ALL TABLES IN SCHEMA metadata TO joule_module;")
-            conn.execute("GRANT SELECT ON ALL TABLES IN SCHEMA data TO joule_module;")
-            # test out pg_read_all_settings command
-            conn.execute("show data_directory")
-            # load custom functions
-            for file in os.listdir(SQL_DIR):
-                file_path = os.path.join(SQL_DIR, file)
-                with open(file_path, 'r') as f:
-                    conn.execute(text(f.read()))
-            conn.execute("GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO joule_module;")
+                # create a module user
+                cmd = """
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'joule_module') THEN
+                    CREATE USER joule_module;
+                END IF;
+                END
+                $$;"""
+                conn.execute(text(cmd))
+                conn.execute(text("ALTER ROLE joule_module WITH PASSWORD '%s'" % password))
+                conn.execute(text("GRANT CONNECT ON DATABASE %s TO joule_module" % parsed_dsn.database))
+                conn.execute(text("GRANT USAGE ON SCHEMA data TO joule_module"))
+                conn.execute(text("GRANT USAGE ON SCHEMA metadata TO joule_module"))
+                conn.execute(text("GRANT SELECT ON ALL TABLES IN SCHEMA metadata TO joule_module;"))
+                conn.execute(text("GRANT SELECT ON ALL TABLES IN SCHEMA data TO joule_module;"))
+                # test out pg_read_all_settings command
+                conn.execute(text("show data_directory"))
+                # load custom functions
+                for file in os.listdir(SQL_DIR):
+                    file_path = os.path.join(SQL_DIR, file)
+                    with open(file_path, 'r') as f:
+                        conn.execute(text(f.read()))
+                conn.execute(text("GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO joule_module;"))
         Base.metadata.create_all(engine)
         self.db = Session(bind=engine)
 
@@ -376,7 +377,7 @@ def main(argv=None):
                     if not t.cancelled():
                         exception = t.exception()
                         if exception is not None:
-                            print("Got exception", t.exception())
+                            print(f"Got exception: [{exception}], type:{type(exception)}")
                             # print("----Cancelling Daemon----")
                             # daemon_task.cancel()
                         # else:

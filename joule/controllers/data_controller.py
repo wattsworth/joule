@@ -34,7 +34,7 @@ async def _read(request: web.Request, json):
     if 'path' in request.query:
         stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
     elif 'id' in request.query:
-        stream = db.query(DataStream).get(request.query["id"])
+        stream = db.get(DataStream,request.query["id"])
     else:
         return web.Response(text="specify an id or a path", status=400)
     if stream is None:
@@ -136,7 +136,7 @@ async def _subscribe(request: web.Request, json: bool):
     if 'path' in request.query:
         stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
     elif 'id' in request.query:
-        stream = db.query(DataStream).get(request.query["id"])
+        stream = db.get(DataStream,request.query["id"])
     else:
         return web.Response(text="specify an id or a path", status=400)
     if stream is None:
@@ -155,7 +155,7 @@ async def _subscribe(request: web.Request, json: bool):
         await resp.prepare(request)
     except ConnectionResetError:
         unsubscribe()
-        return
+        return resp
 
     try:
         while True:
@@ -175,6 +175,7 @@ async def _subscribe(request: web.Request, json: bool):
         raise e
     except ConnectionResetError:
         unsubscribe()
+        return resp
 
 
 async def intervals(request: web.Request):
@@ -184,7 +185,7 @@ async def intervals(request: web.Request):
     if 'path' in request.query:
         stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
     elif 'id' in request.query:
-        stream = db.query(DataStream).get(request.query["id"])
+        stream = db.get(DataStream,request.query["id"])
     else:
         return web.Response(text="specify an id or a path", status=400)
     if stream is None:
@@ -216,7 +217,7 @@ async def write(request: web.Request):
     if 'path' in request.query:
         stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
     elif 'id' in request.query:
-        stream = db.query(DataStream).get(request.query["id"])
+        stream = db.get(DataStream,request.query["id"])
     else:
         return web.Response(text="specify an id or a path", status=400)
     if stream is None:
@@ -250,7 +251,7 @@ async def remove(request: web.Request):
     if 'path' in request.query:
         stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
     elif 'id' in request.query:
-        stream = db.query(DataStream).get(request.query["id"])
+        stream = db.get(DataStream,request.query["id"])
     else:
         return web.Response(text="specify an id or a path", status=400)
     if stream is None:
@@ -283,7 +284,7 @@ async def consolidate(request):
     if 'path' in request.query:
         stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
     elif 'id' in request.query:
-        stream = db.query(DataStream).get(request.query["id"])
+        stream = db.get(DataStream,request.query["id"])
     else:
         return web.Response(text="specify an id or a path", status=400)
     if stream is None:

@@ -140,6 +140,6 @@ class TestFolderController(AioHTTPTestCase):
         }
         resp = await self.client.put("/folder.json", json=payload)
         self.assertEqual(200, resp.status)
-        my_folder: DataStream = db.query(Folder).get(my_folder.id)
+        my_folder: DataStream = db.get(Folder,my_folder.id)
         self.assertEqual("new name", my_folder.name)
         self.assertEqual("new description", my_folder.description)

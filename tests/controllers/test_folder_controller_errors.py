@@ -105,7 +105,7 @@ class TestFolderControllerErrors(AioHTTPTestCase):
         resp = await self.client.delete("/folder.json", params={"path": "/a"})
         self.assertEqual(resp.status, 400)
         self.assertTrue('recursive' in await resp.text())
-        self.assertIsNotNone(db.query(Folder).get(f.id))
+        self.assertIsNotNone(db.get(Folder, f.id))
         # cannot delete locked folders
         my_folder = folder.find("/top/middle", db)
         my_folder.children[0].data_streams[0].is_configured = True

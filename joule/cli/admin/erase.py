@@ -54,7 +54,7 @@ def admin_erase(config, links):
 
 
 async def run(config, delete_links):
-    from sqlalchemy import create_engine
+    from sqlalchemy import create_engine, text
     from sqlalchemy.orm import Session
 
     from joule.models import (DataStream, Element, EventStream,
@@ -65,20 +65,20 @@ async def run(config, delete_links):
     # erase metadata
     engine = create_engine(config.database)
     with engine.connect() as conn:
-        conn.execute('CREATE SCHEMA IF NOT EXISTS data')
-        conn.execute('CREATE SCHEMA IF NOT EXISTS metadata')
-
-    Base.metadata.create_all(engine)
-    db = Session(bind=engine)
-    db.query(Element).delete()
-    db.query(Annotation).delete()
-    db.query(DataStream).delete()
-    db.query(EventStream).delete()
-    db.query(Folder).delete()
-    if delete_links:
-        db.query(Master).delete()
-        db.query(Follower).delete()
-    db.commit()
+        with conn.begin():
+            conn.execute(text('CREATE SCHEMA IF NOT EXISTS data'))
+            conn.execute(text('CREATE SCHEMA IF NOT EXISTS metadata'))
+        Base.metadata.create_all(engine)
+        db = Session(bind=engine)
+        db.query(Element).delete()
+        db.query(Annotation).delete()
+        db.query(DataStream).delete()
+        db.query(EventStream).delete()
+        db.query(Folder).delete()
+        if delete_links:
+            db.query(Master).delete()
+            db.query(Follower).delete()
+        db.commit()
 
     if config.nilmdb_url is not None:
         click.echo("Not erasing NilmDB data")

@@ -13,7 +13,7 @@ async def info(request: web.Request):
     if 'path' in request.query:
         my_stream = folder.find_stream_by_path(request.query['path'], db, stream_type=EventStream)
     elif 'id' in request.query:
-        my_stream = db.query(EventStream).get(request.query["id"])
+        my_stream = db.get(EventStream, request.query["id"])
     else:
         return web.Response(text="specify an id or a path", status=400)
     if my_stream is None:
@@ -31,7 +31,7 @@ async def move(request: web.Request):
     if 'src_path' in body:
         my_stream = folder.find_stream_by_path(body['src_path'], db, stream_type=EventStream)
     elif 'src_id' in body:
-        my_stream = db.query(EventStream).get(body["src_id"])
+        my_stream = db.get(EventStream, body["src_id"])
     else:
         return web.Response(text="specify a source id or a path", status=400)
     if my_stream is None:
@@ -43,7 +43,7 @@ async def move(request: web.Request):
         except ConfigurationError as e:
             return web.Response(text="Destination error: %s" % str(e), status=400)
     elif 'dest_id' in body:
-        destination = db.query(Folder).get(body["dest_id"])
+        destination = db.get(Folder, body["dest_id"])
     else:
         return web.Response(text="specify a destination", status=400)
     # make sure name is unique in this destination
@@ -73,7 +73,7 @@ async def create(request):
         except ConfigurationError as e:
             return web.Response(text="Destination error: %s" % str(e), status=400)
     elif 'dest_id' in body:
-        destination = db.query(Folder).get(body["dest_id"])
+        destination = db.get(Folder, body["dest_id"])
     else:
         return web.Response(text="specify a destination", status=400)
 
@@ -108,7 +108,7 @@ async def update(request: web.Request):
     if 'id' not in body:
         return web.Response(text="Invalid request: specify id", status=400)
 
-    my_stream: EventStream = db.query(EventStream).get(body['id'])
+    my_stream: EventStream = db.get(EventStream, body['id'])
     if my_stream is None:
         return web.Response(text="stream does not exist", status=404)
     if 'stream' not in body:
@@ -140,7 +140,7 @@ async def delete(request):
         my_stream = folder.find_stream_by_path(request.query['path'], db,
                                                stream_type=EventStream)
     elif 'id' in request.query:
-        my_stream = db.query(EventStream).get(request.query["id"])
+        my_stream = db.get(EventStream, request.query["id"])
     else:
         return web.Response(text="specify an id or a path", status=400)
     if my_stream is None:
@@ -163,7 +163,7 @@ async def write_events(request):
         my_stream = folder.find_stream_by_path(body['path'], db,
                                                stream_type=EventStream)
     elif 'id' in body:
-        my_stream = db.query(EventStream).get(body["id"])
+        my_stream = db.get(EventStream, body["id"])
     else:
         return web.Response(text="specify an id or a path!!", status=400)
     if my_stream is None:
@@ -182,7 +182,7 @@ async def read_events(request):
         my_stream = folder.find_stream_by_path(request.query['path'], db,
                                                stream_type=EventStream)
     elif 'id' in request.query:
-        my_stream = db.query(EventStream).get(request.query["id"])
+        my_stream = db.get(EventStream, request.query["id"])
     else:
         return web.Response(text="specify an id or a path", status=400)
     if my_stream is None:
@@ -239,7 +239,7 @@ async def remove_events(request):
         my_stream = folder.find_stream_by_path(request.query['path'], db,
                                                stream_type=EventStream)
     elif 'id' in request.query:
-        my_stream = db.query(EventStream).get(request.query["id"])
+        my_stream = db.get(EventStream, request.query["id"])
     else:
         return web.Response(text="specify an id or a path", status=400)
     if my_stream is None:
