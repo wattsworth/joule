@@ -6,6 +6,7 @@ import logging
 import tempfile
 import h5py
 import json
+import datetime
 import unittest
 from icecream import ic
 from ..fake_joule import FakeJoule, FakeJouleTestCase
@@ -24,7 +25,8 @@ class TestDataIngest(FakeJouleTestCase):
     def test_ingests_data_to_empty_existing_stream(self):
         server = FakeJoule()
         # create the source stream
-        src = DataStream(id=0, name="existing", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32)
+        src = DataStream(id=0, name="existing", keep_us=100,
+                         datatype=DataStream.DATATYPE.FLOAT32, updated_at=datetime.datetime.utcnow())
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         src_data = helpers.create_data(src.layout, length=22000)
         src_info = StreamInfo(0, 0, 0, 0)
@@ -46,7 +48,8 @@ class TestDataIngest(FakeJouleTestCase):
         #  the datatype of the file and target stream must match
         server = FakeJoule()
         # create the source stream
-        src = DataStream(id=0, name="dest", keep_us=100, datatype=DataStream.DATATYPE.UINT16)
+        src = DataStream(id=0, name="dest", keep_us=100,
+                         datatype=DataStream.DATATYPE.UINT16, updated_at=datetime.datetime.utcnow())
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         # source has 100 rows of data between [0, 100]
         file_data = helpers.create_data('int16_3')
@@ -66,7 +69,8 @@ class TestDataIngest(FakeJouleTestCase):
         # if there is existing data in the target, confirm removal
         server = FakeJoule()
         # create the source stream
-        src = DataStream(id=0, name="dest", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32)
+        src = DataStream(id=0, name="dest", keep_us=100,
+                         datatype=DataStream.DATATYPE.FLOAT32, updated_at=datetime.datetime.utcnow())
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         # source has 100 rows of data between [0, 100]
         src_data = helpers.create_data(src.layout, length=1000)
@@ -107,7 +111,8 @@ class TestDataIngest(FakeJouleTestCase):
         #  the datatype of the file and target stream must match
         server = FakeJoule()
         # create the source stream
-        src = DataStream(id=0, name="dest", keep_us=100, datatype=DataStream.DATATYPE.UINT16)
+        src = DataStream(id=0, name="dest", keep_us=100,
+                         datatype=DataStream.DATATYPE.UINT16, updated_at=datetime.datetime.utcnow())
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(4)]
         # source has 100 rows of data between [0, 100]
         file_data = helpers.create_data('uint16_3')

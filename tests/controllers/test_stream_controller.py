@@ -1,3 +1,5 @@
+import datetime
+
 from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 from aiohttp import web
 import asyncio
@@ -55,12 +57,15 @@ class TestStreamController(AioHTTPTestCase):
         resp = await self.client.put("/stream/move.json", json=payload)
         self.assertEqual(resp.status, 200)
         folder3 = db.query(Folder).filter_by(name="folder3").one()
+        folder3_created_at = folder3.updated_at
         folder1 = db.query(Folder).filter_by(name="folder1").one()
+        folder1_created_at = folder1.updated_at
         # check the destination
         self.assertEqual(folder3.data_streams[0].name, "stream1")
         self.assertEqual(folder3.parent.name, "new")
         # check the source
         self.assertEqual(len(folder1.data_streams), 0)
+
         # move stream1 back to folder1
         payload = {
             "src_path": "/new/folder3/stream1",
@@ -72,11 +77,14 @@ class TestStreamController(AioHTTPTestCase):
         self.assertEqual(folder1.data_streams[0].name, "stream1")
         # check the source
         self.assertEqual(len(folder3.data_streams), 0)
-
+        # make sure both the destination and source are updated
+        self.assertGreater(folder3.updated_at, folder3_created_at)
+        self.assertGreater(folder1.updated_at, folder1_created_at)
 
     async def test_stream_create(self):
         db: Session = self.app["db"]
-        new_stream = DataStream(name="test", datatype=DataStream.DATATYPE.FLOAT32)
+        new_stream = DataStream(name="test", datatype=DataStream.DATATYPE.FLOAT32,
+                                updated_at=datetime.datetime.utcnow())
         new_stream.elements = [Element(name="e%d" % j, index=j,
                                        display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(3)]
         payload = {
@@ -110,10 +118,14 @@ class TestStreamController(AioHTTPTestCase):
     async def test_stream_delete_by_path(self):
         db: Session = self.app["db"]
         my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
+        folder = my_stream.folder
+        folder_created_at = folder.updated_at
         store: MockStore = self.app["data-store"]
         payload = {'path': "/folder1/stream1"}
         resp = await self.client.delete("/stream.json", params=payload)
         self.assertEqual(resp.status, 200)
+        # make sure the parent was updated
+        self.assertGreater(folder.updated_at, folder_created_at)
         # make sure it was removed from the data store
         self.assertEqual(store.destroyed_stream_id, my_stream.id)
         # and the metadata
@@ -136,6 +148,8 @@ class TestStreamController(AioHTTPTestCase):
     async def test_stream_update(self):
         db: Session = self.app["db"]
         my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
+        created_at = my_stream.updated_at
+        folder_created_at = my_stream.folder.updated_at
         # change the stream name
         payload = {
             "id": my_stream.id,
@@ -145,3 +159,6 @@ class TestStreamController(AioHTTPTestCase):
         self.assertEqual(resp.status, 200)
         my_stream: DataStream = db.get(DataStream, my_stream.id)
         self.assertEqual("new name", my_stream.name)
+        # make sure updated timestamps are more recent than created timestamps
+        self.assertGreater(my_stream.updated_at, created_at)
+        self.assertGreater(my_stream.folder.updated_at, folder_created_at)

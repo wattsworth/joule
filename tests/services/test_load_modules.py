@@ -1,6 +1,7 @@
 import logging
 import tempfile
 import os
+import datetime
 import unittest
 
 from tests.helpers import DbTestCase
@@ -10,26 +11,32 @@ from joule.services import load_modules
 
 logger = logging.getLogger('joule')
 
+
 class TestConfigureModules(DbTestCase):
 
     def test_parses_configs(self):
         """e2e module configuration service test"""
 
         # /test/stream1:float32_3
-        folder_test = Folder(name="test")
+        folder_test = Folder(name="test",
+                             updated_at=datetime.datetime.now())
         stream1 = DataStream(name="stream1", keep_us=100,
-                             datatype=DataStream.DATATYPE.FLOAT32)
+                             datatype=DataStream.DATATYPE.FLOAT32,
+                             updated_at=datetime.datetime.now())
         stream1.elements = [Element(name="e%d" % x, index=x, default_min=1) for x in range(3)]
         folder_test.data_streams.append(stream1)
 
         # /test/deeper/stream2: int8_2
-        folder_deeper = Folder(name="deeper")
-        stream2 = DataStream(name="stream2", datatype=DataStream.DATATYPE.INT8)
+        folder_deeper = Folder(name="deeper",
+                               updated_at=datetime.datetime.now())
+        stream2 = DataStream(name="stream2", datatype=DataStream.DATATYPE.INT8,
+                             updated_at=datetime.datetime.now())
         stream2.elements = [Element(name="e%d" % x, index=x) for x in range(2)]
         folder_deeper.data_streams.append(stream2)
         folder_deeper.parent = folder_test
 
-        root = Folder(name="root")
+        root = Folder(name="root",
+                      updated_at=datetime.datetime.now())
         root.children = [folder_test]
         self.db.add(root)
 
@@ -109,4 +116,3 @@ class TestConfigureModules(DbTestCase):
         # sink2 goes to a new stream
         stream3 = self.db.query(DataStream).filter_by(name="stream3").one()
         self.assertEqual(m2.outputs['sink2'], stream3)
-

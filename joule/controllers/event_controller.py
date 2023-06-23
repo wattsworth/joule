@@ -1,6 +1,7 @@
 from aiohttp import web
 import json
 from sqlalchemy.orm import Session
+import datetime
 from joule.models import EventStream, EventStore, event_stream
 
 from joule.models import folder, Folder
@@ -52,7 +53,9 @@ async def move(request: web.Request):
         db.rollback()
         return web.Response(text="stream with the same name exists in the destination folder",
                             status=400)
+    my_stream.folder.touch()
     destination.event_streams.append(my_stream)
+    destination.touch()
     db.commit()
     return web.json_response({"stream": my_stream.to_json()})
 
@@ -85,6 +88,7 @@ async def create(request):
         existing_names = [s.name for s in destination.data_streams + destination.event_streams]
         if new_stream.name in existing_names:
             raise ConfigurationError("stream with the same name exists in the folder")
+        new_stream.updated_at = datetime.datetime.utcnow()
         destination.event_streams.append(new_stream)
         db.commit()
     except (TypeError, ValueError) as e:
@@ -146,6 +150,7 @@ async def delete(request):
     if my_stream is None:
         return web.Response(text="stream does not exist", status=404)
     await data_store.destroy(my_stream)
+    my_stream.folder.touch()
     db.delete(my_stream)
     db.commit()
     return web.Response(text="ok")

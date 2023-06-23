@@ -1,6 +1,7 @@
 import asyncio
 import tempfile
 import unittest
+import datetime
 from unittest import mock
 import logging
 import signal
@@ -36,7 +37,7 @@ MODULE_ECHO_ARGS = os.path.join(os.path.dirname(__file__),
 MODULE_SIMPLE_FILTER = os.path.join(os.path.dirname(__file__),
                                     'worker_scripts', 'simple_filter.py')
 MODULE_INFINITE_PRINT_LOOP = os.path.join(os.path.dirname(__file__),
-                                    'worker_scripts', 'infinite_print_loop.py')
+                                          'worker_scripts', 'infinite_print_loop.py')
 warnings.simplefilter('always')
 
 
@@ -49,6 +50,7 @@ class TestWorker(unittest.TestCase):
         asyncio.set_event_loop(self.loop)
         # generic float32_4 streams
         streams = [DataStream(name="str%d" % n, datatype=DataStream.DATATYPE.FLOAT32,
+                              updated_at=datetime.datetime.now(),
                               id=n, elements=[Element(name="e%d" % j, index=j,
                                                       display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(3)])
                    for n in
@@ -151,7 +153,7 @@ class TestWorker(unittest.TestCase):
     def test_collects_statistics(self):
         # child should listen for stop_requested flag
 
-        #loop = asyncio.get_event_loop()
+        # loop = asyncio.get_event_loop()
         self.module.exec_cmd = "python3 " + MODULE_STOP_ON_SIGTERM
 
         async def get_statistics():
@@ -174,13 +176,13 @@ class TestWorker(unittest.TestCase):
             await asyncio.gather(
                 get_statistics(),
                 self.worker.run(self.supervisor.subscribe, restart=False))
+
         with self.check_fd_leakage():
             asyncio.run(runner())
 
-
     def test_restarts_and_stops_child_by_request(self):
         # child should listen for stop_requested flag
-        #loop = asyncio.get_event_loop()
+        # loop = asyncio.get_event_loop()
         self.worker.RESTART_INTERVAL = 0.01
         self.module.exec_cmd = "python3 " + MODULE_STOP_ON_SIGTERM
 
@@ -193,14 +195,15 @@ class TestWorker(unittest.TestCase):
             await asyncio.sleep(0.2)
             await self.worker.stop()
             await task
+
         with self.assertLogs(level="WARNING") as logs:
             with self.check_fd_leakage():
                 asyncio.run(runner())
-                #asyncio.run(asyncio.gather(
+                # asyncio.run(asyncio.gather(
                 #    loop.create_task(self._stop_worker(loop)),
                 #    loop.create_task(self._restart_worker(loop)),
                 #    loop.create_task()
-                #))
+                # ))
         # check to make sure it was killed by SIGTERM
         self.assertEqual(self.worker.process.returncode, -1 * signal.SIGTERM)
         # the restart should be logged
@@ -219,10 +222,12 @@ class TestWorker(unittest.TestCase):
         self.module.exec_cmd = "python3 " + MODULE_IGNORE_SIGTERM
         # speed up the test
         self.worker.SIGTERM_TIMEOUT = 0.5
+
         async def runner():
             task = asyncio.create_task(self.worker.run(self.supervisor.subscribe, restart=False))
             await asyncio.sleep(0.5)
             await self.worker.stop()
+
         with self.assertLogs(level="WARNING"):
             with self.check_fd_leakage():
                 asyncio.run(runner())
@@ -280,7 +285,6 @@ class TestWorker(unittest.TestCase):
     def test_inputs_must_be_available(self):
         self.module.inputs["missing_input"] = self.streams[4]
 
-
         with self.assertLogs(level="ERROR"):
             asyncio.run(self.worker.run(self.supervisor.subscribe, restart=False))
         for entry in self.worker.logs:
@@ -303,10 +307,12 @@ class TestWorker(unittest.TestCase):
 
     def test_rolls_logs(self):
         self.module.exec_cmd = "/usr/bin/env python3 " + MODULE_INFINITE_PRINT_LOOP
+
         async def runner():
             task = asyncio.create_task(self.worker.run(self.supervisor.subscribe, restart=False))
             await asyncio.sleep(0.5)
             await self.worker.stop()
+
         with self.check_fd_leakage():
             asyncio.run(runner())
         logs = self.worker.logs
@@ -322,8 +328,8 @@ class TestWorker(unittest.TestCase):
             Streams 2,3 are produced by the filter
             Output1 is sent to
             """
-    def test_passes_data_across_pipes(self):
 
+    def test_passes_data_across_pipes(self):
 
         # create worker connections
         # child runs until stopped
@@ -353,7 +359,7 @@ class TestWorker(unittest.TestCase):
             # await asyncio.sleep(0.5)
             # wait for filter to subscribe to input stream0
             while True:
-                if len(self.producers[0].subscribers[self.streams[0]])>0:
+                if len(self.producers[0].subscribers[self.streams[0]]) > 0:
                     break
                 await asyncio.sleep(0.01)
             stream = self.producers[0].subscribers[self.streams[0]][0]
@@ -365,7 +371,7 @@ class TestWorker(unittest.TestCase):
 
             # wait for filter to subscribe to input 1
             while True:
-                if len(self.producers[1].subscribers[self.streams[1]])>0:
+                if len(self.producers[1].subscribers[self.streams[1]]) > 0:
                     break
                 await asyncio.sleep(0.01)
             stream = self.producers[1].subscribers[self.streams[1]][0]
@@ -376,6 +382,7 @@ class TestWorker(unittest.TestCase):
             await stream.close()
 
             await asyncio.sleep(2)
+
         # subscribe to the module outputs
         output1 = pipes.LocalPipe(layout=self.streams[2].layout, name="output1", debug=False)
         output2 = pipes.LocalPipe(layout=self.streams[3].layout, name="output2", debug=False)
@@ -402,6 +409,7 @@ class TestWorker(unittest.TestCase):
         self.worker.subscribe(self.streams[3], output2)
 
         self.worker.subscribe(self.streams[2], output1)
+
         async def runner():
             await web_runner.setup()
             sock_site = web.UnixSite(web_runner, sock_file)
@@ -412,6 +420,7 @@ class TestWorker(unittest.TestCase):
 
             await web_runner.shutdown()
             await web_runner.cleanup()
+
         with self.assertLogs() as log:
             asyncio.run(runner())
 

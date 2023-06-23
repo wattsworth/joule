@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from typing import List
+import datetime
 
 from joule.errors import ConfigurationError
 from joule.models import DataStream, Element, Follower
@@ -48,7 +49,8 @@ def run(pipe_config: str, db: Session) -> DataStream:
 
     # build the stream from inline config
     my_stream = data_stream.DataStream(name=name,
-                                       datatype=datatype)
+                                       datatype=datatype,
+                                       updated_at=datetime.datetime.utcnow())
     i = 0
     for e in element_names:
         my_stream.elements.append(Element(name=e, index=i))

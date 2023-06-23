@@ -1,5 +1,5 @@
 import unittest
-
+import datetime
 from joule.models import (DataStream, Element, data_stream)
 from joule.errors import ConfigurationError
 from tests import helpers
@@ -12,7 +12,8 @@ class TestStream(unittest.TestCase):
                                                 description="test_description",
                                                 datatype=DataStream.DATATYPE.FLOAT32,
                                                 keep_us=us_in_week,
-                                                decimate=True)
+                                                decimate=True,
+                                                updated_at=datetime.datetime.now())
         self.my_stream.elements.append(Element(name="e1", index=0,
                                                display_type=Element.DISPLAYTYPE.CONTINUOUS))
         self.base_config = helpers.parse_configs(
@@ -29,7 +30,8 @@ class TestStream(unittest.TestCase):
 
     def test_attributes(self):
         my_stream = DataStream(name='test', description='a test',
-                               datatype=DataStream.DATATYPE.FLOAT32, keep_us=DataStream.KEEP_ALL)
+                               datatype=DataStream.DATATYPE.FLOAT32, keep_us=DataStream.KEEP_ALL,
+                               updated_at=datetime.datetime.now())
         self.assertIsNotNone(my_stream)
         # has a meaningful string representation
         self.assertTrue("test" in "%r" % my_stream)
@@ -42,7 +44,9 @@ class TestStream(unittest.TestCase):
         self.assertEqual(my_stream.remote_path, "remote_path")
 
     def test_json(self):
-        my_stream = DataStream(id=0, name='test', decimate=True, datatype=DataStream.DATATYPE.UINT16)
+        my_stream = DataStream(id=0, name='test', decimate=True,
+                               datatype=DataStream.DATATYPE.UINT16,
+                               updated_at=datetime.datetime.now())
         for j in range(4):
             my_stream.elements.append(Element(name="e%d" % j, index=j,
                                               display_type=Element.DISPLAYTYPE.CONTINUOUS))
@@ -153,9 +157,9 @@ class TestStream(unittest.TestCase):
         my_stream.elements.sort(key=lambda e: e.index)
         elem0 = my_stream.elements[0]
         self.assertEqual(elem0.index, 0)
-        self.assertEqual(elem0.name,'stream_0')
+        self.assertEqual(elem0.name, 'stream_0')
         self.assertEqual(elem0.plottable, False)
-        self.assertEqual(elem0.default_min,-10)
+        self.assertEqual(elem0.default_min, -10)
         self.assertEqual(elem0.default_max, None)
         elem2 = my_stream.elements[2]
         self.assertEqual(elem2.index, 2)
@@ -185,11 +189,14 @@ class TestStream(unittest.TestCase):
         self.assertEqual(elem2.offset, 0.0)
 
     def test_to_nilmdb_metadata(self):
-        my_stream = DataStream(name="test", datatype=DataStream.DATATYPE.INT16)
-        my_stream.elements.append(Element(name="e0", index=0, plottable=True, offset=0.0, default_min=-5, scale_factor=1.0))
-        my_stream.elements.append(Element(name="e1", index=1, plottable=True, units="watts", offset=3.5, scale_factor=1.0))
+        my_stream = DataStream(name="test", datatype=DataStream.DATATYPE.INT16,
+                               updated_at=datetime.datetime.now())
+        my_stream.elements.append(
+            Element(name="e0", index=0, plottable=True, offset=0.0, default_min=-5, scale_factor=1.0))
+        my_stream.elements.append(
+            Element(name="e1", index=1, plottable=True, units="watts", offset=3.5, scale_factor=1.0))
         metadata = my_stream.to_nilmdb_metadata()
-        #NOTE: The plottable flag is always True (see TODO in element.py)
+        # NOTE: The plottable flag is always True (see TODO in element.py)
         expected = {"name": "test", "name_abbrev": "", "delete_locked": False,
                     "streams": [{"column": 0, "name": "e0",
                                  "units": None, "scale_factor": 1.0,

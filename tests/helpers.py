@@ -1,3 +1,5 @@
+import datetime
+
 import numpy as np
 import os
 import pdb
@@ -48,7 +50,8 @@ def create_stream(name, layout, id=0) -> DataStream:
 
     return DataStream(name=name, datatype=datatype, id=id,
                       elements=[Element(name="e%d" % j, index=j,
-                                        display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(lcount)])
+                                        display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(lcount)],
+                      updated_at=datetime.datetime.utcnow())
 
 
 def to_chunks(data, chunk_size):

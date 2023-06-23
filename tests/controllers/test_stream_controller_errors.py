@@ -3,10 +3,11 @@ from sqlalchemy.orm import Session
 from aiohttp import web
 import aiohttp
 import asyncio
+import datetime
+
 from joule.models import DataStream, Element
 import joule.controllers
 from tests.controllers.helpers import create_db, MockStore
-
 
 class TestStreamControllerErrors(AioHTTPTestCase):
 
@@ -99,7 +100,8 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         resp = await self.client.post("/stream.json", json={"dest_path": "notapath"})
         self.assertEqual(resp.status, 400)
         # must specify a path
-        new_stream = DataStream(name="test", datatype=DataStream.DATATYPE.FLOAT32)
+        new_stream = DataStream(name="test", datatype=DataStream.DATATYPE.FLOAT32,
+                      updated_at=datetime.datetime.utcnow())
         new_stream.elements = [Element(name="e%d" % j, index=j,
                                        display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(3)]
         resp = await self.client.post("/stream.json", json={"stream": new_stream.to_json()})

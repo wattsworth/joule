@@ -13,10 +13,14 @@ async def index(request: web.Request):
     event_store: DataStore = request.app["event-store"]
 
     root = folder.root(db)
-    data_streams = db.query(DataStream).all()
-    data_streams_info = await data_store.info(data_streams)
-    event_streams = db.query(EventStream).all()
-    event_streams_info = await event_store.info(event_streams)
+    if 'data-info' in request.query:
+        data_streams = db.query(DataStream).all()
+        data_streams_info = await data_store.info(data_streams)
+        event_streams = db.query(EventStream).all()
+        event_streams_info = await event_store.info(event_streams)
+    else:
+        data_streams_info = {}
+        event_streams_info = {}
     resp = root.to_json(data_streams_info, event_streams_info)
     return web.json_response(resp)
 
@@ -74,6 +78,8 @@ async def move(request):
             if parent == my_folder:
                 raise ValueError()
             parent = parent.parent
+        my_folder.parent.touch()
+        destination.touch()
         destination.children.append(my_folder)
         db.commit()
     except (CircularDependencyError, ValueError):
@@ -110,6 +116,7 @@ async def update(request):
             db.rollback()
             return web.Response(text="a folder with this name is in the destination folder",
                                 status=400)
+        my_folder.touch()
         db.commit()
     except (ValueError, ConfigurationError) as e:
         db.rollback()
@@ -147,6 +154,8 @@ async def delete(request):
         await event_store.destroy(stream)
 
     db.delete(my_folder)
+    # update the parent timestamps
+    my_folder.parent.touch()
     db.commit()
     return web.Response(text="ok")
 

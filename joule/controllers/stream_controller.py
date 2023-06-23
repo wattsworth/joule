@@ -1,3 +1,5 @@
+import datetime
+
 from aiohttp import web
 from sqlalchemy.orm import Session
 from joule.models import (
@@ -57,7 +59,9 @@ async def move(request: web.Request):
         db.rollback()
         return web.Response(text="stream with the same name exists in the destination folder",
                             status=400)
+    my_stream.folder.touch()
     destination.data_streams.append(my_stream)
+    destination.touch()
     db.commit()
     return web.json_response({"stream": my_stream.to_json()})
 
@@ -104,6 +108,7 @@ async def create(request):
         existing_names = [s.name for s in destination.data_streams + destination.event_streams]
         if new_stream.name in existing_names:
             raise ConfigurationError("stream with the same name exists in the folder")
+        new_stream.updated_at = datetime.datetime.utcnow()
         destination.data_streams.append(new_stream)
         db.commit()
     except (TypeError, ValueError) as e:
@@ -168,6 +173,7 @@ async def delete(request):
     if my_stream.locked or my_stream.active:
         return web.Response(text="locked streams cannot be deleted", status=400)
     await data_store.destroy(my_stream)
+    my_stream.folder.touch()
     db.delete(my_stream)
     db.commit()
     return web.Response(text="ok")

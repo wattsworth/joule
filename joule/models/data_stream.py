@@ -1,12 +1,13 @@
 from sqlalchemy.orm import relationship, Mapped
 from sqlalchemy import (Column, Integer, String,
-                        Boolean, Enum, ForeignKey)
+                        Boolean, Enum, ForeignKey, DateTime)
 from sqlalchemy.dialects.postgresql import BIGINT
-from typing import List, Dict, TYPE_CHECKING
+from typing import List, Dict, Optional, TYPE_CHECKING
 import configparser
 import enum
 import re
 from operator import attrgetter
+import datetime
 
 from joule.models.meta import Base
 from joule.errors import ConfigurationError
@@ -63,14 +64,26 @@ class DataStream(Base):
     folder_id: int = Column(Integer, ForeignKey('metadata.folder.id'))
     folder: Mapped["Folder"] = relationship("Folder", back_populates="data_streams")
     elements: Mapped[List[element.Element]] = relationship("Element",
-                                                   cascade="all, delete-orphan",
-                                                   back_populates="stream")
+                                                           cascade="all, delete-orphan",
+                                                           back_populates="stream")
     annotations: Mapped[List[annotation.Annotation]] = relationship("Annotation",
-                                                            cascade="all, delete-orphan",
-                                                            back_populates="stream")
+                                                                    cascade="all, delete-orphan",
+                                                                    back_populates="stream")
+    updated_at: datetime.datetime = Column(DateTime, nullable=False)
 
     def merge_configs(self, other: 'DataStream') -> None:
         # replace configurable attributes with other's values
+        # update the updated_at timestamp if configs are different
+        if (
+                self.keep_us != other.keep_us or
+                self.decimate != other.decimate or
+                self.description != other.description or
+                self.is_configured != other.is_configured or
+                self.is_destination != other.is_destination or
+                self.is_source != other.is_source or
+                self.elements != other.elements
+        ):
+            self.updated_at = datetime.datetime.utcnow()
         self.keep_us = other.keep_us
         self.decimate = other.decimate
         self.description = other.description
@@ -80,10 +93,13 @@ class DataStream(Base):
         self.elements = other.elements
 
     def update_attributes(self, attrs: Dict) -> None:
+        updated = False
         if 'name' in attrs:
             self.name = validate_name(attrs['name'])
+            updated = True
         if 'description' in attrs:
             self.description = attrs['description']
+            updated = True
         if 'elements' in attrs:
             element_configs = attrs['elements']
             # make sure the number of configs is correct
@@ -91,7 +107,9 @@ class DataStream(Base):
                 raise ConfigurationError("incorrect number of elements")
             for e in self.elements:
                 e.update_attributes(element_configs[e.index])
-
+            updated = True
+        if updated:
+            self.touch()
     def __str__(self):
         return "DataStream [{name}]".format(name=self.name)
 
@@ -170,6 +188,14 @@ class DataStream(Base):
         self._remote_node = node
         self._remote_path = path
 
+    # update timestamps on all folders in hierarchy
+    def touch(self, now: Optional[datetime.datetime] = None) -> None:
+        if now is None:
+            now = datetime.datetime.utcnow()
+        self.updated_at = now
+        if self.folder is not None:
+            self.folder.touch(now)
+
     def to_json(self, info: Dict[int, StreamInfo] = None) -> Dict:
         """
           Args:
@@ -194,6 +220,7 @@ class DataStream(Base):
             'is_configured': self.is_configured,
             'is_source': self.is_source,
             'is_destination': self.is_destination,
+            'updated_at': self.updated_at.isoformat(),
             'locked': self.locked,  # meta attribute
             'active': self.active,  # meta attribute
             'decimate': self.decimate,
@@ -237,7 +264,9 @@ def from_json(data: Dict) -> DataStream:
                       is_configured=data["is_configured"],
                       is_source=data["is_source"],
                       is_destination=data["is_destination"],
-                      elements=elements)
+                      elements=elements,
+                      updated_at=datetime.datetime.utcnow())
+
 
 
 def from_config(config: configparser.ConfigParser) -> DataStream:
@@ -263,7 +292,8 @@ def from_config(config: configparser.ConfigParser) -> DataStream:
         name = validate_name(main_configs["name"])
         description = main_configs.get("description", fallback="")
         stream = DataStream(name=name, description=description,
-                            datatype=datatype, keep_us=keep_us, decimate=decimate)
+                            datatype=datatype, keep_us=keep_us, decimate=decimate,
+                            updated_at=datetime.datetime.utcnow())
     except KeyError as e:
         raise ConfigurationError("[Main] missing %s" % e.args[0]) from e
     # now try to load the elements
@@ -298,7 +328,8 @@ def from_nilmdb_metadata(config_data: Dict, layout: str) -> DataStream:
     # make sure the name is valid
     name = config_data["name"].replace("/", "_")
     stream = DataStream(name=name, description='', datatype=datatype,
-                        keep_us=DataStream.KEEP_ALL, decimate=True)
+                        keep_us=DataStream.KEEP_ALL, decimate=True,
+                        updated_at=datetime.datetime.utcnow())
     idx = 0
     for metadata in elements:
         elem = element.from_nilmdb_metadata(metadata, idx)

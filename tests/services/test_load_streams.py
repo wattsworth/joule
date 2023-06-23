@@ -5,6 +5,7 @@ import tempfile
 import logging
 import os
 import warnings
+import datetime
 
 from tests.helpers import DbTestCase
 from joule.models import (Base, DataStream, Folder, Element)
@@ -14,31 +15,38 @@ logger = logging.getLogger('joule')
 
 warnings.simplefilter('always')
 
+
 class TestConfigureStreams(DbTestCase):
 
     def test_merges_config_and_db_streams(self):
         """e2e stream configuration service test"""
 
         # /test/stream1:float32_3
-        folder_test = Folder(name="test")
+        folder_test = Folder(name="test",
+                             updated_at=datetime.datetime.now())
         stream1 = DataStream(name="stream1", keep_us=100,
-                             datatype=DataStream.DATATYPE.FLOAT32)
+                             datatype=DataStream.DATATYPE.FLOAT32,
+                             updated_at=datetime.datetime.now())
         stream1.elements = [Element(name="e%d" % x, index=x, default_min=1) for x in range(3)]
         folder_test.data_streams.append(stream1)
 
         # /test/deeper/stream2: int8_2
-        folder_deeper = Folder(name="deeper")
-        stream2 = DataStream(name="stream2", datatype=DataStream.DATATYPE.INT8)
+        folder_deeper = Folder(name="deeper",
+                               updated_at=datetime.datetime.now())
+        stream2 = DataStream(name="stream2", datatype=DataStream.DATATYPE.INT8,
+                             updated_at=datetime.datetime.now())
         stream2.elements = [Element(name="e%d" % x, index=x) for x in range(2)]
         folder_deeper.data_streams.append(stream2)
         folder_deeper.parent = folder_test
 
         # /test/deeper/stream3: int8_2
-        stream3 = DataStream(name="stream3", datatype=DataStream.DATATYPE.INT16)
+        stream3 = DataStream(name="stream3", datatype=DataStream.DATATYPE.INT16,
+                             updated_at=datetime.datetime.now())
         stream3.elements = [Element(name="e%d" % x, index=x) for x in range(2)]
         folder_deeper.data_streams.append(stream3)
 
-        root = Folder(name="root")
+        root = Folder(name="root",
+                      updated_at=datetime.datetime.now())
         root.children = [folder_test]
         self.db.add(root)
 

@@ -2,6 +2,7 @@ from click.testing import CliRunner
 import warnings
 import numpy as np
 import logging
+import datetime
 import asyncio
 import unittest
 
@@ -23,7 +24,8 @@ class TestDataCopy(FakeJouleTestCase):
         # create the source and destination streams
         src_data = create_source_data(server, break_into_intervals=False)  # helpers.create_data(src.layout)
         # dest is empty
-        dest = DataStream(id=1, name="dest", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32)
+        dest = DataStream(id=1, name="dest", keep_us=100,
+                          datatype=DataStream.DATATYPE.FLOAT32, updated_at=datetime.datetime.utcnow())
         dest.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in
                          range(3)]
         server.add_stream('/test/destination', dest, StreamInfo(None, None, 0), None)
@@ -57,7 +59,8 @@ class TestDataCopy(FakeJouleTestCase):
         # create the source and destination streams
         src_data = create_source_data(server)  # helpers.create_data(src.layout)
         # dest has half the data
-        dest = DataStream(id=1, name="dest", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32)
+        dest = DataStream(id=1, name="dest", keep_us=100,
+                          datatype=DataStream.DATATYPE.FLOAT32, updated_at=datetime.datetime.utcnow())
         dest.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in
                          range(3)]
         # destination is missing first interval but this won't be copied with the --new flag
@@ -89,7 +92,8 @@ class TestDataCopy(FakeJouleTestCase):
         ts = src_data['timestamp']
         intervals = server.streams['/test/source'].intervals
 
-        dest = DataStream(id=1, name="dest", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32)
+        dest = DataStream(id=1, name="dest", keep_us=100,
+                          datatype=DataStream.DATATYPE.FLOAT32, updated_at=datetime.datetime.utcnow())
         dest.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in
                          range(3)]
         server.add_stream('/test/destination', dest, StreamInfo(int(ts[0]), int(ts[-1]),
@@ -108,7 +112,9 @@ class TestDataCopy(FakeJouleTestCase):
     def test_creates_stream_if_necessary(self):
         server = FakeJoule()
         # create the source stream
-        src = DataStream(id=0, name="source", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32)
+        src = DataStream(id=0, name="source", keep_us=100,
+                         datatype=DataStream.DATATYPE.FLOAT32,
+                         updated_at=datetime.datetime.utcnow())
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
 
         # source has 100 rows of data between [0, 100]
@@ -134,7 +140,8 @@ class TestDataCopy(FakeJouleTestCase):
         # source has no data
         src_info = StreamInfo(None, None, 0)
         # create the source stream
-        src = DataStream(id=0, name="source", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32)
+        src = DataStream(id=0, name="source", keep_us=100,
+                         datatype=DataStream.DATATYPE.FLOAT32, updated_at=datetime.datetime.utcnow())
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         server.add_stream('/test/source', src, src_info, np.ndarray([]))
         self.start_server(server)
@@ -147,7 +154,8 @@ class TestDataCopy(FakeJouleTestCase):
     def test_when_destination_is_invalid(self):
         server = FakeJoule()
         # create the source stream
-        src = DataStream(id=0, name="source", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32)
+        src = DataStream(id=0, name="source", keep_us=100,
+                         datatype=DataStream.DATATYPE.FLOAT32, updated_at=datetime.datetime.utcnow())
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
 
         # source has 100 rows of data between [0, 100]
@@ -179,7 +187,8 @@ class TestDataCopy(FakeJouleTestCase):
     def test_incompatible_layouts(self):
         server = FakeJoule()
         create_source_data(server)
-        dest = DataStream(id=1, name="dest", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32)
+        dest = DataStream(id=1, name="dest", keep_us=100,
+                          datatype=DataStream.DATATYPE.FLOAT32, updated_at=datetime.datetime.utcnow())
         dest.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in
                          range(5)]
         server.add_stream('/test/destination', dest, StreamInfo(None, None, 0), None)
@@ -193,7 +202,8 @@ class TestDataCopy(FakeJouleTestCase):
     def test_warn_on_different_elements(self):
         server = FakeJoule()
         create_source_data(server)
-        dest = DataStream(id=1, name="dest", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32)
+        dest = DataStream(id=1, name="dest", keep_us=100,
+                          datatype=DataStream.DATATYPE.FLOAT32, updated_at=datetime.datetime.utcnow())
         dest.elements = [
             Element(name="different%d" % x, index=x, units='other', display_type=Element.DISPLAYTYPE.CONTINUOUS) for x
             in
@@ -262,7 +272,8 @@ def _print_result_on_error(result):
 
 def create_source_data(server, break_into_intervals=True):
     # create the source stream
-    src = DataStream(id=0, name="source", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32)
+    src = DataStream(id=0, name="source", keep_us=100,
+                     datatype=DataStream.DATATYPE.FLOAT32, updated_at=datetime.datetime.utcnow())
     src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
 
     # source has 100 rows of data in four intervals between [0, 100]

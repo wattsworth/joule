@@ -1,7 +1,8 @@
 from sqlalchemy.orm import relationship, Mapped
-from sqlalchemy import (Column, Integer, String, ForeignKey)
+from sqlalchemy import (Column, Integer, String, DateTime, ForeignKey)
 from sqlalchemy.dialects.postgresql import BIGINT, JSONB
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING, Dict, Optional
+import datetime
 
 from joule.errors import ConfigurationError
 
@@ -37,14 +38,29 @@ class EventStream(Base):
     description: str = Column(String)
     folder_id: int = Column(Integer, ForeignKey('metadata.folder.id'))
     folder: Mapped["Folder"] = relationship("Folder", back_populates="event_streams")
+    updated_at: datetime.datetime = Column(DateTime, nullable=False)
 
     def update_attributes(self, attrs: Dict) -> None:
+        updated = False
         if 'name' in attrs:
             self.name = validate_name(attrs['name'])
+            updated = True
         if 'description' in attrs:
             self.description = attrs['description']
+            updated = True
         if 'event_fields' in attrs:
             self.event_fields = validate_event_fields(attrs['event_fields'])
+            updated = True
+        if updated:
+            self.touch()
+
+    # update timestamps on all folders in hierarchy
+    def touch(self, now: Optional[datetime.datetime] = None) -> None:
+        if now is None:
+            now = datetime.datetime.utcnow()
+        self.updated_at = now
+        if self.folder is not None:
+            self.folder.touch(now)
 
     def to_json(self, info: Dict[int, 'StreamInfo'] = None) -> Dict:
         """
@@ -64,7 +80,8 @@ class EventStream(Base):
             'name': self.name,
             'description': self.description,
             'event_fields': self.event_fields,
-            'data_info': data_info
+            'data_info': data_info,
+            'updated_at': self.updated_at.isoformat()
         }
 
     def __str__(self):
@@ -89,7 +106,9 @@ def from_json(data: Dict) -> EventStream:
     return EventStream(id=data["id"],
                        name=validate_name(data["name"]),
                        description=data["description"],
-                       event_fields=data["event_fields"])
+                       event_fields=data["event_fields"],
+                       updated_at=datetime.datetime.utcnow()
+                       )
 
 
 def validate_event_fields(fields: Dict[str, str]) -> Dict[str, str]:

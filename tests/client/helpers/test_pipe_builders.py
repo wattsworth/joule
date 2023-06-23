@@ -1,6 +1,7 @@
 import asyncio
 import numpy as np
 import logging
+import datetime
 from unittest import mock
 from icecream import ic
 import unittest
@@ -294,7 +295,9 @@ class TestPipeHelpers(FakeJouleTestCase):
 
 def create_destination(server):
     # create an empty destination stream
-    dest = DataStream(id=8, name="dest", keep_us=100, datatype=DataStream.DATATYPE.UINT8)
+    dest = DataStream(id=8, name="dest", keep_us=100,
+                      datatype=DataStream.DATATYPE.UINT8,
+                      updated_at=datetime.datetime.utcnow())
     dest.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
 
     # destination has no data
@@ -303,8 +306,10 @@ def create_destination(server):
 
 def create_source_data(server, is_destination=False):
     # create the source stream
-    src = DataStream(id=0, name="source", keep_us=100, datatype=DataStream.DATATYPE.UINT8,
-                     is_destination=is_destination)
+    src = DataStream(id=0, name="source", keep_us=100,
+                     datatype=DataStream.DATATYPE.UINT8,
+                     is_destination=is_destination,
+                      updated_at=datetime.datetime.utcnow())
     src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
 
     # source has 100 rows of data

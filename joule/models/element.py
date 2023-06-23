@@ -51,6 +51,19 @@ class Element(Base):
     def __repr__(self):
         return "<Element(name='%s', units='%s', display_type=%s)>" % (self.name, self.units, self.display_type)
 
+    def __eq__(self, other):
+        if not isinstance(other, Element):
+            return False
+        return (self.name == other.name and
+                self.index == other.index and
+                self.units == other.units and
+                self.plottable == other.plottable and
+                self.display_type == other.display_type and
+                self.offset == other.offset and
+                self.scale_factor == other.scale_factor and
+                self.default_max == other.default_max and
+                self.default_min == other.default_min)
+
     def to_json(self):
         """
 

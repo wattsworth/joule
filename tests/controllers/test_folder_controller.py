@@ -20,8 +20,10 @@ class TestFolderController(AioHTTPTestCase):
         # this takes a while, adjust the expected coroutine execution time
         loop = asyncio.get_running_loop()
         loop.slow_callback_duration = 2.0
-        app["db"], app["psql"] = create_db(["/top/leaf/stream1:float32[x, y, z]",
-                                            "/top/middle/leaf/stream2:int8[val1, val2]"])
+        app["db"], app["psql"] = create_db([
+            "/other/middle/stream3:int8[val1, val2]",
+            "/top/leaf/stream1:float32[x, y, z]",
+            "/top/middle/leaf/stream2:int8[val1, val2]"])
         app["data-store"] = MockStore()
         app["event-store"] = MockEventStore()
         return app
@@ -36,7 +38,12 @@ class TestFolderController(AioHTTPTestCase):
         resp = await self.client.request("GET", "/folders.json")
         actual = await resp.json()
         # basic check to see if JSON response matches database structure
-        expected = folder.root(db).to_json({my_stream.id: mock_info})
+        expected = folder.root(db).to_json()
+        self.assertEqual(actual, expected)
+        # test to see if data-info flag works
+        resp = await self.client.request("GET", "/folders.json", params={"data-info": ""})
+        actual = await resp.json()
+        expected = folder.root(db).to_json(data_stream_info={my_stream.id: mock_info})
         self.assertEqual(actual, expected)
 
 
@@ -64,14 +71,21 @@ class TestFolderController(AioHTTPTestCase):
         # move stream1 into folder3
         payload = {
             "src_path": "/top/leaf",
-            "dest_path": "/top/other"
+            "dest_path": "/other"
         }
+        source_parent_created_at = folder.find("/top", db).updated_at
+        dest_parent_created_at = folder.find("/other", db).updated_at
+        other_folder_created_at = folder.find("/other/middle", db).updated_at
         resp = await self.client.put("/folder/move.json", json=payload)
         self.assertEqual(resp.status, 200)
-        f = folder.find("/top/other/leaf", db)
+        f = folder.find("/other/leaf", db)
         self.assertEqual(f.data_streams[0].name, "stream1")
         self.assertIsNone(folder.find("/top/leaf", db))
-
+        # make sure the parent timestamps are updated
+        self.assertGreater(folder.find("/top", db).updated_at, source_parent_created_at)
+        self.assertGreater(folder.find("/other", db).updated_at, dest_parent_created_at)
+        # other timestamps should not be updated
+        self.assertEqual(folder.find("/other/middle", db).updated_at, other_folder_created_at)
 
     async def test_folder_move_by_id(self):
         db: Session = self.app["db"]
@@ -107,6 +121,8 @@ class TestFolderController(AioHTTPTestCase):
         db: Session = self.app["db"]
         f_count = db.query(Folder).count()
         f = folder.find("/an/empty/folder", db, create=True)
+        parent_updated_at = f.parent.updated_at
+        top_parent_updated_at = f.parent.parent.updated_at
         self.assertEqual(db.query(Folder).count(), f_count + 3)
         payload = {'id': f.id}
         resp = await self.client.delete("/folder.json", params=payload)
@@ -116,7 +132,9 @@ class TestFolderController(AioHTTPTestCase):
         # keeps the parent folders
         self.assertEqual(f_count + 2, db.query(Folder).count())
         self.assertIsNotNone(folder.find("/an/empty", db))
-
+        # parent folders should have updated timestamps
+        self.assertGreater(f.parent.updated_at, parent_updated_at)
+        self.assertGreater(f.parent.parent.updated_at, top_parent_updated_at)
 
     async def test_folder_recursive_delete(self):
         db: Session = self.app["db"]
@@ -124,15 +142,22 @@ class TestFolderController(AioHTTPTestCase):
         payload = {'path': "/top", 'recursive': "1"}
         resp = await self.client.delete("/folder.json", params=payload)
         self.assertEqual(resp.status, 200)
-        # this is the top folder so everything should be gone
-        self.assertEqual(1, db.query(Folder).count())
-        self.assertEqual(0, db.query(DataStream).count())
-        self.assertEqual(0, db.query(Element).count())
+        # this is the top folder so everything under it should be gone
+        # there are three other folders: /, /other, and /other/middle
+        self.assertEqual(3, db.query(Folder).count())
+        # there is one other stream: /other/middle/stream3:int8[val1, val2]
+        self.assertEqual(1, db.query(DataStream).count())
+        self.assertEqual(2, db.query(Element).count())
 
 
     async def test_folder_update(self):
         db: Session = self.app["db"]
         my_folder = folder.find("/top/middle/leaf", db)
+        other_folder = folder.find("/top/other", db, create=True)
+        created_at = my_folder.updated_at
+        middle_parent_created_at = my_folder.parent.updated_at
+        top_parent_created_at = my_folder.parent.parent.updated_at
+        other_folder_created_at = other_folder.updated_at
         # change the stream name
         payload = {
             "id": my_folder.id,
@@ -143,3 +168,13 @@ class TestFolderController(AioHTTPTestCase):
         my_folder: DataStream = db.get(Folder,my_folder.id)
         self.assertEqual("new name", my_folder.name)
         self.assertEqual("new description", my_folder.description)
+        # make sure updated timestamps are more recent than created timestamps
+        self.assertGreater(my_folder.updated_at, created_at)
+        self.assertGreater(my_folder.parent.updated_at, middle_parent_created_at)
+        self.assertGreater(my_folder.parent.parent.updated_at, top_parent_created_at)
+        # make sure other folder is not updated
+        self.assertEqual(other_folder_created_at, other_folder.updated_at)
+        # make sure the JSON response is correct
+        json = await resp.json()
+        self.assertEqual("new name", json["name"])
+        self.assertEqual(my_folder.updated_at.isoformat(), json["updated_at"])

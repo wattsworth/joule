@@ -1,9 +1,9 @@
 from click.testing import CliRunner
-import unittest
 import warnings
 import os
-from joule.models import DataStream, Element, StreamInfo
+import datetime
 
+from joule.models import DataStream, Element, StreamInfo
 from ..fake_joule import FakeJoule, FakeJouleTestCase
 from joule.cli import main
 
@@ -44,7 +44,8 @@ class TestStreamDelete(FakeJouleTestCase):
         server.stub_stream_destroy = True
         server.http_code = error_code
         # actually create a stream so the stubbed API call is the delete one
-        src = DataStream(id=0, name="source", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32)
+        src = DataStream(id=0, name="source", keep_us=100,
+                         datatype=DataStream.DATATYPE.FLOAT32, updated_at=datetime.datetime.utcnow())
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         src_info = StreamInfo(0, 0, 0)
         server.add_stream('/folder/stream', src, src_info, None, [])

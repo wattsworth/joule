@@ -9,6 +9,7 @@ import os
 import signal
 import json
 import psutil
+import datetime
 import unittest
 
 from ..fake_joule import FakeJoule, FakeJouleTestCase
@@ -69,7 +70,8 @@ class TestDataCopyWithNilmDb(FakeJouleTestCase):
         # create the source and destination streams
         src_data = create_source_data(source_server)  # helpers.create_data(src.layout)
 
-        src_stream = DataStream(id=1, name="dest", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32)
+        src_stream = DataStream(id=1, name="dest", keep_us=100,
+                                datatype=DataStream.DATATYPE.FLOAT32, updated_at=datetime.datetime.utcnow())
         src_stream.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in
                                range(3)]
         source_server.add_stream('/test/destination', src_stream, StreamInfo(None, None, 0), None)
@@ -97,7 +99,8 @@ class TestDataCopyWithNilmDb(FakeJouleTestCase):
         # create just the source stream
         src_data = create_source_data(source_server)  # helpers.create_data(src.layout)
 
-        src_stream = DataStream(id=1, name="dest", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32)
+        src_stream = DataStream(id=1, name="dest", keep_us=100,
+                                datatype=DataStream.DATATYPE.FLOAT32, updated_at=datetime.datetime.utcnow())
         src_stream.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in
                                range(3)]
         source_server.add_stream('/test/destination', src_stream, StreamInfo(None, None, 0), None)
@@ -156,7 +159,8 @@ def _print_result_on_error(result):
 
 def create_source_data(server):
     # create the source stream
-    src = DataStream(id=0, name="source", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32)
+    src = DataStream(id=0, name="source", keep_us=100,
+                     datatype=DataStream.DATATYPE.FLOAT32, updated_at=datetime.datetime.utcnow())
     src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
 
     # source has 100 rows of data

@@ -1,6 +1,7 @@
 from sqlalchemy.orm import relationship, backref, Session, Mapped
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 from typing import List, TYPE_CHECKING, Optional, Dict, Union
+import datetime
 import logging
 from joule.errors import ConfigurationError
 from joule.models.data_stream import DataStream
@@ -30,6 +31,7 @@ class Folder(Base):
     data_streams: Mapped[List[DataStream]] = relationship("DataStream", back_populates="folder")
     event_streams: Mapped[List[EventStream]] = relationship("EventStream", back_populates="folder")
     parent_id: int = Column(Integer, ForeignKey('metadata.folder.id'))
+    updated_at: datetime.datetime = Column(DateTime, nullable=False)
     if TYPE_CHECKING:  # pragma: no cover
         parent: 'Folder'
 
@@ -79,6 +81,14 @@ class Folder(Base):
                 return True
         return False
 
+    # update timestamps on all folders in hierarchy
+    def touch(self, now: Optional[datetime.datetime] = None) -> None:
+        if now is None:
+            now = datetime.datetime.utcnow()
+        self.updated_at = now
+        if self.parent is not None:
+            self.parent.touch(now)
+
     def __repr__(self):
         if self.id is None:
             return "<Folder(id=<not assigned>, name='%s')>" % self.name
@@ -93,6 +103,7 @@ class Folder(Base):
             'name': self.name,
             'description': self.description,
             'locked': self.locked,
+            'updated_at': self.updated_at.isoformat(),
             'children': [c.to_json(data_stream_info,
                                    event_stream_info) for c in self.children],
             'streams': [s.to_json(data_stream_info) for s in self.data_streams],
@@ -105,7 +116,7 @@ def root(db: Session) -> Folder:
         filter_by(parent=None). \
         one_or_none()
     if root_folder is None:
-        root_folder = Folder(name="root")
+        root_folder = Folder(name="root", updated_at=datetime.datetime.utcnow())
         db.add(root_folder)
         logger.info("creating root folder")
     return root_folder
@@ -131,7 +142,7 @@ def find(path: str, db: Session, create=False, parent=None) -> Optional[Folder]:
     if folder is None:
         if not create:
             return None
-        folder = Folder(name=name)
+        folder = Folder(name=name, updated_at=datetime.datetime.utcnow())
         parent.children.append(folder)
         db.add(folder)
     sub_path = '/' + '/'.join(reversed(path_chunks))
@@ -172,3 +183,4 @@ def validate_name(name: str) -> str:
     if '/' in name:
         raise ConfigurationError("invalid name, '\\' not allowed")
     return name
+

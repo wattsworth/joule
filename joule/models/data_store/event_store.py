@@ -166,7 +166,7 @@ class StreamInfo:
         self.total_time = total_time
 
     def __repr__(self):
-        return "<DataStreamInfo start=%r end=%r event_count=%r, total_time=%r>" % (
+        return "<StreamInfo start=%r end=%r event_count=%r, total_time=%r>" % (
             self.start, self.end, self.event_count, self.total_time)
 
     def __eq__(self, other):
