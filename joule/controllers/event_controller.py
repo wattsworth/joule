@@ -88,8 +88,8 @@ async def create(request):
         existing_names = [s.name for s in destination.data_streams + destination.event_streams]
         if new_stream.name in existing_names:
             raise ConfigurationError("stream with the same name exists in the folder")
-        new_stream.updated_at = datetime.datetime.utcnow()
         destination.event_streams.append(new_stream)
+        new_stream.touch()
         db.commit()
     except (TypeError, ValueError) as e:
         db.rollback()

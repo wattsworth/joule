@@ -78,7 +78,7 @@ async def move(request):
             if parent == my_folder:
                 raise ValueError()
             parent = parent.parent
-        my_folder.parent.touch()
+        my_folder.touch()
         destination.touch()
         destination.children.append(my_folder)
         db.commit()
@@ -152,6 +152,7 @@ async def delete(request):
         db.delete(stream)
     for stream in my_folder.event_streams:
         await event_store.destroy(stream)
+        db.delete(stream)
 
     db.delete(my_folder)
     # update the parent timestamps

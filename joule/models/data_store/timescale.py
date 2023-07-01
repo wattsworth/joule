@@ -6,6 +6,7 @@ import asyncpg
 import asyncpg.exceptions
 import datetime
 import shutil
+import asyncio
 from joule.utilities import interval_tools, timestamp_to_datetime
 from joule.models.data_store.timescale_inserter import Inserter
 from joule.models import DataStream, pipes
@@ -32,7 +33,10 @@ class TimescaleStore(DataStore):
         return self.pool  # so the event store can reuse it
 
     async def close(self):
-        await self.pool.close()
+        try:
+            await asyncio.wait_for(self.pool.close(), timeout=5.0)
+        except asyncio.TimeoutError:
+            print("WARNING: could not close timescale pool, terminating")
 
     async def spawn_inserter(self, stream: 'DataStream', pipe: pipes.Pipe, insert_period=None) -> asyncio.Task:
         if insert_period is None:

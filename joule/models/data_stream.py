@@ -205,12 +205,9 @@ class DataStream(Base):
 
         """
 
-        if info is not None and self.id in info:
-            data_info = info[self.id].to_json()
-        else:
-            data_info = None
 
-        return {
+
+        resp = {
             'id': self.id,
             'name': self.name,
             'description': self.description,
@@ -225,8 +222,10 @@ class DataStream(Base):
             'active': self.active,  # meta attribute
             'decimate': self.decimate,
             'elements': [e.to_json() for e in sorted(self.elements, key=attrgetter('index'))],
-            'data_info': data_info
         }
+        if info is not None and self.id in info:
+            resp['data_info'] = info[self.id].to_json()
+        return resp
 
     def to_nilmdb_metadata(self) -> Dict:
         return {

@@ -119,7 +119,9 @@ class Daemon(object):
                 conn.execute(text("GRANT USAGE ON SCHEMA data TO joule_module"))
                 conn.execute(text("GRANT USAGE ON SCHEMA metadata TO joule_module"))
                 conn.execute(text("GRANT SELECT ON ALL TABLES IN SCHEMA metadata TO joule_module;"))
-                conn.execute(text("GRANT SELECT ON ALL TABLES IN SCHEMA data TO joule_module;"))
+                # TODO: These are very expensive with the timescaledb backend, is there a better way
+                # to allow the joule_module access to the data schema?
+                #conn.execute(text("GRANT SELECT ON ALL TABLES IN SCHEMA data TO joule_module;"))
                 # test out pg_read_all_settings command
                 conn.execute(text("show data_directory"))
                 # load custom functions

@@ -23,9 +23,9 @@ class Folder:
 
     """
     # folder params
-    def __init__(self):
+    def __init__(self, name=""):
         self._id = None
-        self.name: str = ""
+        self.name: str = name
         self.description: str = ""
         self.locked: bool = False
         self.data_streams: List['DataStream'] = []

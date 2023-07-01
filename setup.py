@@ -44,7 +44,7 @@ setup(
                       'dateparser',
                       'tabulate',
                       'sqlalchemy',
-                      'sqlalchemy>=1,<2',
+                      'sqlalchemy',
                       'aiohttp-jinja2',
                       'jinja2',
                       'asyncpg',

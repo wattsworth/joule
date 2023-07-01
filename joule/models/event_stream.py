@@ -36,7 +36,7 @@ class EventStream(Base):
     keep_us: int = Column(BIGINT, default=KEEP_ALL)
 
     description: str = Column(String)
-    folder_id: int = Column(Integer, ForeignKey('metadata.folder.id'))
+    folder_id: int = Column(Integer, ForeignKey('metadata.folder.id'), nullable=False)
     folder: Mapped["Folder"] = relationship("Folder", back_populates="event_streams")
     updated_at: datetime.datetime = Column(DateTime, nullable=False)
 
@@ -71,18 +71,18 @@ class EventStream(Base):
 
         """
 
-        if info is not None and self.id in info:
-            data_info = info[self.id].to_json()
-        else:
-            data_info = None
-        return {
+        resp = {
             'id': self.id,
             'name': self.name,
             'description': self.description,
             'event_fields': self.event_fields,
-            'data_info': data_info,
             'updated_at': self.updated_at.isoformat()
         }
+
+        if info is not None and self.id in info:
+            resp['data_info'] = info[self.id].to_json()
+        return resp
+
 
     def __str__(self):
         return "EventStream [{name}]".format(name=self.name)

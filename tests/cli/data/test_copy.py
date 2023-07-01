@@ -77,7 +77,6 @@ class TestDataCopy(FakeJouleTestCase):
         self.assertEqual(result.exit_code, 0)
         while self.msgs.empty():
             time.sleep(0.1)
-            print("waiting...")
         while not self.msgs.empty():
             msg = self.msgs.get()
             if type(msg) is MockDbEntry:
