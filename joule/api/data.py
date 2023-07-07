@@ -4,7 +4,7 @@ import aiohttp
 import numpy as np
 from icecream import ic
 from joule.models.pipes import compute_dtype
-
+from joule.utilities.misc import timestamps_are_monotonic, validate_values
 from .session import BaseSession
 from .data_stream import (DataStream,
                           data_stream_get,
@@ -293,8 +293,14 @@ async def _send_data(session: BaseSession,
     async def _data_sender():
         nonlocal output_complete
         try:
+            last_ts = None
             while True:
                 data = await pipe.read()
+                if not timestamps_are_monotonic(data,last_ts,stream.name):
+                    raise errors.ApiError("timestamps are not monotonic")
+                if not validate_values(data):
+                    raise errors.ApiError("invalid values (NaN or Inf)")
+                last_ts = data['timestamp'][-1]
                 if len(data) > 0:
                     yield data.tobytes()
                 if pipe.end_of_interval:

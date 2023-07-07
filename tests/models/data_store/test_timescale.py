@@ -38,6 +38,7 @@ class TestTimescale(asynctest.TestCase):
         # self.db_url = "postgresql://joule:joule@127.0.0.1:5432/joule"
         conn: asyncpg.Connection = await asyncpg.connect(self.db_url)
         await conn.execute("CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE ")
+        await conn.execute("CREATE USER joule_module")
         # load custom functions
         for file in os.listdir(SQL_DIR):
             file_path = os.path.join(SQL_DIR, file)

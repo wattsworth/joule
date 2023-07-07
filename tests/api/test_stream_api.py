@@ -85,19 +85,19 @@ class TestStreamApi(asynctest.TestCase):
         self.assertEqual(stream.to_json(), target.to_json())
         self.assertEqual(self.session.method, 'GET')
         self.assertEqual(self.session.path, "/stream.json")
-        self.assertEqual(self.session.request_data, {'id': 1})
+        self.assertEqual(self.session.request_data, {'id': 1, 'no-info':''})
         # can get by path
         await self.node.data_stream_get('/a/path')
         self.assertEqual(self.session.method, 'GET')
         self.assertEqual(self.session.path, "/stream.json")
-        self.assertEqual(self.session.request_data, {'path': '/a/path'})
+        self.assertEqual(self.session.request_data, {'path': '/a/path', 'no-info':''})
 
         # can get by DataStream
         src = DataStream()
         src.id = 1
         await self.node.data_stream_get(src)
         self.assertEqual(self.session.path, "/stream.json")
-        self.assertEqual(self.session.request_data, {'id': 1})
+        self.assertEqual(self.session.request_data, {'id': 1, 'no-info':''})
 
     async def test_stream_get_errors(self):
         self.session.method = None

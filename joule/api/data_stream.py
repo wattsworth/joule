@@ -276,7 +276,7 @@ async def data_stream_get(session: BaseSession,
         data["path"] = stream
     else:
         raise errors.ApiError("Invalid stream datatype. Must be DataStream, Path, or ID")
-
+    data["no-info"]=''
     resp = await session.get("/stream.json", data)
     return from_json(resp)
 

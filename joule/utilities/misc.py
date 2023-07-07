@@ -1,5 +1,6 @@
 import aiohttp
 import ssl
+import numpy as np
 from aiohttp.client_exceptions import ClientError
 from typing import Optional
 
@@ -46,3 +47,29 @@ async def detect_url(host, port: Optional[int] = None):  # pragma: no cover
                 return "http://" + host
             except ClientError:
                 return None
+
+def timestamps_are_monotonic(data, last_ts: Optional[int], name: str):
+    if len(data) == 0:
+        return True
+    # if there are multiple rows, check that all timestamps are increasing
+    if len(data) > 1 and np.min(np.diff(data['timestamp'])) <= 0:
+        min_idx = np.argmin(np.diff(data['timestamp']))
+        msg = ("Non-monotonic timestamp in new data to stream [%s] (%d<=%d)" %
+               (name, data['timestamp'][min_idx + 1], data['timestamp'][min_idx]))
+        print(msg)
+        return False
+    # check to make sure the first timestamp is larger than the previous block
+    if last_ts is not None:
+        if last_ts >= data['timestamp'][0]:
+            msg = ("Non-monotonic timestamp between writes to stream [%s] (%d<=%d)" %
+                   (name, data['timestamp'][0], last_ts))
+            print(msg)
+            return False
+    return True
+
+def validate_values(data):
+    if np.isnan(data['timestamp']).any():
+        return False
+    if np.isnan(data['data']).any():
+        return False
+    return True

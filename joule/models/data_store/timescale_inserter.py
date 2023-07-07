@@ -7,6 +7,7 @@ import socket
 
 from joule.models import DataStream, pipes
 from joule.models.data_store import psql_helpers
+from joule.models.data_store.errors import DataError
 import joule.utilities
 
 Loop = asyncio.AbstractEventLoop
@@ -54,15 +55,23 @@ class Inserter:
                             if first_insert:
                                 first_insert = False
                                 await psql_helpers.close_interval(conn, self.stream, data['timestamp'][0] - 1)
+                            if not joule.utilities.misc.timestamps_are_monotonic(data, last_ts, self.stream.name):
+                                raise DataError("Non-monotonic timestamps in new data")
+                            if not joule.utilities.misc.validate_values(data):
+                                raise DataError("Invalid values (NaN) in new data")
                             last_ts = data['timestamp'][-1]
                             # lazy initialization of decimator
                             if self.stream.decimate and self.decimator is None:
                                 self.decimator = Decimator(self.stream, 1, 4)
                             psql_bytes = psql_helpers.data_to_bytes(data)
-                            await conn.copy_to_table("stream%d" % self.stream.id,
-                                                     schema_name='data',
-                                                     format='binary',
-                                                     source=psql_bytes)
+                            try:
+                                await conn.copy_to_table("stream%d" % self.stream.id,
+                                                         schema_name='data',
+                                                         format='binary',
+                                                         source=psql_bytes)
+                            except asyncpg.exceptions.UniqueViolationError as e:
+                                raise DataError(e)
+
                             # this was successful so consume the data
                             pipe.consume(len(data))
                             # decimate the data

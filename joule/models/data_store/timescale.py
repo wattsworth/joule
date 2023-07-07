@@ -145,13 +145,16 @@ class TimescaleStore(DataStore):
                 # TODO: use drop chunks with newer and older clauses when timescale is updated
                 # ******DROP CHUNKS IS *VERY* APPROXIMATE*********
                 if start is None and "intervals" not in table and not exact:
-                    # use the much faster drop chunks utility and accept the approximate result
-                    bounds = await psql_helpers.convert_time_bounds(conn, stream, start, end)
-                    if bounds is None:
-                        return  # no data to remove
-                    query = "SELECT drop_chunks('%s', older_than=>'%s'::timestamp)" % (table, bounds[1])
+                    if end is None: # delete everything
+                        query = "TRUNCATE %s" % table
+                    else:
+                        # use the much faster drop chunks utility and accept the approximate result
+                        bounds = await psql_helpers.convert_time_bounds(conn, stream, start, end)
+                        if bounds is None:
+                            return  # no data to remove
+                        query = "SELECT drop_chunks('%s', older_than=>'%s'::timestamp)" % (table, bounds[1])
                 else:
-                    query = 'DELETE FROM %s ' % table + where_clause
+                    query = f'DELETE FROM {table} {where_clause}'
                 try:
                     await conn.execute(query)
                 except asyncpg.UndefinedTableError:

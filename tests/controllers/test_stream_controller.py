@@ -45,6 +45,11 @@ class TestStreamController(AioHTTPTestCase):
         resp = await self.client.request("GET", "/stream.json", params=payload)
         actual = await resp.json()
         self.assertEqual(actual, expected)
+        # adding no-info skips the data store query
+        payload = {'path': "/folder1/stream1", 'no-info': ''}
+        resp = await self.client.request("GET", "/stream.json", params=payload)
+        actual = await resp.json()
+        self.assertEqual(actual, my_stream.to_json({}))
 
 
     async def test_stream_move(self):

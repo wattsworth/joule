@@ -23,7 +23,10 @@ async def info(request: web.Request):
         return web.Response(text="specify an id or a path", status=400)
     if my_stream is None:
         return web.Response(text="stream does not exist", status=404)
-    stream_info = await data_store.info([my_stream])
+    if "no-info" in request.query:
+        stream_info = None
+    else:
+        stream_info = await data_store.info([my_stream])
     return web.json_response(my_stream.to_json(stream_info))
 
 

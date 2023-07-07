@@ -161,6 +161,10 @@ async def create_event_table(conn: asyncpg.Connection):
     sql = """SELECT create_hypertable('data.events', 'time',
     chunk_time_interval => INTERVAL '1 day', if_not_exists=> TRUE)"""
     await conn.execute(sql)
+    sql = """CREATE INDEX ON data.events (event_stream_id, time DESC)"""
+    await conn.execute(sql)
+    sql = """GRANT SELECT ON data.events TO joule_module"""
+    await conn.execute(sql)
 
 
 async def create_stream_table(conn: asyncpg.Connection, stream: DataStream):
@@ -170,14 +174,15 @@ async def create_stream_table(conn: asyncpg.Connection, stream: DataStream):
     cols = ["elem%d %s NOT NULL" % (x, col_type) for x in range(n_elems)]
     sql = "CREATE TABLE IF NOT EXISTS data.stream%d (" % stream.id + \
           "time TIMESTAMP NOT NULL," + \
-          ', '.join(cols) + ");"
+          ', '.join(cols) + \
+          ", PRIMARY KEY(time));"
     await conn.execute(sql)
-    sql = "SELECT create_hypertable('data.stream%d', 'time', if_not_exists=>true, chunk_target_size => 'estimate');" % stream.id
+    sql = f"SELECT create_hypertable('data.stream{stream.id}', 'time', if_not_exists=>true);"
     await conn.execute(sql)
-
+    sql = f"GRANT SELECT ON data.stream{stream.id} TO joule_module;"
+    await conn.execute(sql)
     # create interval table
-    sql = "CREATE TABLE IF NOT EXISTS data.stream%d_intervals (" % stream.id + \
-          "time TIMESTAMP NOT NULL);"
+    sql = f"CREATE TABLE IF NOT EXISTS data.stream{stream.id}_intervals (time TIMESTAMP NOT NULL);"
     await conn.execute(sql)
 
 
@@ -191,7 +196,8 @@ async def create_decimation_table(conn: asyncpg.Connection, stream: DataStream, 
     cols = mean_cols + min_cols + max_cols
     sql = "CREATE TABLE IF NOT EXISTS %s (" % table_name + \
           "time TIMESTAMP NOT NULL," + \
-          ', '.join(cols) + ");"
+          ', '.join(cols) + \
+          ", PRIMARY KEY(time));"
     await conn.execute(sql)
     sql = "SELECT create_hypertable('%s', 'time', if_not_exists=>true, chunk_target_size => 'estimate');" % table_name
     await conn.execute(sql)
