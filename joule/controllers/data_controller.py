@@ -317,3 +317,34 @@ async def consolidate(request):
         return web.Response(text="max_gap must be postive integer", status=400)
     num_removed = await data_store.consolidate(stream, start, end, max_gap)
     return web.json_response(data={"num_consolidated": num_removed})
+
+
+async def decimate(request):
+    db: Session = request.app["db"]
+    data_store: DataStore = request.app["data-store"]
+    # find the requested stream
+    if 'path' in request.query:
+        stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
+    elif 'id' in request.query:
+        stream = db.get(DataStream,request.query["id"])
+    else:
+        return web.Response(text="specify an id or a path", status=400)
+    if stream is None:
+        return web.Response(text="stream does not exist", status=404)
+    await data_store.decimate(stream)
+    return web.Response(text="ok")
+
+async def drop_decimations(request):
+    db: Session = request.app["db"]
+    data_store: DataStore = request.app["data-store"]
+    # find the requested stream
+    if 'path' in request.query:
+        stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
+    elif 'id' in request.query:
+        stream = db.get(DataStream, request.query["id"])
+    else:
+        return web.Response(text="specify an id or a path", status=400)
+    if stream is None:
+        return web.Response(text="stream does not exist", status=404)
+    await data_store.drop_decimations(stream)
+    return web.Response(text="ok")

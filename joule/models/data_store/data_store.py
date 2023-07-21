@@ -68,7 +68,16 @@ class DataStore(ABC):  # pragma: no cover
         pass
 
     @abstractmethod
-    async def consolidate(self, stream: 'DataStream', start: Optional[int], end: Optional[int], max_gap: int) -> int:
+    async def consolidate(self, stream: 'DataStream', start: Optional[int], end: Optional[int],
+                          max_gap: int) -> int:
+        pass
+
+    @abstractmethod
+    async def drop_decimations(self, stream: 'DataStream'):
+        pass
+
+    @abstractmethod
+    async def decimate(self, stream: 'DataStream'):
         pass
 
     @abstractmethod

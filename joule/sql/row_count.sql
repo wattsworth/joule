@@ -26,6 +26,7 @@ BEGIN
     EXECUTE format('SELECT COUNT(*) FROM %s WHERE time >= $1 AND time < $2', level_name)
       USING start_ts, end_ts
       INTO level_count;
+    RAISE notice '-> rows %', level_count;
     IF level_count >= 25 THEN
       base_count = level_count * 4^decim_level;
       EXIT;

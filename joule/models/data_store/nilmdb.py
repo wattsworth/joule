@@ -163,6 +163,12 @@ class NilmdbStore(DataStore):
                         raise errors.DataError("NilmDB(d) error: %s" % error)
         return len(small_gaps)
 
+    async def drop_decimations(self, stream: 'DataStream'):
+        print("ERROR: Not implemented on NilmDB backend")
+
+    async def decimate(self, stream: 'DataStream'):
+        print("ERROR: Not implemented on NilmDB backend")
+
     # TODO: remove path lookup, iterate until the stream decimation isn't found
     async def remove(self, stream, start: Optional[int] = None,
                      end: Optional[int] = None):

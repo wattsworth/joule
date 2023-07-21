@@ -16,7 +16,6 @@ log = logging.getLogger('joule')
 
 postgres_ts_offset = 946684800000000  # January 1 2000 GMT
 
-
 def data_to_bytes(data: np.ndarray) -> io.BytesIO:
     pgcopy_dtype = [("num_fields", ">i2"),
                     ("time_length", '>i4'),
@@ -199,9 +198,20 @@ async def create_decimation_table(conn: asyncpg.Connection, stream: DataStream, 
           ', '.join(cols) + \
           ", PRIMARY KEY(time));"
     await conn.execute(sql)
-    sql = "SELECT create_hypertable('%s', 'time', if_not_exists=>true, chunk_target_size => 'estimate');" % table_name
+    sql = f"""
+        SELECT create_hypertable('{table_name}', 'time',
+        if_not_exists=>true, chunk_time_interval => INTERVAL '{level} weeks');
+    """
+    #print(f"SQL: {sql}")
     await conn.execute(sql)
 
+async def drop_decimation_tables(conn: asyncpg.Connection, stream: DataStream):
+    tables = await get_decimation_table_names(conn, stream, with_schema=True)
+    for table in tables:
+        try:
+            await conn.execute(f"DROP TABLE {table}")
+        except asyncpg.UndefinedTableError:
+            pass
 
 def get_psql_type(x: DataStream.DATATYPE):
     if x == DataStream.DATATYPE.FLOAT32:
@@ -259,20 +269,32 @@ async def close_interval(conn: asyncpg.Connection, stream: DataStream, ts: int):
         query = "INSERT INTO %s(time) VALUES ($1)" % interval_table
         await conn.execute(query, last_ts + datetime.timedelta(microseconds=1))
 
+async def get_decimation_table_names(conn: asyncpg.Connection, stream: DataStream, with_schema=True) -> List[str]:
+    query = r'''select table_name from information_schema.tables 
+                  where table_schema='data' 
+                  and table_type='BASE TABLE' 
+                  and table_name like 'stream%d\_%%';''' % stream.id
+    records = await conn.fetch(query)
+    all_tables = [r['table_name'] for r in records]
+    # omit the interval table
+    data_tables = [name for name in all_tables if not name.endswith('intervals')]
+    #print(f"data tables: {data_tables}")
+    if with_schema:
+        return [f'data.{name}' for name in data_tables]
+    else:
+        return data_tables
+
 
 async def get_table_names(conn: asyncpg.Connection, stream: DataStream, with_schema=True) -> List[str]:
-    query = r'''select table_name from information_schema.tables 
-               where table_schema='data' 
-               and table_type='BASE TABLE' 
-               and table_name like 'stream%d\_%%';''' % stream.id
-    records = await conn.fetch(query)
+    tables = await get_decimation_table_names(conn, stream, with_schema)
     if with_schema:
-        return ['data.' + r['table_name'] for r in records] + ['data.stream%d' % stream.id]
+        return tables + [f'data.stream{stream.id}',f'data.stream{stream.id}_intervals']
     else:
-        return [r['table_name'] for r in records] + ['stream%d' % stream.id]
+        return tables + [f'stream{stream.id}',f'stream{stream.id}_intervals']
 
 
 async def get_all_table_names(conn: asyncpg.Connection, with_schema=True) -> List[str]:
+    """Return a list of all data tables, used when dropping all data from the node"""
     query = r'''select table_name from information_schema.tables 
                where table_schema='data' 
                and table_type='BASE TABLE' 

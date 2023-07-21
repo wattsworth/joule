@@ -108,7 +108,6 @@ class Inserter:
                 query = "SELECT drop_chunks('data.%s',older_than => interval '%d seconds')" % (table, keep_s)
             await conn.execute(query)
 
-
 class Decimator:
 
     def __init__(self, stream: DataStream, from_level: int, factor: int, debug=False):

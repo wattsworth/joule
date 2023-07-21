@@ -45,6 +45,8 @@ routes = [
     web.get('/data', data_controller.read),
     web.get('/data.json', data_controller.read_json),
     web.get('/data/intervals.json', data_controller.intervals),
+    web.post('/data/decimate.json', data_controller.decimate),
+    web.delete('/data/decimate.json', data_controller.drop_decimations),
     web.post('/data/consolidate.json', data_controller.consolidate),
     web.post('/data', data_controller.write),
     web.delete('/data', data_controller.remove),

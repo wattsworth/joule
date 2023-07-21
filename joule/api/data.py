@@ -99,6 +99,33 @@ async def data_intervals(session: BaseSession,
         data['end'] = int(end_time)
     return await session.get("/data/intervals.json", params=data)
 
+async def data_drop_decimations(session: BaseSession,
+                                stream: Union[DataStream, str, int]):
+    data = {}
+    if type(stream) is DataStream:
+        data["id"] = stream.id
+    elif type(stream) is int:
+        data["id"] = stream
+    elif type(stream) is str:
+        data["path"] = stream
+    else:
+        raise errors.ApiError("Invalid stream datatype. Must be DataStream, Path, or ID")
+    await session.delete("/data/decimate.json", params=data)
+
+
+async def data_decimate(session: BaseSession,
+                                stream: Union[DataStream, str, int]):
+    data = {}
+    if type(stream) is DataStream:
+        data["id"] = stream.id
+    elif type(stream) is int:
+        data["id"] = stream
+    elif type(stream) is str:
+        data["path"] = stream
+    else:
+        raise errors.ApiError("Invalid stream datatype. Must be DataStream, Path, or ID")
+    await session.post("/data/decimate.json", params=data)
+
 
 async def data_consolidate(session: BaseSession,
                            stream: Union[DataStream, str, int],

@@ -74,6 +74,8 @@ class MockStore(DataStore):
         self.removed_data_bounds = (None, None)
         self.destroyed_stream_id = None
         self.raise_data_error = False
+        self.dropped_decimations = False
+        self.redecimated_data = False
 
     async def initialize(self, streams: List[DataStream]):
         pass
@@ -132,6 +134,12 @@ class MockStore(DataStore):
                 return [[start, start + 10]]
             else:
                 return [[start, end]]
+
+    async def drop_decimations(self, stream: 'DataStream'):
+        self.dropped_decimations = True
+
+    async def decimate(self, stream: 'DataStream'):
+        self.redecimated_data = True
 
     async def remove(self, stream: DataStream, start: Optional[int], end: Optional[int]):
         self.removed_data_bounds = (start, end)

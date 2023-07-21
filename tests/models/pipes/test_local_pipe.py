@@ -51,7 +51,12 @@ class TestLocalPipe(helpers.AsyncTestCase):
             rx_idx = 0
             while not subscriber_pipe.is_empty():
                 # consume data in pipe
-                data_chunk = await subscriber_pipe.read()
+                try:
+                    data_chunk = await subscriber_pipe.read()
+                except EmptyPipeError:
+                    # can happen if the writer is finished but hasn't
+                    # closed the pipe before the subscriber calls read()
+                    break
                 subscriber_rx_data[rx_idx:rx_idx + len(data_chunk)] = data_chunk
                 rx_idx += len(data_chunk)
                 subscriber_pipe.consume(len(data_chunk))

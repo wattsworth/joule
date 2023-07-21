@@ -66,7 +66,9 @@ class TestTimescale(asynctest.TestCase):
                  self._test_row_count,
                  self._test_actions_on_empty_streams,
                  self._test_consolidate,
-                 self._test_consolidate_with_time_bounds]
+                 self._test_consolidate_with_time_bounds,
+                 self._test_remove_decimations,
+                 self._test_redecimates_data]
         for test in tests:
             conn: asyncpg.Connection = await asyncpg.connect(self.db_url)
             await conn.execute("DROP SCHEMA IF EXISTS data CASCADE")
@@ -210,6 +212,56 @@ class TestTimescale(asynctest.TestCase):
         extracted_data = np.hstack(extracted_data)
         self.assertLessEqual(len(extracted_data), 16)
         self.assertGreater(len(extracted_data), 4)
+
+    async def _test_remove_decimations(self):
+
+        # make sure the stream is decimated:
+        conn: asyncpg.Connection = await asyncpg.connect(self.db_url)
+        table_names = await psql_helpers.get_decimation_table_names(conn, self.test_stream, with_schema=False)
+        for table in [f'stream100_{4**i}' for i in range(1,6)]:
+           self.assertIn(table, table_names)
+        await self.store.drop_decimations(self.test_stream)
+        # drop the decimations
+        table_names = await psql_helpers.get_decimation_table_names(conn, self.test_stream, with_schema=False)
+        # make sure the tables are dropped
+        self.assertEqual(len(table_names), 0)
+        await conn.close()
+
+    async def _test_redecimates_data(self):
+        # create decimated data
+        test_stream = DataStream(id=1, name="stream1", datatype=DataStream.DATATYPE.FLOAT32,
+                                 keep_us=DataStream.KEEP_ALL,
+                                 elements=[Element(name="e%d" % x) for x in range(3)])
+        test_stream.decimate = True
+        source = QueueReader()
+        pipe = pipes.InputPipe(stream=test_stream, reader=source)
+        nrows = 1024
+        data = helpers.create_data(layout=test_stream.layout, length=nrows)
+        task = await self.store.spawn_inserter(test_stream, pipe)
+        for chunk in helpers.to_chunks(data, 16):
+            await source.put(chunk.tobytes())
+            await source.put(pipes.interval_token(test_stream.layout).tobytes())
+        await task
+        conn: asyncpg.Connection = await asyncpg.connect(self.db_url)
+        table_names = await psql_helpers.get_decimation_table_names(conn, test_stream, with_schema=False)
+        # interval breaks cause decimation to stop after level 16 (level 64 is created but empty)
+        self.assertEqual(len(table_names),3)
+        orig_data = await conn.fetch("SELECT * FROM data.stream1_16")
+
+        # redecimate doesn't change anything
+        await self.store.decimate(test_stream)
+        redecimated_data = await conn.fetch("SELECT * FROM data.stream1_16")
+        self.assertEqual(orig_data, redecimated_data)
+
+        # now consolidate the intervals
+        await self.store.consolidate(test_stream, start=None, end=None,
+                                     max_gap = data['timestamp'][1]-data['timestamp'][0])
+        # redecimate
+        await self.store.decimate(test_stream)
+        table_names = await psql_helpers.get_decimation_table_names(conn, test_stream, with_schema=False)
+        for table in [f'stream1_{4**i}' for i in range(1,6)]:
+           self.assertIn(table, table_names)
+        await conn.close()
 
     async def _test_nondecimating_inserter(self):
         # TODO

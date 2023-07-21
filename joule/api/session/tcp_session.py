@@ -30,7 +30,10 @@ class TcpSession(BaseSession):
         return "<joule.api.session.TcpSession url=\"%s\">" % self.url
 
     async def get_session(self):
-        if self._session is None:
+        # make sure session is not closed, this can happen if the same
+        # script has multiple asyncio.run(...) calls since each one has
+        # its own event loop
+        if self._session is None or self._session._loop._closed:
             self._session = aiohttp.ClientSession(
                 connector=aiohttp.TCPConnector(force_close=True),
                 timeout=aiohttp.ClientTimeout(total=None),

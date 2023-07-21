@@ -47,7 +47,9 @@ from joule.api.data import (data_write,
                             data_subscribe,
                             data_delete,
                             data_intervals,
-                            data_consolidate)
+                            data_consolidate,
+                            data_drop_decimations,
+                            data_decimate)
 
 from joule.api.proxy import (proxy_list,
                              proxy_get,
@@ -240,6 +242,14 @@ class BaseNode:
                                start: Optional[int] = None,
                                end: Optional[int] = None) -> List:
         return await data_consolidate(self.session, stream, start, end, max_gap)
+
+    async def data_drop_decimations(self,
+                                    stream: Union[DataStream, str, int]):
+        return await data_drop_decimations(self.session, stream)
+
+    async def data_decimate(self,
+                            stream: Union[DataStream, str, int]):
+        return await data_decimate(self.session, stream)
 
     async def data_write(self, stream: Union[DataStream, str, int],
                          start: Optional[int] = None,

@@ -8,7 +8,7 @@ import datetime
 import shutil
 import asyncio
 from joule.utilities import interval_tools, timestamp_to_datetime
-from joule.models.data_store.timescale_inserter import Inserter
+from joule.models.data_store.timescale_inserter import Inserter, Decimator
 from joule.models import DataStream, pipes
 from joule.models.data_store import psql_helpers
 from joule.models.data_store.data_store import DataStore, StreamInfo, DbInfo
@@ -52,18 +52,42 @@ class TimescaleStore(DataStore):
                      data: np.ndarray, start: int, end: int):
         pass
 
-    async def consolidate(self, stream: 'DataStream', start: int, end: int, max_gap: int) -> int:
+    async def drop_decimations(self, stream: 'DataStream'):
+        async with self.pool.acquire() as conn:
+            await psql_helpers.drop_decimation_tables(conn, stream)
+
+    async def decimate(self, stream: 'DataStream'):
+        await self.drop_decimations(stream)
+        async with self.pool.acquire() as conn:
+            decimator = Decimator(stream=stream, from_level=1, factor=4)
+            interval_token = pipes.interval_token(stream.layout)
+            async def redecimator(data, _, __):
+                if len(data)==1 and data[0] == interval_token:
+                    decimator.close_interval()
+                else:
+                    await decimator.process(conn, data)
+
+            # start a data extraction task with the callback running
+            # the decimation
+            await _extract_data(conn, stream, redecimator,
+                                decimation_level=1, start=None, end=None,
+                                block_size=50000)
+
+    async def consolidate(self, stream: 'DataStream', start: int,
+                          end: int, max_gap: int) -> int:
         # remove interval gaps less than or equal to max_gap duration (in us)
         intervals = await self.intervals(stream, start, end)
         if len(intervals) == 0:
-            return  # no data, nothing to do
+            return 0  # no data, nothing to do
         duration = [intervals[0][0], intervals[-1][1]]
 
         gaps = interval_tools.interval_difference([duration], intervals)
 
         if len(gaps) == 0:
-            return  # no interval breaks, nothing to do
+            return 0  # no interval breaks, nothing to do
         small_gaps = [gap for gap in gaps if (gap[1] - gap[0]) <= max_gap]
+        if len(small_gaps) == 0:
+            return 0  # no small gaps, nothing to do
         boundaries = [gap[0] for gap in small_gaps]
         str_datetimes = ["'%s'" % str(timestamp_to_datetime(ts)) for ts in boundaries]
         query = "DELETE FROM data.stream%d_intervals WHERE time IN (%s)" % (stream.id, ",".join(str_datetimes))
@@ -145,7 +169,7 @@ class TimescaleStore(DataStore):
                 # TODO: use drop chunks with newer and older clauses when timescale is updated
                 # ******DROP CHUNKS IS *VERY* APPROXIMATE*********
                 if start is None and "intervals" not in table and not exact:
-                    if end is None: # delete everything
+                    if end is None:  # delete everything
                         query = "TRUNCATE %s" % table
                     else:
                         # use the much faster drop chunks utility and accept the approximate result
