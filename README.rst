@@ -70,18 +70,39 @@ Features
 Installation
 ------------
 
-Joule requires Python 3.6 or later. Install Joule by running:
+Joule requires Python 3.10 or later. Install Joule by running:
 
   $> python3 setup.py install
 
-To run the Joule daemon, first configure your system with:
+It is also available through PyPi:
 
-  $> sudo joule admin initialize
+  $> pip3 install joule
 
-Then control the daemon as a system service:
+To run the Joule daemon, you must have a PostgreSQL database running with the TimescaleDB extension installed.
+Full instructions on installing TimescaleDB can be found at https://docs.timescale.com/latest/getting-started/installation
+A script to automate the installation process on Ubuntu is included in this repository:
+
+  $> sudo ./install-postgresql.sh
+
+A script to create a database with the TimescaleDB extension is also included:
+
+  $> sudo -u postgres psql < ./postgresql-bootstrap.sql
+
+NOTE: It is strongly recommended to change the default password in the bootstrap script before running it.
+Once the database has been configured you can initialize Joule using the appropriate DSN string:
+
+  $> sudo joule admin initialize --dsn joule:joule@localhost:5432/joule
+
+Change the password to match your configuration.
+Finally, use systemctl to manage the daemon service:
 
   $> sudo systemctl [enable|disable|start|stop|status] joule
 
+To connect to the Joule daemon, use the command line client:
+
+  $> sudo -E joule admin authorize
+
+See https://wattsworth.net/joule for full documentation on using Joule.
 
 Tests
 -----
