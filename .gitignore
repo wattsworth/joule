@@ -22,3 +22,5 @@ joule/scratch.py
 .eggs
 tests/e2e/pki/*.crt
 tests/e2e/pki/*.srl
+.env
+postgres-data

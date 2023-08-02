@@ -1,5 +1,5 @@
 from joule.models.master import Master
-import psycopg2
+import sys
 
 def update_users_from_file(users_file, db):
     print(f"Updating users based on [{users_file}]")
@@ -13,6 +13,7 @@ def update_users_from_file(users_file, db):
                 parse_removal(line, db)
             else:
                 parse_addition(line, db)
+    sys.stdout.flush()
 
 
 def parse_removal(line, db):
@@ -37,8 +38,8 @@ def parse_addition(line, db):
         print(f"ERROR: invalid syntax in users file: {line}")
         return
     user, key = params
-    if len(key) < 32:
-        print(f"ERROR: key is too short, must be >= 32 characters: {line}")
+    if len(key) < 10:
+        print(f"ERROR: key is too short, must be >= 10 characters: {line}")
         return
     add_user(user.strip(), key.strip(), db)
 
@@ -62,6 +63,10 @@ def remove_user_like(name, db):
 
 
 def add_user(name, key, db):
+    # if this key is for the same name, then nothing to do
+    if db.query(Master).filter(Master.name == name).filter(Master.key == key).first():
+        print(f"{name} already exists with this key")
+        return
     # make sure the key does not exist already
     if db.query(Master).filter(Master.key==key).first():
         print(f"Cannot add {name}, the requested key is already associated with another user")

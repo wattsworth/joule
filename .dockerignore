@@ -5,3 +5,5 @@ docs
 docserver
 htmlcov
 venv
+tests
+Joule.egg-info

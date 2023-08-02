@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: timescale/timescaledb:latest-pg15
+    restart: always
+    environment:
+      POSTGRES_USER: joule
+      POSTGRES_PASSWORD: joule
+      POSTGRES_DB: joule
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data  # persist data
+  joule:
+    #image: wattsworth/joule:latest # use Docker Hub image
+    build: # use the local Dockerfile
+      dockerfile: Dockerfile
+    environment:
+      NODE_NAME: joule
+      POSTGRES_USER: joule
+      POSTGRES_PASSWORD: joule
+      POSTGRES_DB: joule
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      USER_KEY: ${USER_KEY}
+    restart: always
+    ports:
+      - 8085:80
