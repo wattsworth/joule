@@ -344,6 +344,7 @@ def main(argv=None):
         postgres=# GRANT ALL PRIVILEGES ON DATABASE joule TO joule WITH GRANT OPTION;
         postgres=# GRANT pg_read_all_settings TO joule;
         """)
+        raise e
         loop.close()
         exit(1)
 
