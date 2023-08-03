@@ -38,7 +38,10 @@ ADD docker/user.template.conf /config/user.template
 RUN mkdir /etc/joule && mkdir /stub
 RUN cd / && rm -rf /build
 # allow the user to override the configuration by mounting a volume to /etc/joule
-RUN ln -s /config/main.conf /etc/joule/main.conf
+RUN mkdir -p /etc/joule/configs && \
+    ln -s /config/main.conf /etc/joule/main.conf && \
+    ln -s /config/user.conf /etc/joule/configs/user.conf
+# allow the user to override the user configuration by mounting a volume to /etc/joule/configs
 CMD envsubst < /config/main.template > /config/main.conf && \
     envsubst < /config/user.template > /config/user.conf && \
     /usr/local/bin/jouled

@@ -14,6 +14,8 @@ services:
     #image: wattsworth/joule:latest # use Docker Hub image
     build: # use the local Dockerfile
       dockerfile: Dockerfile
+    volumes:
+      - ./configs:/etc/joule/configs  # test configs
     environment:
       NODE_NAME: joule
       POSTGRES_USER: joule
