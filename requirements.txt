@@ -54,5 +54,4 @@ treelib==1.6.4
 typing_extensions==4.6.3
 tzlocal==5.0.1
 urllib3==2.0.2
-uvloop==0.17.0
 yarl==1.9.2

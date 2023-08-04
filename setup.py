@@ -49,7 +49,6 @@ setup(
                       'jinja2',
                       'asyncpg',
                       'psycopg2-binary',
-                      'uvloop',
                       'aiodns',
                       'cchardet',
                       'pyopenssl',
