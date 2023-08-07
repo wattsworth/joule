@@ -86,6 +86,10 @@ def main():
             else:
                 shutil.rmtree("/etc/joule/")
         os.symlink(test_path, "/etc/joule")
+        try:
+            os.unlink("/etc/joule/security")
+        except FileNotFoundError:
+            pass
         os.symlink(SECURITY_DIR, "/etc/joule/security")
 
 

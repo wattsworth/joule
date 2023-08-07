@@ -227,6 +227,7 @@ class TestWorker(unittest.TestCase):
             task = asyncio.create_task(self.worker.run(self.supervisor.subscribe, restart=False))
             await asyncio.sleep(0.5)
             await self.worker.stop()
+            await asyncio.sleep(2)
 
         with self.assertLogs(level="WARNING"):
             with self.check_fd_leakage():
