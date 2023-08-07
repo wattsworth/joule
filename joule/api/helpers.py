@@ -212,8 +212,12 @@ def _user_config_dir() -> str:
     # create it if it doesn't exist
     if "JOULE_USER_CONFIG_DIR" in os.environ:
         config_dir = os.environ["JOULE_USER_CONFIG_DIR"]
-    else:
+    elif "HOME" in os.environ:
         config_dir = os.path.join(os.environ["HOME"], ".joule")
+    elif "APPDATA" in os.environ:
+        config_dir = os.path.join(os.environ["APPDATA"], ".joule")
+    else:
+        raise Exception("specify JOULE_USER_CONFIG_DIR environment variable")
     if not os.path.isdir(config_dir):
         os.mkdir(config_dir, mode=0o700)
     return config_dir

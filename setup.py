@@ -50,7 +50,6 @@ setup(
                       'asyncpg',
                       'psycopg2-binary',
                       'aiodns',
-                      'cchardet',
                       'pyopenssl',
                       'dsnparse',
                       'h5py',

@@ -11,7 +11,6 @@ asyncpg==0.27.0
 asynctest==0.13.0
 attrs==23.1.0
 beautifulsoup4==4.12.2
-cchardet==2.1.7
 certifi==2023.5.7
 cffi==1.15.1
 charset-normalizer==3.1.0
