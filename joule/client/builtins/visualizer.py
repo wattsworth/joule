@@ -62,9 +62,9 @@ class Visualizer(FilterModule):  # pragma: no cover
                 if len(data) == 0:
                     continue
                 for i in range(len(pipe.stream.elements)):
-                    data_mean = float(np.mean(data['data'][i]))
-                    data_min = float(np.min(data['data'][i]))
-                    data_max = float(np.max(data['data'][i]))
+                    data_mean = float(np.mean(data['data'][:, i]))
+                    data_min = float(np.min(data['data'][:, i]))
+                    data_max = float(np.max(data['data'][:, i]))
                     self.elements[i + offset]['value'] = data_mean
                     # compute the new min value
                     if type(self.elements[i + offset]['min']) is str:
