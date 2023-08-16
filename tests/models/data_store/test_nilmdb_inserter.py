@@ -1,5 +1,4 @@
-import asynctest
-import aiohttp
+import unittest
 import numpy as np
 import time
 import asyncio
@@ -12,11 +11,11 @@ from tests import helpers
 from tests.models.pipes.reader import QueueReader
 
 
-class TestNilmdbInserter(asynctest.TestCase):
+class TestNilmdbInserter(unittest.IsolatedAsyncioTestCase):
     use_default_loop = False
     forbid_get_event_loop = True
 
-    async def setUp(self):
+    async def asyncSetUp(self):
         self.fake_nilmdb = FakeNilmdb()
         url = await self.fake_nilmdb.start()
         # use a 0 insert period for test execution
@@ -27,7 +26,7 @@ class TestNilmdbInserter(asynctest.TestCase):
         self.stream1 = DataStream(id=1, name="stream1", datatype=DataStream.DATATYPE.INT8,
                                   elements=[Element(name="e%d" % x) for x in range(3)])
 
-    async def tearDown(self):
+    async def asyncTearDown(self):
         await self.fake_nilmdb.stop()
         await self.store.close()
 

@@ -4,7 +4,6 @@ import asyncio
 import json
 import numpy as np
 from unittest import mock
-import asynctest
 
 from .test_filter_module import SimpleFilter
 from .test_reader_module import SimpleReader

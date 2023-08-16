@@ -1,4 +1,4 @@
-import asynctest
+import unittest
 import testing.postgresql
 import asyncpg
 import tempfile
@@ -12,11 +12,11 @@ from joule.models.event_stream import EventStream
 SQL_DIR = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'joule', 'sql')
 
 
-class TestEventStore(asynctest.TestCase):
+class TestEventStore(unittest.IsolatedAsyncioTestCase):
     use_default_loop = False
     forbid_get_event_loop = True
 
-    async def setUp(self):
+    async def asyncSetUp(self):
         # set up the pscql database
         self.psql_dir = tempfile.TemporaryDirectory()
         self.postgresql = testing.postgresql.Postgresql(base_dir=self.psql_dir.name)
@@ -41,7 +41,7 @@ class TestEventStore(asynctest.TestCase):
 
         await conn.close()
 
-    async def tearDown(self):
+    async def asyncTearDown(self):
         self.postgresql.stop()
         self.psql_dir.cleanup()
 

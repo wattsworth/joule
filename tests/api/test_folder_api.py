@@ -1,6 +1,6 @@
 from tests.api import mock_session
 import random
-import asynctest
+import unittest
 
 from joule.api.node import TcpNode
 from joule import errors
@@ -10,9 +10,9 @@ from joule.api.folder import Folder
 from .helpers import build_stream
 
 
-class TestFolderApi(asynctest.TestCase):
+class TestFolderApi(unittest.IsolatedAsyncioTestCase):
 
-    async def setUp(self):
+    async def asyncSetUp(self) -> None:
         # no URL or event loop
         self.node = TcpNode('mock_node', 'http://url', 'api_key')
         self.session = mock_session.MockSession()

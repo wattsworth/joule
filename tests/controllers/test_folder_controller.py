@@ -37,6 +37,10 @@ class TestFolderController(AioHTTPTestCase):
 
         resp = await self.client.request("GET", "/folders.json")
         actual = await resp.json()
+        # list of active streams should be in the response
+        self.assertTrue("active_data_streams" in actual)
+        # remove active_streams from the response, so we can compare it with the database copy
+        del actual['active_data_streams']
         # basic check to see if JSON response matches database structure
         expected = folder.root(db).to_json()
         self.assertEqual(actual, expected)
@@ -44,6 +48,8 @@ class TestFolderController(AioHTTPTestCase):
         resp = await self.client.request("GET", "/folders.json", params={"data-info": ""})
         actual = await resp.json()
         expected = folder.root(db).to_json(data_stream_info={my_stream.id: mock_info})
+        # remove active_streams from the response, so we can compare it with the database copy
+        del actual['active_data_streams']
         self.assertEqual(actual, expected)
 
 

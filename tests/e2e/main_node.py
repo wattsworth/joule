@@ -133,6 +133,7 @@ def main():
                                   stdout=subprocess.PIPE,
                                   stderr=subprocess.STDOUT,
                                   universal_newlines=True)
+        result = asyncio.run(wait_for_follower())
 
         print("---------[%s]---------" % test_name)
         sys.stdout.flush()

@@ -44,7 +44,7 @@ def main():
                               stderr=sys.stderr,
                               universal_newlines=True)
     # wait until local node is online
-    max_tries = 6
+    max_tries = 16
     num_tries = 0
     while num_tries < max_tries:
         num_tries += 1
@@ -58,7 +58,8 @@ def main():
     # local node failure, print the log
     if num_tries == max_tries:
         exit()
-
+    print("follower node is up!")
+    sys.stdout.flush()
     # wait until the master node is online
     max_tries = 10
     num_tries = 0

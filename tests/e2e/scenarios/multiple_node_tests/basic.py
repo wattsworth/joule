@@ -1,13 +1,13 @@
-import asynctest
+import unittest
 
 import joule.api
 import subprocess
-from joule import api, errors
-import os
+from joule import api
 
-class TestBasicAPI(asynctest.TestCase):
 
-    async def setUp(self):
+class TestBasicAPI(unittest.IsolatedAsyncioTestCase):
+
+    async def asyncSetUp(self):
         self.node1 = api.get_node("node1.joule")
         followers = await self.node1.follower_list()
         self.assertEqual(len(followers), 1)
@@ -22,8 +22,8 @@ class TestBasicAPI(asynctest.TestCase):
         /main/folder/base:int32[x]
         """
 
-    async def tearDown(self):
-        await self.node2.master_delete("user","cli")
+    async def asyncTearDown(self):
+        await self.node2.master_delete("user", "cli")
         await self.node1.close()
         await self.node2.close()
 
@@ -56,7 +56,3 @@ class TestBasicAPI(asynctest.TestCase):
         subprocess.run(cmd.split(" "))
         copied_events = await self.node2.event_stream_read("/eventstreams/TestEventsCopy")
         self.assertListEqual(events, copied_events)
-
-
-
-

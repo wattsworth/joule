@@ -1,19 +1,18 @@
-import asynctest
 import unittest
 
 import joule.errors
 from joule import api, utilities, models
 import numpy as np
 import asyncio
-from icecream import ic
 from sqlalchemy import text
 
-class TestDataMethods(asynctest.TestCase):
 
-    async def setUp(self):
+class TestDataMethods(unittest.IsolatedAsyncioTestCase):
+
+    async def asyncSetUp(self):
         self.node = api.get_node()
 
-    async def tearDown(self):
+    async def asyncTearDown(self):
         await self.node.close()
 
     async def test_data_read(self):
@@ -60,7 +59,7 @@ class TestDataMethods(asynctest.TestCase):
         stream.consume(len(data))
         np.testing.assert_array_almost_equal(
             np.ones((len(data) - 1)) * 10,
-            np.diff(data['data'],axis=0).squeeze())
+            np.diff(data['data'], axis=0).squeeze())
 
         await stream.close()
 
@@ -111,7 +110,7 @@ class TestDataMethods(asynctest.TestCase):
             resp = conn.execute(text(f"SELECT count(*) from data.stream{stream_id}"))
             row_count = resp.fetchone()[0]
             print(f"resp is {row_count}")
-            assert row_count==blk_size
+            assert row_count == blk_size
 
     async def test_data_write_invalid_values(self):
         # write duplicate data to a pipe
@@ -124,9 +123,9 @@ class TestDataMethods(asynctest.TestCase):
         data1 = np.random.random((blk_size, 1))
         data2 = np.random.random((blk_size, 1))
         res = np.hstack((ts[:, None], data1, data2))
-        await pipe.write(res[75:,:])
+        await pipe.write(res[75:, :])
         try:
-            await pipe.write(res[:50,:])
+            await pipe.write(res[:50, :])
             await pipe.close()
 
             self.fail("should have raised an exception")
@@ -136,11 +135,11 @@ class TestDataMethods(asynctest.TestCase):
         # write duplicate data across two pipes
         await self.node.data_delete("/archive/data1")
         pipe = await self.node.data_write("/archive/data1")
-        await pipe.write(res[25:,:])
+        await pipe.write(res[25:, :])
         await pipe.close()
         pipe = await self.node.data_write("/archive/data1")
         try:
-            await pipe.write(res[:50,:])
+            await pipe.write(res[:50, :])
             await pipe.close()
             self.fail("should have raised an exception")
         except joule.errors.ApiError as e:
@@ -149,7 +148,7 @@ class TestDataMethods(asynctest.TestCase):
         # write data with NaN's
         await self.node.data_delete("/archive/data1")
         pipe = await self.node.data_write("/archive/data1")
-        res[0,2] = np.nan
+        res[0, 2] = np.nan
         try:
             await pipe.write(res)
             await pipe.close()
@@ -166,7 +165,7 @@ class TestDataMethods(asynctest.TestCase):
             src_info = await self.node.data_stream_info(src)
             if src_info.rows > 10:
                 break
-            await asyncio.sleep(1) # 10Hz rate so this should just happen once
+            await asyncio.sleep(1)  # 10Hz rate so this should just happen once
         dest = await self.node.data_stream_create(src, "/tmp")
         data_in = await self.node.data_read(src)
         data_out = await self.node.data_write(dest)

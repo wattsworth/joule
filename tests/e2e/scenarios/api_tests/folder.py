@@ -1,10 +1,10 @@
-import asynctest
+import unittest
 from joule import api, errors
 
 
-class TestFolderMethods(asynctest.TestCase):
+class TestFolderMethods(unittest.IsolatedAsyncioTestCase):
 
-    async def setUp(self):
+    async def asyncSetUp(self):
         self.node = api.get_node()
         """
         └── test
@@ -26,7 +26,7 @@ class TestFolderMethods(asynctest.TestCase):
         stream.name = "s2a1a"
         await self.node.data_stream_create(stream, "/test/f2/f2a")
 
-    async def tearDown(self):
+    async def asyncTearDown(self):
         await self.node.folder_delete("/test", recursive=True)
         await self.node.close()
 

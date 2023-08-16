@@ -1,13 +1,14 @@
-import asynctest
+import unittest
+
 from joule import api, errors
 
 
-class TestModuleMethods(asynctest.TestCase):
+class TestModuleMethods(unittest.IsolatedAsyncioTestCase):
 
-    async def setUp(self):
+    async def asyncSetUp(self):
         self.node = api.get_node()
 
-    async def tearDown(self):
+    async def asyncTearDown(self) -> None:
         await self.node.close()
 
     async def test_module_get(self):

@@ -1,8 +1,7 @@
-import asynctest
-import aiohttp
 from aiohttp.test_utils import unused_port
 import os
 import warnings
+import unittest
 
 from joule.models import DataStream, Element, pipes
 from joule.models.data_store.nilmdb import NilmdbStore, bytes_per_row
@@ -14,11 +13,11 @@ STREAM_LIST = os.path.join(os.path.dirname(__file__), 'stream_list.json')
 warnings.simplefilter('always')
 
 
-class TestNilmdbStore(asynctest.TestCase):
+class TestNilmdbStore(unittest.IsolatedAsyncioTestCase):
     use_default_loop = False
     forbid_get_event_loop = True
 
-    async def setUp(self):
+    async def asyncSetUp(self):
         self.fake_nilmdb = FakeNilmdb()
         url = await self.fake_nilmdb.start()
 
@@ -34,7 +33,7 @@ class TestNilmdbStore(asynctest.TestCase):
         self.stream2 = DataStream(id=2, name="stream2", datatype=DataStream.DATATYPE.UINT16,
                                   elements=[Element(name="e%d" % x) for x in range(4)])
 
-    async def tearDown(self):
+    async def asyncTearDown(self) -> None:
         await self.fake_nilmdb.stop()
         await self.store.close()
 

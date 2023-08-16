@@ -1,6 +1,5 @@
 from tests.api import mock_session
-import asynctest
-
+import unittest
 from joule.api.node import TcpNode
 from joule import errors
 
@@ -9,9 +8,9 @@ from joule.api.folder import Folder
 from .helpers import build_stream
 
 
-class TestStreamApi(asynctest.TestCase):
+class TestStreamApi(unittest.IsolatedAsyncioTestCase):
 
-    async def setUp(self):
+    async def asyncSetUp(self):
         # no URL or event loop
         self.node = TcpNode('mock_node', 'http://url', 'api_key')
         self.session = mock_session.MockSession()

@@ -1,4 +1,3 @@
-import asynctest
 import testing.postgresql
 import numpy as np
 import asyncpg
@@ -8,6 +7,7 @@ import tempfile
 import shutil
 import os
 import sys
+import unittest
 
 from joule.models import DataStream, Element, pipes
 from joule.models.data_store import psql_helpers
@@ -18,11 +18,11 @@ from tests.models.pipes.reader import QueueReader
 SQL_DIR = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'joule', 'sql')
 
 
-class TestTimescale(asynctest.TestCase):
+class TestTimescale(unittest.IsolatedAsyncioTestCase):
     use_default_loop = False
     forbid_get_event_loop = True
 
-    async def setUp(self):
+    async def asyncSetUp(self):
         # set up the pscql database
         self.psql_dir = tempfile.TemporaryDirectory()
         self.postgresql = testing.postgresql.Postgresql(base_dir=self.psql_dir.name)
@@ -50,7 +50,7 @@ class TestTimescale(asynctest.TestCase):
         # await conn.execute("GRANT ALL ON SCHEMA data TO public")
         await conn.close()
 
-    async def tearDown(self):
+    async def asyncTearDown(self):
         self.postgresql.stop()
         self.psql_dir.cleanup()
 
