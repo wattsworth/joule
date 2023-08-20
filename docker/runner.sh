@@ -17,4 +17,4 @@ nginx -g "daemon on;"
 
 # start jouled
 rm -f /tmp/joule/pid # remove any existing pid (if container restarts)
-gosu www-data /usr/local/bin/jouled
+/usr/local/bin/jouled

@@ -48,6 +48,7 @@ RUN mkdir /etc/joule && mkdir /stub
 RUN cd / && rm -rf /build
 
 # add nginx
+ADD docker/nginx.conf /etc/nginx/nginx.conf
 ADD docker/nginx-joule.conf /etc/nginx/templates/joule.conf.template
 RUN rm /etc/nginx/sites-enabled/default
 
