@@ -1,7 +1,8 @@
 import asyncpg
 import json
-
+import datetime
 from typing import List, Optional, TYPE_CHECKING, Dict, Callable, Tuple
+
 from joule.models.data_store import psql_helpers
 import joule.utilities
 
@@ -74,6 +75,39 @@ class EventStore:
         async with self.pool.acquire() as conn:
             record = await conn.fetch(query)
             return record[0]['count']
+
+    async def histogram(self, stream: 'EventStream',
+                        start: Optional[int] = None, end: Optional[int] = None,
+                        json_filter=None,
+                        nbuckets=100) -> List[Dict]:
+        if end is not None and start is not None and end <= start:
+            raise ValueError("Invalid time bounds start [%d] must be < end [%d]" % (start, end))
+        # if start or end are omitted use the beginning/end of the dataset
+        async with self.pool.acquire() as conn:
+            if end is None:
+                query = "SELECT time FROM data.events ORDER BY time DESC LIMIT 1"
+                end = (await conn.fetch(query))
+                if len(end) == 0:
+                    return []  # no data
+                end = end[0]['time']
+            elif type(end) is not datetime.datetime:
+                end = datetime.datetime.fromtimestamp(end / 1e6, tz=datetime.timezone.utc).replace(tzinfo=None)
+            if start is None:
+                query = "SELECT time FROM data.events ORDER BY time ASC LIMIT 1"
+                start = (await conn.fetch(query))[0]['time']
+            elif type(start) is not datetime.datetime:
+                start = datetime.datetime.fromtimestamp(start / 1e6, tz=datetime.timezone.utc).replace(tzinfo=None)
+            bucket_size = ((end - start) / (nbuckets - 1)).total_seconds()
+            query = f"""SELECT time_bucket_gapfill('{bucket_size}s', time) AS bucket, COALESCE(count(*),0) AS count
+                       FROM data.events
+                       WHERE time >= $1 AND time <= $2
+                       AND event_stream_id=$3"""
+            if json_filter is not None and len(json_filter) > 0:
+                query += " AND " + psql_helpers.query_event_json(json_filter)
+            query += " GROUP BY bucket ORDER BY bucket ASC"
+            records = await conn.fetch(query, start, end, stream.id)
+            return histogram_to_events(records)
+            #return [(joule.utilities.datetime_to_timestamp(r['bucket']), r['count']) for r in records]
 
     async def extract(self, stream: 'EventStream',
                       start: Optional[int] = None,
@@ -214,3 +248,19 @@ def record_to_event(record: asyncpg.Record) -> Dict:
         'start_time': joule.utilities.datetime_to_timestamp(record['time']),
         'end_time': end,
         'content': json.loads(record['content'])}
+
+
+def histogram_to_events(histogram: List[Tuple[int, int]]) -> List[Dict]:
+    events = []
+    for i in range(len(histogram) - 1):
+        events.append({
+            "id": -1,  # not used
+            "start_time": joule.utilities.datetime_to_timestamp(histogram[i][0]),
+            "end_time": joule.utilities.datetime_to_timestamp(histogram[i + 1][0]),
+            "content": {"count": histogram[i][1]}})
+    events.append({
+        "id": -1,  # not used
+        "start_time": joule.utilities.datetime_to_timestamp(histogram[-1][0]),
+        "end_time": joule.utilities.datetime_to_timestamp(histogram[-1][0]),
+        "content": {"count": histogram[-1][1]}})
+    return events

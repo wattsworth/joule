@@ -81,7 +81,7 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
         try:
             os.mkdir(socket_directory)
             # make sure the ownership is correct
-            os.chmod(socket_directory, 0o700)
+            os.chmod(socket_directory, 0o750)
         except FileExistsError:
             raise ConfigurationError("SocketDirectory [%s] is a file" % socket_directory)
         except PermissionError:

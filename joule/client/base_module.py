@@ -511,6 +511,7 @@ class BaseModule:
         await runner.setup()
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock.bind(args.socket)
+        os.chmod(args.socket, 0o660)
         site = web.SockSite(runner, sock)
         await site.start()
         print("starting web server at [%s]" % args.socket)

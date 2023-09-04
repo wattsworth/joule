@@ -66,6 +66,8 @@ def _save_stream(new_stream: DataStream, path: str, db: Session) -> None:
         else:
             cur_stream.merge_configs(new_stream)
             db.add(cur_stream)
-            db.expunge(new_stream)
+            if new_stream in db:
+                print("Expunging new_stream from database... check this out")
+                db.expunge(new_stream)
     else:
         my_folder.data_streams.append(new_stream)

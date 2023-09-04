@@ -229,7 +229,7 @@ async def get_dsn(node_name) -> str:
 
 def start_src_db(backup_path, pgctl_binary, log) -> str:
     # make sure file permissions are correct
-    os.chmod(backup_path, 0o700)
+    os.chmod(backup_path, 0o750)
     # read the info file for database name and user
     with open(os.path.join(backup_path, "info.json"), 'r') as f:
         db_info = json.load(f)

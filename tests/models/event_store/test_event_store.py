@@ -1,6 +1,7 @@
 import unittest
 import testing.postgresql
 import asyncpg
+import random
 import tempfile
 import shutil
 import os
@@ -8,6 +9,8 @@ import sys
 
 from joule.models.data_store.event_store import EventStore, StreamInfo
 from joule.models.event_stream import EventStream
+from joule.utilities.time import human_to_timestamp as h2ts
+from joule.utilities.time import timestamp_to_human as ts2h
 
 SQL_DIR = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'joule', 'sql')
 
@@ -46,7 +49,8 @@ class TestEventStore(unittest.IsolatedAsyncioTestCase):
         self.psql_dir.cleanup()
 
     async def test_runner(self):
-        tests = [self._test_basic_upsert_extract_remove,
+        tests = [self._test_histogram,
+                 self._test_basic_upsert_extract_remove,
                  self._test_time_bound_queries,
                  self._test_remove_bound_queries,
                  self._test_json_queries,
@@ -105,6 +109,55 @@ class TestEventStore(unittest.IsolatedAsyncioTestCase):
         stream_info = await self.store.info(streams[1:-1])
         ids = [s.id for s in streams[1:-1]]
         self.assertDictEqual(stream_info, _expected_info(ids))
+
+    async def _test_histogram(self):
+        def _count_events(items):
+            acc = 0
+            for item in items:
+                acc += item['content']['count']
+            return acc
+        # generate 200 events with start times between Aug 1 and Aug 2 2021
+        bounds1 = [h2ts("2021-08-01T00:00:00"), h2ts("2021-08-02T00:00:00")]
+        times = [random.randint(bounds1[0], bounds1[1]) for _ in range(200)]
+        event_stream = EventStream(id=1, name='test_stream')
+        events1 = [{'start_time': ts,
+                    'end_time': ts + random.randint(int(10e6), int(100e6)),
+                    'content': {'block': 1}} for ts in times]
+        bounds2 = [h2ts("2021-08-03T00:00:00"), h2ts("2021-08-04T00:00:00")]
+        times = [random.randint(bounds2[0], bounds2[1]) for _ in range(150)]
+        events2 = [{'start_time': ts,
+                    'end_time': ts + random.randint(int(10e6), int(100e6)),
+                    'content': {'block': 2}} for ts in times]
+        await self.store.upsert(event_stream, events1 + events2)
+        # now get the histogram for the whole range
+        hist = await self.store.histogram(event_stream)
+        self.assertEqual(_count_events(hist), len(events1 + events2))
+        # get the histogram for block 1 by time
+        hist = await self.store.histogram(event_stream, end=bounds1[1], nbuckets=50)
+        self.assertEqual(_count_events(hist), len(events1))
+        # expect the right number of buckets
+        self.assertEqual(len(hist), 50)
+        # get the histogram for block 2 by time
+        hist = await self.store.histogram(event_stream, start=bounds2[0], nbuckets=150)
+        self.assertEqual(_count_events(hist), len(events2))
+        # expect the right number of buckets
+        self.assertEqual(len(hist), 150)
+        # get the histogram for block 2 by time, but specify both bounds
+        hist = await self.store.histogram(event_stream, start=bounds2[0], end=bounds2[1], nbuckets=150)
+        self.assertEqual(_count_events(hist), len(events2))
+        # expect the right number of buckets
+        self.assertEqual(len(hist), 150)
+        # get the histogram for block 1 by JSON filter
+        hist = await self.store.histogram(event_stream, json_filter=[[['block', 'eq', 1]]])
+        self.assertEqual(_count_events(hist), len(events1))
+        # expect the right number of buckets
+        self.assertEqual(len(hist), 100)
+        # retrieving the earlier block and the later JSON filter should return no records
+        hist = await self.store.histogram(event_stream, json_filter=[[['block', 'eq', 2]]],
+                                          end=bounds1[1])
+        self.assertEqual(_count_events(hist), 0)
+        # expect the right number of buckets
+        self.assertEqual(len(hist), 100)
 
     async def _test_basic_upsert_extract_remove(self):
         event_stream1 = EventStream(id=1, name='test_stream1')

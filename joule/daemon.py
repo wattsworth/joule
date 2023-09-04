@@ -70,7 +70,7 @@ class Daemon(object):
         # write our pid
         with open(pid_file, 'w') as f:
             f.write('%d\n' % os.getpid())
-        os.chmod(pid_file, 0o600)
+        os.chmod(pid_file, 0o640)
 
         if self.config.nilmdb_url is not None:
             self.data_store: DataStore = \
@@ -240,7 +240,7 @@ class Daemon(object):
         sock_file = os.path.join(self.config.socket_directory, 'api')
         sock_site = web.UnixSite(runner, sock_file)
         await sock_site.start()
-        os.chmod(sock_file, 0o600)
+        os.chmod(sock_file, 0o660)
 
         # sleep and check for stop condition
         while not self.stop_requested:

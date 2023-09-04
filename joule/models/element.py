@@ -64,6 +64,25 @@ class Element(Base):
                 self.default_max == other.default_max and
                 self.default_min == other.default_min)
 
+    def merge_configs(self, other: 'Element'):
+        # only allow merging elements in the same index
+        if self.index != other.index:
+            raise ConfigurationError("cannot merge elements with different indices")
+        # merge other into self and return true
+        # if any of the values are different
+        if self == other:
+            return False
+        self.name = other.name
+        self.units = other.units
+        self.plottable = other.plottable
+        self.display_type = other.display_type
+        self.offset = other.offset
+        self.scale_factor = other.scale_factor
+        self.default_max = other.default_max
+        self.default_min = other.default_min
+        return True
+
+
     def to_json(self):
         """
 

@@ -223,8 +223,10 @@ async def read_events(request):
             return web.Response(text="[limit] must be > 0", status=400)
         event_count = await event_store.count(my_stream, params['start'], params['end'], json_filter=json_filter)
         if event_count > params['limit']:
-            # too many events, just send the count parameter
-            return web.json_response(data={'count': event_count, 'events': []})
+            # too many events, send a histogram instead
+            event_hist = await event_store.histogram(my_stream, params['start'], params['end'], json_filter=json_filter,
+                                                     nbuckets=100)
+            return web.json_response(data={'count': event_count, 'events': event_hist, 'type': 'histogram'})
     # if return-subset, limit is SOFT, return just that many events
     limit = None
     if params['limit'] is not None and 'return-subset' in request.query:
@@ -233,7 +235,7 @@ async def read_events(request):
         limit = params['limit']
 
     events = await event_store.extract(my_stream, params['start'], params['end'], limit=limit, json_filter=json_filter)
-    return web.json_response(data={'count': len(events), 'events': events})
+    return web.json_response(data={'count': len(events), 'events': events, 'type': 'events'})
 
 
 async def remove_events(request):
