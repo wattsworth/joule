@@ -241,6 +241,7 @@ class Daemon(object):
         sock_site = web.UnixSite(runner, sock_file)
         await sock_site.start()
         os.chmod(sock_file, 0o660)
+        os.chmod(self.config.socket_directory, 0o770)
 
         # sleep and check for stop condition
         while not self.stop_requested:
