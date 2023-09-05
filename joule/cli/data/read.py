@@ -9,7 +9,6 @@ import h5py
 import json
 from joule import errors
 from joule.utilities import human_to_timestamp
-from icecream import ic
 
 stop_requested = False
 

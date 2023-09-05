@@ -71,7 +71,7 @@ class DataStream(Base):
                                                                     back_populates="stream")
     updated_at: datetime.datetime = Column(DateTime, nullable=False)
 
-    def merge_configs(self, other: 'DataStream') -> None:
+    def merge_configs(self, other: 'DataStream') -> bool:
         # first update the elements, first make sure
         # both streams have the same number of elements
         # and that they are in the same order
@@ -83,7 +83,14 @@ class DataStream(Base):
         for i in range(len(my_elements)):
             updated_element |= my_elements[i].merge_configs(other_elements[i])
 
-        # update the updated_at timestamp if configs are different
+        # replace configurable attributes with other's values
+        self.keep_us = other.keep_us
+        self.decimate = other.decimate
+        self.description = other.description
+        self.is_configured = other.is_configured
+        self.is_destination = other.is_destination
+        self.is_source = other.is_source
+
         if (
                 self.keep_us != other.keep_us or
                 self.decimate != other.decimate or
@@ -95,13 +102,8 @@ class DataStream(Base):
                 updated_element
         ):
             self.updated_at = datetime.datetime.utcnow()
-        # replace configurable attributes with other's values
-        self.keep_us = other.keep_us
-        self.decimate = other.decimate
-        self.description = other.description
-        self.is_configured = other.is_configured
-        self.is_destination = other.is_destination
-        self.is_source = other.is_source
+            return True
+        return False
 
     def update_attributes(self, attrs: Dict) -> None:
         updated = False

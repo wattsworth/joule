@@ -43,6 +43,7 @@ Unittests can be run using unittest, see **joule/htmlcov** for code coverage.
 .. toctree::
     :maxdepth: 3
 
+    installation
     quick_start
     using_joule
     cli

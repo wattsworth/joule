@@ -2,7 +2,6 @@ from typing import Union, Optional, List
 import asyncio
 import aiohttp
 import numpy as np
-from icecream import ic
 from joule.models.pipes import compute_dtype
 from joule.utilities.misc import timestamps_are_monotonic, validate_values
 from .session import BaseSession

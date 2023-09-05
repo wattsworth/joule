@@ -11,7 +11,6 @@ import json
 import numpy as np
 from joule import errors
 from joule.utilities import timestamp_to_human
-from icecream import ic
 stop_requested = False
 
 BLOCK_SIZE = 10000  # insert blocks of datta

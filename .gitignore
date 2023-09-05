@@ -24,3 +24,5 @@ tests/e2e/pki/*.srl
 .env
 postgres-data
 *checkpoint.ipynb
+version.py
+linux_venv

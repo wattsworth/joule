@@ -5,7 +5,6 @@ from typing import Dict, List
 from joule import Pipe
 from joule.errors import ApiError, EmptyPipeError
 from scipy.interpolate import interp1d
-from icecream import ic
 
 ARGS_DESC = """
 ---

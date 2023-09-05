@@ -5,7 +5,6 @@ import random
 import time
 from typing import List, Callable, Optional
 import logging
-from icecream import ic
 
 from joule.models import DataStream, pipes
 from joule.models.data_store import errors
