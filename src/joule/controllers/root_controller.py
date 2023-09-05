@@ -1,7 +1,7 @@
 from aiohttp import web
 from joule.models import DataStore
 import joule
-
+import pkg_resources
 
 async def index(request: web.Request):
     return web.Response(text="Joule server")
@@ -19,7 +19,7 @@ async def dbinfo(request: web.Request):
 
 
 async def version_json(request: web.Request):
-    return web.json_response(data={'version': joule.__version__,
+    return web.json_response(data={'version': pkg_resources.get_distribution('joule').version,
                                    'name': request.app['name']})
 
 

@@ -72,11 +72,12 @@ Installation
 
 Joule requires Python 3.10 or later. Install Joule by running:
 
-  $> python3 setup.py install
+  $> pip install -r requirements.txt
+  $> pip install .
 
 It is also available through PyPi:
 
-  $> pip3 install joule
+  $> python3 -m pip install joule
 
 To run the Joule daemon, you must have a PostgreSQL database running with the TimescaleDB extension installed.
 Full instructions on installing TimescaleDB can be found at https://docs.timescale.com/latest/getting-started/installation

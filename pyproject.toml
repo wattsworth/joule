@@ -43,6 +43,12 @@ dependencies = [
 "Homepage" = "https://wattsworth.net/joule/"
 "Bug Tracker" = "https://github.com/wattsworth/joule/issues"
 
+[project.optional-dependencies]
+tests = [
+    'testing.postgresql',
+    'requests',
+    'icecream'
+]
 [project.scripts]
 joule = 'joule.cli:main'
 jouled = 'joule.daemon:main'
@@ -54,8 +60,7 @@ joule-visualizer-filter = 'joule.client.builtins.visualizer:main'
 joule-merge-filter = 'joule.client.builtins.merge_filter:main'
 
 [tool.setuptools]
-packages = ["joule"]
 include-package-data = true
 
 [tool.setuptools_scm]
-write_to = "joule/version.py"
+write_to = "src/joule/version.py"
