@@ -24,4 +24,4 @@ async def version_json(request: web.Request):
 
 
 async def version(request: web.Request):
-    return web.Response(text=joule.__version__)
+    return web.Response(text=pkg_resources.get_distribution('joule').version)
