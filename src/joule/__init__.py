@@ -6,6 +6,3 @@ from joule.models.pipes import LocalPipe, EmptyPipe, InputPipe, OutputPipe, Pipe
 from joule.models import DataStream, Element
 from joule import utilities
 
-from ._version import get_versions
-__version__ = get_versions()['version']
-del get_versions

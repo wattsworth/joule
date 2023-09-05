@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from typing import Dict ,List
+from typing import Dict, List
 import logging
 import re
 
@@ -64,10 +64,13 @@ def _save_stream(new_stream: DataStream, path: str, db: Session) -> None:
             logger.error("Invalid layout %s for [%s], existing stream has layout %s" % (
                 new_stream.layout, cur_stream.name, cur_stream.layout))
         else:
-            cur_stream.merge_configs(new_stream)
+            settings_changed = cur_stream.merge_configs(new_stream)
+            if settings_changed:
+                cur_stream.touch()
             db.add(cur_stream)
             if new_stream in db:
                 print("Expunging new_stream from database... check this out")
                 db.expunge(new_stream)
     else:
         my_folder.data_streams.append(new_stream)
+        my_folder.touch()

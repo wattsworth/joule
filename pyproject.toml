@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=61.0","setuptools_scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "joule"
+dynamic = ["version"]
+authors = [
+  { name="John Donnal", email="donnal@usna.edu" },
+]
+description = "Decentralized data processing for IoT platforms"
+readme = "README.rst"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: Open Source (see LICENSE)",
+    "Operating System :: Linux",
+]
+dependencies = [
+    'click',
+    'treelib',
+    'numpy',
+    'scipy',
+    'psutil',
+    'aiohttp>=3,<4',
+    'markdown',
+    'BeautifulSoup4',
+    'dateparser',
+    'tabulate',
+    'sqlalchemy',
+    'sqlalchemy',
+    'aiohttp-jinja2',
+    'jinja2',
+    'asyncpg',
+    'psycopg2-binary',
+    'aiodns',
+    'pyopenssl',
+    'dsnparse',
+    'h5py'
+]
+
+[project.urls]
+"Homepage" = "https://wattsworth.net/joule/"
+"Bug Tracker" = "https://github.com/wattsworth/joule/issues"
+
+[project.optional-dependencies]
+tests = [
+    'testing.postgresql',
+    'requests',
+    'icecream'
+]
+[project.scripts]
+joule = 'joule.cli:main'
+jouled = 'joule.daemon:main'
+joule-random-reader = 'joule.client.builtins.random_reader:main'
+joule-file-reader = 'joule.client.builtins.file_reader:main'
+joule-mean-filter = 'joule.client.builtins.mean_filter:main'
+joule-median-filter = 'joule.client.builtins.median_filter:main'
+joule-visualizer-filter = 'joule.client.builtins.visualizer:main'
+joule-merge-filter = 'joule.client.builtins.merge_filter:main'
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools_scm]
+write_to = "src/joule/version.py"

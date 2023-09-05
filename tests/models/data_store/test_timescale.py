@@ -15,7 +15,7 @@ from joule.models.data_store.timescale import TimescaleStore
 from tests import helpers
 from tests.models.pipes.reader import QueueReader
 
-SQL_DIR = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'joule', 'sql')
+SQL_DIR = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'src', 'joule', 'sql')
 
 
 class TestTimescale(unittest.IsolatedAsyncioTestCase):

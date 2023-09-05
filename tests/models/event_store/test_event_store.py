@@ -12,7 +12,7 @@ from joule.models.event_stream import EventStream
 from joule.utilities.time import human_to_timestamp as h2ts
 from joule.utilities.time import timestamp_to_human as ts2h
 
-SQL_DIR = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'joule', 'sql')
+SQL_DIR = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'src', 'joule', 'sql')
 
 
 class TestEventStore(unittest.IsolatedAsyncioTestCase):
@@ -116,6 +116,7 @@ class TestEventStore(unittest.IsolatedAsyncioTestCase):
             for item in items:
                 acc += item['content']['count']
             return acc
+
         # generate 200 events with start times between Aug 1 and Aug 2 2021
         bounds1 = [h2ts("2021-08-01T00:00:00"), h2ts("2021-08-02T00:00:00")]
         times = [random.randint(bounds1[0], bounds1[1]) for _ in range(200)]

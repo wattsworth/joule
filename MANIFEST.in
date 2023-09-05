@@ -1,9 +1,6 @@
-recursive-include joule/resources *
-recursive-include joule/client/builtins *
-recursive-include joule/sql *
-recursive-include joule/cli/admin/local_postgres_templates *
+recursive-include src/joule/resources *
+recursive-include src/joule/client/builtins *
+recursive-include src/joule/sql *
+recursive-include src/joule/cli/admin/local_postgres_templates *
 
-prune tests
-include versioneer.py
-include joule/_version.py
 global-exclude *.py[co]

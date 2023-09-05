@@ -8,7 +8,6 @@ import collections
 import datetime
 import psutil
 import numpy as np
-from icecream import ic
 
 from joule.models.module import Module
 from joule.models.data_stream import DataStream

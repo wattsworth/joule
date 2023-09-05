@@ -4,7 +4,6 @@ import logging
 
 from joule.models.pipes import Pipe, interval_token
 from joule.models.pipes.errors import PipeError
-from icecream import ic
 log = logging.getLogger('joule')
 
 

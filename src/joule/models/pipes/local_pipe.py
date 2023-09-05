@@ -3,7 +3,6 @@ import asyncio
 import logging
 from joule.models.pipes import Pipe
 from joule.models.pipes.errors import PipeError, EmptyPipe
-from icecream import ic
 
 Loop = asyncio.AbstractEventLoop
 log = logging.getLogger('joule')
