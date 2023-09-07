@@ -5,13 +5,16 @@ Installing Wattsworth
 =====================
 
 This guide provides instructions for installing one or more components of the Wattsworth stack. The choice of
-components and their configuration depends on the expected usage:
+components and their configuration depends on your use case. If you are unsure of which components you need simply follow
+this guide in order starting with the :ref:`sec-install-prereqs` section below.
 
 * **Standalone System**:  :ref:`sec-install-joule` and :ref:`sec-install-lumen` with :ref:`sec-install-nginx`:
 
 * **Data Acquisition Node**: :ref:`sec-install-joule` with :ref:`sec-install-nginx`
 * **Data Analysis Node**: :ref:`sec-install-joule` in a virtual environment
 * **Data Access Node**: :ref:`sec-install-lumen` with :ref:`sec-install-nginx`
+
+.. _sec-install-prereqs:
 
 Prerequistes
 ============
@@ -38,13 +41,7 @@ TimescaleDB
 Joule stores data in a TimescaleDB database. Create the files below and then run the following commands to install TimescaleDB
 in a :ref:`sec-install-docker` container. The first file is a docker-compose file that will create a docker container running TimescaleDB. The second file is a systemd service file that
 automatically starts the container when the system boots.  If you already have a TimescaleDB instance you can skip this step.
-
-.. raw:: html
-
-    <div class="bash-code">
-    sudo systemctl enable timescaledb.service
-    sudo systemctl start timescaledb.service
-    </div>
+If you plan to use this system in production consider changing the ``POSTGRES_PASSWORD`` environment variable to a more secure value.
 
 .. raw:: html
 
@@ -55,7 +52,7 @@ automatically starts the container when the system boots.  If you already have a
 
   services:
     postgres:
-      image: timescale/timescaledb:latest-pg15
+      image: timescale/timescaledb:2.11.2-pg15
       restart: always
       environment:
         POSTGRES_USER: joule
@@ -64,7 +61,7 @@ automatically starts the container when the system boots.  If you already have a
       volumes:
         - /opt/timescaledb/data:/var/lib/postgresql/data  # persist data
       ports:
-        - 5432:5432</code></pre></div>
+        - localhost:5432:5432</code></pre></div>
 
 .. raw:: html
 
@@ -85,6 +82,15 @@ automatically starts the container when the system boots.  If you already have a
 
     [Install]
     WantedBy=multi-user.target</code></pre></div>
+
+After creating the files above, run the following commands to start the TimescaleDB container and configure it to start on system boot.
+
+.. raw:: html
+
+    <div class="bash-code">
+    sudo systemctl enable timescaledb.service
+    sudo systemctl start timescaledb.service
+    </div>
 
 .. _sec-install-joule:
 
