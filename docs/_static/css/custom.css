@@ -15,6 +15,26 @@
   color: #636262;
 }
 
+.hjs-code {
+  border-style: solid;
+  border-width: 1px;
+  padding: 15px;
+  margin-left: 20px;
+  margin-right: 30px;
+  margin-bottom: 15px;
+  white-space: pre;
+}
+.hjs-code {
+  padding: 0px;
+}
+.hjs-code > pre > code.hljs {
+  border-width: 0px;
+}
+
+.hjs-code > pre {
+  margin: 0px;
+}
+
 .code.ini {
   border-style: solid;
   border-width: 1px;
@@ -63,6 +83,10 @@
   white-space: pre;
   line-height: normal;
   margin-bottom: 20px;
+  overflow-x: auto;
+}
+code {
+  white-space: pre !important;
 }
 
 .bash>i {

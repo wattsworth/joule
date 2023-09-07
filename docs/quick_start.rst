@@ -4,9 +4,8 @@
 Quick Start
 ===========
 
-Joule is part of the Wattsworth software stack. See
-http://wattsworth.net/install.html for installation details. Before continuing
-make sure Joule is installed and the jouled service is running:
+Joule is part of the Wattsworth software stack. Follow the instructions on :ref:`installation` to setup both Joule and Lumen
+. Before continuing make sure the Lumen site is available on http://127.0.0.1 and that the jouled service is running:
 
 
 .. raw:: html
@@ -15,7 +14,7 @@ make sure Joule is installed and the jouled service is running:
 
   # ensure the joule CLI is installed
   $> joule --version
-  joule, version 0.9
+  joule, version 0.9.X
 
   # authorize local user access to joule server
   $> sudo -E joule admin authorize
@@ -23,7 +22,7 @@ make sure Joule is installed and the jouled service is running:
 
   # confirm the local joule server is running
   $> joule node info
-  Server Version: 0.9.x
+  Server Version: 0.9.X
   Status: online
 
   </div>
@@ -306,8 +305,8 @@ Restart Joule and confirm that the new module is active
     </div>
 
 
-Viewing Data Apps
------------------
+Lumen Setup
+-----------
 
 Data Apps can be accessed through the Lumen webserver. First, link Joule to the
 local Lumen server using the command below. Note if the Lumen server is
