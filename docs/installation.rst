@@ -97,23 +97,21 @@ After creating the files above, run the following commands to start the Timescal
 Joule
 =====
 The ``jouled`` daemon requires a Linux OS while the ``joule`` client can be used on any OS.
-Both are contained in the *joule* pypi package and require Python 3.9 or later. Omit step 3 if you plan on using the client functionality only.
+Both are contained in the *joule* pypi package and require Python 3.9 or later.
+Omit the second command if you plan on using the client functionality only.
 
 .. raw:: html
 
     <div class="bash-code">
-    sudo curl -sL https://raw.githubusercontent.com/wattsworth/joule/master/requirements.txt | xargs -n 1 pip install
     sudo pip3 install joule
     sudo joule admin initialize --dsn joule:joule@localhost:5432/joule
     </div>
 
 These commands do the following:
 
-1. Install recommended versions of project dependencies. This is optional, omitting this step will install the latest versions of dependencies in step 2.
+1. Install ``joule`` using pip. This will install the package into the system python environment which is the recommended configuration for data acquisition. You may use a virtual environment if you prefer but you will need to modify the service file and other instructions to point to the correct location of the *jouled* and *joule* executables.
 
-2. Install ``joule`` using pip. This will install the package into the system python environment which is the recommended configuration for data acquisition. You may use a virtual environment if you prefer but you will need to modify the service file and other instructions to point to the correct location of the *jouled* and *joule* executables.
-
-3. Initialize Joule with database connection information. If you are using the :ref:`sec-install-timescaledb` docker container configuration above, use the connection string shown. Otherwise modify it to match your database configuration and credentials. The DSN format is:``<username>:<password>@<host>:<port>/<database>``
+2. Initialize Joule with database connection information. If you are using the :ref:`sec-install-timescaledb` docker container configuration above, use the connection string shown. Otherwise modify it to match your database configuration and credentials. The DSN format is:``<username>:<password>@<host>:<port>/<database>``
 
 .. _sec-install-lumen:
 
@@ -178,6 +176,9 @@ command grants Nginx access to the Joule socket file, it is only needed if runni
     <div class="bash-code">
     sudo apt-get install nginx -y
     sudo rm /etc/nginx/sites-enabled/default
+
+    # install Lumen configuration files
+    sudo curl -sL https://raw.githubusercontent.com/wattsworth/lumen-docker/main/host/wattsworth-maps.conf -o /etc/nginx/conf.d/wattsworth-maps.conf
     sudo curl -sL https://raw.githubusercontent.com/wattsworth/lumen-docker/main/host/lumen.conf -o /etc/nginx/lumen.conf
     sudo curl -sL https://raw.githubusercontent.com/wattsworth/lumen-docker/main/host/joule.conf -o /etc/nginx/joule.conf
 
@@ -199,8 +200,8 @@ is required to host an HTTP site.
 	# server_name directive is optional, but recommended
 
 	# Include one or both statements below to enable lumen and/or joule
-	include "/etc/nginx/lumen.conf"
-	include "/etc/nginx/joule.conf"
+	include "/etc/nginx/lumen.conf";
+	include "/etc/nginx/joule.conf";
     }</code></pre></div>
 
 To host the site on HTTPS, you will need a valid SSL certificate and
@@ -227,8 +228,8 @@ and for HTTPS you will need a wildcard certificate for ``*.app.<yourdomain>``.
         server_name example.wattsworth.net *.app.example.wattsworth.net;
 
         # Include one or both statements below to enable lumen and/or joule
-        include "/etc/nginx/lumen.conf"
-        include "/etc/nginx/joule.conf"
+        include "/etc/nginx/lumen.conf";
+        include "/etc/nginx/joule.conf";
 
         # Security configuration
         # Note: For subdomain apps this must include wildcard *.app.<yourdomain>

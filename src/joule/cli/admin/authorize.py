@@ -1,7 +1,7 @@
 import click
 import os
 import configparser
-
+import requests
 from joule import api, errors
 
 
@@ -62,14 +62,29 @@ def admin_authorize(config, url):
         my_master.name = username
         db.add(my_master)
 
-    # if a url is specified use it
+    # if a URL is specified use it
     if url is not None:
         joule_url = url
-    # if the Joule server is not hosting a TCP server use the
-    # default proxy address
+    # if the Joule server is not hosting a TCP server try to
+    # determine the proxy address, show an error if it cannot be found
     elif config.ip_address is None:
         joule_url = "https://localhost/joule"
-    # otherwise use the the server information in the config file
+        # try to get this page, if it fails then try again using http
+        try:
+            r = requests.get(joule_url, verify=False)
+            # make sure the response is a 403 forbidden
+            if r.status_code != 403:
+                raise requests.exceptions.ConnectionError()
+        except requests.exceptions.ConnectionError:
+            joule_url = "http://localhost/joule"
+            try:
+                r = requests.get(joule_url, verify=False)
+            # make sure the response is a 403 forbidden
+                if r.status_code != 403:
+                    raise requests.exceptions.ConnectionError()
+            except requests.exceptions.ConnectionError:
+                raise click.ClickException("Cannot determine Joule URL, please specify with --url")
+    # otherwise use the server information in the config file
     else:
         if config.security is not None and config.security.cafile != "":
             addr = config.name
