@@ -56,8 +56,10 @@ def _parse_configs(configs: Configurations, db: Session) -> Modules:
     # Designate active streams
     for module in parsed_modules:
         for stream in module.outputs.values():
+            stream.touch()
             stream.is_destination = True
         for stream in module.inputs.values():
+            stream.touch()
             stream.is_source = True
     return parsed_modules
 

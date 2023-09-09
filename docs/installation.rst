@@ -61,7 +61,7 @@ If you plan to use this system in production consider changing the ``POSTGRES_PA
       volumes:
         - /opt/timescaledb/data:/var/lib/postgresql/data  # persist data
       ports:
-        - localhost:5432:5432</code></pre></div>
+        - 127.0.0.1:5432:5432</code></pre></div>
 
 .. raw:: html
 
@@ -90,6 +90,9 @@ After creating the files above, run the following commands to start the Timescal
     <div class="bash-code">
     sudo systemctl enable timescaledb.service
     sudo systemctl start timescaledb.service
+
+    # track container installation progress (Ctrl-C to exit)
+    sudo journalctl -u timescaledb.service -f
     </div>
 
 .. _sec-install-joule:
@@ -127,8 +130,8 @@ file and can be used as is in most situations although changing the ``SECRET_KEY
 
     <div class="bash-code">
     sudo mkdir /opt/lumen && cd /opt/lumen
-    curl -sL https://raw.githubusercontent.com/wattsworth/lumen-docker/main/docker-compose.yml
-    curl -sL https://raw.githubusercontent.com/wattsworth/lumen-docker/main/sample.env -O .env
+    sudo curl -sL https://raw.githubusercontent.com/wattsworth/lumen-docker/main/docker-compose.yml -o docker-compose.yml
+    sudo curl -sL https://raw.githubusercontent.com/wattsworth/lumen-docker/main/sample.env -o .env
     </div>
 
 Create the service file below and then run the following commands to configure Lumen to start on system boot.
@@ -158,6 +161,9 @@ Create the service file below and then run the following commands to configure L
         <div class="bash-code">
         sudo systemctl enable lumen.service
         sudo systemctl start lumen.service
+
+        # track container installation progress (Ctrl-C to exit)
+        sudo journalctl -u lumen.service -f
         </div>
 
 
@@ -244,3 +250,5 @@ Finally, restart Nginx to reflect the new configuration:
     <div class="bash-code">
     sudo systemctl restart nginx
     </div>
+
+Continue to :ref:`quick-start` to start using Wattsworth.

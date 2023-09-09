@@ -16,11 +16,24 @@ Joule is part of the Wattsworth software stack. Follow the instructions on :ref:
   $> joule --version
   joule, version 0.9.X
 
+  # ensure the joule daemon (jouled) is running
+  $> sudo systemctl status joule.service
+
+  </div>
+
+The first time you use the Joule client you will need to authorize your account. This requires admin privileges, subsequent
+users can be added without admin privileges using the ``add user`` command. See :ref:`admin` for more details. Note this
+may take some time to complete if you have just installed the system as the Docker containers need to be initialized.
+
+.. raw:: html
+
+  <div class="bash-code">
+
   # authorize local user access to joule server
   $> sudo -E joule admin authorize
   Access to node [xxxx] granted to user [xxxx]
 
-  # confirm the local joule server is running
+  # confirm connection to joule server
   $> joule node info
   Server Version: 0.9.X
   Status: online
@@ -106,9 +119,9 @@ new module is running:
   # check pipeline status using the joule CLI
   $> joule module list -s
   ╒═════════════╤══════════╤══════════════╤═════════╤═════════════╕
-  │ Name        │ Inputs   │ Outputs      │   CPU % │   Mem (KiB) │
+  │ Name        │ Inputs   │ Outputs      │   CPU % │     Mem %   │
   ╞═════════════╪══════════╪══════════════╪═════════╪═════════════╡
-  │ Data Source │          │ /demo/random │       0 │       62868 │
+  │ Data Source │          │ /demo/random │       0 │       2     │
   ╘═════════════╧══════════╧══════════════╧═════════╧═════════════╛
 
   # check module logs for any errors
@@ -117,7 +130,7 @@ new module is running:
 
 
   # confirm the pipeline is producing data
-  $> joule stream info /demo/random
+  $> joule stream info /demo/random -e
         Name:         random
         Description:  —
         Datatype:     float32
@@ -195,20 +208,20 @@ both modules are running:
   $> sudo service joule restart
 
   # check pipeline status using the joule CLI
-  $> joule module list
+  $> joule module list -s
   ╒════════════════╤══════════════╤════════════════╤═════════╤═════════════╕
-  │ Name           │ Inputs       │ Outputs        │   CPU % │   Mem (KiB) │
+  │ Name           │ Inputs       │ Outputs        │   CPU % │     Mem %   │
   ╞════════════════╪══════════════╪════════════════╪═════════╪═════════════╡
-  │ Data Processor │ /demo/random │ /demo/smoothed │       0 │       63880 │
+  │ Data Processor │ /demo/random │ /demo/smoothed │       0 │       2     │
   ├────────────────┼──────────────┼────────────────┼─────────┼─────────────┤
-  │ Data Source    │              │ /demo/random   │       0 │       63172 │
+  │ Data Source    │              │ /demo/random   │       0 │       2     │
   ╘════════════════╧══════════════╧════════════════╧═════════╧═════════════╛
 
   $> joule module logs "Data Processor"
   [2018-09-12T16:00:34.298364]: ---starting module---
 
   # confirm the pipeline is producing data (check /demo/random as well)
-  $> joule stream info /demo/smoothed
+  $> joule stream info /demo/smoothed -e
 
         Name:         smoothed
         Description:  —
@@ -271,16 +284,16 @@ Restart Joule and confirm that the new module is active
     $> sudo service joule restart
 
     # check pipeline status using the joule CLI
-    $> joule module list
+    $> joule module list -s
     ╒════════════════╤════════════════╤════════════════╤═════════╤═════════════╕
-    │ Name           │ Inputs         │ Outputs        │   CPU % │   Mem (KiB) │
+    │ Name           │ Inputs         │ Outputs        │   CPU % │    Mem %    │
     ╞════════════════╪════════════════╪════════════════╪═════════╪═════════════╡
-    │ Data Processor │ /demo/random   │ /demo/smoothed │       2 │       63924 │
+    │ Data Processor │ /demo/random   │ /demo/smoothed │       2 │       2     │
     ├────────────────┼────────────────┼────────────────┼─────────┼─────────────┤
-    │ Data App       │ /demo/smoothed │                │       0 │       64548 │
+    │ Data App       │ /demo/smoothed │                │       0 │       2     │
     │                │ /demo/random   │                │         │             │
     ├────────────────┼────────────────┼────────────────┼─────────┼─────────────┤
-    │ Data Source    │                │ /demo/random   │       0 │       62748 │
+    │ Data Source    │                │ /demo/random   │       0 │       2     │
     ╘════════════════╧════════════════╧════════════════╧═════════╧═════════════╛
 
     # check the module info to find the interface URL

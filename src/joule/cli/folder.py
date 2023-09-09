@@ -110,7 +110,7 @@ async def _run_list(node: BaseNode, path: str, layout: bool, status: bool, showi
     if status:
         click.echo("\t" + click.style("\u25CF ", fg="green") + "active  " +
                    click.style("\u25CF ", fg="cyan") + "configured")
-    click.echo(tree.show())
+    click.echo(tree.show(stdout=False))
 
 
 def _process_folder(tree: Tree, folder: Folder, parent_id,
