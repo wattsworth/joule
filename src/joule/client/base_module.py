@@ -497,9 +497,9 @@ class BaseModule:
                 port = _find_port()
             else:
                 port = args.port
-            site = web.TCPSite(runner, port=args.port, host=args.host)
+            site = web.TCPSite(runner, port=port, host=args.host)
             await site.start()
-            print("starting web server at %s:%d" % (args.host, args.port))
+            print("starting web server at %s:%d" % (args.host, port))
             return runner
         # socket config is 'none' when joule does not connect a socket
         if args.socket == 'none':
