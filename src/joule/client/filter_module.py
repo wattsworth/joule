@@ -57,6 +57,10 @@ class FilterModule(base_module.BaseModule):
     async def _task(self, pending_intervals, input_streams, output_streams, parsed_args, app):
         if len(pending_intervals) == 0:
             print("Nothing to do, data is already filtered")
+        # if an interval is None and live is False this is an error and the filter
+        # cannot run since there are no inputs to read from
+        if not parsed_args.live and len(pending_intervals)==1 and None in pending_intervals:
+            print("Module has no inputs, nothing to do, specify --live to run anyway")
         # if an interval is None this indicates the pipes should be live
         for interval in pending_intervals:
             if interval is not None:

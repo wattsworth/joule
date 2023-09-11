@@ -203,7 +203,6 @@ class BaseModule:
                          help='RESERVED, managed by jouled')
         # --port: port to host interface on during isolated execution
         grp.add_argument("--port", type=int,
-                         default=8080,
                          help='port for isolated execution')
         # --host: IP address to host interface on during isolated exedcution
         grp.add_argument("--host",
@@ -346,6 +345,8 @@ class BaseModule:
     async def _compute_missing_intervals(self, input_streams, output_streams, parsed_args):
         # 1) If live is specified, don't do anything else- no intervals to process
         if parsed_args.live or parsed_args.pipes != 'unset':
+            return [None]
+        if len(input_streams) == 0:
             return [None]
         # 2) Convert string time arguments into Optional[timestamp] types
         start, end = helpers.validate_time_bounds(parsed_args.start_time,
@@ -492,6 +493,10 @@ class BaseModule:
             app.add_routes(routes)
             runner = web.AppRunner(app)
             await runner.setup()
+            if args.port is None:
+                port = _find_port()
+            else:
+                port = args.port
             site = web.TCPSite(runner, port=args.port, host=args.host)
             await site.start()
             print("starting web server at %s:%d" % (args.host, args.port))
@@ -516,3 +521,17 @@ class BaseModule:
         await site.start()
         print("starting web server at [%s]" % args.socket)
         return runner
+
+
+def _find_port():
+    # return an available TCP port, check to make sure it is available
+    # before returning
+    for port in range(8000, 9000):
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.bind(('localhost', port))
+            sock.close()
+            return port
+        except OSError:
+            continue
+    raise ConfigurationError("Could not find an available port for the web interface, specify with --port")
