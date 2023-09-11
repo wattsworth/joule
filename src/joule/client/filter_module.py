@@ -56,12 +56,10 @@ class FilterModule(base_module.BaseModule):
 
     async def _task(self, pending_intervals, input_streams, output_streams, parsed_args, app):
         if len(pending_intervals) == 0:
-            print("Nothing to do, data is already filtered")
-            return asyncio.create_task(asyncio.sleep(0))
-        # if an interval is None and live is False this is an error and the filter
-        # cannot run since there are no inputs to read from
-        if not parsed_args.live and len(pending_intervals)==1 and None in pending_intervals:
-            print("Since module has no inputs it cannot run on historic data, use --live")
+            if len(input_streams) == 0:
+                print("No inputs, cannot run on historic data, specify --live to produce outputs")
+            else:
+                print("Nothing to do, data is already filtered")
             return asyncio.create_task(asyncio.sleep(0))
         # if an interval is None this indicates the pipes should be live
         for interval in pending_intervals:

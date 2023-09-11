@@ -347,7 +347,7 @@ class BaseModule:
         if parsed_args.live or parsed_args.pipes != 'unset':
             return [None]
         if len(input_streams) == 0:
-            return [None]
+            return []
         # 2) Convert string time arguments into Optional[timestamp] types
         start, end = helpers.validate_time_bounds(parsed_args.start_time,
                                                   parsed_args.end_time)
