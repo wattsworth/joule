@@ -27,7 +27,7 @@ more computationally intensive tasks like training new ML models (module 4).
 .. image:: /images/pipeline_example.png
 
 See the :ref:`quick-start` for a hands-on introduction with an example data pipeline. Then read
-:ref:`using-joule` for more detailed information on how to configure Joule for your own pipelines.
+:ref:`configuration-reference` for more detailed information on how to configure Joule for your own pipelines.
 
 Contributing & Running Tests
 ----------------------------

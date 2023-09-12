@@ -1,3 +1,5 @@
+.. _cli-reference:
+
 Command Line Interface
 ----------------------
 The command line interface (CLI) can be used to interact with the local Joule service or any Joule node
@@ -333,6 +335,8 @@ Usage
 
 Arguments
     --dsn: connection string to PostgreSQL database
+
+.. _cli-admin-authorize-cmd:
 
 authorize
 '''''''''

@@ -23,9 +23,6 @@ help:
 #	sphinx-autobuild --host 0.0.0.0 $(SOURCEDIR) $(BUILDDIR)/html -z ../joule -i *___ -E
 livehtml:
 	sphinx-autobuild --host 0.0.0.0 "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) --watch ../joule $(O)
-deployold: html
-	rsync -r --delete $(BUILDDIR)/html/ jdonnal@wattsworth.net:/var/www/docs/joule 
-
 deploy: html
-	rsync -r --delete $(BUILDDIR)/html/ jdonnal@cloud.wattsworth.net:/var/www/docs/joule 
-	ssh jdonnal@cloud.wattsworth.net ./update_doc_tarball.sh
+	rsync -r --delete $(BUILDDIR)/html/ jdonnal@wattsworth.net:/var/www/docs/joule
+	ssh jdonnal@wattsworth.net ./update_doc_tarball.sh

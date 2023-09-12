@@ -1,7 +1,7 @@
-.. _using-joule:
+.. _configuration-reference:
 
-Using Joule
-===========
+Configuration
+=============
 
 
 Joule decentralizes signal processing into discrete **modules**. These

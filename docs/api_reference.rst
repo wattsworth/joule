@@ -1,3 +1,5 @@
+.. _api-reference:
+
 API Reference
 -------------
 
@@ -13,6 +15,17 @@ API Reference
         ...
         >>> import asyncio
         >>>
+
+    A Jupyter Notebook that provides an overview of the API functionality is
+    available `here <https://github.com/wattsworth/joule/blob/master/API_demo.ipynb>`_. To run this notebook follow
+    the commands below to install `Jupyter <https://jupyter.org/>`_ and `matplotlib <https://matplotlib.org/>`_,
+    retrieve the notebook file, and start the Jupyter server:
+
+    .. code-block:: bash
+
+        $> pip install jupyterlab matplotlib # prefix with sudo for system-wide install
+        $> wget https://raw.githubusercontent.com/wattsworth/joule/master/API_demo.ipynb
+        $> jupyter lab --ip=0.0.0.0 # add the --ip flag to allow external connections
 
 Node
 ++++

@@ -1,8 +1,8 @@
 .. _installation:
 
-=====================
-Installing Wattsworth
-=====================
+============
+Installation
+============
 
 This guide provides instructions for installing one or more components of the Wattsworth stack. The choice of
 components and their configuration depends on your use case. If you are unsure of which components you need simply follow
@@ -95,6 +95,10 @@ After creating the files above, run the following commands to start the Timescal
     sudo journalctl -u timescaledb.service -f
     </div>
 
+Wait until you see a log message similar to the following before continuing:
+
+ ``timescaledb-postgres-1  | LOG:  database system is ready to accept connections``
+
 .. _sec-install-joule:
 
 Joule
@@ -166,6 +170,11 @@ Create the service file below and then run the following commands to configure L
         sudo journalctl -u lumen.service -f
         </div>
 
+The initial set up for this container can take several minutes.
+Wait until you see a log message similar to the following which indicates the
+web application is running before continuing:
+
+ ``lumen-lumen-1 | [...omitted...]: Passenger core online, PID 54``
 
 .. _sec-install-nginx:
 

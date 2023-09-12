@@ -22,7 +22,7 @@ Joule is part of the Wattsworth software stack. Follow the instructions on :ref:
   </div>
 
 The first time you use the Joule client you will need to authorize your account. This requires admin privileges, subsequent
-users can be added without admin privileges using the ``add user`` command. See :ref:`admin` for more details. Note this
+users can be added without admin privileges using the ``add user`` command. See :ref:`cli-admin-authorize-cmd` for more details. Note this
 may take some time to complete if you have just installed the system as the Docker containers need to be initialized.
 
 .. raw:: html
@@ -339,13 +339,28 @@ nodes. See `Lumen Documentation`_ for more details.
 Now open a browser and point it to http://127.0.0.1 if you are on the
 target machine or use the IP address of the machine if you want to access
 it from another device. Log in with the user credentials you just added.
-From the main page, expand the local Joule node and click the Data App
-to open the visualizer or select one of the stream elements to view
-data in the plotting interface.
+From the main page, expand the local Joule node (``node_c936`` below). If you
+followed this guide and do not see all of the streams below hover the cursor
+over the node name and click the refresh icon. Click on the folders and data streams
+to expand them and click the add button next to elements
+to add them to the plot.
 
-For more details on modules and streams read :ref:`using-joule` or
-visit the `Lumen Documentation`_ for details on visualizing and plotting data.
+.. image:: /images/quickstart-plot.png
 
 
-.. _Lumen Documentation: /lumen/getting_started.html
+The data app can be opened within the interface as a tab (shown below) or run in a new
+window by clicking the popout icon next to the app name.
+
+.. image:: /images/data-app.png
+
+See `Lumen`_ for additional details on using the web interface.
+
+Next Steps
+----------
+
+* :ref:`cli-reference`: Using the ``joule`` from the command line
+* :ref:`api-reference`: Write programs to interact with Joule data
+* :ref:`configuration-reference`: Information on configuration files and options
+
+.. _Lumen: https://wattsworth.net/lumen/
 
