@@ -38,7 +38,8 @@ dependencies = [
     'aiodns',
     'pyopenssl',
     'dsnparse',
-    'h5py'
+    'h5py',
+    'requests'
 ]
 
 [project.urls]

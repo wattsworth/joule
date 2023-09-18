@@ -331,7 +331,7 @@ def main(argv=None):
 
     # asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
     loop.set_debug(True)
     daemon = Daemon(my_config)
     try:
