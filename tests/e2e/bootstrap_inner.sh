@@ -7,10 +7,9 @@ host="$1"
 shift
 cmd="$@"
 
-echo "Waiting for Postgres..."
-until PGPASSWORD=$POSTGRES_PASSWORD psql -h "$host" -U "postgres" -c '\q'; do
-  echo "Postgres is unavailable - sleeping"
-  sleep 3
+# check if postgres is up on port 5432 without using the psql tool
+until pg_isready -h "$host" -p 5432 -U "postgres"; do
+  >&2 echo "Postgres is unavailable - sleeping"
+  sleep 1
 done
-echo "Postgres is up - executing command"
 exec $cmd

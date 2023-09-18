@@ -1,20 +1,23 @@
-version: '2.1'
+version: '3.0'
 services:
   node1.joule:
-    build: ../../.
+    build:
+      context: ../..
+      dockerfile: docker/development.dockerfile
     links:
-    # - nilmdb
       - timescale
     depends_on:
       - timescale
-    #  - nilmdb
     volumes:
       - ../..:/joule
     environment:
       POSTGRES_PASSWORD: password
     command: ["/joule/tests/e2e/bootstrap_inner.sh", "timescale", "/joule/tests/e2e/main_node.py"]
+
   node2.joule:
-    build: ../../.
+    build:
+      context: ../..
+      dockerfile: docker/development.dockerfile
     links:
       - timescale_follower
     depends_on:
@@ -24,11 +27,6 @@ services:
     environment:
       POSTGRES_PASSWORD: password
     command: ["/joule/tests/e2e/bootstrap_inner.sh", "timescale_follower", "/joule/tests/e2e/follower_node.py"]
-  # nilmdb:
-  #   image: jdonnal/nilmdb
-  #   logging:
-  #    driver: none
-  #   stop_signal: SIGKILL
   timescale:
     image: timescale/timescaledb:latest-pg15
     environment:

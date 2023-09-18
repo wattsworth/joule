@@ -324,7 +324,7 @@ Lumen Setup
 Data Apps can be accessed through the Lumen webserver. First, link Joule to the
 local Lumen server using the command below. Note if the Lumen server is
 already activated you will need an authorization key to add additional Joule
-nodes. See `Lumen Documentation`_ for more details.
+nodes.
 
 
 .. raw:: html
