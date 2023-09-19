@@ -66,7 +66,7 @@ def main():
     # tests = [("multinodes", "/joule/tests/e2e/scenarios/multiple_node_tests")]
     # tests = [("standalone modules", "/joule/tests/e2e/scenarios/standalone_modules")]
     # tests = [("API", "/joule/tests/e2e/scenarios/api_tests")]
-    tests = [("Basic Operation", "/joule/tests/e2e/scenarios/basic_operation")]
+    # tests = [("Basic Operation", "/joule/tests/e2e/scenarios/basic_operation")]
 
     first_test = True
     for (test_name, test_path) in tests:

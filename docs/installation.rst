@@ -110,7 +110,7 @@ Omit the second command if you plan on using the client functionality only.
 .. raw:: html
 
     <div class="bash-code">
-    sudo apt install python3-pip -y
+    sudo apt install python3-pip python3-dev -y
     sudo pip3 install joule
     sudo joule admin initialize --dsn joule:joule@localhost:5432/joule
     </div>

@@ -4,7 +4,6 @@ from joule.utilities import time_now
 import joule
 import numpy as np
 import asyncio
-from icecream import ic
 rows = 100
 freq = 40  # Hz
 
