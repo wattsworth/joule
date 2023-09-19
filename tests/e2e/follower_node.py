@@ -43,46 +43,10 @@ def main():
                               stdout=sys.stdout,
                               stderr=sys.stderr,
                               universal_newlines=True)
-    # wait until local node is online
-    max_tries = 16
-    num_tries = 0
-    while num_tries < max_tries:
-        num_tries += 1
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-        result = sock.connect_ex(('localhost', 8088))
-        sock.close()
-        if result == 0:
-            break
-        time.sleep(0.5)
-    # local node failure, print the log
-    if num_tries == max_tries:
-        exit()
-    print("follower node is up!")
-    sys.stdout.flush()
-    # wait until the master node is online
-    max_tries = 10
-    num_tries = 0
-    while num_tries < max_tries:
-        num_tries += 1
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        result = sock.connect_ex(('node1.joule', 8088))
-        sock.close()
-        if result == 0:
-            break
-        else:
-            print("cannot find node1.joule %d" % result)
-        time.sleep(0.5)
-    # remote node failure, print the log
-    if num_tries == max_tries:
-        print("Cannot find node1.joule, exiting follower")
-        exit()
-
+    time.sleep(3)
     # follow node1.joule
-    #    with open(os.devnull, 'w') as devnull:
     subprocess.run("joule master add joule https://node1.joule:8088".split(" "))  # ,
-    #                       #stderr=devnull, stdout=devnull)
-    # subprocess.run(f"jouled --config {config_file})")
+
     # this will just hang, node1 exits and terminates this container
     stdout, _ = jouled.communicate()
     print(stdout)

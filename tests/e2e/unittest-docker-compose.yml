@@ -1,0 +1,9 @@
+version: '2.1'
+services:
+  joule:
+    build: ../../.
+    user: testrunner
+    volumes:
+      - ../..:/joule
+    working_dir: "/joule"
+    command: ["/usr/bin/python3.11", "-m", "unittest", "-vf"]

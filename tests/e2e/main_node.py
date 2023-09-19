@@ -16,6 +16,7 @@ import configparser
 import time
 import argparse
 
+import joule
 from joule import api
 
 SOURCE_DIR = "/joule"
@@ -36,27 +37,15 @@ def run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL):
 
 
 async def wait_for_follower():
-    # wait until the local node is online
-    max_tries = 10
-    num_tries = 0
-    while num_tries < max_tries:
-        num_tries += 1
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        result = sock.connect_ex(('localhost', 8088))
-        sock.close()
-        if result == 0:
-            break
-        time.sleep(0.5)
-    if num_tries == max_tries:
-        print("error, local node is not online")
-        return -1
-
     node1 = api.get_node("node1.joule")
     while True:
-        followers = await node1.follower_list()
-        if len(followers) == 1:
-            break
-        await asyncio.sleep(0.5)
+        try:
+            followers = await node1.follower_list()
+            if len(followers) == 1:
+                break
+        except joule.errors.ApiError:
+            # wait until node is online
+            await asyncio.sleep(1)
     await node1.close()
     return 0 # success
 
@@ -77,6 +66,7 @@ def main():
     # tests = [("multinodes", "/joule/tests/e2e/scenarios/multiple_node_tests")]
     # tests = [("standalone modules", "/joule/tests/e2e/scenarios/standalone_modules")]
     # tests = [("API", "/joule/tests/e2e/scenarios/api_tests")]
+    tests = [("Basic Operation", "/joule/tests/e2e/scenarios/basic_operation")]
 
     first_test = True
     for (test_name, test_path) in tests:
@@ -117,7 +107,6 @@ def main():
                                       stdout=subprocess.PIPE,
                                       stderr=subprocess.STDOUT,
                                       universal_newlines=True)
-
             result = asyncio.run(wait_for_follower())
             jouled.send_signal(signal.SIGINT)
             stdout, _ = jouled.communicate()
