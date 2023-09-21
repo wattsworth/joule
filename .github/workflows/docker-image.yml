@@ -11,6 +11,10 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-22.04
     steps:
+      - name: Retrieve commit tag from Workflow A
+        id: get_commit_tag
+        run:
+          echo "Commit Tag: ${{ needs.workflow_a.outputs.commit_tag }}"
       - name: Checkout Code
         uses: actions/checkout@v3
 
@@ -31,8 +35,7 @@ jobs:
 
       - name: Test workflow
         run: |
-          echo "Here is the ref_name name: ${{ github.ref_name }}"
-          echo "Here is another value: ${{ github.event.workflow_run.head_ref }}"
+          echo "Here is the ref_name name: ${{ needs.workflow_a.outputs.commit_tag }}"
       - name: Build and push
         uses: docker/build-push-action@v3
         with:
@@ -44,7 +47,7 @@ jobs:
 
       - name: Push Git Tag Image
         run: |
-          docker tag wattsworth/joule:latest wattsworth/joule:${{ github.ref_name }}
-          docker push wattsworth/joule:${{  github.ref_name }}
+          docker tag wattsworth/joule:latest wattsworth/joule:${{ needs.workflow_a.outputs.commit_tag }}
+          docker push wattsworth/joule:${{  needs.workflow_a.outputs.commit_tag }}
 
 

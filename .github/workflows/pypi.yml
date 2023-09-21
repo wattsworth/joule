@@ -25,3 +25,10 @@ jobs:
         run: |
           echo "Here is the ref_name name: ${{ github.ref_name }}"
           echo "Here is another value: ${{ github.event.workflow_run.head_ref }}"
+
+      - name: Set tag as an output variable
+        id: tag_output
+        run: echo "::set-output name=commit_tag::${{ github.ref_name }}"
+
+    outputs:
+      commit_tag: ${{ steps.tag_output.outputs.commit_tag }}
