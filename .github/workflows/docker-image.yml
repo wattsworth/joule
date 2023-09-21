@@ -28,6 +28,9 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USER }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
+      - name: Test workflow
+        run: |
+          echo "Here is the tag name: ${{ github.ref_name }}"
       - name: Build and push
         uses: docker/build-push-action@v3
         with:
