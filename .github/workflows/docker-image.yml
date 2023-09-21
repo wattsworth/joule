@@ -13,7 +13,7 @@ jobs:
     steps:
       - name: Retrieve commit tag from Workflow A
         id: get_commit_tag
-        run:
+        run: |
           echo "Commit Tag: ${{ needs.workflow_a.outputs.commit_tag }}"
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -36,6 +36,7 @@ jobs:
       - name: Test workflow
         run: |
           echo "Here is the ref_name name: ${{ needs.workflow_a.outputs.commit_tag }}"
+
       - name: Build and push
         uses: docker/build-push-action@v3
         with:
