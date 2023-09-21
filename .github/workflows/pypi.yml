@@ -64,11 +64,6 @@ jobs:
           file: ./docker/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: wattsworth/joule:latest
-
-      - name: Push Git Tag Image
-        run: |
-          docker tag wattsworth/joule:latest wattsworth/joule:${{  github.ref_name }}
-          docker push wattsworth/joule:${{  github.ref_name }}
-
-
+          tags: | 
+            wattsworth/joule:latest
+            wattsworth/joule:${{  github.ref_name }}
