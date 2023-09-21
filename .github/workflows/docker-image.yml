@@ -1,11 +1,10 @@
 #From https://www.infracloud.io/blogs/multi-arch-containers-ci-cd-integration/
 name: docker-multi-arch-push
 on:
-  push:
-    tags:
-      - '*'
-    branches:
-      - 'release'
+  workflow_run:
+    workflows: ["Publish Python Package"]
+    types:
+      - completed
 
 jobs:
   docker-build-push:
@@ -40,7 +39,7 @@ jobs:
 
       - name: Push Git Tag Image
         run: |
-          docker tag wattsworth/joule:latest wattsworth/joule:${{ github.event.release.tag_name }}
-          docker push wattsworth/joule:${{ github.event.release.tag_name }}
+          docker tag wattsworth/joule:latest wattsworth/joule:${{ github.ref_name }}
+          docker push wattsworth/joule:${{  github.ref_name }}
 
 
