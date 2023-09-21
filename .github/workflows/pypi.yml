@@ -24,4 +24,4 @@ jobs:
       - name: Test workflow
         run: |
           echo "Here is the ref_name name: ${{ github.ref_name }}"
-          echo "Here is another value: ${{ github.event.workflow_run.head_ref }}""
+          echo "Here is another value: ${{ github.event.workflow_run.head_ref }}"
