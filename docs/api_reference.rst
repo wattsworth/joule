@@ -392,14 +392,23 @@ Annotation Actions
 Event Stream Actions
 ''''''''''''''''''''
 
-.. function:: Node.event_stream_get(stream: Union[EventStream, str, int]) -> EventStream
+.. function:: Node.event_stream_get(stream: Union[EventStream, str, int],
+                                   create: bool = False,
+                                   description: str = "",
+                                   event_fields=None) -> EventStream
 
     Retrieve the specified stream. EventStream may be specified by a :class:`joule.api.EventStream` object,
-    a path, or a numeric ID. Raises :exc:`joule.errors.ApiError` if stream specification is invalid.
+    a path, or a numeric ID. Raises :exc:`joule.errors.ApiError` if stream specification is invalid. If ``stream`` is a
+    path and ``create=True`` then the EventStream is created if it does not exist using the ``description`` and
+    ``event_fields`` parameters. See :meth:`Node.event_stream_create` for more information creating streams.
 
     Examples:
+        >>> await node.event_stream_get("/folder/event_stream", create=True,
+            description="example event stream",
+            event_fields={"Property A": "string", "Property B": "numeric"})
 
-        Notes
+        >>> await node.event_stream_get("/folder/event_stream") # generates exception if stream does not exist
+
 
 .. function:: Node.event_stream_move(stream: Union[DataStream, str, int], folder: Union[Folder, str, int]) -> None
 

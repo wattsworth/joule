@@ -26,7 +26,7 @@ ENV HOST_SCHEME=http
 #	&& localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
 
 RUN apt-get update && \
-    apt-get install -y nginx libpq-dev python3-pip git\
+    apt-get install -y nginx libpq-dev python3-pip git gettext\
     && pip install joule\
     && rm -rf /var/lib/apt/lists/* \
     && rm /etc/nginx/sites-enabled/default
@@ -36,7 +36,7 @@ RUN apt-get update && \
 
 RUN mkdir /config && mkdir /stub && mkdir -p /etc/joule/configs && \
     ln -s /config/main.conf /etc/joule/main.conf && \
-    ln -s /config/user.conf /etc/joule/configs/user.conf
+    ln -s /config/user.conf /etc/joule/configs/users.conf
 COPY main.template.conf /config/main.template
 COPY user.template.conf /config/user.template
 

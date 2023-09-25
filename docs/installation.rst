@@ -105,21 +105,75 @@ Joule
 =====
 The ``jouled`` daemon requires a Linux OS while the ``joule`` client can be used on any OS.
 Both are contained in the *joule* pypi package and require Python 3.9 or later.
-Omit the second command if you plan on using the client functionality only.
+
+.. _sec-install-joule-basic-installation:
+
+Basic Installation
+------------------
+The `joule` package can be installed with pip as shown below. If you are using a virtual environment, activate it
+before running the ``pip3 install`` command and omit the ``sudo`` prefix.
 
 .. raw:: html
 
     <div class="bash-code">
-    sudo apt install python3-pip python3-dev -y
+    sudo apt install gcc python3-pip python3-dev -y
     sudo pip3 install joule
     sudo joule admin initialize --dsn joule:joule@localhost:5432/joule
     </div>
 
 These commands do the following:
 
-1. Install ``joule`` using pip. This will install the package into the system python environment which is the recommended configuration for data acquisition. You may use a virtual environment if you prefer but you will need to modify the service file and other instructions to point to the correct location of the *jouled* and *joule* executables.
+1. Install build dependencies using apt.
 
-2. Initialize Joule with database connection information. If you are using the :ref:`sec-install-timescaledb` docker container configuration above, use the connection string shown. Otherwise modify it to match your database configuration and credentials. The DSN format is:``<username>:<password>@<host>:<port>/<database>``
+2. Install ``joule`` using pip. This will install the package into the system python environment which is the recommended configuration for data acquisition. You may use a virtual environment if you prefer but you will need to modify the service file and other instructions to point to the correct location of the *jouled* and *joule* executables.
+
+3. Initialize Joule with database connection information. If you are using the :ref:`sec-install-timescaledb` docker container configuration above, use the connection string shown. Otherwise modify it to match your database configuration and credentials. The DSN format is:``<username>:<password>@<host>:<port>/<database>``
+
+Docker Container
+----------------
+
+Joule may also be installed as a Docker container. When running inside a container, Joule will not be able to run
+modules but this can be a useful configuration to work on archived data. The docker compose file below
+shows a minimal configuration see :ref:`sec-configure-docker` for full details.
+
+.. raw:: html
+
+  <div class='header ini'>
+  docker-compose.yml
+  </div>
+  <div class="hjs-code"><pre><code class="language-yaml">version: "3.9"
+
+  services:
+    postgres:
+      image: timescale/timescaledb:2.11.2-pg15
+      restart: always
+      environment:
+        POSTGRES_USER: joule
+        POSTGRES_PASSWORD: joule
+        POSTGRES_DB: joule
+      volumes:
+        - /opt/timescaledb/data:/var/lib/postgresql/data  # persist data
+    joule:
+      image: wattsworth/joule:latest
+      restart: always
+      environment:
+        # generate with [openssl rand -hex 16] or similar
+        USER_KEY: ebf8d....b43c2
+      ports:
+        - 127.0.0.1:8181:80</code></pre></div>
+
+The ``USER_KEY`` environment variable is used to
+authorize the joule client. To use the container first install joule on the host following steps 1 and 2 of the
+:ref:`sec-install-joule-basic-installation` instructions and then run the commands below to start the container and authorize the client.
+
+
+.. raw:: html
+
+    <div class="bash-code">
+    # copy the docker compose file above to the current directory
+    sudo docker-compose up -d
+    joule node add mynode http://localhost:8181/joule ebf8d....b43c2
+    </div>
 
 .. _sec-install-lumen:
 
