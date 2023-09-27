@@ -29,7 +29,7 @@ def move(config: Config, source: str, destination: str):
     finally:
         asyncio.run(
             config.close_node())
-        
+
     click.echo("OK")
 
 
@@ -48,7 +48,7 @@ def rename(config: Config, folder, name):
     finally:
         asyncio.run(
             config.close_node())
-        
+
     click.echo("OK")
 
 
@@ -74,7 +74,6 @@ def delete(config, folder, recursive):
     finally:
         asyncio.run(
             config.close_node())
-        
 
 
 @click.command(name="list")
@@ -94,7 +93,6 @@ def list(config, path, layout, status, id):
     finally:
         asyncio.run(
             config.close_node())
-        
 
 
 async def _run_list(node: BaseNode, path: str, layout: bool, status: bool, showid: bool):
@@ -102,6 +100,9 @@ async def _run_list(node: BaseNode, path: str, layout: bool, status: bool, showi
     if path == "/":
         root = await node.folder_root()
         root.name = ""  # omit root name
+        if len(root.children)==0:
+            click.echo("No folders, this node is empty.")
+            return
     else:
         root = await node.folder_get(path)
     _process_folder(tree, root, None, layout, status, showid)
@@ -177,7 +178,6 @@ def copy(config, source, destination, start, end, new, destination_node):
     finally:
         asyncio.run(
             config.close_node())
-        
 
 
 async def _run_copy(source_node, source, destination, start, end, new, destination_node) -> None:

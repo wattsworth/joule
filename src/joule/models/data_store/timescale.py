@@ -108,8 +108,8 @@ class TimescaleStore(DataStore):
                     query = "SELECT time FROM data.stream%d WHERE time < '%s'" % (stream.id, boundary)
                     query += " ORDER BY time DESC LIMIT 1"
                     prev_ts = await conn.fetchval(query)
-                    utc_start_ts = int(cur_start.replace(tzinfo=datetime.timezone.utc).timestamp() * 1e6)
-                    utc_end_ts = int(prev_ts.replace(tzinfo=datetime.timezone.utc).timestamp() * 1e6)
+                    utc_start_ts = round(cur_start.replace(tzinfo=datetime.timezone.utc).timestamp() * 1e6)
+                    utc_end_ts = round(prev_ts.replace(tzinfo=datetime.timezone.utc).timestamp() * 1e6)
                     # intervals are [..) with extra us on the end
                     intervals.append([utc_start_ts, utc_end_ts + 1])
                     cur_start = None
@@ -221,10 +221,10 @@ class TimescaleStore(DataStore):
                 end = record['max_ts']
 
                 if start is not None:
-                    start = int(start.replace(tzinfo=datetime.timezone.utc)
+                    start = round(start.replace(tzinfo=datetime.timezone.utc)
                                 .timestamp() * 1e6)
                 if end is not None:
-                    end = int(end.replace(tzinfo=datetime.timezone.utc)
+                    end = round(end.replace(tzinfo=datetime.timezone.utc)
                               .timestamp() * 1e6)
                 if start is not None and end is not None:
                     total_time = end - start
