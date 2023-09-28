@@ -4,6 +4,7 @@ import random
 import logging
 import asyncpg
 import socket
+import psutil
 
 from joule.models import DataStream, pipes
 from joule.models.data_store import psql_helpers
@@ -12,6 +13,7 @@ import joule.utilities
 
 Loop = asyncio.AbstractEventLoop
 log = logging.getLogger('joule')
+MAX_CHUNK_INTERVAL = 1000 * 60 * 60 * 24 * 7 * 365  # 1 year in milliseconds
 
 
 class Inserter:
@@ -20,6 +22,9 @@ class Inserter:
                  cleanup_period: float):
         self.pool = pool
         self.stream = stream
+        self._data_rate_buffer = []
+        # TODO: make this configurable, right now it is computed automatically
+        self._chunk_interval = 0  # duration in seconds, 0 means not set
         # round cleanup_period to a multiple of insert_period
         if insert_period == 0 or cleanup_period < insert_period:
             self.cleanup_interval = 1  # clean with every insert
@@ -48,6 +53,7 @@ class Inserter:
             while True:
                 await asyncio.sleep(self.insert_period)
                 data = await pipe.read()
+                await self._measure_data_rate(data)
                 # there might be an interval break and no new data
                 try:
                     async with self.pool.acquire() as conn:
@@ -62,7 +68,7 @@ class Inserter:
                             last_ts = data['timestamp'][-1]
                             # lazy initialization of decimator
                             if self.stream.decimate and self.decimator is None:
-                                self.decimator = Decimator(self.stream, 1, 4)
+                                self.decimator = Decimator(self.stream, 1, 4, self._chunk_interval * 4)
                             psql_bytes = psql_helpers.data_to_bytes(data)
                             try:
                                 await conn.copy_to_table("stream%d" % self.stream.id,
@@ -108,9 +114,35 @@ class Inserter:
                 query = "SELECT drop_chunks('data.%s',older_than => interval '%d seconds')" % (table, keep_s)
             await conn.execute(query)
 
+    async def update_chunk_interval(self, chunk_interval: int) -> None:
+        self._chunk_interval = min(chunk_interval, MAX_CHUNK_INTERVAL)
+        async with self.pool.acquire() as conn:
+            await psql_helpers.update_chunk_interval(conn, f"data.stream{self.stream.id}",
+                                                     self._chunk_interval)
+            if self.decimator is not None:
+                await self.decimator.update_chunk_interval(conn, self._chunk_interval * 4)
+
+    async def _measure_data_rate(self, data: np.ndarray) -> None:
+        if self._chunk_interval != 0:
+            return  # already measured
+        self._data_rate_buffer += (data['timestamp']).tolist()
+        if len(self._data_rate_buffer) < 200:
+            return  # not enough data
+        # determine the data rate by using the median of the differences
+        # between timestamps
+        diffs = np.diff(self._data_rate_buffer)
+        data_rate = 1e6 / np.median(diffs) * data.dtype.itemsize
+        total_memory = psutil.virtual_memory().total
+        # set chunk size to 5% of available memory, this allows ~5 active streams
+        self._chunk_interval = (int(total_memory * 0.05) / data_rate)*1e3 # in milliseconds
+        #print(f"Data rate: {data_rate} bytes/sec, chunk interval: {self._chunk_interval} ms")
+        await self.update_chunk_interval(self._chunk_interval)
+
+
 class Decimator:
 
-    def __init__(self, stream: DataStream, from_level: int, factor: int, debug=False):
+    def __init__(self, stream: DataStream, from_level: int, factor: int,
+                 chunk_interval: int, debug=False):
         self.stream = stream
         self.level = from_level * factor
         self.table_name = "stream%d_%d" % (stream.id, self.level)
@@ -123,6 +155,7 @@ class Decimator:
         self.layout = stream.decimated_layout
         self.buffer = []
         self.path_created = False
+        self.chunk_interval = min(chunk_interval, MAX_CHUNK_INTERVAL)
         self.child: Decimator = None
         self.debug = debug
         if self.debug:
@@ -130,10 +163,18 @@ class Decimator:
         # hold off to rate limit traffic
         self.holdoff = 0  # random.random()
 
+    async def update_chunk_interval(self, conn: asyncpg.Connection, chunk_interval):
+        self.chunk_interval = min(chunk_interval, MAX_CHUNK_INTERVAL)
+        await psql_helpers.update_chunk_interval(conn, self.full_table_name, self.chunk_interval)
+        if self.child is not None:
+            await self.child.update_chunk_interval(conn, self.chunk_interval * 4)
+
     async def process(self, conn: asyncpg.Connection, data: np.ndarray) -> None:
         """decimate data and insert it, retry on error"""
         if not self.path_created:
             await psql_helpers.create_decimation_table(conn, self.stream, self.level)
+            if self.chunk_interval is not None:
+                await psql_helpers.update_chunk_interval(conn, self.full_table_name, self.chunk_interval)
             self.path_created = True
 
         decim_data = self._process(data)
@@ -144,7 +185,8 @@ class Decimator:
 
         # lazy initialization of child
         if self.child is None:
-            self.child = Decimator(self.stream, self.level, self.factor)
+            self.child = Decimator(self.stream, self.level, self.factor,
+                                   self.chunk_interval * 4, self.debug)
 
         psql_bytes = psql_helpers.data_to_bytes(decim_data)
         await conn.copy_to_table(self.table_name,

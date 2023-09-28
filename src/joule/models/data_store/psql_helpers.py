@@ -16,6 +16,7 @@ log = logging.getLogger('joule')
 
 postgres_ts_offset = 946684800000000  # January 1 2000 GMT
 
+
 def data_to_bytes(data: np.ndarray) -> io.BytesIO:
     pgcopy_dtype = [("num_fields", ">i2"),
                     ("time_length", '>i4'),
@@ -93,7 +94,7 @@ def query_time_bounds(start, end, start_col_name='time', end_col_name=None):
             start = datetime.datetime.fromtimestamp(start / 1e6, tz=datetime.timezone.utc)
         if end_col_name is not None:  # interval query
             limits.append(f"{end_col_name} >= '{start}'")
-        else: # point query
+        else:  # point query
             limits.append(f"{start_col_name} >= '{start}'")
     if end is not None:
         if type(end) is not datetime.datetime:
@@ -202,8 +203,9 @@ async def create_decimation_table(conn: asyncpg.Connection, stream: DataStream, 
         SELECT create_hypertable('{table_name}', 'time',
         if_not_exists=>true, chunk_time_interval => INTERVAL '{level} weeks');
     """
-    #print(f"SQL: {sql}")
+    # print(f"SQL: {sql}")
     await conn.execute(sql)
+
 
 async def drop_decimation_tables(conn: asyncpg.Connection, stream: DataStream):
     tables = await get_decimation_table_names(conn, stream, with_schema=True)
@@ -212,6 +214,7 @@ async def drop_decimation_tables(conn: asyncpg.Connection, stream: DataStream):
             await conn.execute(f"DROP TABLE {table}")
         except asyncpg.UndefinedTableError:
             pass
+
 
 def get_psql_type(x: DataStream.DATATYPE):
     if x == DataStream.DATATYPE.FLOAT32:
@@ -269,6 +272,7 @@ async def close_interval(conn: asyncpg.Connection, stream: DataStream, ts: int):
         query = "INSERT INTO %s(time) VALUES ($1)" % interval_table
         await conn.execute(query, last_ts + datetime.timedelta(microseconds=1))
 
+
 async def get_decimation_table_names(conn: asyncpg.Connection, stream: DataStream, with_schema=True) -> List[str]:
     query = r'''select table_name from information_schema.tables 
                   where table_schema='data' 
@@ -278,7 +282,7 @@ async def get_decimation_table_names(conn: asyncpg.Connection, stream: DataStrea
     all_tables = [r['table_name'] for r in records]
     # omit the interval table
     data_tables = [name for name in all_tables if not name.endswith('intervals')]
-    #print(f"data tables: {data_tables}")
+    # print(f"data tables: {data_tables}")
     if with_schema:
         return [f'data.{name}' for name in data_tables]
     else:
@@ -288,9 +292,9 @@ async def get_decimation_table_names(conn: asyncpg.Connection, stream: DataStrea
 async def get_table_names(conn: asyncpg.Connection, stream: DataStream, with_schema=True) -> List[str]:
     tables = await get_decimation_table_names(conn, stream, with_schema)
     if with_schema:
-        return tables + [f'data.stream{stream.id}',f'data.stream{stream.id}_intervals']
+        return tables + [f'data.stream{stream.id}', f'data.stream{stream.id}_intervals']
     else:
-        return tables + [f'stream{stream.id}',f'stream{stream.id}_intervals']
+        return tables + [f'stream{stream.id}', f'stream{stream.id}_intervals']
 
 
 async def get_all_table_names(conn: asyncpg.Connection, with_schema=True) -> List[str]:
@@ -381,3 +385,12 @@ async def limit_time_bounds(conn: asyncpg.Connection,
     else:
         end = min(end, data_end)
     return start, end
+
+
+async def update_chunk_interval(conn: asyncpg.Connection, stream: DataStream,
+                                chunk_interval_ms: int):
+    if chunk_interval_ms == 0:
+        return  # invalid chunk interval setting, ignore
+    query = f"SELECT set_chunk_time_interval('{stream}', {round(chunk_interval_ms)})"
+    #print(f"QUERY: <{query}>, {round(chunk_interval_ms/(1000*60*60))}") # show in hours
+    await conn.execute(query)

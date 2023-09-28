@@ -59,7 +59,8 @@ class TimescaleStore(DataStore):
     async def decimate(self, stream: 'DataStream'):
         await self.drop_decimations(stream)
         async with self.pool.acquire() as conn:
-            decimator = Decimator(stream=stream, from_level=1, factor=4)
+            # do not change the chunk interval sizes
+            decimator = Decimator(stream=stream, from_level=1, factor=4, chunk_interval=0)
             interval_token = pipes.interval_token(stream.layout)
             async def redecimator(data, _, __):
                 if len(data)==1 and data[0] == interval_token:
@@ -167,16 +168,14 @@ class TimescaleStore(DataStore):
             tables = await psql_helpers.get_table_names(conn, stream)
             for table in tables:
                 # TODO: use drop chunks with newer and older clauses when timescale is updated
-                # ******DROP CHUNKS IS *VERY* APPROXIMATE*********
-                if start is None and "intervals" not in table and not exact:
-                    if end is None:  # delete everything
-                        query = "TRUNCATE %s" % table
-                    else:
-                        # use the much faster drop chunks utility and accept the approximate result
-                        bounds = await psql_helpers.convert_time_bounds(conn, stream, start, end)
-                        if bounds is None:
-                            return  # no data to remove
-                        query = "SELECT drop_chunks('%s', older_than=>'%s'::timestamp)" % (table, bounds[1])
+                if start is None and end is None:
+                    query = "TRUNCATE %s" % table
+                elif start is None and "intervals" not in table and not exact:
+                    # use the much faster drop chunks utility and accept the approximate result
+                    bounds = await psql_helpers.convert_time_bounds(conn, stream, start, end)
+                    if bounds is None:
+                        return  # no data to remove
+                    query = "SELECT drop_chunks('%s', older_than=>'%s'::timestamp)" % (table, bounds[1])
                 else:
                     query = f'DELETE FROM {table} {where_clause}'
                 try:
