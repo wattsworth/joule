@@ -120,7 +120,7 @@ class Inserter:
             await psql_helpers.update_chunk_interval(conn, f"data.stream{self.stream.id}",
                                                      self._chunk_interval)
             if self.decimator is not None:
-                await self.decimator.update_chunk_interval(conn, self._chunk_interval * 4)
+                await self.decimator.update_chunk_interval(conn, self._chunk_interval)
 
     async def _measure_data_rate(self, data: np.ndarray) -> None:
         if self._chunk_interval != 0:
