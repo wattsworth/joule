@@ -199,9 +199,10 @@ async def create_decimation_table(conn: asyncpg.Connection, stream: DataStream, 
           ', '.join(cols) + \
           ", PRIMARY KEY(time));"
     await conn.execute(sql)
+    # use the default chunk interval, this will be updated by the decimator process
     sql = f"""
         SELECT create_hypertable('{table_name}', 'time',
-        if_not_exists=>true, chunk_time_interval => INTERVAL '{level} weeks');
+        if_not_exists=>true);
     """
     # print(f"SQL: {sql}")
     await conn.execute(sql)

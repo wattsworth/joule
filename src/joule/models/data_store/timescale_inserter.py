@@ -13,7 +13,7 @@ import joule.utilities
 
 Loop = asyncio.AbstractEventLoop
 log = logging.getLogger('joule')
-MAX_CHUNK_INTERVAL = 1000 * 60 * 60 * 24 * 7 * 365  # 1 year in milliseconds
+MAX_CHUNK_INTERVAL = 1000 * 1000 * 60 * 60 * 24 * 365 # 1 year in microseconds
 
 
 class Inserter:
@@ -68,7 +68,7 @@ class Inserter:
                             last_ts = data['timestamp'][-1]
                             # lazy initialization of decimator
                             if self.stream.decimate and self.decimator is None:
-                                self.decimator = Decimator(self.stream, 1, 4, self._chunk_interval * 4)
+                                self.decimator = Decimator(self.stream, 1, 4, self._chunk_interval)
                             psql_bytes = psql_helpers.data_to_bytes(data)
                             try:
                                 await conn.copy_to_table("stream%d" % self.stream.id,
@@ -134,7 +134,10 @@ class Inserter:
         data_rate = 1e6 / np.median(diffs) * data.dtype.itemsize
         total_memory = psutil.virtual_memory().total
         # set chunk size to 5% of available memory, this allows ~5 active streams
-        self._chunk_interval = (int(total_memory * 0.05) / data_rate)*1e3 # in milliseconds
+        self._chunk_interval = (int(total_memory * 0.05) / data_rate)*1e6 # in microseconds
+        hours = self._chunk_interval / (1e6*60*60)
+        memory = int(total_memory*0.05)/1e6
+        print(f"setting target chunk interval for {self.stream.name} [{self.stream.id}] to {hours}  ~ {memory}MB")
         #print(f"Data rate: {data_rate} bytes/sec, chunk interval: {self._chunk_interval} ms")
         await self.update_chunk_interval(self._chunk_interval)
 
@@ -173,7 +176,7 @@ class Decimator:
         """decimate data and insert it, retry on error"""
         if not self.path_created:
             await psql_helpers.create_decimation_table(conn, self.stream, self.level)
-            if self.chunk_interval is not None:
+            if self.chunk_interval > 0:
                 await psql_helpers.update_chunk_interval(conn, self.full_table_name, self.chunk_interval)
             self.path_created = True
 
