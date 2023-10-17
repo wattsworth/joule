@@ -101,7 +101,7 @@ def query_time_bounds(start, end, start_col_name='time', end_col_name=None):
             end = datetime.datetime.fromtimestamp(end / 1e6, tz=datetime.timezone.utc)
         limits.append(f"{start_col_name} < '{end}'")
     if len(limits) > 0:
-        return 'WHERE ' + ' AND '.join(limits)
+        return ' AND '.join(limits)
     else:
         return ''
 
@@ -149,16 +149,41 @@ def query_event_json(filter_groups: EventFilter) -> str:
     return f"({sql_query})"
 
 
-async def create_event_table(conn: asyncpg.Connection):
+async def create_event_table(conn: asyncpg.Connection, stream: 'EventStream'):
+    # first check if the table exists
+    table_name = f"data.event{stream.id}"
+    sql = f"SELECT to_regclass('{table_name }');"
+    result = await conn.fetchval(sql)
+    if result is not None:
+        return  # nothing to do, table exists
+
+    sql = f"""CREATE TABLE {table_name } (
+    id SERIAL,
+    start_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP NOT NULL,
+    content JSONB
+    )"""
+    await conn.execute(sql)
+    if stream.chunk_duration_us > 0:
+        sql = f"""SELECT create_hypertable('{table_name }', 'start_time')"""
+        await conn.execute(sql)
+        await update_chunk_interval(conn, table_name, stream.chunk_duration_us)
+    sql = f"""CREATE INDEX ON {table_name} (start_time, end_time)"""
+    await conn.execute(sql)
+    sql = f"""GRANT SELECT ON {table_name} TO joule_module"""
+    await conn.execute(sql)
+
+
+async def create_event_table_bak(conn: asyncpg.Connection):
     sql = """CREATE TABLE IF NOT EXISTS data.events (
     id SERIAL,
-    time TIMESTAMP NOT NULL,
+    start_time TIMESTAMP NOT NULL,
     end_time TIMESTAMP,
     event_stream_id INTEGER,
     content JSONB
     )"""
     await conn.execute(sql)
-    sql = """SELECT create_hypertable('data.events', 'time',
+    sql = """SELECT create_hypertable('data.events', 'start_time',
     chunk_time_interval => INTERVAL '1 day', if_not_exists=> TRUE)"""
     await conn.execute(sql)
     sql = """CREATE INDEX ON data.events (event_stream_id, time DESC)"""
@@ -321,7 +346,9 @@ async def get_boundaries(conn: asyncpg.Connection, stream: DataStream,
         return []  # no data so no boundaries
     start, end = bounds
     query = "SELECT time FROM data.stream%d_intervals " % stream.id
-    query += query_time_bounds(start, end)
+    where_clause = query_time_bounds(start, end)
+    if len(where_clause)>0:
+        query += " WHERE " + where_clause
     query += " ORDER BY time ASC"
     try:
         records = await conn.fetch(query)
@@ -388,10 +415,10 @@ async def limit_time_bounds(conn: asyncpg.Connection,
     return start, end
 
 
-async def update_chunk_interval(conn: asyncpg.Connection, stream: DataStream,
-                                chunk_interval_ms: int):
-    if chunk_interval_ms == 0:
+async def update_chunk_interval(conn: asyncpg.Connection, table: str,
+                                chunk_interval_us: int):
+    if chunk_interval_us == 0:
         return  # invalid chunk interval setting, ignore
-    query = f"SELECT set_chunk_time_interval('{stream}', {round(chunk_interval_ms)})"
-    #print(f"QUERY: <{query}>, {round(chunk_interval_ms/(1000*60*60))}") # show in hours
+    query = f"SELECT set_chunk_time_interval('{table}', {round(chunk_interval_us)})"
+    # print(f"QUERY: <{query}>, {round(chunk_interval_ms/(1000*60*60))}") # show in hours
     await conn.execute(query)

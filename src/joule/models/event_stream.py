@@ -3,17 +3,16 @@ from sqlalchemy import (Column, Integer, String, DateTime, ForeignKey)
 from sqlalchemy.dialects.postgresql import BIGINT, JSONB
 from typing import TYPE_CHECKING, Dict, Optional
 import datetime
+from sqlalchemy_utils import force_instant_defaults
 
 from joule.errors import ConfigurationError
-
 from joule.models.meta import Base
-
-# from joule.models.data_store.event_store import StreamInfo
 
 if TYPE_CHECKING:
     from joule.models import (Folder)  # pragma: no cover
     from joule.models.data_store.event_store import StreamInfo
 
+force_instant_defaults()
 
 class EventStream(Base):
     """
@@ -22,6 +21,7 @@ class EventStream(Base):
         description (str): stream description
         decimate (bool): whether to store decimated data for event visualization
         folder (joule.Folder): parent Folder
+        chunk_duration_us (int): chunk duration in microseconds, 0 for normal table
         keep_us (int): microseconds of data to keep (KEEP_NONE=0, KEEP_ALL=-1).
     """
     __tablename__ = 'eventstream'
@@ -30,6 +30,7 @@ class EventStream(Base):
     id: int = Column(Integer, primary_key=True)
     name: str = Column(String, nullable=False)
     event_fields: Dict[str, str] = Column(JSONB)
+    chunk_duration_us: int = Column(BIGINT, default=0)
 
     KEEP_ALL = -1
     KEEP_NONE = 0
@@ -51,6 +52,9 @@ class EventStream(Base):
         if 'event_fields' in attrs:
             self.event_fields = validate_event_fields(attrs['event_fields'])
             updated = True
+        if 'chunk_duration_us' in attrs:
+            self.chunk_duration_us = attrs['chunk_duration_us']
+            updated=True
         if updated:
             self.touch()
 
@@ -76,6 +80,7 @@ class EventStream(Base):
             'name': self.name,
             'description': self.description,
             'event_fields': self.event_fields,
+            'chunk_duration_us': self.chunk_duration_us,
             'updated_at': self.updated_at.isoformat()
         }
 
@@ -107,8 +112,14 @@ def from_json(data: Dict) -> EventStream:
                        name=validate_name(data["name"]),
                        description=data["description"],
                        event_fields=data["event_fields"],
+                       chunk_duration_us=data["chunk_duration_us"],
                        updated_at=datetime.datetime.utcnow()
                        )
+
+def validate_chunk_duration(duration):
+    if duration<0:
+        raise ConfigurationError("invalid chunk duration, must be > 0")
+    return duration
 
 
 def validate_event_fields(fields: Dict[str, str]) -> Dict[str, str]:

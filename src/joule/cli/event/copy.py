@@ -38,7 +38,7 @@ def cli_copy(config: Config, start, end, replace, new, destination_node, source,
     click.echo("OK")
 
 
-async def _run(source_node,  dest_node, start, end, new, replace, source, destination):
+async def _run(source_node, dest_node, start, end, new, replace, source, destination):
     # make sure the time bounds make sense
     if start is not None:
         try:
@@ -55,13 +55,17 @@ async def _run(source_node,  dest_node, start, end, new, replace, source, destin
                                    f"must be before end f{ts2h(end)}")
 
     # create the destination stream if necessary
-    name = destination.split('/')[-1]
-    path = "/".join(destination.split('/')[:-1])
-    try:
-        event_stream = joule.api.EventStream(name=name)
-        await dest_node.event_stream_create(event_stream, path)
-    except joule.errors.ApiError:
-        pass  # stream already exists
+    # name = destination.split('/')[-1]
+    # path = "/".join(destination.split('/')[:-1])
+    print(f"creating destination {destination}")
+    source_stream = await source_node.event_stream_get(source)
+    await dest_node.event_stream_get(destination, create=True,
+                                     chunk_duration_us=source_stream.chunk_duration_us)
+    # try:
+    #    event_stream = joule.api.EventStream(name=name)
+    #    await dest_node.event_stream_create(event_stream, path)
+    # except joule.errors.ApiError:
+    #    pass  # stream already exists
 
     if replace:
         await dest_node.event_stream_remove(destination, start, end)
@@ -79,7 +83,7 @@ async def _run(source_node,  dest_node, start, end, new, replace, source, destin
             for event in events:
                 if event.id not in seen_event_ids:
                     seen_event_ids.add(event.id)
-                    event.id = None # remove the event id's so it inserts as a new event
+                    event.id = None  # remove the event id's so it inserts as a new event
                     new_events.append(event)
 
             if len(new_events) == 0:
@@ -90,4 +94,4 @@ async def _run(source_node,  dest_node, start, end, new, replace, source, destin
             bar.update(len(new_events))
             start = new_events[-1].start_time + 1
         # bring bar up to 100%
-        bar.update(event_count-num_copied_events)
+        bar.update(event_count - num_copied_events)

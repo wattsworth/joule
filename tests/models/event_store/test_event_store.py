@@ -93,9 +93,9 @@ class TestEventStore(unittest.IsolatedAsyncioTestCase):
                     results[x] = StreamInfo(None, None, 0, 0, 0)
                 else:
                     start = x * 1000 * 100
-                    end = (x * 1000 + 20 + x - 1) * 100
-                    if x == 10:  # handle rounding error in conversion between postgres and int timestamp
-                        end -= 1
+                    end = (x * 1000 + 20 + x - 1) * 100 + 10
+                    #if x == 10:  # handle rounding error in conversion between postgres and int timestamp
+                    #    end -= 1
                     results[x] = StreamInfo(start, end, 20 + x, end - start, 0)
             return results
 

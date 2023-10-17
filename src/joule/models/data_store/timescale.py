@@ -164,6 +164,8 @@ class TimescaleStore(DataStore):
                      start: Optional[int], end: Optional[int],
                      exact: bool = True):
         where_clause = psql_helpers.query_time_bounds(start, end)
+        if len(where_clause)>0:
+            where_clause = " WHERE " + where_clause
         async with self.pool.acquire() as conn:
             tables = await psql_helpers.get_table_names(conn, stream)
             for table in tables:
@@ -268,7 +270,9 @@ async def _extract_data(conn: asyncpg.Connection, stream: DataStream, callback,
         table_name += "_%d" % decimation_level
     # extract by interval
     query = "SELECT time FROM data.stream%d_intervals " % stream.id
-    query += psql_helpers.query_time_bounds(start, end)
+    where_clause = psql_helpers.query_time_bounds(start, end)
+    if len(where_clause)>0:
+        query += " WHERE " + where_clause
     try:
         boundary_records = await conn.fetch(query)
     except asyncpg.UndefinedTableError:
@@ -285,7 +289,9 @@ async def _extract_data(conn: asyncpg.Connection, stream: DataStream, callback,
         done = False
         while not done:
             query = "SELECT * FROM %s " % table_name
-            query += psql_helpers.query_time_bounds(start, end)
+            where_clause = psql_helpers.query_time_bounds(start, end)
+            if len(where_clause)>0:
+                query+= " WHERE " + where_clause
             query += " ORDER BY time ASC LIMIT %d" % block_size
             psql_bytes = BytesIO()
             try:

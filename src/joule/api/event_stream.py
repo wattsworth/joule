@@ -1,5 +1,6 @@
 from typing import Optional, Dict, Union, List
 import json
+import re
 
 from .session import BaseSession
 from .folder_type import Folder
@@ -18,10 +19,20 @@ class EventStream:
             description (str): optional field
     """
 
-    def __init__(self, name: str = "", description: str = "", event_fields: Optional[Dict[str, str]] = None):
+    def __init__(self, name: str = "",
+                 description: str = "",
+                 chunk_duration: str = "",
+                 chunk_duration_us: Optional[int] = None,
+                 event_fields: Optional[Dict[str, str]] = None):
         self._id = None
         self.name = name
         self.description = description
+        if chunk_duration_us is not None:
+            if chunk_duration != "":
+                raise Exception("specify either chunk_duration or chunk_duration_us, not both")
+            self.chunk_duration_us = chunk_duration_us
+        else:
+            self.chunk_duration_us = self._parse_time_duration(chunk_duration)
         self.event_fields = self._validate_event_fields(event_fields)
 
     @property
@@ -39,7 +50,8 @@ class EventStream:
             "id": self._id,
             "name": self.name,
             "description": self.description,
-            "event_fields": self.event_fields
+            "event_fields": self.event_fields,
+            "chunk_duration_us": self.chunk_duration_us
         }
 
     def __repr__(self):
@@ -56,13 +68,44 @@ class EventStream:
                 raise errors.ApiError("invalid event field type, must be numeric or string")
         return fields
 
+    def _parse_time_duration(self, duration_str):
+        # if duration is already a number interpret it as us
+        try:
+            return int(duration_str)
+        except ValueError:
+            pass
+        # if it is empty use 0 (no hypertables)
+        if duration_str == "":
+            return 0
+        print(f"duration string: {duration_str}")
+        # otherwise expect a time unit and compute accordingly
+        match = re.fullmatch(r'^(\d+)([hdwmy])$', duration_str)
+        if match is None:
+            raise errors.ApiError("invalid duration "
+                                  "use format #unit (eg 1w)")
 
-def from_json(json) -> EventStream:
+        units = {
+            'h': 60 * 60 * 1e6,  # hours
+            'd': 24 * 60 * 60 * 1e6,  # days
+            'w': 7 * 24 * 60 * 60 * 1e6,  # weeks
+            'm': 4 * 7 * 24 * 60 * 60 * 1e6,  # months
+            'y': 365 * 24 * 60 * 60 * 1e6  # years
+        }
+        unit = match.group(2)
+        time = int(match.group(1))
+        if time <= 0:
+            raise errors.ApiError("invalid duration "
+                                  "use format #unit (eg 1w), none or all")
+        return int(time * units[unit])
+
+def from_json(json:dict) -> EventStream:
     my_stream = EventStream()
     my_stream.id = json['id']
     my_stream.name = json['name']
     my_stream.description = json['description']
     my_stream.event_fields = json['event_fields']
+    # use a default of 0 for backwards compatability
+    my_stream.chunk_duration_us = json.get("chunk_duration_us",0)
     return my_stream
 
 
@@ -162,6 +205,8 @@ async def event_stream_get(session: BaseSession,
                            stream: Union[EventStream, str, int],
                            create: bool = False,
                            description: str = "",
+                           chunk_duration: str = "",
+                           chunk_duration_us: Optional[int] = None,
                            event_fields=None) -> EventStream:
     data = {}
 
@@ -182,7 +227,10 @@ async def event_stream_get(session: BaseSession,
             raise e
         name = stream.split('/')[-1]
         path = '/'.join(stream.split('/')[:-1])
-        event_stream = EventStream(name, description, event_fields)
+        event_stream = EventStream(name, description,
+                                   chunk_duration = chunk_duration,
+                                   chunk_duration_us=chunk_duration_us,
+                                   event_fields=event_fields)
         return await event_stream_create(session, event_stream, path)
     return from_json(resp)
 

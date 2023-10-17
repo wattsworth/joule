@@ -158,8 +158,14 @@ class BaseNode:
                                stream: Union[EventStream, str, int],
                                create: bool = False,
                                description: str = "",
+                               chunk_duration: str = "",
+                               chunk_duration_us: Optional[int] = None,
                                event_fields=None) -> EventStream:
-        return await event_stream_get(self.session, stream, create, description, event_fields)
+        return await event_stream_get(self.session, stream, create,
+                                      description=description,
+                                      chunk_duration = chunk_duration,
+                                      chunk_duration_us = chunk_duration_us,
+                                      event_fields = event_fields)
 
     async def event_stream_move(self,
                                 stream: Union[DataStream, str, int],

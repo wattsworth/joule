@@ -30,7 +30,7 @@ dependencies = [
     'dateparser',
     'tabulate',
     'sqlalchemy',
-    'sqlalchemy',
+    'sqlalchemy-utils',
     'aiohttp-jinja2',
     'jinja2',
     'asyncpg',

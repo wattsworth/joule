@@ -137,7 +137,7 @@ class Inserter:
         self._chunk_interval = (int(total_memory * 0.05) / data_rate)*1e6 # in microseconds
         hours = self._chunk_interval / (1e6*60*60)
         memory = int(total_memory*0.05)/1e6
-        print(f"setting target chunk interval for {self.stream.name} [{self.stream.id}] to {hours}  ~ {memory}MB")
+        #print(f"setting target chunk interval for {self.stream.name} [{self.stream.id}] to {hours}  ~ {memory}MB")
         #print(f"Data rate: {data_rate} bytes/sec, chunk interval: {self._chunk_interval} ms")
         await self.update_chunk_interval(self._chunk_interval)
 
