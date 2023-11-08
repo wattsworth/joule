@@ -57,18 +57,25 @@ async def _run(source_node, dest_node, start, end, new, replace, source, destina
     # create the destination stream if necessary
     # name = destination.split('/')[-1]
     # path = "/".join(destination.split('/')[:-1])
-    print(f"creating destination {destination}")
     source_stream = await source_node.event_stream_get(source)
     await dest_node.event_stream_get(destination, create=True,
+                                     description=source_stream.description,
+                                     event_fields=source_stream.event_fields,
                                      chunk_duration_us=source_stream.chunk_duration_us)
     # try:
     #    event_stream = joule.api.EventStream(name=name)
     #    await dest_node.event_stream_create(event_stream, path)
     # except joule.errors.ApiError:
     #    pass  # stream already exists
-
-    if replace:
+    if new:
+        dest_info = await dest_node.event_stream_info(destination)
+        start = dest_info.end
+        if start is not None:
+            print(f"Starting copy at {ts2h(dest_info.end)}")
+    elif replace:
+        print(f"Removing existing events from destination...", end="")
         await dest_node.event_stream_remove(destination, start, end)
+        print("[OK]")
 
     stream_info = await source_node.event_stream_info(source)
     event_count = stream_info.event_count

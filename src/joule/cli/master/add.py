@@ -10,8 +10,9 @@ from joule.api import BaseNode
 @click.argument("type", type=click.Choice(['user', 'joule', 'lumen']))  # , help="type of master")
 @click.argument("identifier")  # help="username or URL for joule/lumen masters")
 @click.option('-k', "--key", help="desired API key, must be 32 characters, omit for a random key")
+@click.option('-u', "--remote-access-url", help="URL for remote access to this node, omit to automatically detect")
 @pass_config
-def cli_add(config, type, identifier, key):
+def cli_add(config, type, identifier, key, remote_access_url):
     """Authorize a new node master.
 
     For users specify a username (for documentation only).
@@ -23,7 +24,7 @@ def cli_add(config, type, identifier, key):
         elif type == 'joule':
             coro = _add_node(config.node, identifier)
         elif type == 'lumen':
-            coro = _add_lumen(config.node, identifier)
+            coro = _add_lumen(config.node, identifier, remote_access_url)
         else:
             raise click.ClickException("invalid type [%s]" % type)
         asyncio.run(coro)
@@ -32,10 +33,9 @@ def cli_add(config, type, identifier, key):
     finally:
         asyncio.run(
             config.close_node())
-        
 
 
-async def _add_lumen(node: BaseNode, host):
+async def _add_lumen(node: BaseNode, host, remote_access_url):
     # add the node and see what error comes back
     req_credentials = "unset"
     try:
@@ -49,7 +49,6 @@ async def _add_lumen(node: BaseNode, host):
             raise e
     if req_credentials == "unset":
         raise errors.ApiError("Lumen node did not specify required credentials")
-    lumen_params = {}
     if req_credentials == "key":
         key = click.prompt("Lumen authorization key")
         lumen_params = {"auth_key": key}
@@ -64,6 +63,8 @@ async def _add_lumen(node: BaseNode, host):
             "last_name": last_name,
             "email": email,
             "password": password}
+    if remote_access_url is not None:
+        lumen_params["return_address"] = remote_access_url
     await node.master_add("lumen", host, lumen_params)
     click.echo("Access to [%s] granted to Lumen Node [%s]" % (node.name, host))
     if req_credentials == "user":

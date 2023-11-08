@@ -15,7 +15,7 @@ DEFAULT_CONFIG = {
             "ModuleDirectory": "/etc/joule/module_configs",
             "StreamDirectory": "/etc/joule/stream_configs",
             "SocketDirectory": "/tmp/joule",
-            "Database": "joule@localhost:5432/joule",
+            #"Database": "joule@localhost:5432/joule",
             "InsertPeriod": 5,
             "CleanupPeriod": 60,
             "MaxLogLines": 100,
