@@ -38,7 +38,9 @@ from joule.api.event_stream import (EventStream,
                                     event_stream_info,
                                     event_stream_write,
                                     event_stream_read,
-                                    event_stream_remove)
+                                    event_stream_remove,
+                                    event_stream_count)
+
 from joule.api.event import Event
 
 from joule.api.data import (data_write,
@@ -163,9 +165,9 @@ class BaseNode:
                                event_fields=None) -> EventStream:
         return await event_stream_get(self.session, stream, create,
                                       description=description,
-                                      chunk_duration = chunk_duration,
-                                      chunk_duration_us = chunk_duration_us,
-                                      event_fields = event_fields)
+                                      chunk_duration=chunk_duration,
+                                      chunk_duration_us=chunk_duration_us,
+                                      event_fields=event_fields)
 
     async def event_stream_move(self,
                                 stream: Union[DataStream, str, int],
@@ -202,6 +204,15 @@ class BaseNode:
                                 limit: Optional[int] = None,
                                 json_filter: Optional[Dict[str, str]] = None) -> List[Event]:
         return await event_stream_read(self.session, stream, start, end, limit, json_filter)
+
+    async def event_stream_count(self,
+                                 stream: Union[EventStream, str, int],
+                                 start: Optional[int] = None,
+                                 end: Optional[int] = None,
+                                 json_filter: Optional[Dict[str, str]] = None,
+                                 include_on_going_events=True) -> int:
+
+        return await event_stream_count(self.session, stream, start, end, json_filter, include_on_going_events)
 
     async def event_stream_remove(self,
                                   stream: Union[EventStream, str, int],

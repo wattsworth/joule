@@ -98,14 +98,15 @@ class EventStream:
                                   "use format #unit (eg 1w), none or all")
         return int(time * units[unit])
 
-def from_json(json:dict) -> EventStream:
+
+def from_json(json: dict) -> EventStream:
     my_stream = EventStream()
     my_stream.id = json['id']
     my_stream.name = json['name']
     my_stream.description = json['description']
     my_stream.event_fields = json['event_fields']
     # use a default of 0 for backwards compatability
-    my_stream.chunk_duration_us = json.get("chunk_duration_us",0)
+    my_stream.chunk_duration_us = json.get("chunk_duration_us", 0)
     return my_stream
 
 
@@ -228,7 +229,7 @@ async def event_stream_get(session: BaseSession,
         name = stream.split('/')[-1]
         path = '/'.join(stream.split('/')[:-1])
         event_stream = EventStream(name, description,
-                                   chunk_duration = chunk_duration,
+                                   chunk_duration=chunk_duration,
                                    chunk_duration_us=chunk_duration_us,
                                    event_fields=event_fields)
         return await event_stream_create(session, event_stream, path)
@@ -289,6 +290,32 @@ async def event_stream_write(session: BaseSession,
         for i in range(len(chunk)):
             chunk[i].id = rx_events[i].id
     return events
+
+
+async def event_stream_count(session: BaseSession,
+                             stream: Union[EventStream, str, int],
+                             start_time: Optional[int],
+                             end_time: Optional[int],
+                             json_filter,
+                             include_on_going_events) -> List[Event]:
+    params = {}
+    if type(stream) is EventStream:
+        params["id"] = stream.id
+    elif type(stream) is int:
+        params["id"] = stream
+    elif type(stream) is str:
+        params["path"] = stream
+    else:
+        raise errors.ApiError("Invalid stream datatype. Must be EventStream, Path, or ID")
+    if start_time is not None:
+        params['start'] = int(start_time)
+    if end_time is not None:
+        params['end'] = int(end_time)
+    if json_filter is not None:
+        params['filter'] = json_filter
+    params['include-on-going-events'] = include_on_going_events
+    resp = await session.get("/event/data/count.json", params)
+    return resp["count"]
 
 
 async def event_stream_read(session: BaseSession,

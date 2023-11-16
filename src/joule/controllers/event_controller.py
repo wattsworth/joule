@@ -179,6 +179,51 @@ async def write_events(request):
     return web.json_response(data={'count': len(events), 'events': events})
 
 
+async def count_events(request):
+    db: Session = request.app["db"]
+    event_store: EventStore = request.app["event-store"]
+    # find the requested stream
+    if 'path' in request.query:
+        my_stream = folder.find_stream_by_path(request.query['path'], db,
+                                               stream_type=EventStream)
+    elif 'id' in request.query:
+        my_stream = db.get(EventStream, request.query["id"])
+    else:
+        return web.Response(text="specify an id or a path", status=400)
+    if my_stream is None:
+        return web.Response(text="stream does not exist", status=404)
+
+    # parse optional parameters
+    params = {'start': None, 'end': None, 'limit': None, 'include-ongoing-events': True}
+    param = ""  # to appease type checker
+    try:
+        for param in params:
+            if param in request.query:
+                params[param] = int(request.query[param])
+    except ValueError:
+        return web.Response(text="parameter [%s] must be an int" % param, status=400)
+
+    # make sure parameters make sense
+    if ((params['start'] is not None and params['end'] is not None) and
+            (params['start'] >= params['end'])):
+        return web.Response(text="[start] must be < [end]", status=400)
+
+    # handle json filter parameter
+    json_filter = None
+    if 'filter' in request.query and request.query['filter'] is not None and len(request.query['filter']) > 0:
+        try:
+            json_filter = json.loads(request.query['filter'])
+            # TODO verify syntax
+        except (json.decoder.JSONDecodeError, ValueError):
+            return web.Response(text="invalid filter parameter", status=400)
+
+    # handle limit parameter, default is HARD, do not return unless count < limit
+    event_count = await event_store.count(my_stream, params['start'], params['end'],
+                                          json_filter=json_filter,
+                                          include_on_going_events=params['include-ongoing-events'])
+    return web.json_response(data={'count': event_count})
+
+
 async def read_events(request):
     db: Session = request.app["db"]
     event_store: EventStore = request.app["event-store"]
@@ -194,7 +239,7 @@ async def read_events(request):
         return web.Response(text="stream does not exist", status=404)
 
     # parse optional parameters
-    params = {'start': None, 'end': None, 'limit': None}
+    params = {'start': None, 'end': None, 'limit': None, 'include-ongoing-events': True}
     param = ""  # to appease type checker
     try:
         for param in params:
@@ -221,10 +266,13 @@ async def read_events(request):
     if params['limit'] is not None and 'return-subset' not in request.query:
         if params['limit'] <= 0:
             return web.Response(text="[limit] must be > 0", status=400)
-        event_count = await event_store.count(my_stream, params['start'], params['end'], json_filter=json_filter)
+        event_count = await event_store.count(my_stream, params['start'], params['end'],
+                                              json_filter=json_filter,
+                                              include_on_going_events=params['include-ongoing-events'])
         if event_count > params['limit']:
             # too many events, send a histogram instead
-            event_hist = await event_store.histogram(my_stream, params['start'], params['end'], json_filter=json_filter,
+            event_hist = await event_store.histogram(my_stream, params['start'], params['end'],
+                                                     json_filter=json_filter,
                                                      nbuckets=100)
             return web.json_response(data={'count': event_count, 'events': event_hist, 'type': 'histogram'})
     # if return-subset, limit is SOFT, return just that many events
@@ -234,7 +282,9 @@ async def read_events(request):
             return web.Response(text="[limit] must be > 0", status=400)
         limit = params['limit']
 
-    events = await event_store.extract(my_stream, params['start'], params['end'], limit=limit, json_filter=json_filter)
+    events = await event_store.extract(my_stream, params['start'], params['end'],
+                                       limit=limit, json_filter=json_filter,
+                                       include_on_going_events=params['include-ongoing-events'])
     return web.json_response(data={'count': len(events), 'events': events, 'type': 'events'})
 
 

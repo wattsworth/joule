@@ -12,13 +12,14 @@ from joule.cli.config import Config, pass_config
 @click.command(name="copy")
 @click.option('-s', "--start", help="timestamp or descriptive string")
 @click.option('-e', "--end", help="timestamp or descriptive string")
-@click.option('-r', "--replace", help="remove existing events in destination", is_flag=True)
+@click.option('-a', '--action', help="action to take if events already exist in the destination",
+              type=click.Choice(['skip', 'ignore', 'replace', 'prompt']), default='prompt')
 @click.option('-n', '--new', help="copy starts at the last timestamp of the destination", is_flag=True)
 @click.option('-d', '--destination-node', help="node name or Nilmdb URL")
 @click.argument("source")
 @click.argument("destination")
 @pass_config
-def cli_copy(config: Config, start, end, replace, new, destination_node, source, destination):
+def cli_copy(config: Config, start, end, action, new, destination_node, source, destination):
     """Copy events to a different stream."""
     try:
         if destination_node is None:
@@ -28,7 +29,8 @@ def cli_copy(config: Config, start, end, replace, new, destination_node, source,
     except errors.ApiError:
         raise click.ClickException(f"Invalid destination node [{destination_node}]")
     try:
-        asyncio.run(_run(config.node, dest_node, start, end, new, replace, source, destination))
+        replace_action = asyncio.run(_verify_action(dest_node, destination, action, start, end))
+        asyncio.run(_run(config.node, dest_node, start, end, new, action, source, destination))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
@@ -36,6 +38,44 @@ def cli_copy(config: Config, start, end, replace, new, destination_node, source,
         if destination_node is not None:  # different destination node
             asyncio.run(dest_node.close())
     click.echo("OK")
+
+
+async def _replace_destination_events(node, stream, action, start, end):
+    if action == 'replace':
+        return True
+    elif action == 'ignore':
+        return False
+    elif action == 'prompt':
+        if await has_existing_events(node, stream, start, end):
+            print(""""
+                   There are already events in this destination, select how you want to procede:
+                   [c]ancel: stop, do not copy anything
+                   [i]gnore: ignore existing destination events, add source events. This may result in duplicate events
+                   [r]eplace: remove all destination events, then add source events. This may result in data loss
+                   Select an option (c,i or r): """)
+            choice = click.getchar()
+            if choice == 'c':
+                raise click.ClickException("Action cancelled")
+            elif action == 'i':
+                print("\t ignoring existing events, running copy anyway")
+                return False
+            elif action == 'r':
+                print("\t removing events in destination before running copy")
+                return True
+
+    else:
+        raise click.ClickException("\t invalid option, cancelling copy")
+
+
+async def has_existing_events(node, stream, start, end):
+    try:
+        count = await node.event_stream_count(stream, start=start, end=end)
+        return count > 0
+    except joule.errors.ApiError as e:
+        if "does not exist" in str(e):
+            return False
+        else:
+            raise e
 
 
 async def _run(source_node, dest_node, start, end, new, replace, source, destination):
@@ -57,10 +97,16 @@ async def _run(source_node, dest_node, start, end, new, replace, source, destina
     # create the destination stream if necessary
     # name = destination.split('/')[-1]
     # path = "/".join(destination.split('/')[:-1])
-    print(f"creating destination {destination}")
     source_stream = await source_node.event_stream_get(source)
+
     await dest_node.event_stream_get(destination, create=True,
+                                     description=source_stream.description,
+                                     event_fields=source_stream.event_fields,
                                      chunk_duration_us=source_stream.chunk_duration_us)
+    if new:
+        dest_info = await dest_node.event_stream_info(destination)
+        start = dest_info.start_time
+        print(f"Starting copy at {ts2h(start)}")
     # try:
     #    event_stream = joule.api.EventStream(name=name)
     #    await dest_node.event_stream_create(event_stream, path)
@@ -74,24 +120,26 @@ async def _run(source_node, dest_node, start, end, new, replace, source, destina
     event_count = stream_info.event_count
     num_copied_events = 0
     with click.progressbar(length=event_count) as bar:
-        seen_event_ids = set()
+        # seen_event_ids = set()
         while True:
             events = await source_node.event_stream_read(source, start=start, end=end,
-                                                         limit=1000)
+                                                         limit=1000, include_on_going_events=False)
 
-            new_events = []
-            for event in events:
-                if event.id not in seen_event_ids:
-                    seen_event_ids.add(event.id)
-                    event.id = None  # remove the event id's so it inserts as a new event
-                    new_events.append(event)
-
-            if len(new_events) == 0:
+            if len(events) == 0:
                 break
+            # new_events = []
+            # for event in events:
+            #    if event.id not in seen_event_ids:
+            #        seen_event_ids.add(event.id)
+            #        event.id = None  # remove the event id's so it inserts as a new event
+            #        new_events.append(event)
 
-            await dest_node.event_stream_write(destination, new_events)
-            num_copied_events += len(new_events)
-            bar.update(len(new_events))
-            start = new_events[-1].start_time + 1
+            # if len(new_events) == 0:
+            #    break
+
+            await dest_node.event_stream_write(destination, events)
+            num_copied_events += len(events)
+            bar.update(len(events))
+            start = events[-1].start_time + 1
         # bring bar up to 100%
         bar.update(event_count - num_copied_events)

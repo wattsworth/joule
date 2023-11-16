@@ -26,6 +26,7 @@ routes = [
     web.delete('/event.json', event_controller.delete),
     # --- event stream data routes ---
     web.get('/event/data.json', event_controller.read_events),
+    web.get('/event/data/count.json', event_controller.count_events),
     web.post('/event/data.json', event_controller.write_events),
     web.delete('/event/data.json', event_controller.remove_events),
     # --- stream routes ---

@@ -24,7 +24,6 @@ class EventStore:
         else:
             self.pool = pool
 
-
     async def upsert(self, stream: 'EventStream', events: List):
         updated_events = list(filter(lambda event: "id" in event and event["id"] is not None, events))
         new_events = list(filter(lambda event: "id" not in event or event["id"] is None, events))
@@ -58,13 +57,18 @@ class EventStore:
 
     async def count(self, stream: 'EventStream',
                     start: Optional[int] = None, end: Optional[int] = None,
-                    json_filter=None) -> int:
+                    json_filter=None,
+                    include_on_going_events=False) -> int:
         if end is not None and start is not None and end <= start:
             raise ValueError("Invalid time bounds start [%d] must be < end [%d]" % (start, end))
         query = f"SELECT count(*) FROM data.event{stream.id} "
+        if include_on_going_events:
+            end_col_name = None  # only return events that start within this interval
+        else:
+            end_col_name = 'end_time'  # return all events that are active within this interval
         where_clauses = [psql_helpers.query_time_bounds(start, end,
                                                         start_col_name='start_time',
-                                                        end_col_name='end_time')]
+                                                        end_col_name=end_col_name)]
         if json_filter is not None and len(json_filter) > 0:
             where_clauses.append(psql_helpers.query_event_json(json_filter))
         where_clauses = [wc for wc in where_clauses if len(wc) > 0]
@@ -104,24 +108,29 @@ class EventStore:
             query += " GROUP BY bucket ORDER BY bucket ASC"
             records = await conn.fetch(query, start, end)
             return histogram_to_events(records)
-            #return [(joule.utilities.datetime_to_timestamp(r['bucket']), r['count']) for r in records]
+            # return [(joule.utilities.datetime_to_timestamp(r['bucket']), r['count']) for r in records]
 
     async def extract(self, stream: 'EventStream',
                       start: Optional[int] = None,
                       end: Optional[int] = None,
                       json_filter=None,
-                      limit=None) -> List[Dict]:
+                      limit=None,
+                      include_on_going_events=False) -> List[Dict]:
         if end is not None and start is not None and end <= start:
             raise ValueError("Invalid time bounds start [%d] must be < end [%d]" % (start, end))
         query = f"SELECT id, start_time, end_time, content FROM data.event{stream.id} "
+        if include_on_going_events:
+            end_col_name = None  # only return events that start within this interval
+        else:
+            end_col_name = 'end_time'  # return all events that are active within this interval
         where_clauses = [psql_helpers.query_time_bounds(start, end,
-                                                      start_col_name='start_time',
-                                                      end_col_name='end_time')]
+                                                        start_col_name='start_time',
+                                                        end_col_name=end_col_name)]
         if json_filter is not None and len(json_filter) > 0:
             where_clauses.append(psql_helpers.query_event_json(json_filter))
-        where_clauses = [wc for wc in where_clauses if len(wc)>0]
-        if len(where_clauses)>0:
-            query += "WHERE "+ " AND ".join(where_clauses)
+        where_clauses = [wc for wc in where_clauses if len(wc) > 0]
+        if len(where_clauses) > 0:
+            query += "WHERE " + " AND ".join(where_clauses)
         if limit is not None:
             assert limit > 0, "limit must be > 0"
             if start is None and end is not None:
@@ -172,8 +181,8 @@ class EventStore:
                     query = "select count(*), min(start_time) as start_time," \
                             f" max(end_time) as end_time from data.event{stream.id}"
                     row = await conn.fetchrow(query)
-                    if row['count']==0:
-                        continue # no events in stream
+                    if row['count'] == 0:
+                        continue  # no events in stream
                     end_time = joule.utilities.datetime_to_timestamp(row['end_time'])
                     start_time = joule.utilities.datetime_to_timestamp(row['start_time'])
                     total_time = end_time - start_time
@@ -218,6 +227,7 @@ class StreamInfo:
             "total_time": self.total_time
         }
 
+
 def event_to_record(event: Dict) -> Tuple:
     start = joule.utilities.timestamp_to_datetime(event['start_time'])
     if event['end_time'] is not None:
@@ -229,7 +239,6 @@ def event_to_record(event: Dict) -> Tuple:
     else:
         end = None
     return event["id"], start, end, json.dumps(event['content'])
-
 
 
 def record_to_event(record: asyncpg.Record) -> Dict:
