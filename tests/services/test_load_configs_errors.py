@@ -36,7 +36,7 @@ class TestLoadConfigErrors(unittest.TestCase):
                                 StreamDirectory=%s
                                 SocketDirectory=%s
                             """ % (module_dir, stream_dir, sock_dir))
-                    with self.assertRaisesRegex(ConfigurationError, "database"):
+                    with self.assertRaisesRegex(ConfigurationError, "Database"):
                         load_config.run(custom_values=parser)
 
     def test_error_on_bad_ip_address(self):

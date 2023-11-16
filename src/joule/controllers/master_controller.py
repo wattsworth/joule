@@ -76,6 +76,11 @@ async def add(request: web.Request):  # pragma: no cover
             db.add(my_master)
             db.commit()
             # post this key to the master
+            # keep track of whether the operation is successful, don't fail on error
+            # because it might not be possible to coordinate the correct URL's, let the user
+            # fix this later through the Lumen web interface or some other way.
+            success = False
+            error_msg = ""
             if master_type == 'joule':
                 coro = _send_node_key(my_master.key, identifier, local_port,
                                       local_name, local_scheme, local_uri, request.app["cafile"])
@@ -85,11 +90,11 @@ async def add(request: web.Request):  # pragma: no cover
                                        body['lumen_params'])
             try:
                 name = await coro
+                success = True
             except errors.ApiError as e:
-                # remove the pending key
-                db.delete(my_master)
-                db.commit()
-                return web.Response(text="The master cannot add this node [%s]" % str(e), status=400)
+                error_msg = str(e)
+                name = identifier
+                success = False
 
             # remove the key for this node if it already exists
             db.query(Master). \
@@ -98,7 +103,10 @@ async def add(request: web.Request):  # pragma: no cover
             my_master.name = name
             db.add(my_master)
             db.commit()
-            return web.json_response({"name": my_master.name})
+            if success:
+                return web.json_response({"name": my_master.name})
+            else:
+                return web.json_response({"lumen error": error_msg}, status=400)
     except (ValueError, KeyError) as e:
         if my_master is not None:
             db.delete(my_master)

@@ -112,9 +112,15 @@ async def _run(source_node, dest_node, start, end, new, replace, source, destina
     #    await dest_node.event_stream_create(event_stream, path)
     # except joule.errors.ApiError:
     #    pass  # stream already exists
-
-    if replace:
+    if new:
+        dest_info = await dest_node.event_stream_info(destination)
+        start = dest_info.end
+        if start is not None:
+            print(f"Starting copy at {ts2h(dest_info.end)}")
+    elif replace:
+        print(f"Removing existing events from destination...", end="")
         await dest_node.event_stream_remove(destination, start, end)
+        print("[OK]")
 
     stream_info = await source_node.event_stream_info(source)
     event_count = stream_info.event_count
