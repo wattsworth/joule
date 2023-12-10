@@ -23,6 +23,7 @@ class EventStream:
                  description: str = "",
                  chunk_duration: str = "",
                  chunk_duration_us: Optional[int] = None,
+                 keep_us: int = -1,
                  event_fields: Optional[Dict[str, str]] = None):
         self._id = None
         self.name = name
@@ -34,6 +35,7 @@ class EventStream:
         else:
             self.chunk_duration_us = self._parse_time_duration(chunk_duration)
         self.event_fields = self._validate_event_fields(event_fields)
+        self.keep_us = keep_us
 
     @property
     def id(self) -> int:
@@ -51,7 +53,8 @@ class EventStream:
             "name": self.name,
             "description": self.description,
             "event_fields": self.event_fields,
-            "chunk_duration_us": self.chunk_duration_us
+            "chunk_duration_us": self.chunk_duration_us,
+            "keep_us": self.keep_us
         }
 
     def __repr__(self):
@@ -105,6 +108,7 @@ def from_json(json: dict) -> EventStream:
     my_stream.name = json['name']
     my_stream.description = json['description']
     my_stream.event_fields = json['event_fields']
+    my_stream.keep_us = json['keep_us']
     # use a default of 0 for backwards compatability
     my_stream.chunk_duration_us = json.get("chunk_duration_us", 0)
     return my_stream
@@ -133,7 +137,7 @@ class EventStreamInfo:
         self.total_time = total_time
 
     def __repr__(self):
-        return "<joule.api.EventStreamInfo start=%r end=%r events=%r, total_time=%r>" % (
+        return "<joule.api.EventStreamInfo start=%r end=%r event_count=%r, total_time=%r>" % (
             self.start, self.end, self.event_count, self.total_time)
 
 
@@ -173,7 +177,7 @@ async def event_stream_create(session: BaseSession,
     data = {"stream": stream.to_json()}
 
     if type(folder) is Folder:
-        data["dest_id"] = folder.id
+        data["dest_id"] = folder.id  # raises error if id is None
     elif type(folder) is int:
         data["dest_id"] = folder
     elif type(folder) is str:
@@ -190,7 +194,7 @@ async def event_stream_info(session: BaseSession,
     data = {}
 
     if type(stream) is EventStream:
-        data["id"] = stream.id
+        data["id"] = stream.id  # raises error if id is None
     elif type(stream) is int:
         data["id"] = stream
     elif type(stream) is str:
@@ -284,6 +288,7 @@ async def event_stream_write(session: BaseSession,
     for idx in range(0, len(events), 500):
         chunk = events[idx:idx + 500]
         data['events'] = [e.to_json() for e in events[idx:idx + 500]]
+        print(len(data['events']))
         resp = await session.post("/event/data.json", data)
         rx_events += [event_from_json(e) for e in resp["events"]]
         # copy the ids over
@@ -313,17 +318,19 @@ async def event_stream_count(session: BaseSession,
         params['end'] = int(end_time)
     if json_filter is not None:
         params['filter'] = json_filter
-    params['include-on-going-events'] = include_on_going_events
+    if include_on_going_events:
+        params['include-on-going-events'] = 1
     resp = await session.get("/event/data/count.json", params)
     return resp["count"]
 
 
 async def event_stream_read(session: BaseSession,
                             stream: Union[EventStream, str, int],
-                            start_time: Optional[int] = None,
-                            end_time: Optional[int] = None,
-                            limit=None,
-                            json_filter=None) -> List[Event]:
+                            start_time: Optional[int],
+                            end_time: Optional[int],
+                            limit,
+                            json_filter,
+                            include_on_going_events) -> List[Event]:
     params = {}
     if type(stream) is EventStream:
         params["id"] = stream.id
@@ -337,15 +344,24 @@ async def event_stream_read(session: BaseSession,
         params['start'] = int(start_time)
     if end_time is not None:
         params['end'] = int(end_time)
-    if limit is not None:
-        if limit <= 0:
-            raise errors.ApiError("Limit must be > 0")
-        params['limit'] = limit
-        params['return-subset'] = 1
+    # enforce a limit, do not allow arbitrarily large reads
+    limit = int(limit)
+    if limit <= 0:
+        raise errors.ApiError("Limit must be > 0")
+    params['limit'] = limit + 1  # pad by 1 to check for read overflow, see error message below
+    params['return-subset'] = 1
     if json_filter is not None:
         params['filter'] = json_filter
+    if include_on_going_events:
+        params['include-on-going-events'] = 1
     resp = await session.get("/event/data.json", params)
-    return [event_from_json(e) for e in resp["events"]]
+    events = [event_from_json(e) for e in resp["events"]]
+    if len(events) > limit:
+        print(f"WARNING: Only returning the first {limit} events in this stream, increase "
+              "the limit parameter to retrieve more data or use different "
+              "time bounds and/or filter parameters to reduce the number of events returned")
+        return events[:-1]
+    return events
 
 
 async def event_stream_remove(session: BaseSession,

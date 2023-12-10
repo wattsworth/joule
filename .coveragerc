@@ -1,6 +1,7 @@
 [run]
-omit = joule/daemon.py, joule/_version.py, joule/cli/admin/*
+#omit = joule/daemon.py, joule/_version.py, joule/cli/admin/*
 source = joule
+parallel = True
 
 [report]
 exclude_lines =

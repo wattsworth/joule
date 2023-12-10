@@ -493,7 +493,7 @@ Event Stream Actions
         >>> e2 = Event(start_time=time_now()-1e6, end_time = time_now(), content={'name': 'event2'})
         >>> await node.event_stream_write("/plugs/events",[e1,e2])
 
-.. function:: Node.event_stream_read(stream: Union[EventStream, str, int], start: Optional[int] = None, end: Optional[int] = None, limit: Optional[int] = None, json_filter: Optional[string]=None) -> List[Event]
+.. function:: Node.event_stream_read(stream: Union[EventStream, str, int], start: Optional[int] = None, end: Optional[int] = None, limit: 10000, json_filter: Optional[string]=None, include_on_going_events=True) -> List[Event]
 
     Read events from an existing stream. Returns a list of :class:`joule.api.Event` objects.
 
@@ -503,6 +503,7 @@ Event Stream Actions
         :end: UNIX timestamp (microseconds). Omit to read to end of stream.
         :limit: Limit query to first N result.
         :json_filter: Select events based on content, see below.
+        :include_on_going_events: Set to `False` to only return events that begin within the specified interval. By default this function returns all events that are active within the specified interval.
 
     JSON Filter Format:
         Specify a list of lists where each item is a tuple of ``[key,comparison,value]``

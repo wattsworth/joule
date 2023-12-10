@@ -8,5 +8,6 @@ RUN apt-get update && \
 
 COPY . /joule
 RUN cd /joule && pip install .
+RUN pip install coverage
 
 CMD tests/e2e/bootstrap_inner.sh timescale tests/e2e/follower_node.py

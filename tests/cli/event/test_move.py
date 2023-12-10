@@ -12,8 +12,8 @@ class TestStreamMove(FakeJouleTestCase):
         server = FakeJoule()
         self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['stream', 'move', '/folder/src', '/folder/dest'])
-        self.assertEqual(result.exit_code, 0)
+        result = runner.invoke(main, ['event', 'move', '/folder/src', '/folder/dest'])
+        self.assertCliSuccess(result)
         (path, destination) = self.msgs.get()
         self.assertEqual(path, '/folder/src')
         self.stop_server()
@@ -25,7 +25,7 @@ class TestStreamMove(FakeJouleTestCase):
         server.stub_stream_move = True
         self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['stream', 'move', '/bad/path', '/folder/dest'])
+        result = runner.invoke(main, ['event', 'move', '/bad/path', '/folder/dest'])
         self.assertTrue("Error" in result.output)
         self.stop_server()
 
@@ -36,7 +36,7 @@ class TestStreamMove(FakeJouleTestCase):
         server.stub_stream_move = True
         self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['stream', 'move', '/folder/src', '/folder/dest'])
+        result = runner.invoke(main, ['event', 'move', '/folder/src', '/folder/dest'])
         self.assertTrue('500' in result.output)
         self.assertTrue("test error" in result.output)
         self.assertEqual(result.exit_code, 1)

@@ -1,0 +1,16 @@
+{
+  "id": 192,
+  "name": "stream",
+  "description": "",
+  "event_fields": {},
+  "chunk_duration_us": 0,
+  "keep_us": -1,
+  "updated_at": "2023-11-22T17:03:54.208132",
+  "data_info": {
+    "start": null,
+    "end": null,
+    "event_count": 0,
+    "bytes": 0,
+    "total_time": 0
+  }
+}

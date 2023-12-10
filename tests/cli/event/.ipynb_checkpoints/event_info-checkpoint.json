@@ -1,0 +1,26 @@
+{
+  "id": 181,
+  "name": "Simple",
+  "description": "simple transients",
+  "event_fields": {
+    "type": "string",
+    "phase": "string",
+    "duration": "numeric",
+    "isolated": "numeric",
+    "position": "numeric",
+    "real_power": "numeric",
+    "power_factor": "numeric",
+    "apparent_power": "numeric",
+    "reactive_power": "numeric",
+    "relative_variance": "numeric"
+  },
+  "chunk_duration_us": 0,
+  "updated_at": "2023-11-21T17:32:07.611657",
+  "data_info": {
+    "start": 1363392024045101,
+    "end": 1378294129612766,
+    "event_count": 282587,
+    "bytes": 0,
+    "total_time": 14902105567665
+  }
+}

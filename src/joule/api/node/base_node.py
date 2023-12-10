@@ -170,7 +170,7 @@ class BaseNode:
                                       event_fields=event_fields)
 
     async def event_stream_move(self,
-                                stream: Union[DataStream, str, int],
+                                stream: Union[EventStream, str, int],
                                 folder: Union[Folder, str, int]) -> None:
         return await event_stream_move(self.session, stream, folder)
 
@@ -199,11 +199,15 @@ class BaseNode:
 
     async def event_stream_read(self,
                                 stream: Union[EventStream, str, int],
-                                start: Optional[int] = None,
-                                end: Optional[int] = None,
-                                limit: Optional[int] = None,
-                                json_filter: Optional[Dict[str, str]] = None) -> List[Event]:
-        return await event_stream_read(self.session, stream, start, end, limit, json_filter)
+                                start: Optional[int]=None,
+                                end: Optional[int]=None,
+                                limit: Optional[int]=10000,
+                                json_filter: Optional[Dict[str, str]]=None,
+                                include_on_going_events=True) -> List[Event]:
+        return await event_stream_read(self.session, stream=stream,
+                                       start_time=start, end_time=end,
+                                       limit=limit, json_filter=json_filter,
+                                       include_on_going_events=include_on_going_events)
 
     async def event_stream_count(self,
                                  stream: Union[EventStream, str, int],

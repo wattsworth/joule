@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
 force_instant_defaults()
 
+
 class EventStream(Base):
     """
     Attributes:
@@ -53,8 +54,11 @@ class EventStream(Base):
             self.event_fields = validate_event_fields(attrs['event_fields'])
             updated = True
         if 'chunk_duration_us' in attrs:
-            self.chunk_duration_us = attrs['chunk_duration_us']
-            updated=True
+            self.chunk_duration_us = validate_chunk_duration(attrs['chunk_duration_us'])
+            updated = True
+        if 'keep_us' in attrs:
+            self.keep_us = validate_keep_us(attrs['keep_us'])
+            updated = True
         if updated:
             self.touch()
 
@@ -81,13 +85,13 @@ class EventStream(Base):
             'description': self.description,
             'event_fields': self.event_fields,
             'chunk_duration_us': self.chunk_duration_us,
+            'keep_us': self.keep_us,
             'updated_at': self.updated_at.isoformat()
         }
 
         if info is not None and self.id in info:
             resp['data_info'] = info[self.id].to_json()
         return resp
-
 
     def __str__(self):
         return "EventStream [{name}]".format(name=self.name)
@@ -111,22 +115,43 @@ def from_json(data: Dict) -> EventStream:
     return EventStream(id=data["id"],
                        name=validate_name(data["name"]),
                        description=data["description"],
-                       event_fields=data["event_fields"],
-                       chunk_duration_us=data["chunk_duration_us"],
+                       event_fields=validate_event_fields(data["event_fields"]),
+                       chunk_duration_us=validate_chunk_duration(data["chunk_duration_us"]),
+                       keep_us=validate_keep_us(data["keep_us"]),
                        updated_at=datetime.datetime.utcnow()
                        )
 
+
 def validate_chunk_duration(duration):
-    if duration<0:
-        raise ConfigurationError("invalid chunk duration, must be > 0")
+    try:
+        duration = int(duration)
+    except (ValueError, TypeError):
+        raise ConfigurationError("invalid chunk_duration_us, must be an integer")
+    if duration < 0:
+        raise ConfigurationError("invalid chunk_duration_us, must be > 0")
     return duration
+
+
+def validate_keep_us(keep_us):
+    try:
+        keep_us = int(keep_us)
+    except (ValueError, TypeError):
+        raise ConfigurationError("invalid keep_us, must be an integer")
+    if keep_us < -1:
+        raise ConfigurationError("invalid keep_us, must be -1 (KEEP_ALL) or >= 0")
+    return keep_us
 
 
 def validate_event_fields(fields: Dict[str, str]) -> Dict[str, str]:
     # make sure values are either string or numeric
-    for field in fields:
-        if fields[field] not in ['string', 'numeric']:
-            raise ConfigurationError("invalid event field type, must be numeric or string")
+    try:
+        if not isinstance(fields, dict):
+            raise TypeError
+        for field in fields:
+            if fields[field] not in ['string', 'numeric']:
+                raise ConfigurationError("invalid value in event_fields, must be [numeric|string]")
+    except TypeError:
+        raise ConfigurationError(f"event_fields must be a dictionary, not a {type(fields).__name__}")
     return fields
 
 

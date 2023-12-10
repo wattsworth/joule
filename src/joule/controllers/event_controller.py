@@ -62,6 +62,7 @@ async def move(request: web.Request):
 
 async def create(request):
     db: Session = request.app["db"]
+    event_store: EventStore = request.app["event-store"]
     if request.content_type != 'application/json':
         return web.Response(text='content-type must be application/json', status=400)
     body = await request.json()
@@ -100,6 +101,7 @@ async def create(request):
     except KeyError as e:
         db.rollback()
         return web.Response(text="Invalid or missing stream attribute: %s" % e, status=400)
+    await event_store.create(new_stream)
     return web.json_response(data=new_stream.to_json())
 
 
@@ -237,9 +239,16 @@ async def read_events(request):
         return web.Response(text="specify an id or a path", status=400)
     if my_stream is None:
         return web.Response(text="stream does not exist", status=404)
-
+    if 'limit' not in request.query:
+        return web.Response(text="limit parameter is required", status=400)
+    try:
+        limit = int(request.query['limit'])
+        if limit < 0:
+            raise ValueError
+    except ValueError:
+        return web.Response(text="limit parameter must be an integer > 0", status=400)
     # parse optional parameters
-    params = {'start': None, 'end': None, 'limit': None, 'include-ongoing-events': True}
+    params = {'start': None, 'end': None, 'include-ongoing-events': True}
     param = ""  # to appease type checker
     try:
         for param in params:
@@ -263,25 +272,17 @@ async def read_events(request):
             return web.Response(text="invalid filter parameter", status=400)
 
     # handle limit parameter, default is HARD, do not return unless count < limit
-    if params['limit'] is not None and 'return-subset' not in request.query:
-        if params['limit'] <= 0:
-            return web.Response(text="[limit] must be > 0", status=400)
+    if 'return-subset' not in request.query:
         event_count = await event_store.count(my_stream, params['start'], params['end'],
                                               json_filter=json_filter,
                                               include_on_going_events=params['include-ongoing-events'])
-        if event_count > params['limit']:
+        if event_count > limit:
             # too many events, send a histogram instead
             event_hist = await event_store.histogram(my_stream, params['start'], params['end'],
                                                      json_filter=json_filter,
                                                      nbuckets=100)
             return web.json_response(data={'count': event_count, 'events': event_hist, 'type': 'histogram'})
     # if return-subset, limit is SOFT, return just that many events
-    limit = None
-    if params['limit'] is not None and 'return-subset' in request.query:
-        if params['limit'] <= 0:
-            return web.Response(text="[limit] must be > 0", status=400)
-        limit = params['limit']
-
     events = await event_store.extract(my_stream, params['start'], params['end'],
                                        limit=limit, json_filter=json_filter,
                                        include_on_going_events=params['include-ongoing-events'])

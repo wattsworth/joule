@@ -30,17 +30,18 @@ async def _run(node, path):
     click.echo("\tName:         %s" % my_stream.name)
     click.echo("\tStart:        %s" % _display_time(my_info.start))
     click.echo("\tEnd:          %s" % _display_time(my_info.end))
-    click.echo("\tRows:         %d" % my_info.event_count)
-
+    click.echo("\tEvents:       %d" % my_info.event_count)
+    click.echo("")
+    if len(my_stream.event_fields) > 0:
+        click.echo("Event Fields:")
+        click.echo("\tType\t| Name")
+        click.echo("\t--------------------")
+        for name, datatype in my_stream.event_fields.items():
+            click.echo(f"\t{datatype}\t| {name}")
+    else:
+        click.echo("There are no fields specified for this event stream")
 
 def _display_time(time: int) -> str:
     if time is None:
         return u"\u2014"  # emdash
     return str(datetime.datetime.fromtimestamp(time / 1e6))
-
-
-def _optional_field(value: str) -> str:
-    if value is None or value == "":
-        return u"\u2014"  # emdash
-    else:
-        return value

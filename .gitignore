@@ -7,6 +7,7 @@ dist/*
 *.egg-info
 #*
 .coverage
+.coverage.*
 test/e2e/archive/nilm*
 htmlcov/*
 asynctests.py

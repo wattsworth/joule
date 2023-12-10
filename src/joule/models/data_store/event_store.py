@@ -24,11 +24,16 @@ class EventStore:
         else:
             self.pool = pool
 
+    async def create(self, stream: 'EventStream'):
+        async with self.pool.acquire() as conn:
+            await psql_helpers.create_event_table(conn, stream)
+
     async def upsert(self, stream: 'EventStream', events: List):
         updated_events = list(filter(lambda event: "id" in event and event["id"] is not None, events))
         new_events = list(filter(lambda event: "id" not in event or event["id"] is None, events))
         async with self.pool.acquire() as conn:
             # lazy stream creation, does nothing if stream already exists
+            # keep for legacy nodes, current implementation creates tables at stream creation
             await psql_helpers.create_event_table(conn, stream)
             if len(new_events) > 0:
                 seq = f"'data.event{stream.id}_id_seq'"
@@ -74,9 +79,12 @@ class EventStore:
         where_clauses = [wc for wc in where_clauses if len(wc) > 0]
         if len(where_clauses) > 0:
             query += "WHERE " + " AND ".join(where_clauses)
-        async with self.pool.acquire() as conn:
-            record = await conn.fetch(query)
-            return record[0]['count']
+        try:
+            async with self.pool.acquire() as conn:
+                record = await conn.fetch(query)
+                return record[0]['count']
+        except asyncpg.UndefinedTableError: # legacy nodes may not have tables for empty streams
+            return 0  # no data
 
     async def histogram(self, stream: 'EventStream',
                         start: Optional[int] = None, end: Optional[int] = None,
@@ -140,19 +148,25 @@ class EventStore:
             query += f" LIMIT {limit}"
         else:
             query += " ORDER BY start_time ASC"
-        async with self.pool.acquire() as conn:
-            records = await conn.fetch(query)
-            events = list(map(record_to_event, records))
-            events.sort(key=lambda e: e["start_time"])
-            return events
+        try:
+            async with self.pool.acquire() as conn:
+                records = await conn.fetch(query)
+                events = list(map(record_to_event, records))
+                events.sort(key=lambda e: e["start_time"])
+                return events
+        except asyncpg.UndefinedTableError:  # legacy nodes may not have tables for empty streams
+            return []  # no data
 
     async def remove(self, stream: 'EventStream', start: Optional[int] = None,
                      end: Optional[int] = None,
                      json_filter=None):
         if start is None and end is None and json_filter is None:
             # flush the stream
-            async with self.pool.acquire() as conn:
-                return await conn.execute(f"TRUNCATE data.event{stream.id}")
+            try:
+                async with self.pool.acquire() as conn:
+                    return await conn.execute(f"TRUNCATE data.event{stream.id}")
+            except asyncpg.UndefinedTableError:
+                pass  # legacy nodes may not have tables for empty streams
 
         query = f"DELETE FROM data.event{stream.id} "
         where_clauses = [psql_helpers.query_time_bounds(start, end,
@@ -163,12 +177,18 @@ class EventStore:
         where_clauses = [wc for wc in where_clauses if len(wc) > 0]
         if len(where_clauses) > 0:
             query += " WHERE " + " AND ".join(where_clauses)
-        async with self.pool.acquire() as conn:
-            return await conn.execute(query)
+        try:
+            async with self.pool.acquire() as conn:
+                return await conn.execute(query)
+        except asyncpg.UndefinedTableError:
+            pass  # legacy nodes may not have tables for empty streams
 
     async def destroy(self, stream: 'EventStream'):
-        async with self.pool.acquire() as conn:
-            return await conn.execute(f"DROP TABLE data.event{stream.id}")
+        try:
+            async with self.pool.acquire() as conn:
+                return await conn.execute(f"DROP TABLE data.event{stream.id}")
+        except asyncpg.UndefinedTableError:
+            pass  # legacy nodes may not have tables for empty streams
 
     async def info(self, streams: List['EventStream']) -> Dict[int, 'StreamInfo']:
         if len(streams) == 0:

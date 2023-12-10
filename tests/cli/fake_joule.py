@@ -74,7 +74,18 @@ class FakeJoule:
                 web.put('/annotation.json', self.update_annotation),
                 web.post('/annotation.json', self.create_annotation),
                 web.delete('/annotation.json', self.delete_annotation),
-                web.delete('/stream/annotations.json', self.delete_all_annotations)
+                web.delete('/stream/annotations.json', self.delete_all_annotations),
+                # --- event stream routes ---
+                web.get('/event.json', self.stub_get),
+                web.put('/event/move.json', self.move_stream),
+                web.put('/event.json', self.update_stream),
+                #web.post('/event.json', None),
+                #web.delete('/event.json', None),
+                # --- event stream data routes ---
+                #web.get('/event/data.json', None),
+                #web.get('/event/data/count.json', None),
+                #web.post('/event/data.json', None),
+                #web.delete('/event/data.json', None),
             ])
         self.stub_stream_info = False
         self.stub_stream_move = False
@@ -453,3 +464,9 @@ class FakeJouleTestCase(helpers.AsyncTestCase):
         del self.server_proc
         self.conf_dir.cleanup()
         del os.environ["JOULE_USER_CONFIG_DIR"]
+
+    def assertCliSuccess(self, cli_result):
+        if cli_result.exit_code != 0:
+            print("#### Error CLI Output #####: ")
+            print(cli_result.output)
+        self.assertEqual(cli_result.exit_code, 0)
