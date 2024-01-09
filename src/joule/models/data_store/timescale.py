@@ -273,6 +273,7 @@ async def _extract_data(conn: asyncpg.Connection, stream: DataStream, callback,
     where_clause = psql_helpers.query_time_bounds(start, end)
     if len(where_clause)>0:
         query += " WHERE " + where_clause
+    query += " ORDER BY time ASC"
     try:
         boundary_records = await conn.fetch(query)
     except asyncpg.UndefinedTableError:

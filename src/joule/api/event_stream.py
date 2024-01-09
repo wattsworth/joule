@@ -288,7 +288,6 @@ async def event_stream_write(session: BaseSession,
     for idx in range(0, len(events), 500):
         chunk = events[idx:idx + 500]
         data['events'] = [e.to_json() for e in events[idx:idx + 500]]
-        print(len(data['events']))
         resp = await session.post("/event/data.json", data)
         rx_events += [event_from_json(e) for e in resp["events"]]
         # copy the ids over
