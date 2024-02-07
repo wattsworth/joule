@@ -39,6 +39,7 @@ class BaseModule:
         self.STOP_TIMEOUT = 2
         self.runner = None
         self.node: node.BaseNode = None
+        self.parsed_args = None
 
     async def run_as_task(self, parsed_args, app: web.Application) -> asyncio.Task:
         assert False, "implement in child class"  # pragma: no cover
@@ -95,6 +96,7 @@ class BaseModule:
 
         module_args = helpers.load_args_from_file(module_config_file)
         parsed_args = parser.parse_args(module_args)
+        self.parsed_args = parsed_args
         self.node = api.get_node(parsed_args.node)
 
         self.stop_requested = False
@@ -136,7 +138,7 @@ class BaseModule:
             self._build_args(parser)
             module_args = helpers.module_args()
             parsed_args = parser.parse_args(module_args)
-
+        self.parsed_args = parsed_args
         # asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
         loop = asyncio.new_event_loop()
         self.stop_requested = False
