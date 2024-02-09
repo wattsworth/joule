@@ -360,7 +360,7 @@ async def _read_nilmdb_data(nilmdb_url, stream, start, end, max_rows, flatten) -
             while not resp.content.at_eof() and len(data)<=max_bytes:
                 data += await resp.content.read(max_bytes)
             if not resp.content.at_eof():
-                print(f"WARNING: Requested time interval mas more data than {max_rows} rows of data")
+                print(f"WARNING: Requested time interval has more data than {max_rows} rows of data")
     sdata = np.frombuffer(data[:max_bytes], dtype=dtype)
     if flatten:
         return np.c_[sdata['timestamp'][:, None], sdata['data']]
