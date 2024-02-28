@@ -80,7 +80,7 @@ class EventStream:
         # if it is empty use 0 (no hypertables)
         if duration_str == "":
             return 0
-        print(f"duration string: {duration_str}")
+        #print(f"duration string: {duration_str}")
         # otherwise expect a time unit and compute accordingly
         match = re.fullmatch(r'^(\d+)([hdwmy])$', duration_str)
         if match is None:

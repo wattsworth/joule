@@ -12,9 +12,10 @@ services:
       - ./postgres-data:/var/lib/postgresql/data  # persist data
   joule:
     #image: wattsworth/joule:latest # use Docker Hub image
-    build: # use the local Dockerfile
-      dockerfile: Dockerfile
-    volumes:
+    #image: wattsworth/joule:dev # use the local image-> see docker/development.dockerfile for build instructions
+    build:
+      dockerfile: docker/development.dockerfile
+    volumes: # NOTE: this overrides USER_KEY specified below!
       - ./docker/sample_configs:/etc/joule/configs  # sample configs
     environment:
       NODE_NAME: joule

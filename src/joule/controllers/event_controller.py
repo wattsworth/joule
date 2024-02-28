@@ -196,7 +196,7 @@ async def count_events(request):
         return web.Response(text="stream does not exist", status=404)
 
     # parse optional parameters
-    params = {'start': None, 'end': None, 'limit': None, 'include-ongoing-events': True}
+    params = {'start': None, 'end': None, 'limit': None, 'include-ongoing-events': 0}
     param = ""  # to appease type checker
     try:
         for param in params:
@@ -248,7 +248,7 @@ async def read_events(request):
     except ValueError:
         return web.Response(text="limit parameter must be an integer > 0", status=400)
     # parse optional parameters
-    params = {'start': None, 'end': None, 'include-ongoing-events': True}
+    params = {'start': None, 'end': None, 'include-ongoing-events': 0}
     param = ""  # to appease type checker
     try:
         for param in params:

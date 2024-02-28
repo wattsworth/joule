@@ -127,7 +127,7 @@ class EventStore:
         if end is not None and start is not None and end <= start:
             raise ValueError("Invalid time bounds start [%d] must be < end [%d]" % (start, end))
         query = f"SELECT id, start_time, end_time, content FROM data.event{stream.id} "
-        if include_on_going_events:
+        if not include_on_going_events:
             end_col_name = None  # only return events that start within this interval
         else:
             end_col_name = 'end_time'  # return all events that are active within this interval
