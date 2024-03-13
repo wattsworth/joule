@@ -326,9 +326,9 @@ async def _send_data(session: BaseSession,
                     raise errors.ApiError("timestamps are not monotonic")
                 if not validate_values(data):
                     raise errors.ApiError("invalid values (NaN or Inf)")
-                last_ts = data['timestamp'][-1]
                 if len(data) > 0:
                     yield data.tobytes()
+                    last_ts = data['timestamp'][-1]
                 if pipe.end_of_interval:
                     yield interval_token(stream.layout).tobytes()
                 pipe.consume(len(data))
