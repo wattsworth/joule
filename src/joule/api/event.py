@@ -32,11 +32,11 @@ class Event:
             self.start_time, self.end_time, content_str)
 
     def __eq__(self, other):
-        if other.start_time != other.start_time:
+        if self.start_time != other.start_time:
             return False
-        if other.end_time != other.end_time:
+        if self.end_time != other.end_time:
             return False
-        if json.dumps(other.content) != json.dumps(other.content):
+        if json.dumps(self.content) != json.dumps(other.content):
             return False
         return True
 

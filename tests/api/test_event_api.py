@@ -21,6 +21,10 @@ class TestEventApi(unittest.IsolatedAsyncioTestCase):
         self.session = mock_session.MockSession()
         self.node.session = self.session
 
+    async def test_event_equality(self):
+        self.assertNotEqual(Event(0, 1, content={'a': 'b'}), Event(10, 11, content={'b': 'c'}))
+        self.assertEqual(Event(20, 30, content={'a': 'b'}), Event(20, 30, content={'a': 'b'}))
+
     async def test_deletes_event_streams(self):
         # can delete by ID
         await self.node.event_stream_delete(1)
