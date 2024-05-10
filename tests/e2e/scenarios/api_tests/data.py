@@ -1,5 +1,5 @@
 import unittest
-
+import traceback
 import joule.errors
 from joule import api, utilities, models
 import numpy as np
@@ -130,7 +130,7 @@ class TestDataMethods(unittest.IsolatedAsyncioTestCase):
 
             self.fail("should have raised an exception")
         except joule.errors.ApiError as e:
-            assert "monotonic" in str(e)
+            assert "monotonic" in traceback.format_exc()
             pass
         # write duplicate data across two pipes
         await self.node.data_delete("/archive/data1")
@@ -143,7 +143,7 @@ class TestDataMethods(unittest.IsolatedAsyncioTestCase):
             await pipe.close()
             self.fail("should have raised an exception")
         except joule.errors.ApiError as e:
-            assert "already exists" in str(e)
+            assert "already exists" in traceback.format_exc()
             pass
         # write data with NaN's
         await self.node.data_delete("/archive/data1")
@@ -154,7 +154,7 @@ class TestDataMethods(unittest.IsolatedAsyncioTestCase):
             await pipe.close()
             self.fail("should have raised an exception")
         except joule.errors.ApiError as e:
-            assert "NaN" in str(e)
+            assert "NaN" in traceback.format_exc()
             pass
 
     async def test_data_delete(self):
