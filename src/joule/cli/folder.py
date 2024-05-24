@@ -1,16 +1,12 @@
 import click
 import asyncio
 from treelib import Tree
-from typing import Optional
 
 import joule.api
 from joule import errors
 from joule.cli.config import Config, pass_config
-from joule.cli.data.copy import _run as run_data_copy
-from joule.cli.event.copy import _run as run_event_copy
-from joule.cli.event.copy import has_existing_events
 from joule.api import BaseNode
-from joule.api.folder import (Folder, folder_root)
+from joule.api.folder import Folder
 from joule.api.data_stream import DataStream
 from joule.api.event_stream import EventStream
 
@@ -186,6 +182,10 @@ def copy(config, source, destination, start, end, new, action, destination_node)
             config.close_node())
 
 async def _run_copy(source_node, source, destination, start, end, new, destination_node) -> None:
+    from joule.cli.data.copy import _run as run_data_copy # lazy import
+    from joule.cli.event.copy import _run as run_event_copy # lazy import
+    from joule.cli.event.copy import has_existing_events # lazy import
+
     global action_on_event_conflict
     if type(source) is str:
         source_folder = await source_node.folder_get(source)

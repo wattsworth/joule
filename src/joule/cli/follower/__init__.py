@@ -1,13 +1,11 @@
 import click
-from .list import cli_list
-from .delete import follower_delete
+from joule.cli.lazy_group import LazyGroup
 
-
-@click.group(name="follower")
+@click.group(name="follower",
+             cls=LazyGroup,
+             lazy_subcommands={"list": "joule.cli.follower.list.cli_list",
+                               "delete": "joule.cli.follower.delete.follower_delete"})
 def follower():
     """Manage node followers."""
     pass  # pragma: no cover
 
-
-follower.add_command(cli_list)
-follower.add_command(follower_delete)

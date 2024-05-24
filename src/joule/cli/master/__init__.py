@@ -1,15 +1,12 @@
 import click
-from .list import cli_list
-from .delete import cli_delete
-from .add import cli_add
+from joule.cli.lazy_group import LazyGroup
 
-
-@click.group(name="master")
+@click.group(name="master",
+             cls=LazyGroup,
+             lazy_subcommands={"list": "joule.cli.master.list.cli_list",
+                               "delete": "joule.cli.master.delete.cli_delete",
+                               "add": "joule.cli.master.add.cli_add"})
 def master():
     """Manage node access."""
     pass  # pragma: no cover
 
-
-master.add_command(cli_list)
-master.add_command(cli_delete)
-master.add_command(cli_add)

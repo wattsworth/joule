@@ -1,19 +1,23 @@
 import click
 
-from joule.cli.stream import streams
-from joule.cli.data import data
-from joule.cli.module import module
-from joule.cli.folder import folders
-from joule.cli.proxy import proxies
-from joule.cli.admin import admin
-from joule.cli.master import master
-from joule.cli.follower import follower
-from joule.cli.event import events
-from joule.cli.node import node
 from joule.cli.config import Config, pass_config
+from joule.cli.lazy_group import LazyGroup
 
-
-@click.group()
+@click.group(
+    cls=LazyGroup,
+    lazy_subcommands={
+       # "data": "joule.cli.data.data",
+       # "stream": "joule.cli.stream.streams",
+       # "module": "joule.cli.module.module",
+        "folder": "joule.cli.folder.folders",
+        "proxy": "joule.cli.proxy.proxies",
+        "admin": "joule.cli.admin.admin",
+        "master": "joule.cli.master.master",
+        "follower": "joule.cli.follower.follower",
+       # "event": "joule.cli.event.events",
+       # "node": "joule.cli.node.node"
+        }
+)
 @click.option('-n', '--node', default="", help="Joule Node name")
 @click.version_option()
 @pass_config
@@ -22,7 +26,7 @@ def main(config, node):
     # if node_name is given use it, otherwise go with the default
     config.set_node_name(node)
 
-
+"""
 main.add_command(admin)
 main.add_command(streams)
 main.add_command(events)
@@ -33,3 +37,4 @@ main.add_command(proxies)
 main.add_command(master)
 main.add_command(follower)
 main.add_command(node)
+"""

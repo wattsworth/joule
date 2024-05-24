@@ -11,3 +11,4 @@ from joule.api.module import (Module,
                               ModuleStatistics)
 from joule.api.annotation import Annotation
 from joule.api.proxy import Proxy
+print("Ran joule.api.__init__.py")

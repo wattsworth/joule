@@ -1,6 +1,5 @@
 import aiohttp
 import ssl
-import numpy as np
 from aiohttp.client_exceptions import ClientError
 from typing import Optional
 
@@ -49,6 +48,7 @@ async def detect_url(host, port: Optional[int] = None):  # pragma: no cover
                 return None
 
 def timestamps_are_monotonic(data, last_ts: Optional[int], name: str):
+    import numpy as np
     if len(data) == 0:
         return True
     # if there are multiple rows, check that all timestamps are increasing
@@ -68,6 +68,7 @@ def timestamps_are_monotonic(data, last_ts: Optional[int], name: str):
     return True
 
 def validate_values(data):
+    import numpy as np
     if np.isnan(data['timestamp']).any():
         return False
     if np.isnan(data['data']).any():

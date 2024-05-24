@@ -1,4 +1,3 @@
-import heapq
 
 
 # Adapted from Jim Paris
@@ -66,6 +65,8 @@ def imerge(*iterables):
     [0, 1, 2, 3, 4, 5, 5, 7, 8, 10, 15, 20, 25]
 
     """
+    import heapq
+
     heappop, siftup, _Stop = heapq.heappop, heapq._siftup, StopIteration
 
     h = []

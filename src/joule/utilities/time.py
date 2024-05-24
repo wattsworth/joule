@@ -1,5 +1,4 @@
 import datetime
-import dateparser
 
 
 # --------- Utility functions from Jim Paris ------------
@@ -33,6 +32,8 @@ def human_to_timestamp(time: str) -> int:
     """Convert a time specification into a UNIX microsecond timestamp. Time specification
         may be a wide variety of date formats, relative interval such as "one minute ago", or a numeric
         timestamp. Raises :exc:ValueError for invalid time specification"""
+    import dateparser
+
     try:
         return int(time)
     except ValueError:

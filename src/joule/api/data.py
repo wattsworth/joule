@@ -1,7 +1,6 @@
-from typing import Union, Optional, List
+from typing import Union, Optional, List, TYPE_CHECKING
 import asyncio
 import aiohttp
-import numpy as np
 from joule.models.pipes import compute_dtype
 from joule.utilities.misc import timestamps_are_monotonic, validate_values
 from .session import BaseSession
@@ -16,6 +15,9 @@ from joule.models.pipes import (Pipe,
                                 LocalPipe,
                                 interval_token)
 from joule import errors
+
+if TYPE_CHECKING:
+    import numpy as np
 
 import logging
 
@@ -185,7 +187,7 @@ async def data_read_array(session: BaseSession,
                           start: Optional[int] = None,
                           end: Optional[int] = None,
                           max_rows: int = 10000,
-                          flatten: bool = False) -> np.ndarray:
+                          flatten: bool = False) -> 'np.ndarray':
     """ Read the requested data into a numpy array, raises ValueError
     if the stream has more data than max_rows"""
     if type(stream) is not DataStream:
@@ -345,7 +347,8 @@ async def _send_data(session: BaseSession,
         pipe.fail()
         raise e
 
-async def _read_nilmdb_data(nilmdb_url, stream, start, end, max_rows, flatten) -> np.ndarray:
+async def _read_nilmdb_data(nilmdb_url, stream, start, end, max_rows, flatten) -> 'np.ndarray':
+    import numpy as np
     url = f"{nilmdb_url}/stream/extract"
     params = {"path": f"/joule/{stream.id}",
               "binary": 1,

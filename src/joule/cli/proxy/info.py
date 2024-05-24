@@ -3,7 +3,6 @@ import asyncio
 
 from joule import errors
 from joule.api import node
-from joule.api.proxy import (proxy_get)
 from joule.cli.config import Config, pass_config
 
 
@@ -29,7 +28,7 @@ async def _run(node: node.BaseNode, name: str):
     click.echo("ID:\n\t%d" % proxy.id)
     click.echo("Name:\n\t%s" % proxy.name)
     click.echo("Proxy URL:\n\t%s/interface/p%d/" % (node.url, proxy.id))
-    click.echo("Source URL:\n\t%s" % proxy.url)
+    click.echo("Source URL:\n\t%s" % proxy.target_url)
 
 
 

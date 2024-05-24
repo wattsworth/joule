@@ -1,6 +1,4 @@
-from typing import Optional, List
-from asyncio import AbstractEventLoop, get_event_loop
-
+from typing import List
 from .base_node import BaseNode
 from .node_config import NodeConfig
 from joule.api.session import TcpSession

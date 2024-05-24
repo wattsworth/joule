@@ -1,19 +1,14 @@
 import click
-from .initialize import admin_initialize
-from .erase import admin_erase
-from .authorize import admin_authorize
-from .backup import admin_backup
-from .ingest import admin_ingest
 
+from joule.cli.lazy_group import LazyGroup
 
-@click.group(name="admin")
+@click.group(name="admin",
+             cls=LazyGroup,
+             lazy_subcommands={"initialize": "joule.cli.admin.initialize.admin_initialize",
+                               "erase": "joule.cli.admin.erase.admin_erase",
+                               "authorize": "joule.cli.admin.authorize.admin_authorize",
+                               "backup": "joule.cli.admin.backup.admin_backup",
+                               "ingest": "joule.cli.admin.ingest.admin_ingest"})
 def admin():
     """Administer the local node."""
     pass  # pragma: no cover
-
-
-admin.add_command(admin_initialize)
-admin.add_command(admin_authorize)
-admin.add_command(admin_erase)
-admin.add_command(admin_backup)
-admin.add_command(admin_ingest)
