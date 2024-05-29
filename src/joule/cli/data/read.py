@@ -3,9 +3,7 @@ import asyncio
 import signal
 
 from joule.cli.config import pass_config
-from joule.models.pipes import EmptyPipe
 
-import h5py
 import json
 from joule import errors
 from joule.utilities import human_to_timestamp
@@ -182,6 +180,7 @@ def handler(signum, frame):
 
 
 def _create_hdf_dataset(config, stream, path, element_indices, file, pipe, data_width, initial_size):
+    import h5py # lazy import
     hdf_root = h5py.File(file, "w")
     # note this could be optimized to store data in the correct datatype
     # right now everything is stored as a double which is probably excessive precision

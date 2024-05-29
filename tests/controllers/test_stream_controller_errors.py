@@ -1,4 +1,5 @@
-from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
+import testing.postgresql
+from aiohttp.test_utils import AioHTTPTestCase
 from sqlalchemy.orm import Session
 from aiohttp import web
 import aiohttp
@@ -8,12 +9,14 @@ import datetime
 from joule.models import DataStream, Element
 import joule.controllers
 from tests.controllers.helpers import create_db, MockStore
+from joule import app_keys
 
+psql_key = web.AppKey("psql", testing.postgresql.Postgresql)
 class TestStreamControllerErrors(AioHTTPTestCase):
 
     async def tearDownAsync(self):
-        self.app["db"].close()
-        self.app["psql"].stop()
+        self.app[app_keys.db].close()
+        self.app[psql_key].stop()
         await self.client.close()
 
     async def get_application(self):
@@ -22,15 +25,14 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         # this takes a while, adjust the expected coroutine execution time
         loop = asyncio.get_running_loop()
         loop.slow_callback_duration = 2.0
-        app["db"], app["psql"] = create_db(["/folder1/stream1:float32[x, y, z]",
-                                            "/folder1/same_name:float32[x, y, z]",
-                                            "/folder2/deeper/stream2:int8[val1, val2]",
-                                            "/folder_x1/same_name:float32[x, y, z]",
-                                            "/folder_x2/same_name:int8[val1, val2]"
-                                            ])
-        app["data-store"] = MockStore()
+        app[app_keys.db], app[psql_key] = create_db(["/folder1/stream1:float32[x, y, z]",
+                                                     "/folder1/same_name:float32[x, y, z]",
+                                                     "/folder2/deeper/stream2:int8[val1, val2]",
+                                                     "/folder_x1/same_name:float32[x, y, z]",
+                                                     "/folder_x2/same_name:int8[val1, val2]"
+                                                     ])
+        app[app_keys.data_store] = MockStore()
         return app
-
 
     async def test_stream_info(self):
         # must specify an id or a path
@@ -44,9 +46,8 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         resp = await self.client.request("GET", "/stream.json", params=payload)
         self.assertEqual(resp.status, 404)
 
-
     async def test_stream_move(self):
-        db: Session = self.app["db"]
+        db: Session = self.app[app_keys.db]
 
         # must be json
         resp = await self.client.put("/stream/move.json", data={"dest_path": "/new/folder3"})
@@ -86,7 +87,6 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         self.assertEqual(resp.status, 400)
         self.assertTrue('locked' in await resp.text())
 
-
     async def test_stream_create(self):
         # must be json
         resp = await self.client.post("/stream.json", data={"bad_values": "not_json"})
@@ -101,7 +101,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         self.assertEqual(resp.status, 400)
         # must specify a path
         new_stream = DataStream(name="test", datatype=DataStream.DATATYPE.FLOAT32,
-                      updated_at=datetime.datetime.utcnow())
+                                updated_at=datetime.datetime.utcnow())
         new_stream.elements = [Element(name="e%d" % j, index=j,
                                        display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(3)]
         resp = await self.client.post("/stream.json", json={"stream": new_stream.to_json()})
@@ -165,9 +165,8 @@ class TestStreamControllerErrors(AioHTTPTestCase):
                                                             "stream": '{"invalid": 2}'})
         self.assertEqual(resp.status, 400)
 
-
     async def test_stream_delete(self):
-        db: Session = self.app["db"]
+        db: Session = self.app[app_keys.db]
 
         resp = await self.client.delete("/stream.json", params={})
         self.assertEqual(resp.status, 400)
@@ -185,9 +184,8 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         self.assertTrue('locked' in await resp.text())
         self.assertIsNotNone(db.query(DataStream).filter_by(name="stream1").one())
 
-
     async def test_stream_update(self):
-        db: Session = self.app["db"]
+        db: Session = self.app[app_keys.db]
         my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
 
         # must be json

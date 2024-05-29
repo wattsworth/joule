@@ -3,8 +3,7 @@ from aiohttp import web
 import numpy as np
 import asyncio
 import logging
-import aiohttp
-
+from joule import app_keys
 
 from joule.models import (folder, DataStore, DataStream,
                           InsufficientDecimationError, DataError,
@@ -28,8 +27,8 @@ async def read(request: web.Request, json=False):
 
 
 async def _read(request: web.Request, json):
-    db: Session = request.app["db"]
-    data_store: DataStore = request.app["data-store"]
+    db: Session = request.app[app_keys.db]
+    data_store: DataStore = request.app[app_keys.data_store]
     # find the requested stream
     if 'path' in request.query:
         stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
@@ -127,7 +126,7 @@ async def _read(request: web.Request, json):
 
 
 async def _subscribe(request: web.Request, json: bool):
-    db: Session = request.app["db"]
+    db: Session = request.app[app_keys.db]
     supervisor: Supervisor = request.app['supervisor']
     if json:
         return web.Response(text="JSON subscription not implemented", status=400)
@@ -179,8 +178,8 @@ async def _subscribe(request: web.Request, json: bool):
 
 
 async def intervals(request: web.Request):
-    db: Session = request.app["db"]
-    data_store: DataStore = request.app["data-store"]
+    db: Session = request.app[app_keys.db]
+    data_store: DataStore = request.app[app_keys.data_store]
     # find the requested stream
     if 'path' in request.query:
         stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
@@ -211,8 +210,8 @@ async def intervals(request: web.Request):
 
 
 async def write(request: web.Request):
-    db: Session = request.app["db"]
-    data_store: DataStore = request.app["data-store"]
+    db: Session = request.app[app_keys.db]
+    data_store: DataStore = request.app[app_keys.data_store]
     # find the requested stream
     if 'path' in request.query:
         stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
@@ -245,8 +244,8 @@ async def write(request: web.Request):
 
 
 async def remove(request: web.Request):
-    db: Session = request.app["db"]
-    data_store: DataStore = request.app["data-store"]
+    db: Session = request.app[app_keys.db]
+    data_store: DataStore = request.app[app_keys.data_store]
     # find the requested stream
     if 'path' in request.query:
         stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
@@ -278,8 +277,8 @@ async def remove(request: web.Request):
 
 
 async def consolidate(request):
-    db: Session = request.app["db"]
-    data_store: DataStore = request.app["data-store"]
+    db: Session = request.app[app_keys.db]
+    data_store: DataStore = request.app[app_keys.data_store]
     # find the requested stream
     if 'path' in request.query:
         stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
@@ -320,8 +319,8 @@ async def consolidate(request):
 
 
 async def decimate(request):
-    db: Session = request.app["db"]
-    data_store: DataStore = request.app["data-store"]
+    db: Session = request.app[app_keys.db]
+    data_store: DataStore = request.app[app_keys.data_store]
     # find the requested stream
     if 'path' in request.query:
         stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
@@ -335,8 +334,8 @@ async def decimate(request):
     return web.Response(text="ok")
 
 async def drop_decimations(request):
-    db: Session = request.app["db"]
-    data_store: DataStore = request.app["data-store"]
+    db: Session = request.app[app_keys.db]
+    data_store: DataStore = request.app[app_keys.data_store]
     # find the requested stream
     if 'path' in request.query:
         stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)

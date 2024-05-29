@@ -11,7 +11,7 @@ from joule.models import folder
 from joule.errors import ApiError
 
 async def info(request):
-    db: Session = request.app["db"]
+    db: Session = request.app[app_keys.db]
 
     if 'stream_id' in request.query:
         my_stream = db.query(DataStream,request.query["stream_id"])
@@ -48,7 +48,7 @@ async def info(request):
 
 
 async def index(request):
-    db: Session = request.app["db"]
+    db: Session = request.app[app_keys.db]
     # specify stream_ids as array
     # optionally specify start and end
     # parse time bounds
@@ -91,7 +91,7 @@ async def index(request):
 
 
 async def update(request):
-    db: Session = request.app["db"]
+    db: Session = request.app[app_keys.db]
     if request.content_type != 'application/json':
         return web.Response(text='content-type must be application/json', status=400)
     body = await request.json()
@@ -110,7 +110,7 @@ async def update(request):
 
 
 async def create(request):
-    db: Session = request.app["db"]
+    db: Session = request.app[app_keys.db]
     if request.content_type != 'application/json':
         return web.Response(text='content-type must be application/json', status=400)
     body = await request.json()
@@ -138,7 +138,7 @@ async def create(request):
 
 
 async def delete(request):
-    db: Session = request.app["db"]
+    db: Session = request.app[app_keys.db]
     if 'id' in request.query:
         my_annotation = db.get(Annotation,request.query["id"])
     else:
@@ -151,7 +151,7 @@ async def delete(request):
 
 
 async def delete_all(request):
-    db: Session = request.app["db"]
+    db: Session = request.app[app_keys.db]
 
     if "stream_id" in request.query:
         stream_id = request.query["stream_id"]

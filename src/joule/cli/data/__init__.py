@@ -14,7 +14,7 @@ from joule.cli.lazy_group import LazyGroup
              cls=LazyGroup,
              lazy_subcommands={"copy": "joule.cli.data.copy.data_copy",
                                "read": "joule.cli.data.read.cmd",
-                               "remove": "joule.cli.data.remove.data_remove",
+                               "delete": "joule.cli.data.delete.data_delete",
                                "intervals": "joule.cli.data.intervals.intervals",
                                "consolidate": "joule.cli.data.consolidate.consolidate",
                                "merge": "joule.cli.data.merge.merge",

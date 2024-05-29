@@ -1,4 +1,4 @@
-from joule import LocalPipe
+from joule.models.pipes import LocalPipe
 import unittest
 import asyncio
 import numpy as np

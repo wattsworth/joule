@@ -82,7 +82,7 @@ ARGS_DESC = """
 """
 
 
-class MedianFilter(joule.FilterModule):
+class MedianFilter(joule.client.FilterModule):
     """Compute the median of the input"""
 
     def custom_args(self, parser):  # pragma: no cover

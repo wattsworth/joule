@@ -12,7 +12,7 @@ from joule import errors
 @click.option("--all", is_flag=True, help="remove all data")
 @click.argument("stream")
 @pass_config
-def data_remove(config, start, end, all, stream):
+def data_delete(config, start, end, all, stream):
     """Remove data from a stream."""
     if all:
         if start is not None or end is not None:

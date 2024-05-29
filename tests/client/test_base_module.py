@@ -7,7 +7,6 @@ import time
 import threading
 import tempfile
 from aiohttp import web
-import unittest
 from unittest import mock
 
 from joule.client import BaseModule

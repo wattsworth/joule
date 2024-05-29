@@ -1,19 +1,17 @@
 import click
-from .info import cli_info
-from .move import cli_move
-from .destroy import cli_delete
-from .rename import cli_rename
-from .copy import cli_copy
 
+from joule.cli.lazy_group import LazyGroup
 
-@click.group(name="event")
+@click.group(name="event",
+             cls=LazyGroup,
+             lazy_subcommands={
+                 "info": "joule.cli.event.info.cli_info",
+                 "move": "joule.cli.event.move.cli_move",
+                 "delete": "joule.cli.event.destroy.cli_delete",
+                 "rename": "joule.cli.event.rename.cli_rename",
+                 "copy": "joule.cli.event.copy.cli_copy"
+             })
 def events():
     """Manage event streams."""
     pass  # pragma: no cover
 
-
-events.add_command(cli_info)
-events.add_command(cli_move)
-events.add_command(cli_delete)
-events.add_command(cli_rename)
-events.add_command(cli_copy)

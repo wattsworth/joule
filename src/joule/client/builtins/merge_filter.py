@@ -2,7 +2,7 @@ from joule.client import FilterModule
 import textwrap
 import numpy as np
 from typing import Dict, List
-from joule import Pipe
+from joule.models.pipes import Pipe
 from joule.errors import ApiError, EmptyPipeError
 from scipy.interpolate import interp1d
 

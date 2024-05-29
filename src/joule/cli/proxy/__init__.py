@@ -1,9 +1,12 @@
 import click
-from .list import cli_list
-from .info import cli_info
+from joule.cli.lazy_group import LazyGroup
 
-
-@click.group(name="proxy")
+@click.group(name="proxy",
+             cls=LazyGroup,
+             lazy_subcommands={
+                 "list": "joule.cli.proxy.list.cli_list",
+                 "info": "joule.cli.proxy.info.cli_info"
+             })
 def proxies():
     """Proxied site information.
 
@@ -12,5 +15,3 @@ def proxies():
     pass  # pragma: no cover
 
 
-proxies.add_command(cli_list)
-proxies.add_command(cli_info)

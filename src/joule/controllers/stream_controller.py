@@ -10,11 +10,11 @@ from joule.models import (
 
 from joule.models import folder, Folder
 from joule.errors import ConfigurationError
-
+from joule import app_keys
 
 async def info(request: web.Request):
-    db: Session = request.app["db"]
-    data_store: DataStore = request.app["data-store"]
+    db: Session = request.app[app_keys.db]
+    data_store: DataStore = request.app[app_keys.data_store]
     if 'path' in request.query:
         my_stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
     elif 'id' in request.query:
@@ -31,7 +31,7 @@ async def info(request: web.Request):
 
 
 async def move(request: web.Request):
-    db: Session = request.app["db"]
+    db: Session = request.app[app_keys.db]
     if request.content_type != 'application/json':
         return web.Response(text='content-type must be application/json', status=400)
     body = await request.json()
@@ -70,7 +70,7 @@ async def move(request: web.Request):
 
 
 async def create(request):
-    db: Session = request.app["db"]
+    db: Session = request.app[app_keys.db]
     if request.content_type != 'application/json':
         return web.Response(text='content-type must be application/json', status=400)
     body = await request.json()
@@ -127,7 +127,7 @@ async def create(request):
 
 
 async def update(request: web.Request):
-    db: Session = request.app["db"]
+    db: Session = request.app[app_keys.db]
     if request.content_type != 'application/json':
         return web.Response(text='content-type must be application/json', status=400)
 
@@ -162,8 +162,8 @@ async def update(request: web.Request):
 
 
 async def delete(request):
-    db: Session = request.app["db"]
-    data_store: DataStore = request.app["data-store"]
+    db: Session = request.app[app_keys.db]
+    data_store: DataStore = request.app[app_keys.data_store]
     # find the requested stream
     if 'path' in request.query:
         my_stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)

@@ -30,7 +30,7 @@ import joule.controllers
 from joule.utilities import ConnectionInfo
 from joule.update_users import update_users_from_file
 import ssl
-
+from joule import app_keys
 log = logging.getLogger('joule')
 async_log = logging.getLogger('asyncio')
 async_log.setLevel(logging.WARNING)
@@ -201,31 +201,31 @@ class Daemon(object):
         ]
         app = web.Application(middlewares=middlewares)
 
-        app['module-connection-info'] = self.module_connection_info
-        app['supervisor'] = self.supervisor
-        app['data-store'] = self.data_store
-        app['event-store'] = self.event_store
-        app['db'] = self.db
+        app[app_keys.module_connection_info] = self.module_connection_info
+        app[app_keys.supervisor] = self.supervisor
+        app[app_keys.data_store] = self.data_store
+        app[app_keys.event_store] = self.event_store
+        app[app_keys.db] = self.db
         # used to tell master's this node's info
 
         # if the API is proxied the base_uri
         # will be retrieved from the X-Api-Base-Uri header
-        app['base_uri'] = ""
+        app[app_keys.base_uri] = ""
 
         # if the API is proxied the port
         # will be retrieved from the X-Api-Port header
-        app['name'] = self.config.name
-        app['port'] = self.config.port
+        app[app_keys.name] = self.config.name
+        app[app_keys.port] = self.config.port
 
         # note, if the API is proxied the scheme
         # will be retrieved from the X-Api-Scheme header
         if self.ssl_context is None:
-            app['scheme'] = 'http'
+            app[app_keys.scheme] = 'http'
         else:
-            app['scheme'] = 'https'
+            app[app_keys.scheme] = 'https'
 
         # for acting as a client when accessing remote streams and joining other nodes
-        app['cafile'] = self.cafile
+        app[app_keys.cafile] = self.cafile
 
         app.add_routes(joule.controllers.routes)
         runner = web.AppRunner(app)

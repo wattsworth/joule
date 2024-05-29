@@ -1,15 +1,15 @@
 import click
-from .list import cli_list
-from .info import cli_info
-from .logs import cli_logs
 
+from joule.cli.lazy_group import LazyGroup
 
-@click.group(name="module")
+@click.group(name="module",
+             cls=LazyGroup,
+             lazy_subcommands={
+                 "list": "joule.cli.module.list.cli_list",
+                 "info": "joule.cli.module.info.cli_info",
+                 "logs": "joule.cli.module.logs.cli_logs"
+             })
 def module():
     """Retrieve module information."""
     pass  # pragma: no cover
 
-
-module.add_command(cli_list)
-module.add_command(cli_info)
-module.add_command(cli_logs)

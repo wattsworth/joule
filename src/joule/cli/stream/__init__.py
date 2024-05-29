@@ -1,19 +1,19 @@
 import click
-from .info import cli_info
-from .move import cli_move
-from .destroy import cli_delete
-from .annotation import cli_annotations
-from .rename import cli_rename
 
+from joule.cli.lazy_group import LazyGroup
 
-@click.group(name="stream")
+@click.group(name="stream",
+             cls=LazyGroup,
+             lazy_subcommands={
+                 "info": "joule.cli.stream.info.cli_info",
+                 "move": "joule.cli.stream.move.cli_move",
+                 "delete": "joule.cli.stream.destroy.cli_delete",
+                 "annotations": "joule.cli.stream.annotation.cli_annotations",
+                 "rename": "joule.cli.stream.rename.cli_rename"
+             })
 def streams():
     """Manage data streams."""
     pass  # pragma: no cover
 
 
-streams.add_command(cli_info)
-streams.add_command(cli_move)
-streams.add_command(cli_delete)
-streams.add_command(cli_annotations)
-streams.add_command(cli_rename)
+

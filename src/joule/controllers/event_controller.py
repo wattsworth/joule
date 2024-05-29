@@ -6,7 +6,7 @@ from joule.models import EventStream, EventStore, event_stream
 
 from joule.models import folder, Folder
 from joule.errors import ConfigurationError
-
+from joule import app_keys
 
 async def info(request: web.Request):
     db: Session = request.app["db"]

@@ -1,19 +1,16 @@
 import click
-from .info import node_info
-from .list import node_list
-from .add import node_add
-from .delete import node_delete
-from .default import node_default
+from joule.cli.lazy_group import LazyGroup
 
-
-@click.group(name="node")
+@click.group(name="node",
+             cls=LazyGroup,
+             lazy_subcommands={
+                 "info": "joule.cli.node.info.node_info",
+                 "list": "joule.cli.node.list.node_list",
+                 "add": "joule.cli.node.add.node_add",
+                 "delete": "joule.cli.node.delete.node_delete",
+                 "default": "joule.cli.node.default.node_default"
+             })
 def node():
     """Configure local settings."""
     pass  # pragma: no cover
 
-
-node.add_command(node_info)
-node.add_command(node_list)
-node.add_command(node_add)
-node.add_command(node_delete)
-node.add_command(node_default)
