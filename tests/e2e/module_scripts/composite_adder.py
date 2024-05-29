@@ -5,7 +5,7 @@ InStream2 ==> x3 ==> OutStream2
 """
 
 
-import joule
+import joule.client
 import argparse
 import json
 
@@ -24,7 +24,7 @@ path2 --> + offset[1] --> path2
 """
 
 
-class CompositeAdder(joule.CompositeModule):
+class CompositeAdder(joule.client.CompositeModule):
     " add offsets to input streams"
 
     def custom_args(self, parser):

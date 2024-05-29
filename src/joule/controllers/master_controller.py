@@ -7,7 +7,7 @@ from joule.api.session import TcpSession
 from joule.models.master import Master, make_key
 from joule.utilities.misc import detect_url
 from joule import errors
-
+from joule import app_keys
 
 # NOTE: This controller is best tested with e2e
 # ignored for unittests
@@ -16,11 +16,11 @@ async def add(request: web.Request):  # pragma: no cover
     """
     Contact specified node and add self as a follower
     """
-    db: Session = request.app["db"]
-    local_name: str = request.app["name"]
-    local_port: int = request.app["port"]
-    local_scheme: str = request.app["scheme"]
-    local_uri: str = request.app["base_uri"]
+    db: Session = request.app[app_keys.db]
+    local_name: str = request.app[app_keys.name]
+    local_port: int = request.app[app_keys.port]
+    local_scheme: str = request.app[app_keys.scheme]
+    local_uri: str = request.app[app_keys.base_uri]
     if request.content_type != 'application/json':
         return web.Response(text='content-type must be application/json', status=400)
     body = await request.json()
@@ -83,10 +83,10 @@ async def add(request: web.Request):  # pragma: no cover
             error_msg = ""
             if master_type == 'joule':
                 coro = _send_node_key(my_master.key, identifier, local_port,
-                                      local_name, local_scheme, local_uri, request.app["cafile"])
+                                      local_name, local_scheme, local_uri, request.app[app_keys.cafile])
             else:
                 coro = _send_lumen_key(my_master.key, identifier, local_port,
-                                       local_name, local_scheme, local_uri, request.app["cafile"],
+                                       local_name, local_scheme, local_uri, request.app[app_keys.cafile],
                                        body['lumen_params'])
             try:
                 name = await coro
@@ -180,7 +180,7 @@ async def _send_lumen_key(key: str,
 
 
 async def index(request: web.Request):
-    db: Session = request.app["db"]
+    db: Session = request.app[app_keys.db]
     masters = db.query(Master).all()
     return web.json_response([m.to_json() for m in masters])
 
@@ -189,8 +189,8 @@ async def delete(request: web.Request):
     """
     Remove the specified node from the list of masters
     """
-    db: Session = request.app["db"]
-    node_name: str = request.app["name"]
+    db: Session = request.app[app_keys.db]
+    node_name: str = request.app[app_keys.name]
     # to eliminate uninitialized warnings
     str_master_type = ""
     name = ""

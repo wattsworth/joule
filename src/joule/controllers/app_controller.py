@@ -1,12 +1,13 @@
 from joule.models.supervisor import Supervisor
 from aiohttp import web
 import logging
+from joule import app_keys
 
 log = logging.getLogger("joule")
 
 
 async def auth(request: web.Request):
-    supervisor: Supervisor = request.app["supervisor"]
+    supervisor: Supervisor = request.app[app_keys.supervisor]
 
     try:
         app_id = request.headers["X-App-Id"]
@@ -34,7 +35,7 @@ async def auth(request: web.Request):
 
 
 async def index(request: web.Request):
-    supervisor: Supervisor = request.app["supervisor"]
+    supervisor: Supervisor = request.app[app_keys.supervisor]
     apps = []
     for worker in supervisor.workers:
         if not worker.is_app:

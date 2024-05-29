@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 import logging
 from sqlalchemy.exc import SQLAlchemyError
 from joule.models import Master
-
+from joule import app_keys
 log = logging.getLogger('joule')
 
 
@@ -13,28 +13,28 @@ def authorize(exemptions=None):
 
     @middleware
     async def _authorize(request, handler):
-        db: Session = request.app["db"]
+        db: Session = request.app[app_keys.db]
 
         # Remote is empty for Unix Socket connections,
         # populate app with values from reverse proxy if present
         if request.remote == "":
             # set the app port and scheme based off headers if present
             if 'X-API-PORT' in request.headers:
-                request.app["port"] = request.headers['X-API-PORT']
+                request.app[app_keys.port] = request.headers['X-API-PORT']
             if 'X-API-SCHEME' in request.headers:
-                request.app["scheme"] = request.headers['X-API-SCHEME']
+                request.app[app_keys.scheme] = request.headers['X-API-SCHEME']
             if 'X-API-BASE-URI' in request.headers:
-                request.app["base_uri"] = request.headers['X-API-BASE-URI']
+                request.app[app_keys.base_uri] = request.headers['X-API-BASE-URI']
             if 'X-FORWARDED-FOR' in request.headers:
-                request.app["remote_ip"] = request.headers['X-FORWARDED-FOR']
+                request.app[app_keys.remote_ip] = request.headers['X-FORWARDED-FOR']
             # OK, skip authorization unless requested (ie this is from a reverse proxy)
             if (('X-AUTH-REQUIRED' not in request.headers) or
                ([request.method, request.path] in exemptions)):
                 return await handler(request)
         # This is not coming through a proxy, populate with locally "true" values
         else:
-            request.app["base_uri"] = ""
-            request.app["remote_ip"] = request.remote
+            request.app[app_keys.base_uri] = ""
+            request.app[app_keys.remote_ip] = request.remote
             # scheme and port are populated already (by the daemon)
 
         # OK, exempt request
@@ -57,7 +57,7 @@ def authorize(exemptions=None):
 
 @middleware
 async def sql_rollback(request, handler):
-    db: Session = request.app["db"]
+    db: Session = request.app[app_keys.db]
     try:
         return await handler(request)
     except SQLAlchemyError as e:

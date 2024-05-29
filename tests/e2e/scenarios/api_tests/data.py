@@ -42,7 +42,7 @@ class TestDataMethods(unittest.IsolatedAsyncioTestCase):
                 stream.consume(len(data))
             except models.pipes.EmptyPipe:
                 break
-        self.assertLessEqual(total_rows, 100)
+        self.assertLessEqual(total_rows, 105) # max rows is approximate, see joule/sql/row_count.sql
 
     async def test_data_subscribe(self):
         stream = await self.node.data_subscribe("/live/plus1")

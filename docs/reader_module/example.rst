@@ -10,8 +10,8 @@ Basic Reader
    :linenos:
 
 
-Reader modules should extend the base :class:`joule.ReaderModule` class. The
-child class must implement the :meth:`joule.ReaderModule.run` coroutine which should perform
+Reader modules should extend the base :class:`joule.client.ReaderModule` class. The
+child class must implement the :meth:`joule.client.ReaderModule.run` coroutine which should perform
 the following in a loop:
 
   1. Read data from the input

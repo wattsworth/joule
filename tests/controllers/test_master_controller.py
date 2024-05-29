@@ -5,13 +5,16 @@ import asyncio
 from joule.models import master, Master
 import joule.controllers
 from tests.controllers.helpers import create_db, MockStore
+from joule import app_keys
 
+import testing.postgresql
+psql_key = web.AppKey("psql", testing.postgresql.Postgresql)
 
 class TestMasterController(AioHTTPTestCase):
 
     async def tearDownAsync(self):
-        self.app["db"].close()
-        self.app["psql"].stop()
+        self.app[app_keys.db].close()
+        self.app[psql_key].stop()
         await self.client.close()
 
     async def get_application(self):
@@ -21,23 +24,23 @@ class TestMasterController(AioHTTPTestCase):
         loop = asyncio.get_running_loop()
         loop.slow_callback_duration = 2.0
 
-        app["db"], app["psql"] = create_db([])
-        app["data-store"] = MockStore()
-        app["name"] = "test"
-        app["port"] = 443
-        app["scheme"] = "http"
-        app["base_uri"] = "/"
+        app[app_keys.db], app[psql_key] = create_db([])
+        app[app_keys.data_store] = MockStore()
+        app[app_keys.name] = "test"
+        app[app_keys.port] = 443
+        app[app_keys.scheme] = "http"
+        app[app_keys.base_uri] = "/"
 
         # create a master user to grant access
         self.grantor = Master(name="grantor", key="grantor_key",
                               type=Master.TYPE.USER)
-        app["db"].add(self.grantor)
-        app["db"].commit()
+        app[app_keys.db].add(self.grantor)
+        app[app_keys.db].commit()
         return app
 
 
     async def test_adds_master_user(self):
-        db: Session = self.app["db"]
+        db: Session = self.app[app_keys.db]
         # add user to johndoe
         payload = {
             "master_type": "user",
@@ -62,7 +65,7 @@ class TestMasterController(AioHTTPTestCase):
 
 
     async def test_removes_master_user(self):
-        db: Session = self.app["db"]
+        db: Session = self.app[app_keys.db]
         db.add(Master(name="johndoe", key=master.make_key(), type=Master.TYPE.USER))
         db.commit()
         m = db.query(Master).filter(Master.name == "johndoe").one_or_none()
@@ -80,7 +83,7 @@ class TestMasterController(AioHTTPTestCase):
 
 
     async def test_lists_masters(self):
-        db: Session = self.app["db"]
+        db: Session = self.app[app_keys.db]
         db.add(Master(name="johndoe", key=master.make_key(), type=Master.TYPE.USER))
         db.add(Master(name="joule", key=master.make_key(), type=Master.TYPE.JOULE_NODE))
         db.add(Master(name="lumen", key=master.make_key(), type=Master.TYPE.LUMEN_NODE))

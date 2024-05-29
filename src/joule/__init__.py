@@ -7,5 +7,3 @@
 #from joule.models.pipes import LocalPipe, EmptyPipe, InputPipe, OutputPipe, Pipe
 #from joule.models import DataStream, Element
 #from joule import utilities
-
-print("Ran joule.__init__.py")

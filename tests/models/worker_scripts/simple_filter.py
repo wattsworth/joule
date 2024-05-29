@@ -2,7 +2,8 @@ import sys
 import os
 JOULE_PATH = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir)
 sys.path.append(JOULE_PATH)
-from joule import FilterModule, EmptyPipe
+from joule.client import FilterModule
+from joule.models.pipes import EmptyPipe
 import asyncio
 
 

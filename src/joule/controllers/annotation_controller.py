@@ -9,6 +9,8 @@ from joule.models.annotation import Annotation, from_json
 from joule.models.data_stream import DataStream
 from joule.models import folder
 from joule.errors import ApiError
+from joule import app_keys
+
 
 async def info(request):
     db: Session = request.app[app_keys.db]

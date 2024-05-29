@@ -6,13 +6,16 @@ import asyncio
 from joule.models import folder, DataStream, Folder
 import joule.controllers
 from tests.controllers.helpers import create_db, MockStore, MockEventStore
+from joule import app_keys
 
+import testing.postgresql
+psql_key = web.AppKey("psql", testing.postgresql.Postgresql)
 
 class TestFolderControllerErrors(AioHTTPTestCase):
 
     async def tearDownAsync(self):
-        self.app["db"].close()
-        self.app["psql"].stop()
+        self.app[app_keys.db].close()
+        self.app[psql_key].stop()
         await self.client.close()
 
     async def get_application(self):
@@ -21,11 +24,11 @@ class TestFolderControllerErrors(AioHTTPTestCase):
         # this takes a while, adjust the expected coroutine execution time
         loop = asyncio.get_running_loop()
         loop.slow_callback_duration = 2.0
-        app["db"], app["psql"] = create_db(["/top/leaf/stream1:float32[x, y, z]",
+        app[app_keys.db], app[psql_key] = create_db(["/top/leaf/stream1:float32[x, y, z]",
                                             "/top/same_name/stream3:float32[x, y, z]",
                                             "/top/middle/leaf/stream2:int8[val1, val2]"])
-        app["data-store"] = MockStore()
-        app["event-store"] = MockEventStore()
+        app[app_keys.data_store] = MockStore()
+        app[app_keys.event_store] = MockEventStore()
         return app
 
 
@@ -42,7 +45,7 @@ class TestFolderControllerErrors(AioHTTPTestCase):
 
 
     async def test_folder_move(self):
-        db: Session = self.app["db"]
+        db: Session = self.app[app_keys.db]
 
         # must be a json request
         resp = await self.client.put("/folder/move.json", data={"dest_path": "/new/location"})
@@ -90,7 +93,7 @@ class TestFolderControllerErrors(AioHTTPTestCase):
 
 
     async def test_folder_delete(self):
-        db: Session = self.app["db"]
+        db: Session = self.app[app_keys.db]
 
         resp = await self.client.delete("/folder.json", params={})
         self.assertEqual(resp.status, 400)
@@ -116,7 +119,7 @@ class TestFolderControllerErrors(AioHTTPTestCase):
 
 
     async def test_folder_update(self):
-        db: Session = self.app["db"]
+        db: Session = self.app[app_keys.db]
         my_folder = folder.find("/top/middle", db)
 
         # must be a json request

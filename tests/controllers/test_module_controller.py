@@ -5,7 +5,7 @@ import aiohttp
 from joule.models.supervisor import Supervisor
 import joule.controllers
 from tests.controllers.helpers import MockWorker
-
+from joule import app_keys
 
 class TestModuleController(AioHTTPTestCase):
 
@@ -14,7 +14,7 @@ class TestModuleController(AioHTTPTestCase):
         app.add_routes(joule.controllers.routes)
         wreader = MockWorker("reader", {}, {'output': '/reader/path'})
         wfilter = MockWorker("filter", {'input': '/reader/path'}, {'output': '/output/path'})
-        app["supervisor"] = Supervisor([wreader, wfilter], [], None)  # type: ignore
+        app[app_keys.supervisor] = Supervisor([wreader, wfilter], [], None)  # type: ignore
         return app
 
 

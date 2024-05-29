@@ -6,9 +6,9 @@ Pipes
 Joule pipes provide a protocol independent interface to data
 streams. This decouples module design from pipeline
 implementation. There are three different pipe implementations,
-:class:`joule.LocalPipe`, :class:`joule.InputPipe`, and :class:`joule.OutputPipe` all of which derive
+:class:`joule.models.LocalPipe`, :class:`joule.models.InputPipe`, and :class:`joule.models.OutputPipe` all of which derive
 from the abstract base class
-:class:`joule.Pipe`. **LocalPipe**'s are intended for intra-module communication (see :ref:`sec-composite`).
+:class:`joule.models.Pipe`. **LocalPipe**'s are intended for intra-module communication (see :ref:`sec-composite`).
 It is bidirectional meaning it supports both read and write operations. **InputPipe**'s and OutputPipe are unidirectional
 supporting only read and write respectively. These are intended for inter-module communication with
 one module's OutputPipe connected to another's InputPipe. The figure below
@@ -147,14 +147,14 @@ subscribed to either an OutputPipe or the output end of another LocalPipe.
 Reference
 +++++++++
 
-.. autoclass:: joule.Pipe
+.. autoclass:: joule.models.Pipe
     :members:
 
-.. autoclass:: joule.InputPipe
+.. autoclass:: joule.models.InputPipe
     :members:
 
-.. autoclass:: joule.OutputPipe
+.. autoclass:: joule.models.OutputPipe
     :members:
 
-.. autoclass:: joule.LocalPipe
+.. autoclass:: joule.models.LocalPipe
     :members:

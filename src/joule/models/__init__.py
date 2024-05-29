@@ -14,4 +14,8 @@ from joule.models.data_store.nilmdb import NilmdbStore
 from joule.models.data_store.event_store import EventStore
 from joule.models.data_store.timescale import TimescaleStore
 from joule.models.pipes.pipe import Pipe
+from joule.models.pipes.local_pipe import LocalPipe
+from joule.models.pipes.input_pipe import InputPipe
+from joule.models.pipes.output_pipe import OutputPipe
+from joule.models.pipes.errors import PipeError, EmptyPipe
 from joule.models.meta import Base

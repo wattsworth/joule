@@ -7,13 +7,16 @@ from joule.models import DataStream
 import joule.controllers
 from tests.controllers.helpers import create_db, MockStore, MockSupervisor
 from tests import helpers
+from joule import app_keys
 
+import testing.postgresql
+psql_key = web.AppKey("psql", testing.postgresql.Postgresql)
 
 class TestDataController(AioHTTPTestCase):
 
     async def tearDownAsync(self):
-        self.app["db"].close()
-        self.app["psql"].stop()
+        self.app[app_keys.db].close()
+        self.app[psql_key].stop()
         await self.client.close()
 
     async def get_application(self):
@@ -22,11 +25,11 @@ class TestDataController(AioHTTPTestCase):
         # this takes a while, adjust the expected coroutine execution time
         loop = asyncio.get_running_loop()
         loop.slow_callback_duration = 2.0
-        app["db"], app["psql"] = create_db(["/folder1/stream1:float32[x, y, z]",
+        app[app_keys.db], app[psql_key] = create_db(["/folder1/stream1:float32[x, y, z]",
                                             "/folder2/deeper/stream2:int8[val1, val2]"])
-        app["data-store"] = MockStore()
+        app[app_keys.data_store] = MockStore()
         self.supervisor = MockSupervisor()
-        app["supervisor"] = self.supervisor
+        app[app_keys.supervisor] = self.supervisor
         return app
 
 
@@ -47,7 +50,7 @@ class TestDataController(AioHTTPTestCase):
 
 
     async def test_read_errors_on_no_data(self):
-        store: MockStore = self.app['data-store']
+        store: MockStore = self.app[app_keys.data_store]
         store.configure_extract(0, no_data=True)
         params = {'path': '/folder1/stream1', 'decimation-level': 64}
         resp: aiohttp.ClientResponse = await self.client.get("/data", params=params)
@@ -56,7 +59,7 @@ class TestDataController(AioHTTPTestCase):
 
 
     async def test_read_errors_on_decimation_failure(self):
-        store: MockStore = self.app['data-store']
+        store: MockStore = self.app[app_keys.data_store]
         store.configure_extract(10, decimation_error=True)
         params = {'path': '/folder1/stream1', 'decimation-level': 64}
         resp: aiohttp.ClientResponse = await self.client.get("/data", params=params)
@@ -65,7 +68,7 @@ class TestDataController(AioHTTPTestCase):
 
 
     async def test_read_errors_on_nilmdb_error(self):
-        store: MockStore = self.app['data-store']
+        store: MockStore = self.app[app_keys.data_store]
         store.configure_extract(10, data_error=True)
         params = {'path': '/folder1/stream1', 'decimation-level': 64}
         resp: aiohttp.ClientResponse = await self.client.get("/data", params=params)
@@ -229,8 +232,8 @@ class TestDataController(AioHTTPTestCase):
 
 
     async def test_invalid_writes_propagates_data_error(self):
-        db: Session = self.app["db"]
-        store: MockStore = self.app['data-store']
+        db: Session = self.app[app_keys.db]
+        store: MockStore = self.app[app_keys.data_store]
         store.raise_data_error = True
         stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
         data = helpers.create_data(stream.layout)

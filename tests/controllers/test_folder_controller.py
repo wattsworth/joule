@@ -5,13 +5,16 @@ import asyncio
 from joule.models import folder, DataStream, Folder, Element, StreamInfo
 import joule.controllers
 from tests.controllers.helpers import create_db, MockStore, MockEventStore
+from joule import app_keys
 
+import testing.postgresql
+psql_key = web.AppKey("psql", testing.postgresql.Postgresql)
 
 class TestFolderController(AioHTTPTestCase):
 
     async def tearDownAsync(self):
-        self.app["db"].close()
-        self.app["psql"].stop()
+        self.app[app_keys.db].close()
+        self.app[psql_key].stop()
         await self.client.close()
 
     async def get_application(self):
@@ -20,18 +23,18 @@ class TestFolderController(AioHTTPTestCase):
         # this takes a while, adjust the expected coroutine execution time
         loop = asyncio.get_running_loop()
         loop.slow_callback_duration = 2.0
-        app["db"], app["psql"] = create_db([
+        app[app_keys.db], app[psql_key] = create_db([
             "/other/middle/stream3:int8[val1, val2]",
             "/top/leaf/stream1:float32[x, y, z]",
             "/top/middle/leaf/stream2:int8[val1, val2]"])
-        app["data-store"] = MockStore()
-        app["event-store"] = MockEventStore()
+        app[app_keys.data_store] = MockStore()
+        app[app_keys.event_store] = MockEventStore()
         return app
 
     async def test_stream_list(self):
-        db: Session = self.app["db"]
+        db: Session = self.app[app_keys.db]
         my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
-        store: MockStore = self.app["data-store"]
+        store: MockStore = self.app[app_keys.data_store]
         mock_info = StreamInfo(start=0, end=100, rows=200)
         store.set_info(my_stream, mock_info)
 
@@ -73,7 +76,7 @@ class TestFolderController(AioHTTPTestCase):
 
 
     async def test_folder_move_by_path(self):
-        db: Session = self.app["db"]
+        db: Session = self.app[app_keys.db]
         # move stream1 into folder3
         payload = {
             "src_path": "/top/leaf",
@@ -94,7 +97,7 @@ class TestFolderController(AioHTTPTestCase):
         self.assertEqual(folder.find("/other/middle", db).updated_at, other_folder_created_at)
 
     async def test_folder_move_by_id(self):
-        db: Session = self.app["db"]
+        db: Session = self.app[app_keys.db]
         # move stream1 into folder3
         dest_folder = folder.find("/top/middle/leaf", db)
         src_folder = folder.find("/top/leaf", db)
@@ -110,7 +113,7 @@ class TestFolderController(AioHTTPTestCase):
 
 
     async def test_folder_delete_by_path(self):
-        db: Session = self.app["db"]
+        db: Session = self.app[app_keys.db]
         f = folder.find("/top/leaf", db)
         payload = {'path': "/top/leaf"}
         resp = await self.client.delete("/folder.json", params=payload)
@@ -124,7 +127,7 @@ class TestFolderController(AioHTTPTestCase):
 
 
     async def test_folder_delete_by_id(self):
-        db: Session = self.app["db"]
+        db: Session = self.app[app_keys.db]
         f_count = db.query(Folder).count()
         f = folder.find("/an/empty/folder", db, create=True)
         parent_updated_at = f.parent.updated_at
@@ -143,7 +146,7 @@ class TestFolderController(AioHTTPTestCase):
         self.assertGreater(f.parent.parent.updated_at, top_parent_updated_at)
 
     async def test_folder_recursive_delete(self):
-        db: Session = self.app["db"]
+        db: Session = self.app[app_keys.db]
         f = folder.find("/top", db)
         payload = {'path': "/top", 'recursive': "1"}
         resp = await self.client.delete("/folder.json", params=payload)
@@ -157,7 +160,7 @@ class TestFolderController(AioHTTPTestCase):
 
 
     async def test_folder_update(self):
-        db: Session = self.app["db"]
+        db: Session = self.app[app_keys.db]
         my_folder = folder.find("/top/middle/leaf", db)
         other_folder = folder.find("/top/other", db, create=True)
         created_at = my_folder.updated_at

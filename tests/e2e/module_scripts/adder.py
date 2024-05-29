@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-import joule
+import joule.client
 import asyncio
 
 
-class Adder(joule.FilterModule):
+class Adder(joule.client.FilterModule):
     """ Add DC offset to input """
     
     def custom_args(self, parser):

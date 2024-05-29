@@ -8,13 +8,16 @@ from sqlalchemy.orm import Session
 from joule.models import folder, DataStream, Folder, Element, StreamInfo
 import joule.controllers
 from tests.controllers.helpers import create_db, MockStore
+from joule import app_keys
 
+import testing.postgresql
+psql_key = web.AppKey("psql", testing.postgresql.Postgresql)
 
 class TestStreamController(AioHTTPTestCase):
 
     async def tearDownAsync(self):
-        self.app["db"].close()
-        self.app["psql"].stop()
+        self.app[app_keys.db].close()
+        self.app[psql_key].stop()
         await self.client.close()
 
     async def get_application(self):
@@ -23,16 +26,16 @@ class TestStreamController(AioHTTPTestCase):
         # this takes a while, adjust the expected coroutine execution time
         loop = asyncio.get_running_loop()
         loop.slow_callback_duration = 2.0
-        app["db"], app["psql"] = create_db(["/folder1/stream1:float32[x, y, z]",
+        app[app_keys.db], app[psql_key] = create_db(["/folder1/stream1:float32[x, y, z]",
                                             "/folder2/deeper/stream2:int8[val1, val2]"])
-        app["data-store"] = MockStore()
+        app[app_keys.data_store] = MockStore()
         return app
 
 
     async def test_stream_info(self):
-        db: Session = self.app["db"]
+        db: Session = self.app[app_keys.db]
         my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
-        store: MockStore = self.app["data-store"]
+        store: MockStore = self.app[app_keys.data_store]
         mock_info = StreamInfo(start=0, end=100, rows=200)
         store.set_info(my_stream, mock_info)
         # can query by id
@@ -53,7 +56,7 @@ class TestStreamController(AioHTTPTestCase):
 
 
     async def test_stream_move(self):
-        db: Session = self.app["db"]
+        db: Session = self.app[app_keys.db]
         # move stream1 into folder3
         payload = {
             "src_path": "/folder1/stream1",
@@ -87,7 +90,7 @@ class TestStreamController(AioHTTPTestCase):
         self.assertGreater(folder1.updated_at, folder1_created_at)
 
     async def test_stream_create(self):
-        db: Session = self.app["db"]
+        db: Session = self.app[app_keys.db]
         new_stream = DataStream(name="test", datatype=DataStream.DATATYPE.FLOAT32,
                                 updated_at=datetime.datetime.utcnow())
         new_stream.elements = [Element(name="e%d" % j, index=j,
@@ -121,11 +124,11 @@ class TestStreamController(AioHTTPTestCase):
 
 
     async def test_stream_delete_by_path(self):
-        db: Session = self.app["db"]
+        db: Session = self.app[app_keys.db]
         my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
         folder = my_stream.folder
         folder_created_at = folder.updated_at
-        store: MockStore = self.app["data-store"]
+        store: MockStore = self.app[app_keys.data_store]
         payload = {'path': "/folder1/stream1"}
         resp = await self.client.delete("/stream.json", params=payload)
         self.assertEqual(resp.status, 200)
@@ -138,9 +141,9 @@ class TestStreamController(AioHTTPTestCase):
 
 
     async def test_stream_delete_by_id(self):
-        db: Session = self.app["db"]
+        db: Session = self.app[app_keys.db]
         my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
-        store: MockStore = self.app["data-store"]
+        store: MockStore = self.app[app_keys.data_store]
         payload = {'id': my_stream.id}
         resp = await self.client.delete("/stream.json", params=payload)
         self.assertEqual(resp.status, 200)
@@ -151,7 +154,7 @@ class TestStreamController(AioHTTPTestCase):
 
 
     async def test_stream_update(self):
-        db: Session = self.app["db"]
+        db: Session = self.app[app_keys.db]
         my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
         created_at = my_stream.updated_at
         folder_created_at = my_stream.folder.updated_at

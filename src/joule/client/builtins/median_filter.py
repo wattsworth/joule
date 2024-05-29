@@ -3,7 +3,7 @@ import asyncio
 import textwrap
 import numpy as np
 
-import joule
+import joule.client
 
 
 ARGS_DESC = """

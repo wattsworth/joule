@@ -4,15 +4,15 @@ import aiohttp
 
 import joule.controllers
 from tests.controllers.helpers import MockStore
-
+from joule import app_keys
 
 class TestRootController(AioHTTPTestCase):
 
     async def get_application(self):
         app = web.Application()
         app.add_routes(joule.controllers.routes)
-        app["data-store"] = MockStore()
-        app["name"] = "test_suite"
+        app[app_keys.data_store] = MockStore()
+        app[app_keys.name] = "test_suite"
         return app
 
 

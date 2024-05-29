@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
 from joule.utilities import time_now
-import joule
+import joule.client
 import asyncio
 import numpy as np
 
 
-class Counter(joule.ReaderModule):
+class Counter(joule.client.ReaderModule):
     "Counts up from 0 at 10Hz"
 
     def custom_args(self, parser):

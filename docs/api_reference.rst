@@ -41,7 +41,7 @@ created automatically that refers to the node where it is running.
 
 .. code-block:: python
 
-    """ Inside a joule.ReaderModule class """
+    """ Inside a joule.client.ReaderModule class """
     async def run(self, parsed_args, output):
         node_info = await self.node.info()
         # other run code
@@ -59,7 +59,7 @@ The rest of this section describes class methods separated by category.
 Folder Actions
 ''''''''''''''
 
-.. function:: Node.folder_root() -> joule.Folder
+.. function:: Node.folder_root() -> joule.api.Folder
 
     Retrieve the node's root folder. This returns the entire database structure as shown in the
     example below.
@@ -73,7 +73,7 @@ Folder Actions
          <joule.api.Folder id=2729 name='archive' description=None locked=True>,
          <joule.api.Folder id=2730 name='live' description=None locked=True>]
 
-.. function:: Node.folder_get(folder: Union[joule.Folder, str, int]) -> joule.Folder
+.. function:: Node.folder_get(folder: Union[joule.api.Folder, str, int]) -> joule.api.Folder
 
     Retrieve the specified folder. Folder may be specified by a :class:`joule.api.Folder` object,
     a path, or numeric ID. Raises :exc:`joule.errors.ApiError` if folder specification is invalid.
@@ -91,7 +91,7 @@ Folder Actions
 .. function:: Node.folder_move(source: Union[Folder, str, int], destination: Union[Folder, str, int]) -> None
 
     Move the *source* folder into the *destination* folder. The source and destination may be
-    specified by joule.Folder objects, paths, or numeric ID's. The source folder name must be unique in the destination
+    specified by joule.api.Folder objects, paths, or numeric ID's. The source folder name must be unique in the destination
     and not be locked (actively in use by a module or statically configured) Raises
     :exc:`joule.errors.ApiError` if folder specifications are invalid or the requested
     move cannot be performed. The destination is automatically created if it does not exist.
@@ -105,7 +105,7 @@ Folder Actions
         >>> await node.folder_move("/parent1/missing_folder","/parent2") # rasises ApiError
         joule.errors.ApiError: folder does not exist [404]
 
-.. function:: Node.folder_update(folder: joule.Folder) -> None
+.. function:: Node.folder_update(folder: joule.api.Folder) -> None
 
     Update folder attributes. The name and description are the only writable attributes.
     Raises :exc:`joule.errors.ApiError` if folder is locked or the specification is invalid

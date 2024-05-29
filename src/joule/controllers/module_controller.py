@@ -1,10 +1,10 @@
 from aiohttp import web
 
 from joule.models.supervisor import Supervisor
-
+from joule import app_keys
 
 async def index(request):
-    supervisor: Supervisor = request.app["supervisor"]
+    supervisor: Supervisor = request.app[app_keys.supervisor]
     resp = []
     if 'statistics' in request.query and request.query['statistics'] != '0':
         get_stats = True
@@ -32,7 +32,7 @@ async def index(request):
 
 
 async def info(request):
-    supervisor: Supervisor = request.app["supervisor"]
+    supervisor: Supervisor = request.app[app_keys.supervisor]
     if 'name' in request.query:
         worker = [w for w in supervisor.workers if w.name == request.query['name']]
     elif 'id' in request.query:
@@ -59,7 +59,7 @@ async def info(request):
 
 
 async def logs(request):
-    supervisor: Supervisor = request.app["supervisor"]
+    supervisor: Supervisor = request.app[app_keys.supervisor]
     if 'name' in request.query:
         worker = [w for w in supervisor.workers if w.name == request.query['name']]
     elif 'id' in request.query:

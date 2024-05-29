@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-import joule
+import joule.client
 import numpy as np
 
 
-class MergeSum(joule.FilterModule):
+class MergeSum(joule.client.FilterModule):
     " Sums two streams "
 
     def custom_args(self, parser):

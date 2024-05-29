@@ -1,10 +1,10 @@
 from aiohttp import web
 
 from joule.models.supervisor import Supervisor
-
+from joule import app_keys
 
 async def index(request):
-    supervisor: Supervisor = request.app["supervisor"]
+    supervisor: Supervisor = request.app[app_keys.supervisor]
     resp = []
 
     for proxy in supervisor.proxies:
@@ -18,7 +18,7 @@ async def index(request):
 
 
 async def info(request):
-    supervisor: Supervisor = request.app["supervisor"]
+    supervisor: Supervisor = request.app[app_keys.supervisor]
     if 'name' in request.query:
         proxy = [p for p in supervisor.proxies if p.name == request.query['name']]
     elif 'id' in request.query:

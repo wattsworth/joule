@@ -26,14 +26,14 @@ Build test objects
 
 		# build test objects
 		my_reader = ReaderDemo()
-		pipe = LocalNumpyPipe("output", layout="float32_1")
+		pipe = LocalPipe("output", layout="float32_1")
 		args = argparse.Namespace(rate=0.1, pipes="unset")
 
 1. Create an instance of the reader module. Properly designed readers
    should not require any initialization parameters.
 
 2. Create an output pipe to receive data from the
-   module. ``LocalNumpyPipe`` takes two arguments, a pipe name which
+   module. ``LocalPipe`` takes two arguments, a pipe name which
    should be a helpful string, and a layout. The layout should match
    the stream configuration file associated with your module. See the
    NumpyPipe documentation for details on local pipes and the layout

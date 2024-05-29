@@ -14,3 +14,6 @@ name = web.AppKey("name", str)
 port = web.AppKey("port", int)
 scheme = web.AppKey("scheme", str)
 cafile = web.AppKey("cafile", str)
+remote_ip = web.AppKey("remote-ip", str)  # set by middleware but not used?
+
+

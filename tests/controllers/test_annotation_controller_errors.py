@@ -5,7 +5,10 @@ import joule.controllers
 from tests.controllers.helpers import create_db
 from joule.models import DataStream, Annotation
 from joule import utilities
+from joule import app_keys
 
+import testing.postgresql
+psql_key = web.AppKey("psql", testing.postgresql.Postgresql)
 
 class TestAnnotationControllerErrors(AioHTTPTestCase):
 
@@ -17,7 +20,7 @@ class TestAnnotationControllerErrors(AioHTTPTestCase):
         loop = asyncio.get_running_loop()
         loop.slow_callback_duration = 2.0
 
-        db, app["psql"] = create_db(["/top/leaf/stream1:float32[x, y, z]",
+        db, app[psql_key] = create_db(["/top/leaf/stream1:float32[x, y, z]",
                                      "/top/middle/leaf/stream2:int8[val1, val2]"])
         self.stream1 = db.query(DataStream).filter_by(name="stream1").one_or_none()
         self.stream2 = db.query(DataStream).filter_by(name="stream2").one_or_none()
@@ -35,7 +38,7 @@ class TestAnnotationControllerErrors(AioHTTPTestCase):
             db.add(a1)
             db.add(a2)
         db.commit()
-        app["db"] = db
+        app[app_keys.db] = db
         self.db = db
         return app
 

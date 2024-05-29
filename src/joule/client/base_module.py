@@ -26,6 +26,7 @@ log = logging.getLogger('joule')
 
 DataStreams = Dict[str, api.DataStream]
 
+task_key = web.AppKey("task", asyncio.Task)
 
 class BaseModule:
     """
@@ -103,13 +104,13 @@ class BaseModule:
         my_app = self._create_app()
 
         async def on_startup(app):
-            app['task'] = await self.run_as_task(parsed_args, app)
+            app[task_key] = await self.run_as_task(parsed_args, app)
 
         my_app.on_startup.append(on_startup)
 
         async def on_shutdown(app):
             self.stop()
-            await app['task']
+            await app[task_key]
 
         my_app.on_shutdown.append(on_shutdown)
         return my_app

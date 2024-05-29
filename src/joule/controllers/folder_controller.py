@@ -5,12 +5,12 @@ from typing import List
 
 from joule.models import folder, Folder, EventStore, DataStore, DataStream, EventStream
 from joule.errors import ConfigurationError
-
+from joule import app_keys
 
 async def index(request: web.Request):
-    db: Session = request.app["db"]
-    data_store: DataStore = request.app["data-store"]
-    event_store: DataStore = request.app["event-store"]
+    db: Session = request.app[app_keys.db]
+    data_store: DataStore = request.app[app_keys.data_store]
+    event_store: DataStore = request.app[app_keys.event_store]
 
     root = folder.root(db)
     if 'data-info' in request.query:
@@ -31,7 +31,7 @@ async def index(request: web.Request):
 
 
 async def info(request: web.Request):
-    db: Session = request.app["db"]
+    db: Session = request.app[app_keys.db]
     if 'path' in request.query:
         my_folder = folder.find(request.query['path'], db)
     elif 'id' in request.query:
@@ -44,7 +44,7 @@ async def info(request: web.Request):
 
 
 async def move(request):
-    db: Session = request.app["db"]
+    db: Session = request.app[app_keys.db]
     if request.content_type != 'application/json':
         return web.Response(text='content-type must be application/json', status=400)
     body = await request.json()
@@ -95,7 +95,7 @@ async def move(request):
 
 
 async def update(request):
-    db: Session = request.app["db"]
+    db: Session = request.app[app_keys.db]
     if request.content_type != 'application/json':
         return web.Response(text='content-type must be application/json', status=400)
     body = await request.json()
@@ -130,9 +130,9 @@ async def update(request):
 
 
 async def delete(request):
-    db: Session = request.app["db"]
-    data_store: DataStore = request.app["data-store"]
-    event_store: EventStore = request.app["event-store"]
+    db: Session = request.app[app_keys.db]
+    data_store: DataStore = request.app[app_keys.data_store]
+    event_store: EventStore = request.app[app_keys.event_store]
     # find the requested folder
     if 'path' in request.query:
         my_folder: Folder = folder.find(request.query['path'], db)

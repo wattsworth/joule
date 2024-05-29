@@ -52,7 +52,7 @@ Reader Modules
 
 Reader modules are designed to read data into the Joule Framework. Data can come from
 sensors, system logs, HTTP API's or any other timeseries data source. Reader modules
-should extend the base class :class:`joule.ReaderModule` illustrated below.
+should extend the base class :class:`joule.client.ReaderModule` illustrated below.
 
 .. image:: /images/reader_module.png
 
@@ -75,7 +75,7 @@ Testing
 Reference
 '''''''''
 
-.. autoclass:: joule.ReaderModule
+.. autoclass:: joule.client.ReaderModule
     :members:
     :inherited-members:
 
@@ -85,7 +85,7 @@ Filter Modules
 ++++++++++++++
 
 Filter modules process data. They may have one or more input streams and one or
-more output streams. Filter modules should extend the base class :class:`joule.FilterModule` illustrated below.
+more output streams. Filter modules should extend the base class :class:`joule.client.FilterModule` illustrated below.
 
 .. image:: /images/filter_module.png
 
@@ -112,7 +112,7 @@ Testing
 Reference
 '''''''''
 
-.. autoclass:: joule.FilterModule
+.. autoclass:: joule.client.FilterModule
     :members:
     :inherited-members:
 
@@ -125,7 +125,7 @@ Composite Modules
 Composite modules aggregate multiple modules into a single
 process. They may have one or more input streams and one or
 more output streams. Composite modules should extend the base
-class :class:`joule.CompositeModule` illustrated below.
+class :class:`joule.client.CompositeModule` illustrated below.
 
 .. image:: /images/composite_module.png
 
@@ -147,7 +147,7 @@ Testing
 Reference
 '''''''''
 
-.. autoclass:: joule.CompositeModule
+.. autoclass:: joule.client.CompositeModule
     :members:
     :inherited-members:
 

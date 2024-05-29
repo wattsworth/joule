@@ -127,7 +127,7 @@ async def _read(request: web.Request, json):
 
 async def _subscribe(request: web.Request, json: bool):
     db: Session = request.app[app_keys.db]
-    supervisor: Supervisor = request.app['supervisor']
+    supervisor: Supervisor = request.app[app_keys.supervisor]
     if json:
         return web.Response(text="JSON subscription not implemented", status=400)
 

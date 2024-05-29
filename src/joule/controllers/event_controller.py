@@ -9,8 +9,8 @@ from joule.errors import ConfigurationError
 from joule import app_keys
 
 async def info(request: web.Request):
-    db: Session = request.app["db"]
-    event_store: EventStore = request.app["event-store"]
+    db: Session = request.app[app_keys.db]
+    event_store: EventStore = request.app[app_keys.event_store]
     if 'path' in request.query:
         my_stream = folder.find_stream_by_path(request.query['path'], db, stream_type=EventStream)
     elif 'id' in request.query:
@@ -24,7 +24,7 @@ async def info(request: web.Request):
 
 
 async def move(request: web.Request):
-    db: Session = request.app["db"]
+    db: Session = request.app[app_keys.db]
     if request.content_type != 'application/json':
         return web.Response(text='content-type must be application/json', status=400)
     body = await request.json()
@@ -61,8 +61,8 @@ async def move(request: web.Request):
 
 
 async def create(request):
-    db: Session = request.app["db"]
-    event_store: EventStore = request.app["event-store"]
+    db: Session = request.app[app_keys.db]
+    event_store: EventStore = request.app[app_keys.event_store]
     if request.content_type != 'application/json':
         return web.Response(text='content-type must be application/json', status=400)
     body = await request.json()
@@ -106,7 +106,7 @@ async def create(request):
 
 
 async def update(request: web.Request):
-    db: Session = request.app["db"]
+    db: Session = request.app[app_keys.db]
     if request.content_type != 'application/json':
         return web.Response(text='content-type must be application/json', status=400)
 
@@ -139,8 +139,8 @@ async def update(request: web.Request):
 
 
 async def delete(request):
-    db: Session = request.app["db"]
-    data_store: EventStore = request.app["event-store"]
+    db: Session = request.app[app_keys.db]
+    data_store: EventStore = request.app[app_keys.event_store]
     # find the requested stream
     if 'path' in request.query:
         my_stream = folder.find_stream_by_path(request.query['path'], db,
@@ -161,8 +161,8 @@ async def delete(request):
 # ----- data actions ----
 
 async def write_events(request):
-    db: Session = request.app["db"]
-    event_store: EventStore = request.app["event-store"]
+    db: Session = request.app[app_keys.db]
+    event_store: EventStore = request.app[app_keys.event_store]
     body = await request.json()
 
     # find the requested stream
@@ -182,8 +182,8 @@ async def write_events(request):
 
 
 async def count_events(request):
-    db: Session = request.app["db"]
-    event_store: EventStore = request.app["event-store"]
+    db: Session = request.app[app_keys.db]
+    event_store: EventStore = request.app[app_keys.event_store]
     # find the requested stream
     if 'path' in request.query:
         my_stream = folder.find_stream_by_path(request.query['path'], db,
@@ -227,8 +227,8 @@ async def count_events(request):
 
 
 async def read_events(request):
-    db: Session = request.app["db"]
-    event_store: EventStore = request.app["event-store"]
+    db: Session = request.app[app_keys.db]
+    event_store: EventStore = request.app[app_keys.event_store]
     # find the requested stream
     if 'path' in request.query:
         my_stream = folder.find_stream_by_path(request.query['path'], db,
@@ -290,8 +290,8 @@ async def read_events(request):
 
 
 async def remove_events(request):
-    db: Session = request.app["db"]
-    event_store: EventStore = request.app["event-store"]
+    db: Session = request.app[app_keys.db]
+    event_store: EventStore = request.app[app_keys.event_store]
     # find the requested stream
     if 'path' in request.query:
         my_stream = folder.find_stream_by_path(request.query['path'], db,

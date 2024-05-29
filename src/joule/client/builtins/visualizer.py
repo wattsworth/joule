@@ -17,13 +17,15 @@ ARGS_DESC = """
 TODO
 """
 
+# App Keys #
+title_key = web.AppKey("title", str)
 
 class Visualizer(FilterModule):  # pragma: no cover
 
     async def setup(self, parsed_args, app, inputs, outputs):
         loader = jinja2.FileSystemLoader(TEMPLATES_DIR)
         aiohttp_jinja2.setup(app, loader=loader)
-        app["title"] = parsed_args.title
+        app[title_key] = parsed_args.title
 
         self.elements = []
         dom_id = 0  # DOM id for javascript manipulation
@@ -93,7 +95,7 @@ class Visualizer(FilterModule):  # pragma: no cover
 
     @aiohttp_jinja2.template('index.jinja2')
     async def index(self, request):
-        return {'title': request.app['title'], 'elements': self.elements}
+        return {'title': request.app[title_key], 'elements': self.elements}
 
     async def data(self, request):
         return web.json_response(data=self.elements)

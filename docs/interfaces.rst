@@ -4,7 +4,7 @@ a Lumen server, the user authentication and authorization is handled
 by Lumen and the interface is presented on a common dashboard with other
 modules the user is authorized to use.
 
-To add an interface to a module implement the :meth:`joule.BaseModule.routes` function
+To add an interface to a module implement the :meth:`joule.client.BaseModule.routes` function
 and register handlers for any routes your module implements. Then enable the interface
 by changing the ``is_app`` attribute to ``yes`` in the
 :ref:`sec-modules` file.

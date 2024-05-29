@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 
 from joule.utilities import time_now
-import joule
+import joule.client
 import numpy as np
 import asyncio
 rows = 100
 freq = 40  # Hz
 
 
-class BrokenGen(joule.ReaderModule):
+class BrokenGen(joule.client.ReaderModule):
 
     async def run(self, parsed_args, output):
             data = 100 * np.sin(np.arange(0, 2 * np.pi, 2 * np.pi / rows))

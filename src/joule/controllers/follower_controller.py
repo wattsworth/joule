@@ -5,9 +5,9 @@ from sqlalchemy.orm import Session
 
 from joule.models import Follower
 from joule.api import TcpNode
-
+from joule import app_keys
 async def index(request: web.Request):
-    db: Session = request.app["db"]
+    db: Session = request.app[app_keys.db]
     followers = db.query(Follower)
     return web.json_response([f.to_json() for f in followers])
 
@@ -22,8 +22,8 @@ async def add(request: web.Request):  # pragma: no cover
         port(int): specify the port Joule is using on the follower
 
     """
-    db: Session = request.app["db"]
-    cafile = request.app["cafile"]
+    db: Session = request.app[app_keys.db]
+    cafile = request.app[app_keys.cafile]
     if request.content_type != 'application/json':
         return web.Response(text='content-type must be application/json', status=400)
     body = await request.json()
@@ -56,14 +56,14 @@ async def add(request: web.Request):  # pragma: no cover
         return web.Response(text="Invalid request, missing [%s]" % str(e), status=400)
     except ValueError as e:
         return web.Response(text="Invalid request, bad argument format", status=400)
-    return web.json_response(data={'name': request.app["name"]})
+    return web.json_response(data={'name': request.app[app_keys.name]})
 
 
 async def delete(request: web.Request):
     """
     Remove the specified node from the list of followers
     """
-    db: Session = request.app["db"]
+    db: Session = request.app[app_keys.db]
     try:
         name = request.query["name"]
         db.query(Follower).filter(name == name).delete()

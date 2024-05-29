@@ -8,13 +8,16 @@ from joule.models import DataStream, pipes
 import joule.controllers
 from tests.controllers.helpers import create_db, MockStore, MockSupervisor
 from tests import helpers
+from joule import app_keys
 
+import testing.postgresql
+psql_key = web.AppKey("psql", testing.postgresql.Postgresql)
 
 class TestDataController(AioHTTPTestCase):
 
     async def tearDownAsync(self):
-        self.app["db"].close()
-        self.app["psql"].stop()
+        self.app[app_keys.db].close()
+        self.app[psql_key].stop()
         await self.client.close()
 
     async def get_application(self):
@@ -23,17 +26,17 @@ class TestDataController(AioHTTPTestCase):
         # this takes a while, adjust the expected coroutine execution time
         loop = asyncio.get_running_loop()
         loop.slow_callback_duration = 2.0
-        app["db"], app["psql"] = create_db(["/folder1/stream1:float32[x, y, z]",
+        app[app_keys.db], app[psql_key] = create_db(["/folder1/stream1:float32[x, y, z]",
                                             "/folder2/deeper/stream2:int8[val1, val2]"])
-        app["data-store"] = MockStore()
+        app[app_keys.data_store] = MockStore()
         self.supervisor = MockSupervisor()
-        app["supervisor"] = self.supervisor
+        app[app_keys.supervisor] = self.supervisor
         return app
 
 
     async def test_read_binary_data(self):
-        db: Session = self.app["db"]
-        store: MockStore = self.app["data-store"]
+        db: Session = self.app[app_keys.db]
+        store: MockStore = self.app[app_keys.data_store]
         nchunks = 10
         store.configure_extract(nchunks)
         resp: aiohttp.ClientResponse = await \
@@ -58,8 +61,8 @@ class TestDataController(AioHTTPTestCase):
 
 
     async def test_read_json_data(self):
-        db: Session = self.app["db"]
-        store: MockStore = self.app["data-store"]
+        db: Session = self.app[app_keys.db]
+        store: MockStore = self.app[app_keys.data_store]
         n_chunks = 10
         n_intervals = 2
         # mock data has 2 intervals retrieved as 10 chunks each
@@ -82,7 +85,7 @@ class TestDataController(AioHTTPTestCase):
 
 
     async def test_subscribes_to_data(self):
-        db: Session = self.app["db"]
+        db: Session = self.app[app_keys.db]
         my_stream = db.query(DataStream).filter_by(name="stream1").one()
         blk1 = helpers.create_data(my_stream.layout)
         blk2 = helpers.create_data(my_stream.layout, length=50)
@@ -109,8 +112,8 @@ class TestDataController(AioHTTPTestCase):
 
 
     async def test_unsubscribes_terminated_connections(self):
-        db: Session = self.app["db"]
-        supervisor: MockSupervisor = self.app["supervisor"]
+        db: Session = self.app[app_keys.db]
+        supervisor: MockSupervisor = self.app[app_keys.supervisor]
         supervisor.hang_pipe = True
         my_stream = db.query(DataStream).filter_by(name="stream1").one()
         my_pipe = pipes.LocalPipe(my_stream.layout)
@@ -126,8 +129,8 @@ class TestDataController(AioHTTPTestCase):
 
 
     async def test_write_data(self):
-        db: Session = self.app["db"]
-        store: MockStore = self.app['data-store']
+        db: Session = self.app[app_keys.db]
+        store: MockStore = self.app[app_keys.data_store]
         stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
         data = helpers.create_data(stream.layout)
         resp: aiohttp.ClientResponse = await \
@@ -147,8 +150,8 @@ class TestDataController(AioHTTPTestCase):
 
 
     async def test_remove_data(self):
-        db: Session = self.app["db"]
-        store: MockStore = self.app['data-store']
+        db: Session = self.app[app_keys.db]
+        store: MockStore = self.app[app_keys.data_store]
         stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
         resp: aiohttp.ClientResponse = await \
             self.client.delete("/data", params={"path": "/folder1/stream1",
@@ -169,7 +172,7 @@ class TestDataController(AioHTTPTestCase):
 
 
     async def test_interval_data(self):
-        db: Session = self.app["db"]
+        db: Session = self.app[app_keys.db]
         stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
         resp = await self.client.get("/data/intervals.json",
                                      params={"id": stream.id})
