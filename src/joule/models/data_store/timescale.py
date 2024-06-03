@@ -12,7 +12,7 @@ from joule.models.data_store.timescale_inserter import Inserter, Decimator
 from joule.models import DataStream, pipes
 from joule.models.data_store import psql_helpers
 from joule.models.data_store.data_store import DataStore, StreamInfo, DbInfo
-
+from joule.utilities import datetime_to_timestamp as dt2ts
 Loop = asyncio.AbstractEventLoop
 
 
@@ -275,18 +275,21 @@ async def _extract_data(conn: asyncpg.Connection, stream: DataStream, callback,
         query += " WHERE " + where_clause
     query += " ORDER BY time ASC"
     try:
-        boundary_records = await conn.fetch(query)
+        data = await conn.fetch(query)
+        # convert to timestamps
+        boundary_records = [dt2ts(row['time']) for row in data]
     except asyncpg.UndefinedTableError:
         # no data tables
         data = np.array([], dtype=pipes.compute_dtype(layout))
         await callback(data, layout, decimation_level)
         return
 
-    boundary_records += [{'time': end}]
+    boundary_records.append(end)
     for i in range(len(boundary_records)):
-        record = boundary_records[i]
-        end = record['time']
+        end = boundary_records[i]
         # extract the interval data
+        if start==end: # do not run an empty query
+            continue
         done = False
         while not done:
             query = "SELECT * FROM %s " % table_name

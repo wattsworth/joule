@@ -30,8 +30,8 @@ class TestEventInfo(FakeJouleTestCase):
         self.assertTrue("282587" in row_line)
         start_line = [x for x in output if 'Start' in x][0]
 
-        # note: hour depends on client's timezone (check year and MM:SS)
-        self.assertIsNotNone(re.search(r'2013-03-15', start_line))
+        # note: day and hour depends on client's timezone (check year and MM:SS)
+        self.assertIsNotNone(re.search(r'2013-03-', start_line))
         end_line = [x for x in output if 'End' in x][0]
         self.assertIsNotNone(re.search(r'28:49', end_line))
 
