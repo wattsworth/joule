@@ -14,7 +14,7 @@ Joule is part of the Wattsworth software stack. Follow the instructions on :ref:
 
   # ensure the joule CLI is installed
   $> joule --version
-  joule, version 0.9.X
+  joule, version 0.10.X
 
   # ensure the joule daemon (jouled) is running
   $> sudo systemctl status joule.service
@@ -35,7 +35,7 @@ may take some time to complete if you have just installed the system as the Dock
 
   # confirm connection to joule server
   $> joule node info
-  Server Version: 0.9.X
+  Server Version: 0.10.X
   Status: online
 
   </div>

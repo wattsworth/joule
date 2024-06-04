@@ -37,8 +37,8 @@ Arguments
 Example
     $> joule node info
     --connecting to [XXXX]--
-    Server Version:         0.9.XX
-    Database Location:      /var/lib/postgresql/12/main
+    Server Version:         0.10.XX
+    Database Location:      /var/lib/postgresql/13/main
     Database Size:          2GiB
     Space Available:        20GiB
 

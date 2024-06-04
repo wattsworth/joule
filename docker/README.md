@@ -4,6 +4,6 @@ This works on Linux but not on OSX. Repeat with the latest tag, not ideal but ot
 you can only push the local architecture and not the multiarch image.
 
 ```bash
-docker buildx build --push --platform linux/amd64,linux/arm64 --tag wattsworth/joule:0.9.XX .
+docker buildx build --push --platform linux/amd64,linux/arm64 --tag wattsworth/joule:0.10.XX .
 ```
 
