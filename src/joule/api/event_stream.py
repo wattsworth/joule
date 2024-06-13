@@ -7,7 +7,7 @@ from .folder_type import Folder
 from .event import Event
 from .event import from_json as event_from_json
 from joule import errors
-
+from joule.utilities.validators import validate_event_fields
 
 class EventStream:
     """
@@ -34,7 +34,10 @@ class EventStream:
             self.chunk_duration_us = chunk_duration_us
         else:
             self.chunk_duration_us = self._parse_time_duration(chunk_duration)
-        self.event_fields = self._validate_event_fields(event_fields)
+        if event_fields is None:
+            self.event_fields = {}
+        else:
+            self.event_fields = validate_event_fields(event_fields)
         self.keep_us = keep_us
 
     @property
@@ -61,15 +64,7 @@ class EventStream:
         return "<joule.api.EventStream id=%r name=%r description=%r>" % (
             self._id, self.name, self.description
         )
-
-    def _validate_event_fields(self, fields: Optional[Dict[str, str]]) -> Dict[str, str]:
-        # make sure values are either string or numeric
-        if fields is None:
-            return {}
-        for field in fields:
-            if fields[field] not in ['string', 'numeric']:
-                raise errors.ApiError("invalid event field type, must be numeric or string")
-        return fields
+        
 
     def _parse_time_duration(self, duration_str):
         # if duration is already a number interpret it as us
@@ -242,6 +237,8 @@ async def event_stream_get(session: BaseSession,
 
 async def event_stream_update(session: BaseSession,
                               stream: EventStream) -> None:
+    # validate the event fields before sending
+    validate_event_fields(stream.event_fields)
     await session.put("/event.json", {"id": stream.id,
                                       "stream": stream.to_json()})
 

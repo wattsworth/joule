@@ -7,6 +7,7 @@ from sqlalchemy_utils import force_instant_defaults
 
 from joule.errors import ConfigurationError
 from joule.models.meta import Base
+from joule.utilities.validators import validate_event_fields
 
 if TYPE_CHECKING:
     from joule.models import (Folder)  # pragma: no cover
@@ -142,17 +143,6 @@ def validate_keep_us(keep_us):
     return keep_us
 
 
-def validate_event_fields(fields: Dict[str, str]) -> Dict[str, str]:
-    # make sure values are either string or numeric
-    try:
-        if not isinstance(fields, dict):
-            raise TypeError
-        for field in fields:
-            if fields[field] not in ['string', 'numeric']:
-                raise ConfigurationError("invalid value in event_fields, must be [numeric|string]")
-    except TypeError:
-        raise ConfigurationError(f"event_fields must be a dictionary, not a {type(fields).__name__}")
-    return fields
 
 
 def validate_name(name: str) -> str:

@@ -148,6 +148,23 @@ class TestEventApi(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(src_returned.name, "exist")
         self.assertEqual(src_returned.id, 99)
 
+    async def tests_validates_event_fields(self):
+        # valid fields, no exception raised
+        EventStream(name="test",
+                    event_fields = {'field1': 'string', 'field2': 'numeric', 'field3': 'category:["cat1","cat2"]'})
+        
+
+        # invalid fields
+        with self.assertRaises(errors.ConfigurationError):
+            event_fields = {'field1': 'string', 'field2': 'numeric', 'field3': 'category:[]', 'field4': 'bad'}
+            EventStream(name="test",event_fields=event_fields)
+        with self.assertRaises(errors.ConfigurationError):
+            event_fields = {'field1': 'string', 'field2': 'numeric', 'field3': 'category:bad'}
+            EventStream(name="test",event_fields=event_fields)
+        with self.assertRaises(errors.ConfigurationError):
+            event_fields = {'field1': 'string', 'field2': 'numeric', 'field3': 'bad'}
+            EventStream(name="test",event_fields=event_fields)
+
     async def test_updates_event_stream(self):
         src = EventStream(name="test")
         src.id = 100
@@ -157,6 +174,11 @@ class TestEventApi(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.session.method, 'PUT')
         self.assertEqual(self.session.path, "/event.json")
         self.assertEqual(self.session.request_data, {'id': src.id, 'stream': src.to_json()})
+
+        # updating with invalid fields raises an error
+        src.event_fields = {'field1': 'bad', 'field2': 'numeric'}
+        with self.assertRaises(errors.ConfigurationError):
+            await self.node.event_stream_update(src)
 
     async def test_moves_event_stream(self):
         src = EventStream(name="test")
