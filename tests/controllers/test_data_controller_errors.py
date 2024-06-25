@@ -154,6 +154,16 @@ class TestDataController(AioHTTPTestCase):
             self.client.post("/data", params={'id': '404'})
         self.assertEqual(resp.status, 404)
 
+    async def test_write_errors_on_merge_gap(self):
+        resp: aiohttp.ClientResponse = await \
+            self.client.post("/data", params={'path': '/folder1/stream1', 'merge-gap':'not valid'})
+        self.assertEqual(resp.status, 400)
+        resp: aiohttp.ClientResponse = await \
+            self.client.post("/data", params={'path': '/folder1/stream1', 'merge-gap':-5})
+        self.assertEqual(resp.status, 400)
+        resp: aiohttp.ClientResponse = await \
+            self.client.post("/data", params={'path': '/folder1/stream1', 'merge-gap':8.6})
+        self.assertEqual(resp.status, 400)
 
     async def test_remove_requires_path_or_id(self):
         resp: aiohttp.ClientResponse = await \

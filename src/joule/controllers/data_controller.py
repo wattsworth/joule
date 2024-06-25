@@ -226,9 +226,18 @@ async def write(request: web.Request):
     db.commit()
 
     pipe = pipes.InputPipe(name="inbound", stream=stream, reader=request.content)
-
+    if 'merge-gap' in request.query:
+        try:
+            merge_gap = int(request.query['merge-gap'])
+        except ValueError:
+            return web.Response(text="merge-gap must be an integer", status=400)
+        
+        if merge_gap < 0:
+            return web.Response(text="merge-gap must be >= 0", status=400)
+    else:
+        merge_gap = 0
     try:
-        task = await data_store.spawn_inserter(stream, pipe, insert_period=0)
+        task = await data_store.spawn_inserter(stream, pipe, insert_period=0, merge_gap=merge_gap)
         await task
     except DataError as e:
         stream.is_destination = False

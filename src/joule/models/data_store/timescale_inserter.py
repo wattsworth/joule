@@ -19,7 +19,7 @@ MAX_CHUNK_INTERVAL = 1000 * 1000 * 60 * 60 * 24 * 365 # 1 year in microseconds
 class Inserter:
 
     def __init__(self, pool: asyncpg.pool.Pool, stream: DataStream, insert_period: float,
-                 cleanup_period: float):
+                 cleanup_period: float, merge_gap: int=0):
         self.pool = pool
         self.stream = stream
         self._data_rate_buffer = []
@@ -33,6 +33,8 @@ class Inserter:
         # add offsets to the period to distribute traffic
         self.insert_period = insert_period + insert_period * random.random() * 0.5
         self.decimator: Decimator = None
+        # merge this insertion with the previous data if the timestamps are <= merge_gap us appart
+        self.merge_gap = merge_gap
 
     async def run(self, pipe: pipes.Pipe) -> None:
         """insert stream data from the queue until the queue is empty"""
@@ -61,6 +63,21 @@ class Inserter:
                             if first_insert:
                                 first_insert = False
                                 await psql_helpers.close_interval(conn, self.stream, data['timestamp'][0] - 1)
+                                # if the difference between the current data and this new data
+                                # is less than merge_gap apart remove the interval boundary
+                                if self.merge_gap > 0:
+                                    await psql_helpers.remove_interval_breaks(conn, self.stream, 
+                                                                              start=data['timestamp'][0]-self.merge_gap,
+                                                                              end=data['timestamp'][0])
+                                #closest_ts = await psql_helpers.get_closest_ts(conn, self.stream, data['timestamp'][0])
+                                #if closest_ts is not None and data['timestamp'][0] - closest_ts > self.merge_gap:
+                                #    await psql_helpers.close_interval(conn, self.stream, data['timestamp'][0] - 1)
+                                #    print("closing interval with previous data")
+                                #elif closest_ts is None:
+                                #    print("no earlier ts in data")
+                                #else:
+                                #    print(f"merging new data with pervious interval: {data['timestamp'][0] - closest_ts} <= {self.merge_gap}")
+                                #    print(f"TODO: remove any previous intervals")
                             if not joule.utilities.misc.timestamps_are_monotonic(data, last_ts, self.stream.name):
                                 raise DataError("Non-monotonic timestamps in new data")
                             if not joule.utilities.misc.validate_values(data):
@@ -75,6 +92,11 @@ class Inserter:
                                                          schema_name='data',
                                                          format='binary',
                                                          source=psql_bytes)
+                                #print("-----BEGIN-------")
+                                #print(f"wrote {data['timestamp']} timestamps to stream{self.stream.id}")
+                                #display the byteio object as a hex string
+                                #print(psql_helpers.data_to_bytes(data).getvalue().hex())
+                                #print("-------END-----")
                             except asyncpg.exceptions.UniqueViolationError as e:
                                 raise DataError(e)
 

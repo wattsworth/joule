@@ -76,6 +76,7 @@ class MockStore(DataStore):
         self.raise_data_error = False
         self.dropped_decimations = False
         self.redecimated_data = False
+        self.merge_gap = None
 
     async def initialize(self, streams: List[DataStream]):
         pass
@@ -84,11 +85,12 @@ class MockStore(DataStore):
                      data: np.ndarray, start: int, end: int):
         pass
 
-    async def spawn_inserter(self, stream: DataStream, pipe: pipes.InputPipe, insert_period=None) -> asyncio.Task:
+    async def spawn_inserter(self, stream: DataStream, pipe: pipes.InputPipe, insert_period=None, merge_gap=0) -> asyncio.Task:
         async def task():
             if self.raise_data_error:
                 raise DataError("test error")
             self.inserted_data = True
+            self.merge_gap = merge_gap
 
         return asyncio.create_task(task())
 

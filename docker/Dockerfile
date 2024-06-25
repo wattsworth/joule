@@ -1,5 +1,5 @@
 #FROM ubuntu:jammy
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 LABEL John Donnal <donnal@usna.edu>
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -27,8 +27,8 @@ ENV HOST_SCHEME=http
 
 RUN apt-get update && \
     apt-get install -y nginx libpq-dev python3-pip git gettext libhdf5-dev python3-h5py\
-    && pip install --upgrade pip \
-    && pip install joule \
+    && pip install --upgrade pip  --break-system-packages\
+    && pip install joule  --break-system-packages\
     && rm -rf /var/lib/apt/lists/* \
     && rm /etc/nginx/sites-enabled/default
     #&& localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8

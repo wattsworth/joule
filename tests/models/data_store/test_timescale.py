@@ -55,7 +55,9 @@ class TestTimescale(unittest.IsolatedAsyncioTestCase):
         self.psql_dir.cleanup()
 
     async def test_runner(self):
-        tests = [self._test_basic_insert_extract,
+        tests = [
+            self._test_merge_gaps_on_write,
+            self._test_basic_insert_extract,
                  self._test_extract_data_with_intervals,
                  self._test_extract_decimated_data,
                  self._test_db_info,
@@ -195,6 +197,59 @@ class TestTimescale(unittest.IsolatedAsyncioTestCase):
         np.testing.assert_array_equal(extracted_data[300], pipes.interval_token(test_stream.layout))
         np.testing.assert_array_equal(extracted_data[601], pipes.interval_token(test_stream.layout))
         np.testing.assert_array_equal(extracted_data[902], pipes.interval_token(test_stream.layout))
+
+    async def _test_merge_gaps_on_write(self):
+        # make sure successive writes less than a merge_gap apart are merged
+        test_stream = DataStream(id=1, name="stream1", datatype=DataStream.DATATYPE.FLOAT32, keep_us=DataStream.KEEP_ALL,
+                                 decimate=True, elements=[Element(name="e%d" % x) for x in range(3)])
+        nrows = 300
+        data = helpers.create_data(layout=test_stream.layout, length=nrows, step=1000, start=15e6)
+        data_1 = data[:100]
+        data_2 = data[100:200]
+        data_3 = data[200:]
+        # write the first chunk
+        pipe = pipes.LocalPipe(test_stream.layout)
+        task = await self.store.spawn_inserter(test_stream, pipe)
+        await pipe.write(data_1)
+        await pipe.close()
+        await task
+
+        # write the second chunk inside the merge_gap setting
+        pipe = pipes.LocalPipe(test_stream.layout)
+        task = await self.store.spawn_inserter(test_stream, pipe, merge_gap=1100)
+        await pipe.write(data_2)
+        await pipe.close()
+        await task
+
+        # write the third chunk outside the merge_gap setting
+        pipe = pipes.LocalPipe(test_stream.layout)
+        task = await self.store.spawn_inserter(test_stream, pipe, merge_gap=900)
+        await pipe.write(data_3)
+        await pipe.close()
+        await task
+
+        # extract data
+        extracted_data = []
+
+        intervals = await self.store.intervals(test_stream,start=None,end=None)
+        print("------")
+        print(intervals)
+        print("-----")
+        async def callback(rx_data, layout, factor):
+            self.assertEqual(layout, test_stream.layout)
+            self.assertEqual(factor, 1)
+            extracted_data.append(rx_data)
+
+        await self.store.extract(test_stream, start=None, end=None, callback=callback)
+        extracted_data = np.hstack(extracted_data)
+        self.assertEqual(len(extracted_data),301)
+        # check for interval boundaries
+        for i in range(200):
+            np.testing.assert_array_equal(extracted_data[i], data[i])
+        np.testing.assert_array_equal(extracted_data[200], pipes.interval_token(test_stream.layout))
+        for i in range(201, 301):
+            np.testing.assert_array_equal(extracted_data[i], data[i-1])
+       
 
     async def _test_extract_decimated_data(self):
 

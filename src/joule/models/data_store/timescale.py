@@ -38,12 +38,15 @@ class TimescaleStore(DataStore):
         except asyncio.TimeoutError:
             print("WARNING: could not close timescale pool, terminating")
 
-    async def spawn_inserter(self, stream: 'DataStream', pipe: pipes.Pipe, insert_period=None) -> asyncio.Task:
+    async def spawn_inserter(self, stream: 'DataStream', pipe: pipes.Pipe, insert_period=None,
+                             merge_gap=0) -> asyncio.Task:
         if insert_period is None:
             insert_period = self.insert_period
 
         inserter = Inserter(self.pool, stream,
-                            insert_period, self.cleanup_period)
+                            insert_period=insert_period, 
+                            cleanup_period=self.cleanup_period,
+                            merge_gap=merge_gap)
         t = asyncio.create_task(inserter.run(pipe))
         t.set_name("Timescale Inserter for [%s]" % stream.name)
         return t

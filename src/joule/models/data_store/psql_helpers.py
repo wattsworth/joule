@@ -5,11 +5,12 @@ import datetime
 import asyncpg
 from typing import List, Optional, Tuple, Dict
 import logging
-
+from joule.utilities import datetime_to_timestamp as dt2ts
 import psycopg2.sql
 
 from joule.errors import DataError
 from joule.models.data_stream import DataStream
+from joule.models.event_stream import EventStream
 import joule.utilities
 
 log = logging.getLogger('joule')
@@ -174,24 +175,6 @@ async def create_event_table(conn: asyncpg.Connection, stream: 'EventStream'):
     await conn.execute(sql)
 
 
-async def create_event_table_bak(conn: asyncpg.Connection):
-    sql = """CREATE TABLE IF NOT EXISTS data.events (
-    id SERIAL,
-    start_time TIMESTAMP NOT NULL,
-    end_time TIMESTAMP,
-    event_stream_id INTEGER,
-    content JSONB
-    )"""
-    await conn.execute(sql)
-    sql = """SELECT create_hypertable('data.events', 'start_time',
-    chunk_time_interval => INTERVAL '1 day', if_not_exists=> TRUE)"""
-    await conn.execute(sql)
-    sql = """CREATE INDEX ON data.events (event_stream_id, time DESC)"""
-    await conn.execute(sql)
-    sql = """GRANT SELECT ON data.events TO joule_module"""
-    await conn.execute(sql)
-
-
 async def create_stream_table(conn: asyncpg.Connection, stream: DataStream):
     n_elems = len(stream.elements)
     # create the main table
@@ -275,6 +258,34 @@ async def get_row_count(conn: asyncpg.Connection, stream: DataStream,
         return 0  # no data tables for this stream
     return nrows
 
+
+async def get_closest_ts(conn: asyncpg.Connection, stream: DataStream, ts: int) -> Optional[datetime.datetime]:
+    base_table = "data.stream%d" % stream.id
+    dt = datetime.datetime.fromtimestamp(int(ts) / 1e6, tz=datetime.timezone.utc)
+    query = f"SELECT time FROM {base_table} WHERE time < '{dt}' ORDER BY time DESC LIMIT 1"
+    print(f"stream: {stream.id} ts: {ts}: query: {query}")
+
+    try:
+        last_dt = await conn.fetchval(query)
+    except asyncpg.UndefinedTableError:
+        # no data tables so no previous timestamp
+        return None
+    if last_dt is None:
+        # no data exists before ts so no previous timestamp
+        return None
+    # convert the datetime.datetime to a timestamp
+    return dt2ts(last_dt)
+    
+async def remove_interval_breaks(conn: asyncpg.Connection, stream: DataStream, start: int, end: int):
+    # remove interval breaks that are no longer needed
+    interval_table = "data.stream%d_intervals" % stream.id
+    start = datetime.datetime.fromtimestamp(start / 1e6, tz=datetime.timezone.utc)
+    end = datetime.datetime.fromtimestamp(end / 1e6, tz=datetime.timezone.utc)
+    query = f"DELETE FROM {interval_table} WHERE time >= '{start}' AND time <= '{end}'"
+    try:
+        await conn.fetch(query)
+    except asyncpg.UndefinedTableError:
+        return  # no interval table so no breaks to remove
 
 async def close_interval(conn: asyncpg.Connection, stream: DataStream, ts: int):
     # place a boundary 1us *after* ts

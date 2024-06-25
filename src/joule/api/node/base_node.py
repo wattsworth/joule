@@ -245,9 +245,10 @@ class BaseNode:
 
     async def data_write(self, stream: Union['DataStream', str, int],
                          start: Optional[int] = None,
-                         end: Optional[int] = None) -> 'Pipe':
+                         end: Optional[int] = None,
+                         merge_gap:int = 0) -> 'Pipe':
         from joule.api.data import data_write
-        return await data_write(self.session, stream, start, end)
+        return await data_write(self.session, stream, start, end, merge_gap=merge_gap)
 
     async def data_delete(self, stream: Union['DataStream', str, int],
                           start: Optional[int] = None,

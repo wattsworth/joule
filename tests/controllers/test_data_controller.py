@@ -148,6 +148,21 @@ class TestDataController(AioHTTPTestCase):
         self.assertEqual(resp.status, 200)
         self.assertTrue(store.inserted_data)
 
+        # can set merge_gap value
+        resp: aiohttp.ClientResponse = await \
+            self.client.post("/data", params={"id": stream.id, "merge-gap": 100},
+                             data=data.tobytes())
+        self.assertEqual(resp.status, 200)
+        self.assertEqual(store.merge_gap, 100)
+
+        # merge gap is 0 by default
+        resp: aiohttp.ClientResponse = await \
+            self.client.post("/data", params={"id": stream.id},
+                             data=data.tobytes())
+        self.assertEqual(resp.status, 200)
+        self.assertEqual(store.merge_gap, 0)
+
+
 
     async def test_remove_data(self):
         db: Session = self.app[app_keys.db]

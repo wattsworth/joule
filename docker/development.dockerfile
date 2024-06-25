@@ -1,6 +1,6 @@
 # RUN this docker file from the root of the joule project:
 # $ joule> docker build -f docker/development.dockerfile -t wattsworth/joule:dev .
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 LABEL John Donnal <donnal@usna.edu>
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -48,7 +48,7 @@ COPY docker/nginx-joule.conf /etc/nginx/templates/joule.conf.template
 #WORKDIR /joule
 COPY . /joule
 WORKDIR /joule
-RUN pip3 install .
+RUN pip3 install .  --break-system-packages
 
 COPY docker/runner.sh .
 COPY docker/nginx_scripts .

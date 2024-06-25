@@ -49,6 +49,7 @@ async def data_write(session: BaseSession,
                      stream: Union[DataStream, str, int],
                      start_time: Optional[int] = None,
                      end_time: Optional[int] = None,
+                     merge_gap: int = 0
                      ) -> Pipe:
     # stream must exist, does not automatically create a stream
     # retrieve the destination stream object
@@ -76,7 +77,7 @@ async def data_write(session: BaseSession,
 
     pipe = LocalPipe(dest_stream.layout, name=dest_stream.name,
                      stream=dest_stream, close_cb=close, debug=False, write_limit=5)
-    task = asyncio.create_task(_send_data(session, dest_stream, pipe))
+    task = asyncio.create_task(_send_data(session, dest_stream, pipe, merge_gap))
     return pipe
 
 
@@ -314,7 +315,8 @@ async def _historic_reader(session: BaseSession,
 
 async def _send_data(session: BaseSession,
                      stream: DataStream,
-                     pipe: Pipe):
+                     pipe: Pipe,
+                     merge_gap: int):
     # TODO is this necssary?
     output_complete = False
 
@@ -340,7 +342,7 @@ async def _send_data(session: BaseSession,
 
     try:
         result = await session.post("/data",
-                                    params={"id": stream.id},
+                                    params={"id": stream.id, "merge-gap": int(merge_gap)},
                                     data=_data_sender(),
                                     chunked=True)
     except Exception as e:

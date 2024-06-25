@@ -89,6 +89,58 @@ class TestDataMethods(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(blk_size * nblks, nrows)
 
+    async def test_data_merges_successive_writes(self):
+        await self.node.data_delete("/archive/data1")
+        n = utilities.time_now()
+        #n = 0
+        blk_size = 5
+        ts = np.linspace(n+10e6, n+15e6, blk_size)
+        data = np.random.random((blk_size, 2))
+        pipe = await self.node.data_write("/archive/data1")
+        print([int(x) for x in ts])
+        await pipe.write(np.hstack((ts[:, None], data)))
+        await pipe.close()
+
+        # now write some data that will *not* merge into the previous data interval
+        ts = np.linspace(n+16e6, n+20e6, blk_size)
+        pipe = await self.node.data_write("/archive/data1", merge_gap=1e3)
+        print([int(x) for x in ts])
+        await pipe.write(np.hstack((ts[:, None], data)))
+        await pipe.close()
+
+        # now write some data that will merge into the previous data interval
+        ts = np.linspace(n+21e6, n+25e6, blk_size)
+        print([int(x) for x in ts])
+        pipe = await self.node.data_write("/archive/data1", merge_gap=2e6)
+        await pipe.write(np.hstack((ts[:, None], data)))
+        await pipe.close()
+
+        # expect 2 intervals
+        intervals = await self.node.data_intervals("/archive/data1")
+        print(intervals)
+        self.assertEqual(len(intervals), 2)
+
+        # now read the data back
+        pipe = await self.node.data_read("/archive/data1", start=0)
+        nrows = 0
+        first_block = True
+        print("===== READING DATA ======")
+        while not pipe.is_empty():
+            data = await pipe.read()
+            print([int(x) for x in data['timestamp']])
+            nrows += len(data)
+            if pipe.end_of_interval:
+                print("--- interval break ---")
+            if pipe.end_of_interval and first_block:
+                # 1st block has one chunk of data
+                self.assertEqual(len(data), blk_size)
+                first_block = False
+                nrows=0
+            pipe.consume(len(data))
+        # 2nd block has two chunks of data
+        self.assertEqual(nrows, blk_size*2)
+
+        
     @unittest.skip("TODO: something with postgres auth doesn't work on docker")
     async def test_db_data_access(self):
         # should be able to read data streams from postgres
