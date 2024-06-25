@@ -110,13 +110,19 @@ Both are contained in the *joule* pypi package and require Python 3.9 or later.
 
 Basic Installation
 ------------------
+
+.. warning::
+  Do not use python3.10, there is an bug with TLS that causes intermitent timeouts when retrieving
+  large amounts of data from the TimescaleDB backend. Python 3.9 does not have this problem, 
+  but >= 3.11 is recommended.
+
 The `joule` package can be installed with pip as shown below. If you are using a virtual environment, activate it
 before running the ``pip3 install`` command and omit the ``sudo`` prefix.
 
 .. raw:: html
 
     <div class="bash-code">
-    sudo apt install gcc python3-pip python3-dev libhdf5-dev -y
+    sudo apt install gcc python3-pip python3-dev libhdf5-dev python3-h5py -y
     sudo pip3 install joule
     sudo joule admin initialize --dsn joule:joule@localhost:5432/joule
     </div>
