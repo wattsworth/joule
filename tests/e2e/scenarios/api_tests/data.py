@@ -126,7 +126,10 @@ class TestDataMethods(unittest.IsolatedAsyncioTestCase):
         first_block = True
         print("===== READING DATA ======")
         while not pipe.is_empty():
-            data = await pipe.read()
+            try:
+                data = await pipe.read()
+            except models.pipes.EmptyPipe:
+                break
             print([int(x) for x in data['timestamp']])
             nrows += len(data)
             if pipe.end_of_interval:
@@ -224,7 +227,10 @@ class TestDataMethods(unittest.IsolatedAsyncioTestCase):
         first_ts = None
         last_ts = None
         while not data_in.is_empty():
-            data = await data_in.read()
+            try:
+                data = await data_in.read()
+            except models.pipes.EmptyPipe:
+                break
             if first_ts is None:
                 first_ts = data['timestamp'][0]
             last_ts = data['timestamp'][-1]

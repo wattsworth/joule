@@ -26,9 +26,9 @@ ENV HOST_SCHEME=http
 #	&& localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
 
 RUN apt-get update && \
-    apt-get install -y nginx libpq-dev python3-pip git gettext libhdf5-dev python3-h5py\
+    apt-get install -y nginx libpq-dev python3-pip git gettext libhdf5-dev python3-h5py pkg-config\
     && pip install --upgrade pip  --break-system-packages\
-    && pip install joule  --break-system-packages\
+    && pip install joule==0.10.3rc1  --break-system-packages\
     && rm -rf /var/lib/apt/lists/* \
     && rm /etc/nginx/sites-enabled/default
     #&& localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8

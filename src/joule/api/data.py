@@ -167,7 +167,7 @@ async def data_read(session: BaseSession,
     #            stream, stream.layout, src_stream.layout))
     # replace the stub stream (from config file) with actual stream
     pipe = LocalPipe(stream.layout, name=stream.name, stream=stream, write_limit=5)
-    pipe.TIMEOUT_INTERVAL = 0 # read as fast as possible
+    pipe.TIMEOUT_INTERVAL = 0.001 # read as fast as possible
     task = asyncio.create_task(_historic_reader(session,
                                                 stream,
                                                 pipe,
