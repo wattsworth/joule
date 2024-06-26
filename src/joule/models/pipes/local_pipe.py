@@ -26,7 +26,7 @@ class LocalPipe(Pipe):
 
         super().__init__(name=name, layout=layout, stream=stream)
         # tunable constants
-        self.TIMEOUT_INTERVAL = 0.001 # used to be set to 0.5, trade off is busy polling of the queue
+        self.TIMEOUT_INTERVAL = 0.5 # this can be lower by the trade off is more busy polling of an empty queue
         self.debug = debug
 
         self._interval_break = False
