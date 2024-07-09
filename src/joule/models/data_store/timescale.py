@@ -66,9 +66,19 @@ class TimescaleStore(DataStore):
             decimator = Decimator(stream=stream, from_level=1, factor=4, chunk_interval=0)
             interval_token = pipes.interval_token(stream.layout)
             async def redecimator(data, _, __):
+                if len(data)==0:
+                    breakpoint()
+                    print("WARNING: decimator received a 0 length data array")
+                    return
+                # if the data is just an interval token, close the interval
                 if len(data)==1 and data[0] == interval_token:
                     decimator.close_interval()
-                else:
+                    return
+                # if the end of the data is an interval token, remove it
+                if data[-1] == interval_token:
+                    await decimator.process(conn, data[:-1])
+                    decimator.close_interval()
+                else: # normal data just process it
                     await decimator.process(conn, data)
 
             # start a data extraction task with the callback running
@@ -311,12 +321,23 @@ async def _extract_data(conn: asyncpg.Connection, stream: DataStream, callback,
             psql_bytes.seek(0)
             dtype = pipes.compute_dtype(layout)
             np_data = psql_helpers.bytes_to_data(psql_bytes, dtype)
+
+            if len(np_data) < block_size:
+                # this is the last block in the interval, append an interval token
+                # unless this is the end of the requested data
+                if i < len(boundary_records) - 1:
+                    # add an interval token to the end of np_data
+                    np_data = np.append(np_data, pipes.interval_token(layout))
+            if len(np_data)==0:
+                print("WARNING: empty read, no data found in interval")
+                break
+                
             await callback(np_data, layout, decimation_level)
 
             if len(np_data) < block_size:
                 break
             start = np_data['timestamp'][-1] + 1
         # do not put an interval token at the end of the data
-        if i < len(boundary_records) - 1:
-            await callback(pipes.interval_token(layout), layout, decimation_level)
+        #if i < len(boundary_records) - 1:
+        #    await callback(pipes.interval_token(layout), layout, decimation_level)
         start = end

@@ -263,7 +263,7 @@ async def get_closest_ts(conn: asyncpg.Connection, stream: DataStream, ts: int) 
     base_table = "data.stream%d" % stream.id
     dt = datetime.datetime.fromtimestamp(int(ts) / 1e6, tz=datetime.timezone.utc)
     query = f"SELECT time FROM {base_table} WHERE time < '{dt}' ORDER BY time DESC LIMIT 1"
-    print(f"stream: {stream.id} ts: {ts}: query: {query}")
+    #print(f"stream: {stream.id} ts: {ts}: query: {query}")
 
     try:
         last_dt = await conn.fetchval(query)

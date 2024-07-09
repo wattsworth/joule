@@ -89,6 +89,7 @@ class TestDataRead(FakeJouleTestCase):
         result = runner.invoke(main, ['data', 'read', '/test/source',
                                       '--start', '0', '--end', '1 hour ago',
                                       '--max-rows', '28'])
+        _print_result_on_error(result)
         self.assertEqual(result.exit_code, 0)
         output = result.output.split('\n')
         offset = 0
@@ -99,6 +100,12 @@ class TestDataRead(FakeJouleTestCase):
                 continue
             else:
                 expected = "%d %s" % (row['timestamp'], ' '.join('%f' % x for x in row['data'][:3]))
+            if expected not in output[x - offset + 1]:
+                print(f"expected: {expected}")
+                print(f"output: {output[x - offset + 1]}")
+                breakpoint()
+                print("hmmm")
+                
             self.assertTrue(expected in output[x - offset + 1])
 
         self.stop_server()
@@ -142,6 +149,7 @@ class TestDataRead(FakeJouleTestCase):
         result = runner.invoke(main, ['data', 'read', '/test/source',
                                       '--start', '0', '--end', '1 hour ago',
                                       '--max-rows', '28'])
+        _print_result_on_error(result)
         self.assertEqual(result.exit_code, 0)
         output = result.output.split('\n')
         offset = 0

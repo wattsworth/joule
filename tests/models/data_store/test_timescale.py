@@ -145,7 +145,7 @@ class TestTimescale(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(layout, test_stream.layout)
                     self.assertEqual(factor, 1)
                     extracted_data.append(rx_data)
-
+                
                 await self.store.extract(test_stream, start=None, end=None, callback=callback)
                 extracted_data = np.hstack(extracted_data)
                 np.testing.assert_array_equal(extracted_data, data)
@@ -232,9 +232,7 @@ class TestTimescale(unittest.IsolatedAsyncioTestCase):
         extracted_data = []
 
         intervals = await self.store.intervals(test_stream,start=None,end=None)
-        print("------")
-        print(intervals)
-        print("-----")
+        #print(intervals)
         async def callback(rx_data, layout, factor):
             self.assertEqual(layout, test_stream.layout)
             self.assertEqual(factor, 1)
@@ -509,7 +507,10 @@ class TestTimescale(unittest.IsolatedAsyncioTestCase):
         rx_chunks = []
 
         async def callback(rx_data, layout, factor):
-            if rx_data[0] != pipes.interval_token(layout):
+            #if rx_data[0] != pipes.interval_token(layout):
+            if rx_data[-1][0]==0:
+                rx_chunks.append(rx_data[:-1])
+            else:
                 rx_chunks.append(rx_data)
 
         await self.store.consolidate(test_stream, start=None, end=None, max_gap=6e3)
@@ -545,7 +546,9 @@ class TestTimescale(unittest.IsolatedAsyncioTestCase):
         rx_chunks = []
 
         async def callback(rx_data, layout, factor):
-            if rx_data[0] != pipes.interval_token(layout):
+            if rx_data[-1][0]==0:
+                rx_chunks.append(rx_data[:-1])
+            else:
                 rx_chunks.append(rx_data)
 
         await self.store.consolidate(test_stream, start=chunks[1][3]['timestamp'],

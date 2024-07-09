@@ -167,7 +167,7 @@ async def data_read(session: BaseSession,
     #            stream, stream.layout, src_stream.layout))
     # replace the stub stream (from config file) with actual stream
     pipe = LocalPipe(stream.layout, name=stream.name, stream=stream, write_limit=5)
-    pipe.TIMEOUT_INTERVAL = 0.001 # read as fast as possible
+    pipe.TIMEOUT_INTERVAL = 0.01 # read as fast as possible, any lower than this seems to cause race conditions in the pipes
     task = asyncio.create_task(_historic_reader(session,
                                                 stream,
                                                 pipe,
@@ -301,10 +301,16 @@ async def _historic_reader(session: BaseSession,
             while True:
                 data = await pipe_in.read()
                 pipe_in.consume(len(data))
-                await pipe_out.write(data)
-                if pipe_in.end_of_interval:
-                    await pipe_out.close_interval()
-
+                try:
+                    await pipe_out.write(data)
+                    if pipe_in.end_of_interval:
+                        await pipe_out.close_interval()
+                except PipeError as e:
+                    if "closed pipe" in str(e):
+                        # pipe was closed by the user, they don't want any more data
+                        break
+                    else:
+                        raise e # something else happened, propogate the error
     except (asyncio.CancelledError, EmptyPipe):
         pass
     except Exception as e:

@@ -97,43 +97,43 @@ class TestDataMethods(unittest.IsolatedAsyncioTestCase):
         ts = np.linspace(n+10e6, n+15e6, blk_size)
         data = np.random.random((blk_size, 2))
         pipe = await self.node.data_write("/archive/data1")
-        print([int(x) for x in ts])
+        #print([int(x) for x in ts])
         await pipe.write(np.hstack((ts[:, None], data)))
         await pipe.close()
 
         # now write some data that will *not* merge into the previous data interval
         ts = np.linspace(n+16e6, n+20e6, blk_size)
         pipe = await self.node.data_write("/archive/data1", merge_gap=1e3)
-        print([int(x) for x in ts])
+        #print([int(x) for x in ts])
         await pipe.write(np.hstack((ts[:, None], data)))
         await pipe.close()
 
         # now write some data that will merge into the previous data interval
         ts = np.linspace(n+21e6, n+25e6, blk_size)
-        print([int(x) for x in ts])
+        #print([int(x) for x in ts])
         pipe = await self.node.data_write("/archive/data1", merge_gap=2e6)
         await pipe.write(np.hstack((ts[:, None], data)))
         await pipe.close()
 
         # expect 2 intervals
         intervals = await self.node.data_intervals("/archive/data1")
-        print(intervals)
+        #print(intervals)
         self.assertEqual(len(intervals), 2)
 
         # now read the data back
         pipe = await self.node.data_read("/archive/data1", start=0)
         nrows = 0
         first_block = True
-        print("===== READING DATA ======")
+        #print("===== READING DATA ======")
         while not pipe.is_empty():
             try:
                 data = await pipe.read()
             except models.pipes.EmptyPipe:
                 break
-            print([int(x) for x in data['timestamp']])
+            #print([int(x) for x in data['timestamp']])
             nrows += len(data)
-            if pipe.end_of_interval:
-                print("--- interval break ---")
+            #if pipe.end_of_interval:
+            #    print("--- interval break ---")
             if pipe.end_of_interval and first_block:
                 # 1st block has one chunk of data
                 self.assertEqual(len(data), blk_size)
@@ -141,6 +141,7 @@ class TestDataMethods(unittest.IsolatedAsyncioTestCase):
                 nrows=0
             pipe.consume(len(data))
         # 2nd block has two chunks of data
+        self.assertFalse(first_block) # make sure we already read the first block
         self.assertEqual(nrows, blk_size*2)
 
         
@@ -164,7 +165,7 @@ class TestDataMethods(unittest.IsolatedAsyncioTestCase):
         with engine.connect() as conn:
             resp = conn.execute(text(f"SELECT count(*) from data.stream{stream_id}"))
             row_count = resp.fetchone()[0]
-            print(f"resp is {row_count}")
+            #print(f"resp is {row_count}")
             assert row_count == blk_size
 
     async def test_data_write_invalid_values(self):

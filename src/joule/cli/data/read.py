@@ -98,6 +98,11 @@ def cmd(config, start, end, live, max_rows, show_bounds, mark_intervals, element
             except asyncio.TimeoutError:
                 # check periodically for Ctrl-C (SIGTERM) even if server is slow
                 continue
+            except errors.EmptyPipeError as e:
+                # this is unavoidable if the pipe closes between calls to read
+                if len(sdata)==0:
+                    break # nothing left to read
+                pipe.consume(len(sdata))
             # ===== Write to HDF File ======
             if write_to_file:
                 if len(sdata) > 0:  # ignore empty chunks
