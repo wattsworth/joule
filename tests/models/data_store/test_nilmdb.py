@@ -25,12 +25,12 @@ class TestNilmdbStore(unittest.IsolatedAsyncioTestCase):
         self.store = NilmdbStore(url, 0, 60)
 
         # make a couple example streams
-        # stream1 int8_3
-        self.stream1 = DataStream(id=1, name="stream1", datatype=DataStream.DATATYPE.INT8,
+        # stream1 int16_3
+        self.stream1 = DataStream(id=1, name="stream1", datatype=DataStream.DATATYPE.INT16,
                                   elements=[Element(name="e%d" % x) for x in range(3)])
 
-        # stream2 uint16_4
-        self.stream2 = DataStream(id=2, name="stream2", datatype=DataStream.DATATYPE.UINT16,
+        # stream2 int32_4
+        self.stream2 = DataStream(id=2, name="stream2", datatype=DataStream.DATATYPE.INT32,
                                   elements=[Element(name="e%d" % x) for x in range(4)])
 
     async def asyncTearDown(self) -> None:
@@ -46,8 +46,8 @@ class TestNilmdbStore(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(len(self.fake_nilmdb.posts), 3)
         self.assertEqual(len(self.fake_nilmdb.streams), 2)
-        self.assertEqual(self.fake_nilmdb.streams["/joule/1"].layout, "int8_3")
-        self.assertEqual(self.fake_nilmdb.streams["/joule/2"].layout, "uint16_4")
+        self.assertEqual(self.fake_nilmdb.streams["/joule/1"].layout, "int16_3")
+        self.assertEqual(self.fake_nilmdb.streams["/joule/2"].layout, "int32_4")
 
     async def test_initialize_errors(self):
         # when nilmdb returns invalid error data
@@ -66,13 +66,13 @@ class TestNilmdbStore(unittest.IsolatedAsyncioTestCase):
     async def test_insert(self):
         await self.store.initialize([self.stream1])
         nrows = 300
-        data = helpers.create_data(layout="int8_3", length=nrows)
+        data = helpers.create_data(layout="int16_3", length=nrows)
         # first insert
         await self.store.insert(self.stream1, data['timestamp'][0],
                                 data['timestamp'][-1] + 1, data)
         self.assertEqual(self.fake_nilmdb.streams["/joule/1"].rows, nrows)
         # another insert
-        data = helpers.create_data(layout="int8_3", start=data['timestamp'][-1] + 1,
+        data = helpers.create_data(layout="int16_3", start=data['timestamp'][-1] + 1,
                                    length=nrows)
         await self.store.insert(self.stream1, data['timestamp'][0],
                                 data['timestamp'][-1] + 1, data)
@@ -83,7 +83,7 @@ class TestNilmdbStore(unittest.IsolatedAsyncioTestCase):
         await self.store.initialize([self.stream1])
         self.fake_nilmdb.streams['/joule/1'] = FakeStream(
             layout=self.stream1.layout, start=0, end=500, rows=500)
-        data = helpers.create_data(layout="int8_3", start=25, step=1, length=20)
+        data = helpers.create_data(layout="int16_3", start=25, step=1, length=20)
         with self.assertRaises(DataError)as e:
             await self.store.insert(self.stream1, 25, 1000, data)
         self.assertTrue('overlaps' in str(e.exception))
@@ -297,7 +297,7 @@ class TestNilmdbStore(unittest.IsolatedAsyncioTestCase):
     async def test_bytes_per_row(self):
         await self.store.initialize([])
         examples = [['float32_8', 40],
-                    ['uint8_1', 9],
+                    ['int8_1', 9],
                     ['int16_20', 48],
                     ['float64_1', 16]]
         for example in examples:

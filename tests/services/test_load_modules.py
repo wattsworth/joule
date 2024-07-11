@@ -26,10 +26,10 @@ class TestConfigureModules(DbTestCase):
         stream1.elements = [Element(name="e%d" % x, index=x, default_min=1) for x in range(3)]
         folder_test.data_streams.append(stream1)
 
-        # /test/deeper/stream2: int8_2
+        # /test/deeper/stream2: int16_2
         folder_deeper = Folder(name="deeper",
                                updated_at=datetime.datetime.now())
-        stream2 = DataStream(name="stream2", datatype=DataStream.DATATYPE.INT8,
+        stream2 = DataStream(name="stream2", datatype=DataStream.DATATYPE.INT16,
                              updated_at=datetime.datetime.now())
         stream2.elements = [Element(name="e%d" % x, index=x) for x in range(2)]
         folder_deeper.data_streams.append(stream2)
@@ -62,7 +62,7 @@ class TestConfigureModules(DbTestCase):
               source = /test/stream1:float32[e0,e1, e2]
             [Outputs]
               sink1 = /test/deeper/stream2
-              sink2 = /test/stream3:uint8[ x, y ]
+              sink2 = /test/stream3:int16[ x, y ]
             """,
             # ignored: unconfigured input
             """
@@ -79,7 +79,7 @@ class TestConfigureModules(DbTestCase):
               name = bad_module2
               exec_cmd = runit4.sh
             [Inputs]
-              source = /test/stream3:uint8[x,y,z]
+              source = /test/stream3:int16[x,y,z]
             [Outputs]
             """,
         ]

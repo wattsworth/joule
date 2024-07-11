@@ -30,7 +30,7 @@ class TestPipeHelpers(FakeJouleTestCase):
         my_node = api.get_node()
 
         async def runner():
-            pipes_in, pipes_out = await build_network_pipes({'input': '/test/source:uint8[x,y,z]'},
+            pipes_in, pipes_out = await build_network_pipes({'input': '/test/source:int16[x,y,z]'},
                                                             {},
                                                             {},
                                                             my_node,
@@ -64,7 +64,7 @@ class TestPipeHelpers(FakeJouleTestCase):
         my_node = api.get_node()
 
         async def runner():
-            pipes_in, pipes_out = await build_network_pipes({'input': '/test/source:uint8[x,y,z]'},
+            pipes_in, pipes_out = await build_network_pipes({'input': '/test/source:int16[x,y,z]'},
                                                             {},
                                                             {},
                                                             my_node,
@@ -90,8 +90,8 @@ class TestPipeHelpers(FakeJouleTestCase):
 
     def test_builds_output_pipes(self):
         server = FakeJoule()
-        blk1 = helpers.create_data("uint8_3", start=10, step=1, length=10)
-        blk2 = helpers.create_data("uint8_3", start=200, step=1, length=10)
+        blk1 = helpers.create_data("int16_3", start=10, step=1, length=10)
+        blk2 = helpers.create_data("int16_3", start=200, step=1, length=10)
 
         create_destination(server)
 
@@ -99,7 +99,7 @@ class TestPipeHelpers(FakeJouleTestCase):
         my_node = api.get_node()
         async def runner():
             pipes_in, pipes_out = await build_network_pipes({},
-                                                            {'output': '/test/dest:uint8[e0,e1,e2]'},
+                                                            {'output': '/test/dest:int16[e0,e1,e2]'},
                                                             {},
                                                             my_node,
                                                             10, 210, force=True)
@@ -139,7 +139,7 @@ class TestPipeHelpers(FakeJouleTestCase):
                 mock_click.confirm = mock.Mock(return_value=False)
                 with self.assertRaises(SystemExit):
                     await build_network_pipes({},
-                                              {'output': '/test/dest:uint8[e0,e1,e2]'},
+                                              {'output': '/test/dest:int16[e0,e1,e2]'},
                                               {},
                                               my_node,
                                               1472500708000000, 1476475108000000,
@@ -154,7 +154,7 @@ class TestPipeHelpers(FakeJouleTestCase):
                 mock_click.confirm = mock.Mock(return_value=False)
                 with self.assertRaises(SystemExit):
                     await build_network_pipes({},
-                                              {'output': '/test/dest:uint8[e0,e1,e2]'},
+                                              {'output': '/test/dest:int16[e0,e1,e2]'},
                                               {},
                                               my_node,
                                               1472500708000000, None,
@@ -169,7 +169,7 @@ class TestPipeHelpers(FakeJouleTestCase):
                 mock_click.confirm = mock.Mock(return_value=False)
                 with self.assertRaises(SystemExit):
                     await build_network_pipes({},
-                                              {'output': '/test/dest:uint8[e0,e1,e2]'},
+                                              {'output': '/test/dest:int16[e0,e1,e2]'},
                                               {},
                                               my_node,
                                               None, 1476475108000000,
@@ -201,7 +201,7 @@ class TestPipeHelpers(FakeJouleTestCase):
             with self.assertRaises(errors.ApiError):
                 await my_node.data_stream_get("/test/dest")
             pipes_in, pipes_out = await build_network_pipes({},
-                                                            {'output': '/test/dest:uint8[e0,e1,e2]'},
+                                                            {'output': '/test/dest:int16[e0,e1,e2]'},
                                                             {},
                                                             my_node,
                                                             None, None)
@@ -247,16 +247,16 @@ class TestPipeHelpers(FakeJouleTestCase):
         # errors on layout differences
         with self.assertRaises(ConfigurationError) as e:
             with self.assertLogs(level='INFO'):
-                loop.run_until_complete(build_network_pipes({'input': '/test/source:uint8[x,y]'},
+                loop.run_until_complete(build_network_pipes({'input': '/test/source:int16[x,y]'},
                                                             {},
                                                             {},
                                                             my_node,
                                                             10, 20, force=True))
-        self.assertIn('uint8_3', str(e.exception))
+        self.assertIn('int16_3', str(e.exception))
 
         # errors if live stream is requested but unavailable
         with self.assertRaises(ApiError) as e:
-            loop.run_until_complete(build_network_pipes({'input': '/test/source:uint8[x,y,z]'},
+            loop.run_until_complete(build_network_pipes({'input': '/test/source:int16[x,y,z]'},
                                                         {},
                                                         {},
                                                         my_node, None, None))
@@ -279,12 +279,12 @@ class TestPipeHelpers(FakeJouleTestCase):
                                                         {'output': '/test/dest:float32[x,y,z]'},
                                                         {},
                                                         my_node, None, None))
-        self.assertIn('uint8_3', str(e.exception))
+        self.assertIn('int16_3', str(e.exception))
 
         # errors if the stream is already being produced
         with self.assertRaises(ApiError) as e:
             loop.run_until_complete(build_network_pipes({},
-                                                        {'output': '/test/source:uint8[e0,e1,e2]'},
+                                                        {'output': '/test/source:int16[e0,e1,e2]'},
                                                         {},
                                                         my_node, None, None))
         loop.run_until_complete(my_node.close())
@@ -296,7 +296,7 @@ class TestPipeHelpers(FakeJouleTestCase):
 def create_destination(server):
     # create an empty destination stream
     dest = DataStream(id=8, name="dest", keep_us=100,
-                      datatype=DataStream.DATATYPE.UINT8,
+                      datatype=DataStream.DATATYPE.INT16,
                       updated_at=datetime.datetime.utcnow())
     dest.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
 
@@ -307,7 +307,7 @@ def create_destination(server):
 def create_source_data(server, is_destination=False):
     # create the source stream
     src = DataStream(id=0, name="source", keep_us=100,
-                     datatype=DataStream.DATATYPE.UINT8,
+                     datatype=DataStream.DATATYPE.INT16,
                      is_destination=is_destination,
                       updated_at=datetime.datetime.utcnow())
     src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]

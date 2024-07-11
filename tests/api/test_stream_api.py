@@ -77,7 +77,7 @@ class TestStreamApi(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(self.session.method)
 
     async def test_stream_get(self):
-        target = build_stream('test', 'int8[a,b]')
+        target = build_stream('test', 'int16[a,b]')
         target.id = 1
         self.session.response_data = target.to_json()
         stream = await self.node.data_stream_get(1)

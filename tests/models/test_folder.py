@@ -41,7 +41,7 @@ class TestFolder(helpers.DbTestCase):
 
     def test_contains_streams(self):
         my_folder = folder.find("/new/folder/path", self.db, create=True)
-        my_folder.data_streams = [helpers.create_stream("stream1", "int8_2")]
+        my_folder.data_streams = [helpers.create_stream("stream1", "int16_2")]
         self.db.add(my_folder)
         self.db.commit()
         f = folder.find("/new", self.db)
@@ -57,7 +57,7 @@ class TestFolder(helpers.DbTestCase):
 
     def test_locked(self):
         my_folder = folder.find("/new/folder/path", self.db, create=True)
-        my_stream = helpers.create_stream("stream1", "int8_2")
+        my_stream = helpers.create_stream("stream1", "int16_2")
         my_stream.is_configured = True
         my_stream.folder = my_folder
         self.db.add(my_stream)

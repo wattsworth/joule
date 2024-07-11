@@ -49,7 +49,7 @@ class TestModule(unittest.TestCase):
         src = DataStream(id=0, name="source", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32)
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         # create an output stream
-        dest = DataStream(id=1, name="dest", keep_us=100, datatype=DataStream.DATATYPE.UINT16)
+        dest = DataStream(id=1, name="dest", keep_us=100, datatype=DataStream.DATATYPE.INT16)
         dest.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.EVENT) for x in range(5)]
         m = module.from_config(self.config)
         m.inputs = {'input': src}

@@ -20,10 +20,10 @@ class TestParsePipeConfig(DbTestCase):
         stream1.elements = [Element(name="e%d" % x, index=x, default_min=1) for x in range(3)]
         folder_test.data_streams.append(stream1)
 
-        # /test/deeper/stream2:int8[e0,e1]
+        # /test/deeper/stream2:int16[e0,e1]
         folder_deeper = Folder(name="deeper",
                                updated_at=datetime.datetime.now())
-        stream2 = DataStream(name="stream2", datatype=DataStream.DATATYPE.INT8,
+        stream2 = DataStream(name="stream2", datatype=DataStream.DATATYPE.INT16,
                              updated_at=datetime.datetime.now())
         stream2.elements = [Element(name="e%d" % x, index=x) for x in range(2)]
         folder_deeper.data_streams.append(stream2)
@@ -39,11 +39,11 @@ class TestParsePipeConfig(DbTestCase):
         self.db.commit()
 
     def test_parses_new_stream_configs(self):
-        my_stream = parse_pipe_config.run("/test/new_stream:int8[x,y]", self.db)
+        my_stream = parse_pipe_config.run("/test/new_stream:int16[x,y]", self.db)
         # ensure stream entered the database
         self.assertEqual(my_stream, self.db.query(DataStream).filter_by(name="new_stream").one())
         # check stream datatype
-        self.assertEqual(my_stream.datatype, DataStream.DATATYPE.INT8)
+        self.assertEqual(my_stream.datatype, DataStream.DATATYPE.INT16)
         # check elements
         self.assertEqual(len(my_stream.elements), 2)
         for elem in my_stream.elements:
@@ -53,7 +53,7 @@ class TestParsePipeConfig(DbTestCase):
 
     def test_parses_existing_stream_configs(self):
         existing_stream = self.db.query(DataStream).filter_by(name="stream2").one()
-        my_stream = parse_pipe_config.run("/test/deeper/stream2:int8[e0,e1]", self.db)
+        my_stream = parse_pipe_config.run("/test/deeper/stream2:int16[e0,e1]", self.db)
         # retrieved the existsing stream from the database
         self.assertEqual(my_stream, existing_stream)
 
@@ -78,13 +78,13 @@ class TestParsePipeConfig(DbTestCase):
 
     def test_errors_on_stream_datatype_conflict(self):
         with self.assertRaisesRegex(ConfigurationError, "exists"):
-            parse_pipe_config.run("/test/deeper/stream2:uint8[e0,e1]", self.db)
+            parse_pipe_config.run("/test/deeper/stream2:int64[e0,e1]", self.db)
 
     def test_errors_on_stream_element_name_conflict(self):
         with self.assertRaisesRegex(ConfigurationError, "exists"):
-            parse_pipe_config.run("/test/deeper/stream2:int8[e0,e1,e2]", self.db)
+            parse_pipe_config.run("/test/deeper/stream2:int16[e0,e1,e2]", self.db)
         with self.assertRaisesRegex(ConfigurationError, "exists"):
-            parse_pipe_config.run("/test/deeper/stream2:int8[e0,x]", self.db)
+            parse_pipe_config.run("/test/deeper/stream2:int16[e0,x]", self.db)
 
     def test_errors_if_unconfigured_stream_not_in_db(self):
         with self.assertRaisesRegex(ConfigurationError, "/test/deeper/new_stream"):

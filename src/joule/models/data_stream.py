@@ -42,11 +42,17 @@ class DataStream(Base):
         INT64 = enum.auto()
         INT32 = enum.auto()
         INT16 = enum.auto()
-        INT8 = enum.auto()
-        UINT64 = enum.auto()
-        UINT32 = enum.auto()
-        UINT16 = enum.auto()
-        UINT8 = enum.auto()
+        ## BEGIN DEPRECATION ##
+        ## TimescaleDB (really Postgresql) does not support unsigned datatypes
+        ## these are supported by NilmDB so if you need them
+        ## and are confident you will only use the NilmDB backend,
+        ## you can add them back
+        #INT8 = enum.auto()
+        #UINT64 = enum.auto()
+        #UINT32 = enum.auto()
+        #UINT16 = enum.auto()
+        #UINT8 = enum.auto()
+        ### END DEPRECATION ####
 
     datatype: DATATYPE = Column(Enum(DATATYPE), nullable=False)
     decimate: bool = Column(Boolean, default=True)

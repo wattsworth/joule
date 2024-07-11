@@ -25,7 +25,7 @@ class TestAnnotationController(AioHTTPTestCase):
         loop.slow_callback_duration = 2.0
 
         db, app[psql_key] = create_db(["/top/leaf/stream1:float32[x, y, z]",
-                                     "/top/middle/leaf/stream2:int8[val1, val2]"])
+                                     "/top/middle/leaf/stream2:int16[val1, val2]"])
         self.stream1 = db.query(DataStream).filter_by(name="stream1").one_or_none()
         self.stream2 = db.query(DataStream).filter_by(name="stream2").one_or_none()
 

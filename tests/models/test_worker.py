@@ -121,7 +121,7 @@ class TestWorker(unittest.TestCase):
         # an input
         self.assertFalse(self.worker.produces(self.streams[0]))
         # an unrelated stream
-        s = helpers.create_stream("unrelated", "uint8_10")
+        s = helpers.create_stream("unrelated", "int16_10")
         self.assertFalse(self.worker.produces(s))
 
     def test_spawns_child_process(self):

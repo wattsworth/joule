@@ -49,10 +49,10 @@ class TestDataIngest(FakeJouleTestCase):
         server = FakeJoule()
         # create the source stream
         src = DataStream(id=0, name="dest", keep_us=100,
-                         datatype=DataStream.DATATYPE.UINT16, updated_at=datetime.datetime.utcnow())
+                         datatype=DataStream.DATATYPE.INT16, updated_at=datetime.datetime.utcnow())
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         # source has 100 rows of data between [0, 100]
-        file_data = helpers.create_data('int16_3')
+        file_data = helpers.create_data('int32_3')
         src_info = StreamInfo(0, 0, 0, 0)
         server.add_stream('/test/dest', src, src_info, None)
         self.start_server(server)
@@ -112,10 +112,10 @@ class TestDataIngest(FakeJouleTestCase):
         server = FakeJoule()
         # create the source stream
         src = DataStream(id=0, name="dest", keep_us=100,
-                         datatype=DataStream.DATATYPE.UINT16, updated_at=datetime.datetime.utcnow())
+                         datatype=DataStream.DATATYPE.INT16, updated_at=datetime.datetime.utcnow())
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(4)]
         # source has 100 rows of data between [0, 100]
-        file_data = helpers.create_data('uint16_3')
+        file_data = helpers.create_data('int16_3')
         src_info = StreamInfo(0, 0, 0, 0)
         server.add_stream('/test/dest', src, src_info, None)
         self.start_server(server)

@@ -145,7 +145,7 @@ class TestTimescale(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(layout, test_stream.layout)
                     self.assertEqual(factor, 1)
                     extracted_data.append(rx_data)
-                
+
                 await self.store.extract(test_stream, start=None, end=None, callback=callback)
                 extracted_data = np.hstack(extracted_data)
                 np.testing.assert_array_equal(extracted_data, data)

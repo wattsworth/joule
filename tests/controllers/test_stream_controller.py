@@ -27,7 +27,7 @@ class TestStreamController(AioHTTPTestCase):
         loop = asyncio.get_running_loop()
         loop.slow_callback_duration = 2.0
         app[app_keys.db], app[psql_key] = create_db(["/folder1/stream1:float32[x, y, z]",
-                                            "/folder2/deeper/stream2:int8[val1, val2]"])
+                                            "/folder2/deeper/stream2:int16[val1, val2]"])
         app[app_keys.data_store] = MockStore()
         return app
 

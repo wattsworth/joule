@@ -24,9 +24,9 @@ class TestFolderController(AioHTTPTestCase):
         loop = asyncio.get_running_loop()
         loop.slow_callback_duration = 2.0
         app[app_keys.db], app[psql_key] = create_db([
-            "/other/middle/stream3:int8[val1, val2]",
+            "/other/middle/stream3:int16[val1, val2]",
             "/top/leaf/stream1:float32[x, y, z]",
-            "/top/middle/leaf/stream2:int8[val1, val2]"])
+            "/top/middle/leaf/stream2:int16[val1, val2]"])
         app[app_keys.data_store] = MockStore()
         app[app_keys.event_store] = MockEventStore()
         return app
@@ -154,7 +154,7 @@ class TestFolderController(AioHTTPTestCase):
         # this is the top folder so everything under it should be gone
         # there are three other folders: /, /other, and /other/middle
         self.assertEqual(3, db.query(Folder).count())
-        # there is one other stream: /other/middle/stream3:int8[val1, val2]
+        # there is one other stream: /other/middle/stream3:int16[val1, val2]
         self.assertEqual(1, db.query(DataStream).count())
         self.assertEqual(2, db.query(Element).count())
 

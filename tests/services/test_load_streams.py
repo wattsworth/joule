@@ -30,16 +30,16 @@ class TestConfigureStreams(DbTestCase):
         stream1.elements = [Element(name="e%d" % x, index=x, default_min=1) for x in range(3)]
         folder_test.data_streams.append(stream1)
 
-        # /test/deeper/stream2: int8_2
+        # /test/deeper/stream2: int16_2
         folder_deeper = Folder(name="deeper",
                                updated_at=datetime.datetime.now())
-        stream2 = DataStream(name="stream2", datatype=DataStream.DATATYPE.INT8,
+        stream2 = DataStream(name="stream2", datatype=DataStream.DATATYPE.INT16,
                              updated_at=datetime.datetime.now())
         stream2.elements = [Element(name="e%d" % x, index=x) for x in range(2)]
         folder_deeper.data_streams.append(stream2)
         folder_deeper.parent = folder_test
 
-        # /test/deeper/stream3: int8_2
+        # /test/deeper/stream3: int16_2
         stream3 = DataStream(name="stream3", datatype=DataStream.DATATYPE.INT16,
                              updated_at=datetime.datetime.now())
         stream3.elements = [Element(name="e%d" % x, index=x) for x in range(2)]
@@ -69,23 +69,23 @@ class TestConfigureStreams(DbTestCase):
               name=new_e3
               default_min=-10
             """,
-            # /new/path/stream4: uint8_2 <a new stream>
+            # /new/path/stream4: int16_2 <a new stream>
             """
             [Main]
               name = stream4
               path = /new/path
-              datatype = uint8
+              datatype = int16
             [Element1]
               name=1
             [Element2]
               name=2
             """,
-            # /new/path/stream5: uint8_1 <a new stream>
+            # /new/path/stream5: int16_1 <a new stream>
             """
             [Main]
               name = stream5
               path = /new/path
-              datatype = uint8
+              datatype = int16
             [Element1]
               name=1
             """,
@@ -103,7 +103,7 @@ class TestConfigureStreams(DbTestCase):
             [Main] 
               name = invalid
               path = /invalid path//
-              datatype = uint8
+              datatype = int16
               keep = all
             [Element1]
               name=e1
@@ -144,13 +144,13 @@ class TestConfigureStreams(DbTestCase):
         # Check unconfigured streams are unchanged
         #   /test/deeper/stream2 should be the same
         stream2: DataStream = self.db.query(DataStream).filter_by(name="stream2").one()
-        self.assertEqual(stream2.layout, 'int8_2')
+        self.assertEqual(stream2.layout, 'int16_2')
         #   /test/deeper/stream3 should be the same
         stream3: DataStream = self.db.query(DataStream).filter_by(name="stream3").one()
         self.assertEqual(stream3.layout, 'int16_2')
         # Check new streams are added
         stream4: DataStream = self.db.query(DataStream).filter_by(name="stream4").one()
-        self.assertEqual(stream4.layout, 'uint8_2')
+        self.assertEqual(stream4.layout, 'int16_2')
 
         # Check the folder structure
         # -root

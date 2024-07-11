@@ -45,7 +45,7 @@ class TestStream(unittest.TestCase):
 
     def test_json(self):
         my_stream = DataStream(id=0, name='test', decimate=True,
-                               datatype=DataStream.DATATYPE.UINT16,
+                               datatype=DataStream.DATATYPE.INT16,
                                updated_at=datetime.datetime.now())
         for j in range(4):
             my_stream.elements.append(Element(name="e%d" % j, index=j,

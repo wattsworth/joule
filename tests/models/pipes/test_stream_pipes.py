@@ -15,7 +15,7 @@ Tests NumpyPipes with subprocess pipes
 class TestStreamingPipes(helpers.AsyncTestCase):
 
     def test_pipes_numpy_arrays(self):
-        LAYOUT = "int8_2"
+        LAYOUT = "int16_2"
         LENGTH = 1000
         (fd_r, fd_w) = os.pipe()
         ''
@@ -58,7 +58,7 @@ class TestStreamingPipes(helpers.AsyncTestCase):
         asyncio.run(runner())
 
     def test_reconstructs_fragmented_data(self):
-        LAYOUT = "int8_2"
+        LAYOUT = "int16_2"
         LENGTH = 1000
         (fd_r, fd_w) = os.pipe()
         ''
@@ -254,7 +254,7 @@ class TestStreamingPipes(helpers.AsyncTestCase):
         self.assertEqual(subscriber_cb.call_count, 1)
 
     def test_invalid_write_inputs(self):
-        LAYOUT = "int8_2"
+        LAYOUT = "int16_2"
         ''
         my_pipe = OutputPipe(layout=LAYOUT)
 

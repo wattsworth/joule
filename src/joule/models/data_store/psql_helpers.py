@@ -237,6 +237,9 @@ def get_psql_type(x: DataStream.DATATYPE):
     elif x == DataStream.DATATYPE.INT64:
         return 'bigint'
     else:
+        # NOTE: All other datatypes have been removed from DATATYPE
+        # so this code is unreachable, but it is left here to catch
+        # errors from any future changes to DATATYPE
         raise DataError("Invalid type [%r] for timescale backend" % x)
 
 

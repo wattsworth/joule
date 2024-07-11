@@ -25,7 +25,7 @@ class RepeatInserter(joule.client.ReaderModule):
             top_ts = data_ts + 100 * ts_inc
             count += 1
             ts = np.array(np.linspace(data_ts, top_ts, rows,
-                                      endpoint=False), dtype=np.uint64)
+                                      endpoint=False), dtype=np.int64)
             ts.shape = (rows, 1)
             ts_data = np.hstack((ts, data))
             await output.write(ts_data)

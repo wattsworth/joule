@@ -11,7 +11,7 @@ class TestLocalPipe(helpers.AsyncTestCase):
 
     def test_pipes_numpy_arrays(self):
         """writes to pipe sends data to reader and any subscribers"""
-        LAYOUT = "int8_2"
+        LAYOUT = "int16_2"
         LENGTH = 1003
         ''
         my_pipe = LocalPipe(LAYOUT, name="pipe")
@@ -123,10 +123,10 @@ class TestLocalPipe(helpers.AsyncTestCase):
         asyncio.run(reader())
 
     def test_consumes_data(self):
-        LAYOUT = "int8_2"
+        LAYOUT = "int16_2"
         LENGTH = 500
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
-        my_pipe = LocalPipe("int8_2")
+        my_pipe = LocalPipe("int16_2")
         my_pipe.write_nowait(test_data)
         my_pipe.close_nowait()
         async def reader():
@@ -141,7 +141,7 @@ class TestLocalPipe(helpers.AsyncTestCase):
         asyncio.run(reader())
 
     def test_nowait_read_writes(self):
-        LAYOUT = "int8_2"
+        LAYOUT = "int16_2"
         LENGTH = 500
         ''
         my_pipe = LocalPipe(LAYOUT)
@@ -161,7 +161,7 @@ class TestLocalPipe(helpers.AsyncTestCase):
             test_data['timestamp'], result['timestamp'])
 
     def test_invalid_write_nowait_inputs(self):
-        LAYOUT = "int8_2"
+        LAYOUT = "int16_2"
         ''
         my_pipe = LocalPipe(LAYOUT, name="testpipe")
         with self.assertLogs(level="INFO"):
@@ -170,7 +170,7 @@ class TestLocalPipe(helpers.AsyncTestCase):
             my_pipe.write_nowait([1, 2, 3])
 
     def test_different_format_writes(self):
-        LAYOUT = "int8_2"
+        LAYOUT = "int16_2"
         ''
         my_pipe = LocalPipe(LAYOUT, name="testpipe")
 
@@ -249,7 +249,7 @@ class TestLocalPipe(helpers.AsyncTestCase):
         self.assertLessEqual(num_reads, np.ceil(LENGTH / CACHE_SIZE))
 
     def test_nowait_read_empties_queue(self):
-        LAYOUT = "int8_2"
+        LAYOUT = "int16_2"
         LENGTH = 50
         my_pipe = LocalPipe(LAYOUT)
         test_data = helpers.create_data(LAYOUT, length=LENGTH)
@@ -268,7 +268,7 @@ class TestLocalPipe(helpers.AsyncTestCase):
             test_data['timestamp'], result['timestamp'])
 
     def test_nowait_read_does_not_block(self):
-        LAYOUT = "int8_2"
+        LAYOUT = "int16_2"
         LENGTH = 50
         my_pipe = LocalPipe(LAYOUT)
         test_data = helpers.create_data(LAYOUT, length=LENGTH)

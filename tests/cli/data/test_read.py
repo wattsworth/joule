@@ -193,7 +193,7 @@ class TestDataRead(FakeJouleTestCase):
     def test_reads_selected_elements_to_file(self):
         server = FakeJoule()
         # create the source stream
-        src = DataStream(id=0, name="source", keep_us=100, datatype=DataStream.DATATYPE.UINT16,
+        src = DataStream(id=0, name="source", keep_us=100, datatype=DataStream.DATATYPE.INT16,
                          updated_at=datetime.datetime.utcnow())
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         # source has 100 rows of data between [0, 100]

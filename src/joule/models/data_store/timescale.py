@@ -67,7 +67,6 @@ class TimescaleStore(DataStore):
             interval_token = pipes.interval_token(stream.layout)
             async def redecimator(data, _, __):
                 if len(data)==0:
-                    breakpoint()
                     print("WARNING: decimator received a 0 length data array")
                     return
                 # if the data is just an interval token, close the interval

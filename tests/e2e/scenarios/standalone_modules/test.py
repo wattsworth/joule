@@ -72,8 +72,8 @@ async def start_standalone_procs2(node: api.BaseNode):
     p1 = subprocess.Popen(build_standalone_args("proc1"))
 
     stream = DataStream()
-    stream.name = "int8"
-    stream.datatype = "int8"
+    stream.name = "int16"
+    stream.datatype = "int16"
     for x in range(3):
         e = Element()
         e.name = 'item%d' % x
@@ -81,7 +81,7 @@ async def start_standalone_procs2(node: api.BaseNode):
         stream.elements.append(e)
     await node.data_stream_create(stream, "/exists")
 
-    # proc5 tries to write to /exists/int8 with wrong element count
+    # proc5 tries to write to /exists/int16 with wrong element count
     p4 = subprocess.run(build_standalone_args("proc4"),
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,

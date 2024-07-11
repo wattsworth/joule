@@ -94,7 +94,7 @@ class TestPipe(helpers.AsyncTestCase):
         self.assertFalse(pipe.end_of_interval)
 
     def test_raises_dtype_errors(self):
-        pipe = Pipe(layout="uint8_4")
+        pipe = Pipe(layout="int16_4")
         # data for a different stream type
         data1 = helpers.create_data("float32_3")
         # invalid array structure (must be 2D)
@@ -106,7 +106,7 @@ class TestPipe(helpers.AsyncTestCase):
                 _ = pipe._apply_dtype(data)
 
     def test_subscribe(self):
-        LAYOUT = "uint8_4"
+        LAYOUT = "int16_4"
         # cannot subscribe to input pipes
         input_pipe = Pipe(layout=LAYOUT, direction=Pipe.DIRECTION.INPUT)
         output_pipe = Pipe(layout=LAYOUT, direction=Pipe.DIRECTION.OUTPUT)

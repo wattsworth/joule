@@ -18,16 +18,16 @@ class TestSchema(unittest.TestCase):
         folder1 = Folder(name="folder1")
         folder1.data_streams.append(stream11)
 
-        stream21 = DataStream(name="stream21", datatype=DataStream.DATATYPE.UINT8)
+        stream21 = DataStream(name="stream21", datatype=DataStream.DATATYPE.INT16)
         stream21.elements = [Element(name="e%d" % x,
                                      display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(4)]
         folder2 = Folder(name="folder2")
         folder2.data_streams.append(stream21)
 
-        stream1 = DataStream(name="stream1", datatype=DataStream.DATATYPE.INT8)
+        stream1 = DataStream(name="stream1", datatype=DataStream.DATATYPE.INT16)
         stream1.elements.append(Element(name="e0"))
 
-        stream2 = DataStream(name="stream2", datatype=DataStream.DATATYPE.UINT64)
+        stream2 = DataStream(name="stream2", datatype=DataStream.DATATYPE.INT64)
         stream2.elements.append(Element(name="e0"))
 
         root = Folder(name="root")

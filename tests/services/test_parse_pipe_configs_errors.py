@@ -8,8 +8,8 @@ class TestParsePipeConfigErrors(DbTestCase):
 
     def test_ensures_valid_path_and_name(self):
         bad_configs = [
-            "/no_path:int8[x,y]",
-            "missing/slash:int8[x,y]",
+            "/no_path:int16[x,y]",
+            "missing/slash:int16[x,y]",
             "justbad",
             "",
             "/tooshort"

@@ -3,6 +3,8 @@
 import joule.client
 import asyncio
 
+import joule.errors
+
 
 class Adder(joule.client.FilterModule):
     """ Add DC offset to input """
@@ -25,7 +27,7 @@ class Adder(joule.client.FilterModule):
                     print("closing interval")
                     await stream_out.close_interval()
 
-            except joule.EmptyPipe:
+            except joule.errors.EmptyPipeError:
                 print("got an empty pipe, exiting")
                 exit(1)
             

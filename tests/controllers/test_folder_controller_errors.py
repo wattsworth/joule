@@ -26,7 +26,7 @@ class TestFolderControllerErrors(AioHTTPTestCase):
         loop.slow_callback_duration = 2.0
         app[app_keys.db], app[psql_key] = create_db(["/top/leaf/stream1:float32[x, y, z]",
                                             "/top/same_name/stream3:float32[x, y, z]",
-                                            "/top/middle/leaf/stream2:int8[val1, val2]"])
+                                            "/top/middle/leaf/stream2:int16[val1, val2]"])
         app[app_keys.data_store] = MockStore()
         app[app_keys.event_store] = MockEventStore()
         return app
