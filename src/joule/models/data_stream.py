@@ -119,6 +119,12 @@ class DataStream(Base):
         if 'description' in attrs:
             self.description = attrs['description']
             updated = True
+        if 'keep_us' in attrs:
+            self.keep_us = attrs['keep_us']
+            updated = True
+        if 'decimate' in attrs:
+            self.decimate = attrs['decimate']
+            updated = True
         if 'elements' in attrs:
             element_configs = attrs['elements']
             # make sure the number of configs is correct

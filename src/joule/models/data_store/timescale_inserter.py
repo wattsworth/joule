@@ -56,9 +56,9 @@ class Inserter:
                 await asyncio.sleep(self.insert_period)
                 data = await pipe.read()
                 await self._measure_data_rate(data)
-                # there might be an interval break and no new data
                 try:
                     async with self.pool.acquire() as conn:
+                        # there might be an interval break and no new data
                         if len(data) > 0:
                             if first_insert:
                                 first_insert = False

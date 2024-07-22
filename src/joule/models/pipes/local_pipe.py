@@ -165,6 +165,7 @@ class LocalPipe(Pipe):
             return True
         if self.queue.empty() and len(self.read_buffer) == 0 and self.closed:
             return True
+        # TODO: do another read to make sure there is still data available
         return False
 
     def consume(self, num_rows):

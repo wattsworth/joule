@@ -2,6 +2,7 @@ from typing import Union, Optional, List, TYPE_CHECKING
 import asyncio
 import aiohttp
 from joule.models.pipes import compute_dtype
+from joule.utilities.time import time_now
 from joule.utilities.misc import timestamps_are_monotonic, validate_values
 from .session import BaseSession
 from .data_stream import (DataStream,
@@ -340,6 +341,10 @@ async def _send_data(session: BaseSession,
                 if len(data) > 0:
                     yield data.tobytes()
                     last_ts = data['timestamp'][-1]
+                # warn if there is data in this chunk that is older than the keep value
+                # of the destination stream (-1 == KEEP ALL data)
+                if stream.keep_us != -1 and (data['timestamp'][0] < time_now() - stream.keep_us):
+                    log.warning("this data is older than the keep value of the destination stream, it may be discarded")
                 if pipe.end_of_interval:
                     yield interval_token(stream.layout).tobytes()
                 pipe.consume(len(data))

@@ -86,9 +86,24 @@ async def _read(request: web.Request, json):
             if data_segment is not None:
                 data_blocks.append(data_segment.tolist())
                 data_segment = None
+        # previously interval boundaries were always sent separately
+        # now they are appended to the end of a chunk of data when possible
+        # this requires an additional check here
+        elif len(data)>0 and np.array_equal([data[-1]],pipes.interval_token(layout)):
+            # flatten the structured array
+            data = np.c_[data['timestamp'][:, None], data['data']]
+            # remove the interval token
+            data = data[:-1,:]
+            # put the chunk in the list
+            if data_segment is not None:
+                data_segment = np.vstack((data_segment, data))
+                data_blocks.append(data_segment.tolist())
+                data_segment = None
+            elif len(data)>0: 
+                # only need to create a data block if there's actually data in this segment
+                data_blocks.append(data.tolist())
         else:
             data = np.c_[data['timestamp'][:, None], data['data']]
-
             if data_segment is None:
                 data_segment = data
             else:
