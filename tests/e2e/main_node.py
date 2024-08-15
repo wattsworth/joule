@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python3 -u
 
 """
 Run through each scenario in scenarios
@@ -24,6 +24,9 @@ SCENARIO_DIR = "/joule/tests/e2e/scenarios"
 MODULE_SCRIPT_DIR = "/joule/tests/e2e/module_scripts"
 JOULE_CONF_DIR = "/etc/joule"
 SECURITY_DIR = "/joule/tests/e2e/pki"
+
+JOULED_CMD ="coverage run --rcfile=/joule/.coveragerc -m joule.daemon".split(" ")
+JOULE_CMD = "coverage run --rcfile=/joule/.coveragerc -m joule.cli".split(" ")
 
 FORCE_DUMP = False
 
@@ -88,7 +91,7 @@ def main():
             os.environ["LOGNAME"] = "e2e"
             os.environ["JOULE_USER_CONFIG_DIR"] = "/tmp/joule_user"
             with open(os.devnull, 'w') as devnull:
-                subprocess.run("joule admin authorize".split(" "),
+                subprocess.run(JOULE_CMD+"admin authorize".split(" "),
                                stdout=devnull)
             shutil.copy("/etc/joule/security/ca.joule.crt", "/tmp/joule_user/ca.crt")
 
@@ -102,8 +105,7 @@ def main():
             configs.write(os.fdopen(f, mode='w'))
             main_conf = path
         if first_test:
-            jouled = subprocess.Popen(["jouled", "--config",
-                                       main_conf],
+            jouled = subprocess.Popen(JOULED_CMD+["--config", main_conf],
                                       stdout=subprocess.PIPE,
                                       stderr=subprocess.STDOUT,
                                       universal_newlines=True)
@@ -111,14 +113,14 @@ def main():
             jouled.send_signal(signal.SIGINT)
             stdout, _ = jouled.communicate()
             if result != 0:
+                print("ERROR!")
+                print(stdout)
                 return result
-
         # clear the existing database (keeping master/follower tables)
-        subprocess.run("joule admin erase --yes".split(" "))
-        subprocess.run("joule admin authorize".split(" "))
+        subprocess.run(JOULE_CMD+"admin erase --yes".split(" "))
+        subprocess.run(JOULE_CMD+"admin authorize".split(" "))
 
-        jouled = subprocess.Popen(["jouled", "--config",
-                                   main_conf],
+        jouled = subprocess.Popen(JOULED_CMD+["--config", main_conf],
                                   stdout=subprocess.PIPE,
                                   stderr=subprocess.STDOUT,
                                   universal_newlines=True)
@@ -126,8 +128,8 @@ def main():
 
         print("---------[%s]---------" % test_name)
         sys.stdout.flush()
-
-        test = subprocess.run(os.path.join(test_path, "test.py"))
+        print("Running tests with coverage!")
+        test = subprocess.run(("coverage run --rcfile=/joule/.coveragerc "+os.path.join(test_path, "test.py")).split(" "))
         jouled.send_signal(signal.SIGINT)
         stdout, _ = jouled.communicate()
         if test.returncode != 0 or FORCE_DUMP:

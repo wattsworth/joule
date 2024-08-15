@@ -28,14 +28,14 @@ async def detect_url(host, port: Optional[int] = None):  # pragma: no cover
     if port is not None:
         host = host + ":" + str(port)
 
-    ssl_context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
+    #ssl_context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+    #ssl_context.check_hostname = False
+    #ssl_context.verify_mode = ssl.CERT_NONE
 
     async with aiohttp.ClientSession(conn_timeout=5) as session:
         # try to connect over https
         try:
-            async with session.get("https://" + host, ssl_context=ssl_context) as resp:
+            async with session.get("https://" + host) as resp:
                 pass
             return "https://" + host
         except ClientError as e:

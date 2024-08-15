@@ -14,6 +14,7 @@ until pg_isready -h "$host" -p 5432 -U "postgres" > /dev/null; do
   #>&2 echo "Postgres is unavailable - sleeping"
   sleep 1
 done
-cd /joule
+cd /joule/src
+export COVERAGE_FILE=/joule/.coverage
 # tried using coverage but the coverage report was empty (no lines covered)
 exec $cmd

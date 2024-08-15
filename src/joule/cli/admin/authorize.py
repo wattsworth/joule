@@ -71,14 +71,17 @@ def admin_authorize(config, url):
         joule_url = "https://localhost/joule"
         # try to get this page, if it fails then try again using http
         try:
-            r = requests.get(joule_url, verify=False)
+            r = requests.get(joule_url)
             # make sure the response is a 403 forbidden
             if r.status_code != 403:
                 raise requests.exceptions.ConnectionError()
+        # if this generates an exception with SSL then show a warning
+        except requests.exceptions.SSLError:
+            raise click.ClickException("Could not verify identify of HTTPS server. URL detection failed, please specify with --url")
         except requests.exceptions.ConnectionError:
             joule_url = "http://localhost/joule"
             try:
-                r = requests.get(joule_url, verify=False)
+                r = requests.get(joule_url)
             # make sure the response is a 403 forbidden
                 if r.status_code != 403:
                     raise requests.exceptions.ConnectionError()

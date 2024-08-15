@@ -94,7 +94,8 @@ async def start_standalone_procs2(node: api.BaseNode):
 def build_standalone_args(proc_dir):
     scenario_dir = "/joule/tests/e2e/scenarios/standalone_modules/"
     base_dir = scenario_dir + "standalone_modules/" + proc_dir + "/"
-    return ["/joule/tests/e2e/module_scripts/adder.py",
+    return ["coverage","run","--rcfile=/joule/.coveragerc",
+            "/joule/tests/e2e/module_scripts/adder.py",
             "3", "--live",
             "--module_config", base_dir + "module.conf",
             "--stream_configs", base_dir + "stream_configs"]

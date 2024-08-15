@@ -45,19 +45,19 @@ COPY docker/nginx-joule.conf /etc/nginx/templates/joule.conf.template
 
 # add a local copy of joule
 #COPY src/joule /joule
-#WORKDIR /joule
+WORKDIR /joule
+COPY ./requirements.txt .
+RUN pip3 install -r requirements.txt --break-system-packages
+RUN pip3 install coverage --break-system-packages
+
 COPY . /joule
 WORKDIR /joule
 RUN pip3 install .  --break-system-packages
-
-COPY docker/runner.sh .
 COPY docker/nginx_scripts .
 # allow the user to override the configuration by mounting a volume to /etc/joule
 
 
 EXPOSE 80
-# allow the user to override the user configuration by mounting a volume to /etc/joule/configs
-CMD /bin/bash runner.sh
-
+CMD /bin/bash runner.sh 
 
 

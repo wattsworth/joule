@@ -1,7 +1,14 @@
+[paths]
+source = 
+  src/
+  /joule/src
+  /usr/local/lib/python3.11/dist-packages
+
 [run]
 #omit = joule/daemon.py, joule/_version.py, joule/cli/admin/*
-source = joule
+source_pkgs = joule
 parallel = True
+#relative_files = True
 
 [report]
 exclude_lines =
@@ -10,4 +17,3 @@ exclude_lines =
   if __name__ == "__main__":
   if TYPE_CHECKING:
   if self.debug:
-

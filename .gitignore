@@ -27,3 +27,5 @@ postgres-data
 *checkpoint.ipynb
 version.py
 linux_venv
+coverage.xml
+sonar_scan.sh

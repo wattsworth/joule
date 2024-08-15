@@ -14,7 +14,7 @@ class TestBasicAPI(unittest.IsolatedAsyncioTestCase):
         self.node2 = followers[0]
         # add the root user as a follower to node2.joule
         user = await self.node2.master_add("user", "cli")
-        subprocess.run(f"joule node add node2.joule https://node2.joule:8088 {user.key}".split(" "))
+        subprocess.run(f"coverage run --rcfile=/joule/.coveragerc -m joule.cli node add node2.joule https://node2.joule:8088 {user.key}".split(" "))
         """
         node1.joule:
         /main/folder/added:int32[x]
