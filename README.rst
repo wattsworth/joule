@@ -1,6 +1,9 @@
-.. image:: https://coveralls.io/repos/github/wattsworth/joule/badge.svg?branch=master
-  :target: https://coveralls.io/github/wattsworth/joule?branch=master
 
+
+[![SonarCloud](https://sonarcloud.io/images/project_badges/sonarcloud-white.svg)](https://sonarcloud.io/summary/new_code?id=wattsworth_joule)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=wattsworth_joule&metric=coverage)](https://sonarcloud.io/summary/new_code?id=wattsworth_joule)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=wattsworth_joule&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=wattsworth_joule)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=wattsworth_joule&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=wattsworth_joule)
 Joule
 ========
 
