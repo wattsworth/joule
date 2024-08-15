@@ -1,11 +1,21 @@
 
 
-[![SonarCloud](https://sonarcloud.io/images/project_badges/sonarcloud-white.svg)](https://sonarcloud.io/summary/new_code?id=wattsworth_joule)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=wattsworth_joule&metric=coverage)](https://sonarcloud.io/summary/new_code?id=wattsworth_joule)
-[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=wattsworth_joule&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=wattsworth_joule)
-[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=wattsworth_joule&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=wattsworth_joule)
+
 Joule
 ========
+
+.. image:: https://sonarcloud.io/api/project_badges/measure?project=wattsworth_joule&metric=security_rating
+   :target: https://sonarcloud.io/summary/new_code?id=wattsworth_joule
+   :alt: Security Rating
+
+.. image:: https://sonarcloud.io/api/project_badges/measure?project=wattsworth_joule&metric=vulnerabilities
+   :target: https://sonarcloud.io/summary/new_code?id=wattsworth_joule
+   :alt: Vulnerabilities
+
+.. image:: https://sonarcloud.io/api/project_badges/measure?project=wattsworth_joule&metric=coverage
+   :target: https://sonarcloud.io/summary/new_code?id=wattsworth_joule
+   :alt: Coverage
+
 
 Joule is a data capture and signal processing engine. It allows you to build
 robust sensors using embedded systems such as the
@@ -119,7 +129,10 @@ To run unittests and collect coverage information:
 
 To run integration tests you must have Docker and access to the nilmdb image (for nilmdb tests)
 
-    $ joule/tests/e2e> ./runner.sh [timescale|nilmdb]
+    $ joule/tests/e2e> ./runner.sh
 
 
 
+.. image:: https://sonarcloud.io/images/project_badges/sonarcloud-white.svg
+   :target: https://sonarcloud.io/summary/new_code?id=wattsworth_joule
+   :alt: SonarCloud
