@@ -61,13 +61,9 @@ async def index(request):
         if 'start' in request.query:
             ts = int(request.query['start'])
             start = datetime.fromtimestamp(ts/1e6, timezone.utc)
-            # convert to naive form because it is used in a query
-            #start = start.astimezone(timezone.utc).replace(tzinfo=None)
         if 'end' in request.query:
             ts = int(request.query['end'])
             end = datetime.fromtimestamp(ts/1e6, timezone.utc)
-            # convert to naive form because it is used in a query
-            #end = end.astimezone(timezone.utc).replace(tzinfo=None)
     except ValueError:
         return web.Response(text="[start] and [end] must be microsecond utc timestamps", status=400)
     if (('stream_id' not in request.query) and
@@ -174,13 +170,9 @@ async def delete_all(request):
         if 'start' in request.query:
             ts = int(request.query['start'])
             start = datetime.fromtimestamp(ts/1e6, timezone.utc)
-            # convert to naive form because it is used in a query
-            #start = start.astimezone(timezone.utc).replace(tzinfo=None)
         if 'end' in request.query:
             ts = int(request.query['end'])
             end = datetime.fromtimestamp(ts/1e6, timezone.utc)
-            # convert to naive form because it is used in a query
-            #end = end.astimezone(timezone.utc).replace(tzinfo=None)
     except ValueError:
         return web.Response(text="[start] and [end] must be microsecond utc timestamps", status=400)
 

@@ -52,29 +52,6 @@ class Annotation(Base):
             self.content = json['content']
 
 
-# retrieve start/end as UTC aware datetime objects even though the database stores them as naive
-#@event.listens_for(Annotation, "load")
-def receive_load(target: Annotation, context):
-    if target.start is not None:
-        #breakpoint()
-        target.start = target.start.replace(tzinfo=timezone.utc)
-    if target.end is not None:
-        target.end = target.end.replace(tzinfo=timezone.utc)
-
-# For some reason sqlalchemy converts the datetime to local time before inserting into the database
-# since the database is expecting UTC this is a mess. This event listener converts the datetime to naive
-# so sqlalchemy doesn't try to convert it *argh!*
-
-#@event.listens_for(Annotation, "before_insert")
-#@event.listens_for(Annotation, "before_update")
-def receive_before_insert(mapper, connection, target):
-    if target.start is not None and target.start.tzinfo is not None:
-        # Convert to UTC and strip timezone
-        target.start = target.start.astimezone(timezone.utc).replace(tzinfo=None)
-    if target.end is not None and target.end.tzinfo is not None:
-        # Convert to UTC and strip timezone
-        target.end = target.end.astimezone(timezone.utc).replace(tzinfo=None)
-
 def from_json(json):
     try:
         my_annotation = Annotation(title=json['title'])
