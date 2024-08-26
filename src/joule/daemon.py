@@ -346,8 +346,7 @@ def main(argv=None):
         postgres=# GRANT pg_read_all_settings TO joule;
         """)
         raise e
-        loop.close()
-        exit(1)
+        
 
     loop.add_signal_handler(signal.SIGINT, daemon.stop)
     loop.add_signal_handler(signal.SIGTERM, daemon.stop)

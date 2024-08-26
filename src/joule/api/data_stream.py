@@ -1,4 +1,4 @@
-from typing import Optional, Union, Dict, List
+from typing import Optional, Dict, List
 
 from .session import BaseSession
 from .folder_type import Folder
@@ -216,7 +216,7 @@ def info_from_json(json) -> DataStreamInfo:
 
 
 async def data_stream_delete(session: BaseSession,
-                             stream: Union[DataStream, str, int]):
+                             stream: DataStream | str |int) -> None:
     data = {}
     if type(stream) is DataStream:
         data["id"] = stream.id
@@ -231,7 +231,7 @@ async def data_stream_delete(session: BaseSession,
 
 
 async def data_stream_create(session: BaseSession,
-                             stream: DataStream, folder: Union[Folder, str, int]) -> DataStream:
+                             stream: DataStream, folder: Folder | str | int) -> DataStream:
     data = {"stream": stream.to_json()}
 
     if type(folder) is Folder:
@@ -248,7 +248,7 @@ async def data_stream_create(session: BaseSession,
 
 
 async def data_stream_info(session: BaseSession,
-                           stream: Union[DataStream, str, int]) -> DataStreamInfo:
+                           stream: DataStream | str | int) -> DataStreamInfo:
     data = {}
 
     if type(stream) is DataStream:
@@ -265,7 +265,7 @@ async def data_stream_info(session: BaseSession,
 
 
 async def data_stream_get(session: BaseSession,
-                          stream: Union[DataStream, str, int]) -> DataStream:
+                          stream: DataStream | str | int) -> DataStream:
     data = {}
 
     if type(stream) is DataStream:
@@ -288,8 +288,8 @@ async def data_stream_update(session: BaseSession,
 
 
 async def data_stream_move(session: BaseSession,
-                           source: Union[DataStream, str, int],
-                           destination: Union[Folder, str, int]) -> None:
+                           source: DataStream | str | int,
+                           destination: Folder | str | int) -> None:
     data = {}
 
     if type(source) is DataStream:
@@ -313,7 +313,7 @@ async def data_stream_move(session: BaseSession,
 
 
 async def data_stream_annotation_delete(session: BaseSession,
-                                        stream: Union[DataStream, str, int],
+                                        stream: DataStream | str | int,
                                         start: Optional[int] = None,
                                         end: Optional[int] = None):
     data = {}

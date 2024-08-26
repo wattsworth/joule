@@ -1,7 +1,7 @@
 from sqlalchemy.orm import relationship, backref, Session, Mapped
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 from typing import List, TYPE_CHECKING, Optional, Dict, Union
-import datetime
+from datetime import datetime, timezone
 import logging
 from joule.errors import ConfigurationError
 from joule.models.data_stream import DataStream
@@ -31,7 +31,7 @@ class Folder(Base):
     data_streams: Mapped[List[DataStream]] = relationship("DataStream", back_populates="folder")
     event_streams: Mapped[List[EventStream]] = relationship("EventStream", back_populates="folder")
     parent_id: int = Column(Integer, ForeignKey('metadata.folder.id'))
-    updated_at: datetime.datetime = Column(DateTime, nullable=False)
+    updated_at: datetime = Column(DateTime(timezone=True), nullable=False)
     if TYPE_CHECKING:  # pragma: no cover
         parent: 'Folder'
 
@@ -82,9 +82,9 @@ class Folder(Base):
         return False
 
     # update timestamps on all folders in hierarchy
-    def touch(self, now: Optional[datetime.datetime] = None) -> None:
+    def touch(self, now: Optional[datetime] = None) -> None:
         if now is None:
-            now = datetime.datetime.utcnow()
+            now = datetime.now(timezone.utc)
         self.updated_at = now
         if self.parent is not None:
             self.parent.touch(now)
@@ -116,7 +116,7 @@ def root(db: Session) -> Folder:
         filter_by(parent=None). \
         one_or_none()
     if root_folder is None:
-        root_folder = Folder(name="root", updated_at=datetime.datetime.utcnow())
+        root_folder = Folder(name="root", updated_at=datetime.now(timezone.utc))
         db.add(root_folder)
         logger.info("creating root folder")
     return root_folder
@@ -142,7 +142,7 @@ def find(path: str, db: Session, create=False, parent=None) -> Optional[Folder]:
     if folder is None:
         if not create:
             return None
-        folder = Folder(name=name, updated_at=datetime.datetime.utcnow())
+        folder = Folder(name=name, updated_at=datetime.now(timezone.utc))
         parent.children.append(folder)
         db.add(folder)
     sub_path = '/' + '/'.join(reversed(path_chunks))

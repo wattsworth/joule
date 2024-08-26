@@ -29,8 +29,8 @@ async def folder_root(session: BaseSession) -> Folder:
 
 
 async def folder_move(session: BaseSession,
-                      source: Union[Folder, str, int],
-                      destination: Union[Folder, str, int]) -> None:
+                      source: Folder | str | int,
+                      destination: Folder | str | int) -> None:
     data = {}
 
     if type(source) is Folder:
@@ -55,7 +55,7 @@ async def folder_move(session: BaseSession,
 
 
 async def folder_delete(session: BaseSession,
-                        folder: Union[Folder, str, int],
+                        folder: Folder | str | int,
                         recursive: bool = False) -> None:
     _recursive = 0
     if recursive:
@@ -81,7 +81,7 @@ async def folder_update(session: BaseSession,
 
 
 async def folder_get(session: BaseSession,
-                     folder: Union[Folder, str, int]) -> Folder:
+                     folder: Folder | str | int) -> Folder:
     params = {}
     if type(folder) is Folder:
         params["id"] = folder.id

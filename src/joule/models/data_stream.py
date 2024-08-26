@@ -7,7 +7,7 @@ import configparser
 import enum
 import re
 from operator import attrgetter
-import datetime
+from datetime import datetime, timezone
 
 from joule.models.meta import Base
 from joule.errors import ConfigurationError
@@ -75,7 +75,7 @@ class DataStream(Base):
     annotations: Mapped[List[annotation.Annotation]] = relationship("Annotation",
                                                                     cascade="all, delete-orphan",
                                                                     back_populates="stream")
-    updated_at: datetime.datetime = Column(DateTime, nullable=False)
+    updated_at: datetime = Column(DateTime, nullable=False)
 
     def merge_configs(self, other: 'DataStream') -> bool:
         # first update the elements, first make sure
@@ -107,7 +107,7 @@ class DataStream(Base):
                 self.elements != other.elements or
                 updated_element
         ):
-            self.updated_at = datetime.datetime.utcnow()
+            self.updated_at = datetime.now(timezone.utc)
             return True
         return False
 
@@ -214,9 +214,9 @@ class DataStream(Base):
         self._remote_path = path
 
     # update timestamps on all folders in hierarchy
-    def touch(self, now: Optional[datetime.datetime] = None) -> None:
+    def touch(self, now: Optional[datetime] = None) -> None:
         if now is None:
-            now = datetime.datetime.utcnow()
+            now = datetime.now(timezone.utc)
         self.updated_at = now
         if self.folder is not None:
             self.folder.touch(now)
@@ -289,7 +289,7 @@ def from_json(data: Dict) -> DataStream:
                       is_source=data["is_source"],
                       is_destination=data["is_destination"],
                       elements=elements,
-                      updated_at=datetime.datetime.utcnow())
+                      updated_at=datetime.now(timezone.utc))
 
 
 
@@ -317,7 +317,7 @@ def from_config(config: configparser.ConfigParser) -> DataStream:
         description = main_configs.get("description", fallback="")
         stream = DataStream(name=name, description=description,
                             datatype=datatype, keep_us=keep_us, decimate=decimate,
-                            updated_at=datetime.datetime.utcnow())
+                            updated_at=datetime.now(timezone.utc))
     except KeyError as e:
         raise ConfigurationError("[Main] missing %s" % e.args[0]) from e
     # now try to load the elements
@@ -353,7 +353,7 @@ def from_nilmdb_metadata(config_data: Dict, layout: str) -> DataStream:
     name = config_data["name"].replace("/", "_")
     stream = DataStream(name=name, description='', datatype=datatype,
                         keep_us=DataStream.KEEP_ALL, decimate=True,
-                        updated_at=datetime.datetime.utcnow())
+                        updated_at=datetime.now(timezone.utc))
     idx = 0
     for metadata in elements:
         elem = element.from_nilmdb_metadata(metadata, idx)

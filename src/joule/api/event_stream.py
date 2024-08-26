@@ -168,7 +168,7 @@ async def event_stream_delete(session: BaseSession,
 
 
 async def event_stream_create(session: BaseSession,
-                              stream: EventStream, folder: Union[Folder, str, int]) -> EventStream:
+                              stream: EventStream, folder: Folder | str | int) -> EventStream:
     data = {"stream": stream.to_json()}
 
     if type(folder) is Folder:
@@ -245,7 +245,7 @@ async def event_stream_update(session: BaseSession,
 
 async def event_stream_move(session: BaseSession,
                             source: Union[EventStream, str, int],
-                            destination: Union[Folder, str, int]) -> None:
+                            destination: Folder | str | int) -> None:
     data = {}
 
     if type(source) is EventStream:

@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timezone
 
 
 # --------- Utility functions from Jim Paris ------------
@@ -8,7 +8,7 @@ def time_now() -> int:
     """
     :return:     current time in UNIX microseconds
     """
-    return int(datetime.datetime.now().timestamp() * 1e6)
+    return int(datetime.now().timestamp() * 1e6)
 
 
 # Range
@@ -24,7 +24,7 @@ def timestamp_to_human(timestamp: int) -> str:
         return "(minimum)"
     if timestamp == max_timestamp:
         return "(maximum)"
-    dt = datetime.datetime.fromtimestamp(timestamp_to_unix(timestamp))
+    dt = datetime.fromtimestamp(timestamp_to_unix(timestamp))
     return dt.strftime("%a, %d %b %Y %H:%M:%S %z")
 
 
@@ -51,11 +51,15 @@ def unix_to_timestamp(unix):
 
 
 def timestamp_to_datetime(timestamp: int):
-    return datetime.datetime.utcfromtimestamp(timestamp / 1e6)
+    return datetime.fromtimestamp(timestamp / 1e6, timezone.utc) 
 
 
 def datetime_to_timestamp(date: datetime):
-    return int(date.replace(tzinfo=datetime.timezone.utc).timestamp() * 1e6)
+    # if it is a naive datetime, assume it is UTC, and convert it to a timestamp
+    if date.tzinfo is None:
+        return int(date.replace(tzinfo=timezone.utc).timestamp() * 1e6)
+    # if it is an aware datetime, convert it to a timestamp
+    return int(date.timestamp() * 1e6)
 
 
 seconds_to_timestamp = unix_to_timestamp

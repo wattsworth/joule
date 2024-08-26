@@ -26,7 +26,7 @@ log = logging.getLogger('joule')
 
 
 async def data_delete(session: BaseSession,
-                      stream: Union[DataStream, str, int],
+                      stream: DataStream | str | int,
                       start: Optional[int] = None,
                       end: Optional[int] = None):
     params = {}
@@ -47,7 +47,7 @@ async def data_delete(session: BaseSession,
 
 
 async def data_write(session: BaseSession,
-                     stream: Union[DataStream, str, int],
+                     stream: DataStream | str | int,
                      start_time: Optional[int] = None,
                      end_time: Optional[int] = None,
                      merge_gap: int = 0
@@ -83,7 +83,7 @@ async def data_write(session: BaseSession,
 
 
 async def data_intervals(session: BaseSession,
-                         stream: Union[DataStream, str, int],
+                         stream: DataStream | str | int,
                          start_time: Optional[int] = None,
                          end_time: Optional[int] = None,
                          ) -> List:
@@ -103,7 +103,7 @@ async def data_intervals(session: BaseSession,
     return await session.get("/data/intervals.json", params=data)
 
 async def data_drop_decimations(session: BaseSession,
-                                stream: Union[DataStream, str, int]):
+                                stream: DataStream | str | int):
     data = {}
     if type(stream) is DataStream:
         data["id"] = stream.id
@@ -117,7 +117,7 @@ async def data_drop_decimations(session: BaseSession,
 
 
 async def data_decimate(session: BaseSession,
-                                stream: Union[DataStream, str, int]):
+                                stream: DataStream | str | int):
     data = {}
     if type(stream) is DataStream:
         data["id"] = stream.id
@@ -131,7 +131,7 @@ async def data_decimate(session: BaseSession,
 
 
 async def data_consolidate(session: BaseSession,
-                           stream: Union[DataStream, str, int],
+                           stream: DataStream | str | int,
                            start_time: Optional[int] = None,
                            end_time: Optional[int] = None,
                            max_gap: int = 2e6
@@ -155,7 +155,7 @@ async def data_consolidate(session: BaseSession,
 
 
 async def data_read(session: BaseSession,
-                    stream: Union[DataStream, str, int],
+                    stream: DataStream | str | int,
                     start: Optional[int] = None,
                     end: Optional[int] = None,
                     max_rows: Optional[int] = None) -> Pipe:
@@ -186,7 +186,7 @@ async def data_read(session: BaseSession,
 
 
 async def data_read_array(session: BaseSession,
-                          stream: Union[DataStream, str, int],
+                          stream: DataStream | str | int,
                           start: Optional[int] = None,
                           end: Optional[int] = None,
                           max_rows: int = 10000,
@@ -205,11 +205,11 @@ async def data_read_array(session: BaseSession,
 
 
 async def data_subscribe(session: BaseSession,
-                         stream: Union[DataStream, str, int]) -> Pipe:
+                         stream: DataStream | str | int) -> Pipe:
     # make sure the input is compatible
     src_stream = await data_stream_get(session, stream)
     if type(stream) is DataStream:
-        if src_stream.layout != src_stream.layout:
+        if stream.layout != src_stream.layout:
             raise errors.ApiError("Input [%s] configured for [%s] but source is [%s]" % (
                 stream, stream.layout, src_stream.layout))
 

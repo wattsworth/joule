@@ -1,6 +1,0 @@
-venv
-dist
-build
-__pycache__
-docs/_build
-docs/_static

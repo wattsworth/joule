@@ -55,7 +55,7 @@ def admin_initialize(dsn, bind, port, nilmdb):  # pragma: no cover
         template_path = pkg_resources.resource_filename(
             "joule", "resources/templates")
         # From https://stackoverflow.com/questions/11857530
-        env = Environment(loader=FileSystemLoader(template_path))
+        env = Environment(loader=FileSystemLoader(template_path), autoescape=True)
         env.trim_blocks = True
         env.lstrip_blocks = True
         env.keep_trailing_newline = True

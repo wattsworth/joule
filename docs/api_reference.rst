@@ -73,7 +73,7 @@ Folder Actions
          <joule.api.Folder id=2729 name='archive' description=None locked=True>,
          <joule.api.Folder id=2730 name='live' description=None locked=True>]
 
-.. function:: Node.folder_get(folder: Union[joule.api.Folder, str, int]) -> joule.api.Folder
+.. function:: Node.folder_get(folder: joule.api.Folder | str | int) -> joule.api.Folder
 
     Retrieve the specified folder. Folder may be specified by a :class:`joule.api.Folder` object,
     a path, or numeric ID. Raises :exc:`joule.errors.ApiError` if folder specification is invalid.
@@ -88,7 +88,7 @@ Folder Actions
         >>> await node.folder_get("/does/not/exist") # raises ApiError
         joule.errors.ApiError: folder does not exist [404]
 
-.. function:: Node.folder_move(source: Union[Folder, str, int], destination: Union[Folder, str, int]) -> None
+.. function:: Node.folder_move(source: Folder | str | int, destination: Folder | str | int) -> None
 
     Move the *source* folder into the *destination* folder. The source and destination may be
     specified by joule.api.Folder objects, paths, or numeric ID's. The source folder name must be unique in the destination
@@ -120,7 +120,7 @@ Folder Actions
         [<joule.api.Folder id=3329 name='new name' description=None locked=False>]
 
 
-.. function:: Node.folder_delete(folder: Union[Folder, str, int], recursive: bool) -> None:
+.. function:: Node.folder_delete(folder: Folder | str | int, recursive: bool) -> None:
 
     Delete the specified folder. If recursive is True delete any
     child folders as well. Raises :exc:`joule.errors.ApiError` if the folder specification
@@ -139,7 +139,7 @@ Folder Actions
 DataStream Actions
 ''''''''''''''''''
 
-.. function:: Node.data_stream_get(stream: Union[DataStream, str, int]) -> DataStream:
+.. function:: Node.data_stream_get(stream: DataStream | str | int) -> DataStream:
 
     Retrieve the specified stream. DataStream may be specified by a :class:`joule.api.DataStream` object,
     a path, or numeric ID. Raises :exc:`joule.errors.ApiError` if stream specification is invalid.
@@ -157,7 +157,7 @@ DataStream Actions
         joule.errors.ApiError: stream does not exist [404]
 
 
-.. function:: Node.data_stream_move(stream: Union[DataStream, str, int], folder: Union[Folder, str, int]) -> None:
+.. function:: Node.data_stream_move(stream: DataStream | str | int, folder: Folder | str | int) -> None:
 
     Move a stream into a different folder. The stream and folder may be
     specified by objects, paths, or numeric ID's. The stream name must be unique in the destination
@@ -194,7 +194,7 @@ DataStream Actions
         [<joule.api.Element id=3192 index=0, name='New Name' units=None
          plottable=True display_type='CONTINUOUS'>]
 
-.. function:: Node.data_stream_delete(stream: Union[DataStream, str, int]) -> None:
+.. function:: Node.data_stream_delete(stream: DataStream | str | int) -> None:
 
     Delete a stream. DataStream may be specified by a :class:`joule.api.DataStream` object,
     a path, or numeric ID. Raises :exc:`joule.errors.ApiError` if the stream specification
@@ -211,7 +211,7 @@ DataStream Actions
         []
 
 
-.. function:: Node.data_stream_create(stream: DataStream, folder: Union[Folder, str, int]) -> DataStream:
+.. function:: Node.data_stream_create(stream: DataStream, folder: Folder | str | int) -> DataStream:
 
     Create a stream and place in the specified folder. Folder may be specified by object, path or numeric ID.
     See :class:`joule.api.DataStream` for details on creating DataStream objects. Raises :exc:`joule.errors.ApiError` if the
@@ -224,7 +224,7 @@ DataStream Actions
         <joule.api.DataStream id=2628 name='New Stream' description='' datatype='float32'
          is_configured=False is_source=False is_destination=False locked=False decimate=True>
 
-.. function:: Node.data_stream_info(stream: Union[DataStream, str, int]) -> DataStreamInfo:
+.. function:: Node.data_stream_info(stream: DataStream | str | int) -> DataStreamInfo:
 
     Get information about a stream as a :class:`joule.api.DataStreamInfo` object. DataStream may be specified
     by a :class:`joule.api.DataStream` object, a path, or numeric ID. Raises :exc:`joule.errors.ApiError`
@@ -235,7 +235,7 @@ DataStream Actions
         <joule.api.DataStreamInfo start=1551730769556442 end=1551751402742424
          rows=61440, total_time=20633185982>
 
-.. function:: Node.data_stream_annotation_delete(stream: Union[DataStream, str, int], start: Optional[int] = None,
+.. function:: Node.data_stream_annotation_delete(stream: DataStream | str | int, start: Optional[int] = None,
         end: Optional[int] = None) -> None:
 
     Remove annotations from this stream. If start and/or end is specified only remove annotations within this range.
@@ -246,7 +246,7 @@ DataStream Actions
 Data Actions
 ''''''''''''
 
-.. function:: Node.data_read(stream: Union[DataStream, str, int], start: Optional[int] = None, end: Optional[int] = None, max_rows: Optional[int] = None) -> Pipe
+.. function:: Node.data_read(stream: DataStream | str | int, start: Optional[int] = None, end: Optional[int] = None, max_rows: Optional[int] = None) -> Pipe
 
     Read historic data from a stream. Specify timestamp bounds for a particular range or omit to read all historic data.
     This method returns a pipe which should be used to read the data. The pipe must be closed after use. See :ref:`pipes`
@@ -271,7 +271,7 @@ Data Actions
         >>> pipe.consume(len(data)) # flush the pipe
         >>> await pipe.close() # close the data connection
 
-.. function:: Node.data_subscribe(stream: Union[DataStream, str, int]) -> Pipe
+.. function:: Node.data_subscribe(stream: DataStream | str | int) -> Pipe
 
     Read live data from a stream. The stream must be actively produced by a module. This method returns a pipe which
     should be used to read the data. The pipe must be closed after use. See :ref:`pipes`
@@ -287,7 +287,7 @@ Data Actions
         >>> pipe.consume(len(data)) # flush the pipe
         >>> await pipe.close() # close the data connection
 
-.. function:: Node.data_write(stream: Union[DataStream, str, int], start: Optional[int] = None, end: Optional[int] = None)
+.. function:: Node.data_write(stream: DataStream | str | int, start: Optional[int] = None, end: Optional[int] = None)
 
     Write data to a stream. The stream must not be an active destination from any other source.
     Optionally specify start and end timestamps to remove existing data over the interval you plan to write. This is required when
@@ -308,7 +308,7 @@ Data Actions
                (1551758297115090, 2.), (1551758297115111, 3.)],
               dtype=[('timestamp', '<i8'), ('data', '<f4')])
 
-.. function:: Node.data_delete(stream: Union[DataStream, str, int], start: Optional[int] = None, end: Optional[int] = None) -> None:
+.. function:: Node.data_delete(stream: DataStream | str | int, start: Optional[int] = None, end: Optional[int] = None) -> None:
 
     Delete data from a stream. Specify timestamp bounds to delete a particular range or omit to delete all data. Deleting
     a range of data creates an interval break in the stream as show in the example below.
@@ -324,7 +324,7 @@ Data Actions
          [1551831387204004, 1551863787204004]]
 
 
-.. function:: Node.data_intervals(stream: Union[DataStream, str, int], start: Optional[int] = None, end: Optional[int] = None) -> List
+.. function:: Node.data_intervals(stream: DataStream | str | int, start: Optional[int] = None, end: Optional[int] = None) -> List
 
     Retrieve list of data intervals. See :ref:`sec-intervals` for details on data intervals. Specify timestamp bounds to
     list intervals over a particular range or omit to list all intervals.
@@ -410,7 +410,7 @@ Event Stream Actions
         >>> await node.event_stream_get("/folder/event_stream") # generates exception if stream does not exist
 
 
-.. function:: Node.event_stream_move(stream: Union[DataStream, str, int], folder: Union[Folder, str, int]) -> None
+.. function:: Node.event_stream_move(stream: DataStream | str | int, folder: Folder | str | int) -> None
 
     Move a stream into a different folder. The stream and folder may be
     specified by objects, paths, or numeric ID's. The stream name must be unique in the destination.
@@ -459,7 +459,7 @@ Event Stream Actions
         >>> folder.event_streams # my_folder is now empty
         []
 
-.. function:: Node.event_stream_create(stream: EventStream, folder: Union[Folder, str, int]) -> EventStream
+.. function:: Node.event_stream_create(stream: EventStream, folder: Folder | str | int) -> EventStream
 
     Create an event stream and place in the specified folder. Folder may be specified by object, path or numeric ID.
     See :class:`joule.api.EventStream` for details on creating EventStream objects. Raises :exc:`joule.errors.ApiError` if the

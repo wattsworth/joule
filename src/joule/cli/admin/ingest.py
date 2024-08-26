@@ -235,7 +235,7 @@ def start_src_db(backup_path, pgctl_binary, log) -> str:
         db_info = json.load(f)
 
     # create the config files
-    env = jinja2.Environment(loader=jinja2.FileSystemLoader(TEMPLATE_DIR))
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(TEMPLATE_DIR), autoescape=True)
 
     template = env.get_template("postgresql.conf.jinja2")
     sock_path = os.path.join(backup_path, "sock")

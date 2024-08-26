@@ -94,7 +94,7 @@ async def annotation_create(session: BaseSession,
 
 
 async def annotation_delete(session: BaseSession,
-                            annotation: Union[int, Annotation]):
+                            annotation: int | Annotation):
     data = {}
     if type(annotation) is Annotation:
         data["id"] = annotation.id
@@ -115,7 +115,7 @@ async def annotation_update(session: BaseSession,
 
 
 async def annotation_info(session: BaseSession,
-                          stream: Union['DataStream', str, int]):
+                          stream: "DataStream | str | int") -> AnnotationInfo:
     data = {}
     if type(stream) is DataStream:
         data["stream_id"] = stream.id
@@ -131,7 +131,7 @@ async def annotation_info(session: BaseSession,
 
 
 async def annotation_get(session: BaseSession,
-                         stream: Union['DataStream', str, int],
+                         stream: "DataStream | str | int",
                          start: Optional[int],
                          end: Optional[int]) -> List[Annotation]:
     from .data_stream import DataStream

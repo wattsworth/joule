@@ -2,7 +2,7 @@ from sqlalchemy.orm import relationship, Mapped
 from sqlalchemy import (Column, Integer, String, DateTime, ForeignKey)
 from sqlalchemy.dialects.postgresql import BIGINT, JSONB
 from typing import TYPE_CHECKING, Dict, Optional
-import datetime
+from datetime import datetime, timezone
 from sqlalchemy_utils import force_instant_defaults
 
 from joule.errors import ConfigurationError
@@ -41,7 +41,7 @@ class EventStream(Base):
     description: str = Column(String)
     folder_id: int = Column(Integer, ForeignKey('metadata.folder.id'), nullable=False)
     folder: Mapped["Folder"] = relationship("Folder", back_populates="event_streams")
-    updated_at: datetime.datetime = Column(DateTime, nullable=False)
+    updated_at: datetime = Column(DateTime, nullable=False)
 
     def update_attributes(self, attrs: Dict) -> None:
         updated = False
@@ -64,9 +64,9 @@ class EventStream(Base):
             self.touch()
 
     # update timestamps on all folders in hierarchy
-    def touch(self, now: Optional[datetime.datetime] = None) -> None:
+    def touch(self, now: Optional[datetime] = None) -> None:
         if now is None:
-            now = datetime.datetime.utcnow()
+            now = datetime.now(timezone.utc)
         self.updated_at = now
         if self.folder is not None:
             self.folder.touch(now)
@@ -119,8 +119,7 @@ def from_json(data: Dict) -> EventStream:
                        event_fields=validate_event_fields(data["event_fields"]),
                        chunk_duration_us=validate_chunk_duration(data["chunk_duration_us"]),
                        keep_us=validate_keep_us(data["keep_us"]),
-                       updated_at=datetime.datetime.utcnow()
-                       )
+                       updated_at=datetime.now(timezone.utc))
 
 
 def validate_chunk_duration(duration):

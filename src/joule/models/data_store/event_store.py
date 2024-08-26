@@ -258,7 +258,8 @@ def event_to_record(event: Dict) -> Tuple:
         end = joule.utilities.timestamp_to_datetime(event['end_time'])
     else:
         end = None
-    return event["id"], start, end, json.dumps(event['content'])
+    # return naive datetime objects for storage (expected by asyncpg)
+    return event["id"], start.replace(tzinfo=None), end.replace(tzinfo=None), json.dumps(event['content'])
 
 
 def record_to_event(record: asyncpg.Record) -> Dict:

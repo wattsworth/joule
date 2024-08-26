@@ -1,5 +1,6 @@
 from aiohttp import web
 import datetime
+from datetime import timezone, datetime
 
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
@@ -31,12 +32,12 @@ async def info(request):
             .filter_by(stream_id=my_stream.id)\
             .order_by(desc(Annotation.start))\
             .limit(1).scalar()
-        start_ts = int(start.replace(tzinfo=datetime.timezone.utc).timestamp() * 1e6)
+        start_ts = int(start.replace(tzinfo=timezone.utc).timestamp() * 1e6)
         end = db.query(Annotation.start)\
             .filter_by(stream_id=my_stream.id)\
             .order_by(desc(Annotation.start))\
             .limit(1).scalar()
-        end_ts = int(end.replace(tzinfo=datetime.timezone.utc).timestamp() * 1e6)
+        end_ts = int(end.replace(tzinfo=timezone.utc).timestamp() * 1e6)
 
     else:
         start_ts = None
@@ -59,10 +60,14 @@ async def index(request):
     try:
         if 'start' in request.query:
             ts = int(request.query['start'])
-            start = datetime.datetime.utcfromtimestamp(ts / 1e6)
+            start = datetime.fromtimestamp(ts/1e6, timezone.utc)
+            # convert to naive form because it is used in a query
+            #start = start.astimezone(timezone.utc).replace(tzinfo=None)
         if 'end' in request.query:
             ts = int(request.query['end'])
-            end = datetime.datetime.utcfromtimestamp(ts / 1e6)
+            end = datetime.fromtimestamp(ts/1e6, timezone.utc)
+            # convert to naive form because it is used in a query
+            #end = end.astimezone(timezone.utc).replace(tzinfo=None)
     except ValueError:
         return web.Response(text="[start] and [end] must be microsecond utc timestamps", status=400)
     if (('stream_id' not in request.query) and
@@ -86,7 +91,6 @@ async def index(request):
             annotations = annotations.filter(Annotation.start >= start)
         if end is not None:
             annotations = annotations.filter(Annotation.start <= end)
-        data = [a.to_json() for a in annotations]
         response += [a.to_json() for a in annotations]
 
     return web.json_response(response)
@@ -169,10 +173,14 @@ async def delete_all(request):
     try:
         if 'start' in request.query:
             ts = int(request.query['start'])
-            start = datetime.datetime.utcfromtimestamp(ts / 1e6)
+            start = datetime.fromtimestamp(ts/1e6, timezone.utc)
+            # convert to naive form because it is used in a query
+            #start = start.astimezone(timezone.utc).replace(tzinfo=None)
         if 'end' in request.query:
             ts = int(request.query['end'])
-            end = datetime.datetime.utcfromtimestamp(ts / 1e6)
+            end = datetime.fromtimestamp(ts/1e6, timezone.utc)
+            # convert to naive form because it is used in a query
+            #end = end.astimezone(timezone.utc).replace(tzinfo=None)
     except ValueError:
         return web.Response(text="[start] and [end] must be microsecond utc timestamps", status=400)
 
@@ -180,7 +188,6 @@ async def delete_all(request):
         return web.Response(text="stream does not exist", status=404)
 
     annotations = db.query(Annotation).filter_by(stream_id=my_stream.id)
-
     if start is not None:
         annotations = annotations.filter(Annotation.start >= start)
     if end is not None:

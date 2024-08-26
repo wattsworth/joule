@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from typing import List
-import datetime
+from datetime import datetime, timezone
 
 from joule.errors import ConfigurationError
 from joule.models import DataStream, Element, Follower
@@ -50,7 +50,7 @@ def run(pipe_config: str, db: Session) -> DataStream:
     # build the stream from inline config
     my_stream = data_stream.DataStream(name=name,
                                        datatype=datatype,
-                                       updated_at=datetime.datetime.utcnow())
+                                       updated_at=datetime.now(timezone.utc))
     i = 0
     for e in element_names:
         my_stream.elements.append(Element(name=e, index=i))

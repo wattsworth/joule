@@ -5,9 +5,12 @@ source =
   /usr/local/lib/python3.11/dist-packages
 
 [run]
-#omit = joule/daemon.py, joule/_version.py, joule/cli/admin/*
 source_pkgs = joule
 parallel = True
+# Note: the docker containers do not seem to respect this setting 
+# it works fine putting everything in the root directory even if it
+# does look messy while the test runs
+#data_file = coverage_reports/.coverage
 #relative_files = True
 
 [report]

@@ -4,7 +4,7 @@
 
 
 def build_stream(name, inline_config: str):# -> DataStream:
-    assert(False, 'deprecated')
+    assert False, 'deprecated'
     s = DataStream()
     s.name = name
     (datatype, names) = parse_inline_config(inline_config)

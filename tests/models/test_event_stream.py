@@ -1,5 +1,5 @@
 import unittest
-import datetime
+from datetime import datetime, timezone
 from joule.models import (EventStream, Folder, event_stream)
 from joule.models.data_store.event_store import StreamInfo
 
@@ -14,7 +14,7 @@ class TestStream(unittest.TestCase):
                                 event_fields={'field1': 'string', 'field2': 'numeric'},
                                 keep_us=100,
                                 chunk_duration_us=0,
-                                updated_at=datetime.datetime.now())
+                                updated_at=datetime.now(timezone.utc))
         my_stream.folder = my_folder
         new_attrs = {
             "name": "new_n",
@@ -44,7 +44,7 @@ class TestStream(unittest.TestCase):
                                 event_fields={'field1': 'string', 'field2': 'numeric'},
                                 keep_us=100,
                                 chunk_duration_us=0,
-                                updated_at=datetime.datetime.now())
+                                updated_at=datetime.now(timezone.utc))
         json_resp = my_stream.to_json()
         self.assertEqual(json_resp["name"], my_stream.name)
         self.assertEqual(json_resp["description"], my_stream.description)
@@ -71,7 +71,7 @@ class TestStream(unittest.TestCase):
                                 event_fields={'field1': 'string', 'field2': 'numeric'},
                                 keep_us=100,
                                 chunk_duration_us=0,
-                                updated_at=datetime.datetime.now())
+                                updated_at=datetime.now(timezone.utc))
         my_stream.id = 100
         stream_info = StreamInfo(start=0, end=100, event_count=10, total_time=100, bytes=100)
         json_resp = my_stream.to_json(info={my_stream.id: stream_info})
