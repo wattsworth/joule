@@ -26,15 +26,15 @@ class TestFolderList(FakeJouleTestCase):
         output = result.output
         # make sure the folders are listed
         for folder in ['basic', 'aux', 'event', 'sensors']:
-            self.assertTrue(folder in output)
+            self.assertIn(folder, output)
         # make sure the data streams are listed
         for stream in ['Accel', 'Encoder', 'Gyro']:
-            self.assertTrue(stream in output)
+            self.assertIn(stream, output)
         # make sure the event streams are listed
         for stream in ['events0', 'events1', 'events2']:
-            self.assertTrue(stream in output)
+            self.assertIn(stream, output)
         # should  check for layout strings
-        self.assertFalse("float32_3" in output)
+        self.assertNotIn("float32_3", output)
         self.stop_server()
 
     def test_lists_streams_with_options(self):
@@ -47,9 +47,9 @@ class TestFolderList(FakeJouleTestCase):
         self.assertEqual(result.exit_code, 0)
         output = result.output
         # check for the augmented legend
-        self.assertTrue("configured" in output)
+        self.assertIn("configured", output)
         # check for layout strings
-        self.assertTrue("float32_3" in output)
+        self.assertIn("float32_3", output)
         self.stop_server()
 
     def test_when_server_returns_invalid_data(self):
@@ -58,7 +58,7 @@ class TestFolderList(FakeJouleTestCase):
         self.start_server(server)
         runner = CliRunner()
         result = runner.invoke(main, ['folder', 'list'])
-        self.assertTrue('Error' in result.output)
+        self.assertIn('Error', result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()
 
@@ -71,7 +71,7 @@ class TestFolderList(FakeJouleTestCase):
         self.start_server(server)
         runner = CliRunner()
         result = runner.invoke(main, ['folder', 'list'])
-        self.assertTrue('%d' % error_code in result.output)
-        self.assertTrue(error_msg in result.output)
+        self.assertIn('%d' % error_code, result.output)
+        self.assertIn(error_msg, result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()

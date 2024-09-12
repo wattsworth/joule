@@ -6,7 +6,7 @@ import joule.controllers
 from joule.models.supervisor import Supervisor
 from tests.controllers.helpers import MockWorker
 from joule import app_keys
-
+from joule.constants import EndPoints
 
 class TestModuleControllerErrors(AioHTTPTestCase):
 
@@ -21,19 +21,19 @@ class TestModuleControllerErrors(AioHTTPTestCase):
 
     async def test_module_info(self):
         # must specify a name
-        resp: aiohttp.ClientResponse = await self.client.request("GET", "/module.json")
+        resp: aiohttp.ClientResponse = await self.client.request("GET", EndPoints.module)
         self.assertEqual(resp.status, 400)
         # return "not found" on bad name
-        resp: aiohttp.ClientResponse = await self.client.request("GET", "/module.json",
+        resp: aiohttp.ClientResponse = await self.client.request("GET", EndPoints.module,
                                                                  params={'name': 'unknown'})
         self.assertEqual(resp.status, 404)
 
 
     async def test_module_logs(self):
         # must specify a name
-        resp: aiohttp.ClientResponse = await self.client.request("GET", "/module/logs.json")
+        resp: aiohttp.ClientResponse = await self.client.request("GET", EndPoints.module_logs)
         self.assertEqual(resp.status, 400)
         # return "not found" on bad name
-        resp: aiohttp.ClientResponse = await self.client.request("GET", "/module/logs.json",
+        resp: aiohttp.ClientResponse = await self.client.request("GET", EndPoints.module_logs,
                                                                  params={'name': 'unknown'})
         self.assertEqual(resp.status, 404)

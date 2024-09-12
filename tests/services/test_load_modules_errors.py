@@ -25,7 +25,7 @@ class TestLoadModulesErrors(DbTestCase):
         with self.assertLogs(level="ERROR") as logs:
             attempt_load(conf_str, self.db)
         all_logs = ' '.join(logs.output).lower()
-        self.assertTrue('exec_cmd' in all_logs)
+        self.assertIn('exec_cmd', all_logs)
 
     def test_streams_must_be_configured(self):
         conf_str = """
@@ -39,7 +39,7 @@ class TestLoadModulesErrors(DbTestCase):
         with self.assertLogs(level="ERROR") as logs:
             attempt_load(conf_str, self.db)
         all_logs = ' '.join(logs.output).lower()
-        self.assertTrue('configured' in all_logs)
+        self.assertIn('configured', all_logs)
 
 
 def attempt_load(conf_str, db: Session):

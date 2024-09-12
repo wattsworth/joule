@@ -99,7 +99,7 @@ class TestStreamAnnotation(FakeJouleTestCase):
         result = runner.invoke(main, ['stream', 'annotations', '/my/stream',
                                       '--start', 'baddate',
                                       '--end', '29 Jun 2019 16:00'])
-        self.assertTrue('start time' in result.output)
+        self.assertIn('start time', result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()
 
@@ -110,7 +110,7 @@ class TestStreamAnnotation(FakeJouleTestCase):
         result = runner.invoke(main, ['stream', 'annotations', '/my/stream',
                                       '--start', '28 Jun 2019 16:00',
                                       '--end', 'baddate'])
-        self.assertTrue('end time' in result.output)
+        self.assertIn('end time', result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()
 

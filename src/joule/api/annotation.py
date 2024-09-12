@@ -2,6 +2,7 @@ from typing import Union, List, Optional, TYPE_CHECKING
 from dataclasses import dataclass
 
 from joule import errors
+from joule.constants import EndPoints
 from .session import BaseSession
 
 #if TYPE_CHECKING:
@@ -87,9 +88,9 @@ async def annotation_create(session: BaseSession,
     elif type(stream) is str:
         data["stream_path"] = stream
     else:
-        raise errors.ApiError("Invalid stream datatype. Must be DataStream, Path, or ID")
+        raise errors.InvalidDataStreamParameter()
 
-    json = await session.post("/annotation.json", json=data)
+    json = await session.post(EndPoints.annotation, json=data)
     return from_json(json)
 
 
@@ -101,7 +102,7 @@ async def annotation_delete(session: BaseSession,
     elif type(annotation) is int:
         data["id"] = annotation
 
-    await session.delete("/annotation.json", params=data)
+    await session.delete(EndPoints.annotation, params=data)
 
 
 async def annotation_update(session: BaseSession,
@@ -110,7 +111,7 @@ async def annotation_update(session: BaseSession,
             "title": annotation.title,
             "content": annotation.content,
             }
-    json = await session.put("/annotation.json", json=data)
+    json = await session.put(EndPoints.annotation, json=data)
     return from_json(json)
 
 
@@ -124,9 +125,9 @@ async def annotation_info(session: BaseSession,
     elif type(stream) is str:
         data["stream_path"] = stream
     else:
-        raise errors.ApiError("Invalid stream datatype. Must be DataStream, Path, or ID")
+        raise errors.InvalidDataStreamParameter()
 
-    json = await session.get("/annotations/info.json", data)
+    json = await session.get(EndPoints.annotations_info, data)
     return AnnotationInfo(**json)
 
 
@@ -149,9 +150,9 @@ async def annotation_get(session: BaseSession,
     elif type(stream) is str:
         data["stream_path"] = stream
     else:
-        raise errors.ApiError("Invalid stream datatype. Must be DataStream, Path, or ID")
+        raise errors.InvalidDataStreamParameter()
 
-    json = await session.get("/annotations.json", data)
+    json = await session.get(EndPoints.annotations, data)
 
     annotations = []
     for item in json:

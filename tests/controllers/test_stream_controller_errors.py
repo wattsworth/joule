@@ -10,6 +10,7 @@ from joule.models import DataStream, Element
 import joule.controllers
 from tests.controllers.helpers import create_db, MockStore
 from joule import app_keys
+from joule.constants import EndPoints
 
 psql_key = web.AppKey("psql", testing.postgresql.Postgresql)
 class TestStreamControllerErrors(AioHTTPTestCase):
@@ -36,80 +37,80 @@ class TestStreamControllerErrors(AioHTTPTestCase):
 
     async def test_stream_info(self):
         # must specify an id or a path
-        resp: aiohttp.ClientResponse = await self.client.request("GET", "/stream.json")
+        resp: aiohttp.ClientResponse = await self.client.request("GET", EndPoints.stream)
         self.assertEqual(resp.status, 400)
         # return "not found" on bad id
-        resp: aiohttp.ClientResponse = await self.client.request("GET", "/stream.json?id=2348")
+        resp: aiohttp.ClientResponse = await self.client.request("GET", f"{EndPoints.stream}?id=2348")
         self.assertEqual(resp.status, 404)
         # return "not found" on bad path
         payload = {'path': "/bad/path"}
-        resp = await self.client.request("GET", "/stream.json", params=payload)
+        resp = await self.client.request("GET", EndPoints.stream, params=payload)
         self.assertEqual(resp.status, 404)
 
     async def test_stream_move(self):
         db: Session = self.app[app_keys.db]
 
         # must be json
-        resp = await self.client.put("/stream/move.json", data={"dest_path": "/new/folder3"})
+        resp = await self.client.put(EndPoints.stream_move, data={"dest_path": "/new/folder3"})
         self.assertEqual(resp.status, 400)
         self.assertIn("json", await resp.text())
         # must specify an id or a path
-        resp = await self.client.put("/stream/move.json", json={"dest_path": "/new/folder3"})
+        resp = await self.client.put(EndPoints.stream_move, json={"dest_path": "/new/folder3"})
         self.assertEqual(resp.status, 400)
         # must specify a destination
-        resp = await self.client.put("/stream/move.json", json={"src_path": "/folder1/stream1"})
+        resp = await self.client.put(EndPoints.stream_move, json={"src_path": "/folder1/stream1"})
         self.assertEqual(resp.status, 400)
         # return "not found" on bad id
-        resp = await self.client.put("/stream/move.json", json={"src_id": 2348,
+        resp = await self.client.put(EndPoints.stream_move, json={"src_id": 2348,
                                                                 "dest_path": "/x/y"})
         self.assertEqual(resp.status, 404)
         # return "not found" on bad path
-        resp = await self.client.put("/stream/move.json", json={"src_path": "/folder2/deeper",
+        resp = await self.client.put(EndPoints.stream_move, json={"src_path": "/folder2/deeper",
                                                                 "dest_path": "/x/y"})
         self.assertEqual(resp.status, 404)
         # error on bad destination
-        resp = await self.client.put("/stream/move.json", json={"src_path": "/folder2/deeper",
+        resp = await self.client.put(EndPoints.stream_move, json={"src_path": "/folder2/deeper",
                                                                 "dest_path": "malformed"})
         self.assertEqual(resp.status, 404)
-        resp = await self.client.put("/stream/move.json", json={"src_path": "/folder1/stream1",
+        resp = await self.client.put(EndPoints.stream_move, json={"src_path": "/folder1/stream1",
                                                                 "dest_path": "invalid"})
         self.assertEqual(resp.status, 400)
 
         # cannot conflict with an existing stream in the destination
-        resp = await self.client.put("/stream/move.json", json={"src_path": "/folder_x1/same_name",
+        resp = await self.client.put(EndPoints.stream_move, json={"src_path": "/folder_x1/same_name",
                                                                 "dest_path": "/folder_x2"})
         self.assertEqual(resp.status, 400)
         # cannot move streams with a fixed configuration
         my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
         my_stream.is_configured = True
-        resp = await self.client.put("/stream/move.json", json={"src_path": "/folder1/stream1",
+        resp = await self.client.put(EndPoints.stream_move, json={"src_path": "/folder1/stream1",
                                                                 "dest_path": "/folder8"})
         self.assertEqual(resp.status, 400)
         self.assertTrue('locked' in await resp.text())
 
     async def test_stream_create(self):
         # must be json
-        resp = await self.client.post("/stream.json", data={"bad_values": "not_json"})
+        resp = await self.client.post(EndPoints.stream, data={"bad_values": "not_json"})
         self.assertEqual(resp.status, 400)
         self.assertIn("json", await resp.text())
 
         # must specify a stream
-        resp = await self.client.post("/stream.json", json={"dest_path": "/folder2/deeper"})
+        resp = await self.client.post(EndPoints.stream, json={"dest_path": "/folder2/deeper"})
         self.assertEqual(resp.status, 400)
         # invalid dest_path
-        resp = await self.client.post("/stream.json", json={"dest_path": "notapath"})
+        resp = await self.client.post(EndPoints.stream, json={"dest_path": "notapath"})
         self.assertEqual(resp.status, 400)
         # must specify a path
         new_stream = DataStream(name="test", datatype=DataStream.DATATYPE.FLOAT32,
                                 updated_at=datetime.datetime.utcnow())
         new_stream.elements = [Element(name="e%d" % j, index=j,
                                        display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(3)]
-        resp = await self.client.post("/stream.json", json={"stream": new_stream.to_json()})
+        resp = await self.client.post(EndPoints.stream, json={"stream": new_stream.to_json()})
         self.assertEqual(resp.status, 400)
         # element names must be unique
         e1_name = new_stream.elements[1].name
         new_stream.elements[1].name = new_stream.elements[2].name
-        resp = await self.client.post("/stream.json", json={
+        resp = await self.client.post(EndPoints.stream, json={
             "dest_path": "/folder2/deeper",
             "stream": new_stream.to_json()})
         self.assertEqual(resp.status, 400)
@@ -118,68 +119,68 @@ class TestStreamControllerErrors(AioHTTPTestCase):
 
         # stream must have a unique name in the folder
         new_stream.name = "stream1"
-        resp = await self.client.post("/stream.json", json={"stream": new_stream.to_json(),
+        resp = await self.client.post(EndPoints.stream, json={"stream": new_stream.to_json(),
                                                             "dest_path": "/folder1"})
         self.assertEqual(resp.status, 400)
         self.assertIn("same name", await resp.text())
         # invalid dest_path
-        resp = await self.client.post("/stream.json", json={"stream": new_stream.to_json(),
+        resp = await self.client.post(EndPoints.stream, json={"stream": new_stream.to_json(),
                                                             "dest_path": "notapath"})
         self.assertEqual(resp.status, 400)
         # stream must have a name
         new_stream.name = ""
-        resp = await self.client.post("/stream.json", json={"stream": new_stream.to_json(),
+        resp = await self.client.post(EndPoints.stream, json={"stream": new_stream.to_json(),
                                                             "dest_path": "/a/valid/path"})
         self.assertEqual(resp.status, 400)
         self.assertIn("name", await resp.text())
         new_stream.name = "test"
         # stream must have at least one element
         new_stream.elements = []
-        resp = await self.client.post("/stream.json", json={"stream": new_stream.to_json(),
+        resp = await self.client.post(EndPoints.stream, json={"stream": new_stream.to_json(),
                                                             "dest_path": "/a/valid/path"})
         self.assertEqual(resp.status, 400)
         self.assertIn("element", await resp.text())
 
         # invalid stream json (test all different exception paths)
-        resp = await self.client.post("/stream.json", json={"dest_path": "/path/to",
+        resp = await self.client.post(EndPoints.stream, json={"dest_path": "/path/to",
                                                             "stream": 'notjson'})
         self.assertEqual(resp.status, 400)
         self.assertIn("JSON", await resp.text())
 
         json = new_stream.to_json()
         json["datatype"] = "invalid"
-        resp = await self.client.post("/stream.json", json={"dest_path": "/path/to",
+        resp = await self.client.post(EndPoints.stream, json={"dest_path": "/path/to",
                                                             "stream": json})
         self.assertEqual(resp.status, 400)
         self.assertIn("specification", await resp.text())
         self.assertIn("datatype", await resp.text())
 
         del json["datatype"]
-        resp = await self.client.post("/stream.json", json={"dest_path": "/path/to",
+        resp = await self.client.post(EndPoints.stream, json={"dest_path": "/path/to",
                                                             "stream": json})
         self.assertEqual(resp.status, 400)
         self.assertIn("datatype", await resp.text())
 
         # incorrect stream format
-        resp = await self.client.post("/stream.json", json={"path": "/path/to",
+        resp = await self.client.post(EndPoints.stream, json={"path": "/path/to",
                                                             "stream": '{"invalid": 2}'})
         self.assertEqual(resp.status, 400)
 
     async def test_stream_delete(self):
         db: Session = self.app[app_keys.db]
 
-        resp = await self.client.delete("/stream.json", params={})
+        resp = await self.client.delete(EndPoints.stream, params={})
         self.assertEqual(resp.status, 400)
         # return "not found" on bad id
-        resp = await self.client.delete("/stream.json", params={"id": 2348})
+        resp = await self.client.delete(EndPoints.stream, params={"id": 2348})
         self.assertEqual(resp.status, 404)
         # return "not found" on bad path
-        resp = await self.client.delete("/stream.json", params={"path": "/bad/path"})
+        resp = await self.client.delete(EndPoints.stream, params={"path": "/bad/path"})
         self.assertEqual(resp.status, 404)
         # cannot delete locked streams
         my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
         my_stream.is_configured = True
-        resp = await self.client.delete("/stream.json", params={"id": my_stream.id})
+        resp = await self.client.delete(EndPoints.stream, params={"id": my_stream.id})
         self.assertEqual(resp.status, 400)
         self.assertTrue('locked' in await resp.text())
         self.assertIsNotNone(db.query(DataStream).filter_by(name="stream1").one())
@@ -189,7 +190,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
 
         # must be json
-        resp = await self.client.put("/stream.json", data={"bad_values": "not_json"})
+        resp = await self.client.put(EndPoints.stream, data={"bad_values": "not_json"})
         self.assertEqual(resp.status, 400)
         self.assertIn("json", await resp.text())
 
@@ -202,7 +203,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
                               {"name": "new1"},
                               {"name": "new3"}]}
         }
-        resp = await self.client.put("/stream.json", json=payload)
+        resp = await self.client.put(EndPoints.stream, json=payload)
         self.assertEqual(resp.status, 400)
         self.assertTrue('display_type' in await resp.text())
 
@@ -216,7 +217,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         payload = {
             "stream": {"name": "new name"}
         }
-        resp = await self.client.put("/stream.json", json=payload)
+        resp = await self.client.put(EndPoints.stream, json=payload)
         self.assertEqual(resp.status, 400)
         self.assertTrue('id' in await resp.text())
 
@@ -224,7 +225,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         payload = {
             "id": my_stream.id
         }
-        resp = await self.client.put("/stream.json", json=payload)
+        resp = await self.client.put(EndPoints.stream, json=payload)
         self.assertEqual(resp.status, 400)
         self.assertTrue('stream' in await resp.text())
 
@@ -233,7 +234,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
             "id": my_stream.id,
             "stream": "notjson"
         }
-        resp = await self.client.put("/stream.json", json=payload)
+        resp = await self.client.put(EndPoints.stream, json=payload)
         self.assertEqual(resp.status, 400)
         self.assertTrue('JSON' in await resp.text())
 
@@ -243,7 +244,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
             "id": my_stream.id,
             "stream": {"name": "new name"}
         }
-        resp = await self.client.put("/stream.json", json=payload)
+        resp = await self.client.put(EndPoints.stream, json=payload)
         self.assertEqual(resp.status, 400)
         self.assertTrue('locked' in await resp.text())
 
@@ -252,7 +253,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
             "id": 4898,
             "stream": {"name": "new name"}
         }
-        resp = await self.client.put("/stream.json", json=payload)
+        resp = await self.client.put(EndPoints.stream, json=payload)
         self.assertEqual(resp.status, 404)
         self.assertTrue('exist' in await resp.text())
 
@@ -262,6 +263,6 @@ class TestStreamControllerErrors(AioHTTPTestCase):
             "id": my_stream.id,
             "stream": {"name": "same_name"}
         }
-        resp = await self.client.put("/stream.json", json=payload)
+        resp = await self.client.put(EndPoints.stream, json=payload)
         self.assertEqual(resp.status, 400)
         self.assertIn('same name', await resp.text())

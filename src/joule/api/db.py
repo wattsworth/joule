@@ -3,10 +3,11 @@ from urllib.parse import urlparse
 
 from .session import BaseSession
 from joule.utilities import connection_info
+from joule.constants import EndPoints
 
 
 async def db_connect(session: BaseSession) -> sqlalchemy.engine.Engine:
-    resp = await session.get("/db/connection.json")
+    resp = await session.get(EndPoints.db_connection)
     conn_info = connection_info.from_json(resp)
     # replace the host with the session host
     url = urlparse(session.url)
@@ -15,7 +16,7 @@ async def db_connect(session: BaseSession) -> sqlalchemy.engine.Engine:
 
 
 async def db_connection_info(session: BaseSession) -> connection_info.ConnectionInfo:
-    resp = await session.get("/db/connection.json")
+    resp = await session.get(EndPoints.db_connection)
     # replace the host with the session host
     conn_info = connection_info.from_json(resp)
     url = urlparse(session.url)

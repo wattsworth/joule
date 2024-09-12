@@ -87,4 +87,5 @@ class StdoutPipe:
         print("--- interval gap ---", file=sys.stderr)
 
     async def close(self):
+        # this provides API compatibility with Pipe, no action needed
         pass

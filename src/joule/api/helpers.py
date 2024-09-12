@@ -9,7 +9,7 @@ from joule.api.node.node_config import NodeConfig
 from joule import errors
 
 from joule.api.node.base_node import BaseNode
-
+from joule.constants import ConfigFiles
 
 def get_node(name: str = "") -> BaseNode:
     try:
@@ -71,7 +71,7 @@ def set_default_node(node: Union[str, BaseNode]) -> None:
         name = node.name
 
     config_dir = _user_config_dir()
-    default_node_path = os.path.join(config_dir, "default_node.txt")
+    default_node_path = os.path.join(config_dir, ConfigFiles.default_node)
 
     node_configs = _get_node_configs()
     if len(name) > 0 and name not in node_configs.keys():
@@ -109,7 +109,7 @@ def _get_cafile():
 def _get_node_configs() -> Dict[str, NodeConfig]:
     node_configs = {}
     config_dir = _user_config_dir()
-    nodes_path = os.path.join(config_dir, "nodes.json")
+    nodes_path = os.path.join(config_dir, ConfigFiles.nodes)
 
     # if nodes.json does not exist try to create it
 
@@ -132,7 +132,7 @@ def _get_default_node(configs: Dict[str, NodeConfig]) -> NodeConfig:
     # if default_node.txt is empty or does not exist set it
     # to the first entry in nodes
     config_dir = _user_config_dir()
-    default_node_path = os.path.join(config_dir, "default_node.txt")
+    default_node_path = os.path.join(config_dir, ConfigFiles.default_node)
     # Case 1: No nodes in nodes.json
     if len(configs) == 0:
         # no nodes, remove the default
@@ -165,8 +165,8 @@ def _get_default_node(configs: Dict[str, NodeConfig]) -> NodeConfig:
 
 def _write_node_configs(node_configs: Dict[str, NodeConfig]):
     config_dir = _user_config_dir()
-    nodes_path = os.path.join(config_dir, "nodes.json")
-    default_node_path = os.path.join(config_dir, "default_node.txt")
+    nodes_path = os.path.join(config_dir, ConfigFiles.nodes)
+    default_node_path = os.path.join(config_dir, ConfigFiles.default_node)
 
     # write out the key into nodes.json
     with open(nodes_path, "w") as f:
@@ -200,9 +200,9 @@ def _fix_config_ownership():
 
     config_dir = _user_config_dir()
     os.chown(config_dir, uid, gid)
-    nodes_path = os.path.join(config_dir, "nodes.json")
+    nodes_path = os.path.join(config_dir, ConfigFiles.nodes)
     os.chown(nodes_path, uid, gid)
-    default_node_path = os.path.join(config_dir, "default_node.txt")
+    default_node_path = os.path.join(config_dir, ConfigFiles.default_node)
     os.chown(default_node_path, uid, gid)
 
 
@@ -216,7 +216,7 @@ def _user_config_dir() -> str:
     elif "APPDATA" in os.environ:
         config_dir = os.path.join(os.environ["APPDATA"], ".joule")
     else:
-        raise Exception("specify JOULE_USER_CONFIG_DIR environment variable")
+        raise errors.ApiError("specify JOULE_USER_CONFIG_DIR environment variable")
     if not os.path.isdir(config_dir):
         os.mkdir(config_dir, mode=0o700)
     return config_dir

@@ -43,7 +43,7 @@ class BaseSession:
             return self._nilmdb_available
         # this is the first time, we have to check...
         self._nilmdb_checked=True
-        resp = await self.get("/db/connection.json")
+        resp = await self.get(EndPoints.db_connection)
         conn_info = connection_info.from_json(resp)
         if conn_info.nilmdb_url is None or conn_info.nilmdb_url == "":
             self._nilmdb_available = False

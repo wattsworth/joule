@@ -8,6 +8,7 @@ from joule.models.master import Master, make_key
 from joule.utilities.misc import detect_url
 from joule import errors
 from joule import app_keys
+from joule.constants import EndPoints
 
 # NOTE: This controller is best tested with e2e
 # ignored for unittests
@@ -137,7 +138,7 @@ async def _send_node_key(key: str,
               'scheme': local_scheme}
     if cafile != "":
         params["name_is_host"] = 1
-    resp = await session.post("/follower.json", json=params)
+    resp = await session.post(EndPoints.follower, json=params)
     await session.close()
     return resp['name']
 
@@ -172,8 +173,6 @@ async def _send_lumen_key(key: str,
     #    params["name_is_host"] = 1
     try:
         await session.post("/nilms.json", json=params)
-    except errors.ApiError as e:
-        raise e
     finally:
         await session.close()
     return identifier

@@ -4,6 +4,7 @@ import aiohttp
 from joule.models.pipes import compute_dtype
 from joule.utilities.time import time_now
 from joule.utilities.misc import timestamps_are_monotonic, validate_values
+from joule.constants import EndPoints
 from .session import BaseSession
 from .data_stream import (DataStream,
                           data_stream_get,
@@ -41,9 +42,9 @@ async def data_delete(session: BaseSession,
     elif type(stream) is int:
         params['id'] = stream
     else:
-        raise errors.ApiError("Invalid stream datatype. Must be DataStream, Path, or ID")
+        raise errors.InvalidDataStreamParameter()
 
-    await session.delete("/data", params)
+    await session.delete(EndPoints.data, params)
 
 
 async def data_write(session: BaseSession,
@@ -95,12 +96,12 @@ async def data_intervals(session: BaseSession,
     elif type(stream) is str:
         data["path"] = stream
     else:
-        raise errors.ApiError("Invalid stream datatype. Must be DataStream, Path, or ID")
+        raise errors.InvalidDataStreamParameter()
     if start_time is not None:
         data['start'] = int(start_time)
     if end_time is not None:
         data['end'] = int(end_time)
-    return await session.get("/data/intervals.json", params=data)
+    return await session.get(EndPoints.data_intervals, params=data)
 
 async def data_drop_decimations(session: BaseSession,
                                 stream: DataStream | str | int):
@@ -112,8 +113,8 @@ async def data_drop_decimations(session: BaseSession,
     elif type(stream) is str:
         data["path"] = stream
     else:
-        raise errors.ApiError("Invalid stream datatype. Must be DataStream, Path, or ID")
-    await session.delete("/data/decimate.json", params=data)
+        raise errors.InvalidDataStreamParameter()
+    await session.delete(EndPoints.data_decimate, params=data)
 
 
 async def data_decimate(session: BaseSession,
@@ -126,8 +127,8 @@ async def data_decimate(session: BaseSession,
     elif type(stream) is str:
         data["path"] = stream
     else:
-        raise errors.ApiError("Invalid stream datatype. Must be DataStream, Path, or ID")
-    await session.post("/data/decimate.json", params=data)
+        raise errors.InvalidDataStreamParameter()
+    await session.post(EndPoints.data_decimate, params=data)
 
 
 async def data_consolidate(session: BaseSession,
@@ -144,13 +145,13 @@ async def data_consolidate(session: BaseSession,
     elif type(stream) is str:
         data["path"] = stream
     else:
-        raise errors.ApiError("Invalid stream datatype. Must be DataStream, Path, or ID")
+        raise errors.InvalidDataStreamParameter()
     if start_time is not None:
         data['start'] = int(start_time)
     if end_time is not None:
         data['end'] = int(end_time)
     data['max_gap'] = int(max_gap)
-    resp = await session.post("/data/consolidate.json", params=data)
+    resp = await session.post(EndPoints.data_consolidate, params=data)
     return resp['num_consolidated']
 
 
@@ -208,10 +209,9 @@ async def data_subscribe(session: BaseSession,
                          stream: DataStream | str | int) -> Pipe:
     # make sure the input is compatible
     src_stream = await data_stream_get(session, stream)
-    if type(stream) is DataStream:
-        if stream.layout != src_stream.layout:
-            raise errors.ApiError("Input [%s] configured for [%s] but source is [%s]" % (
-                stream, stream.layout, src_stream.layout))
+    if type(stream) is DataStream and stream.layout != src_stream.layout:
+        raise errors.ApiError("Input [%s] configured for [%s] but source is [%s]" % (
+            stream, stream.layout, src_stream.layout))
 
     # make sure the stream is being produced
     if not src_stream.is_destination:
@@ -243,7 +243,7 @@ async def _live_reader(session: BaseSession, my_stream: DataStream,
     params = {'id': my_stream.id, 'subscribe': '1'}
     try:
         raw_session = await session.get_session()
-        async with raw_session.get(session.url + "/data",
+        async with raw_session.get(session.url + EndPoints.data,
                                    params=params,
                                    ssl=session.ssl_context) as response:
             if response.status != 200:  # pragma: no cover
@@ -285,7 +285,7 @@ async def _historic_reader(session: BaseSession,
         params['end'] = int(end_time)
     try:
         my_session = await session.get_session()
-        async with my_session.get(session.url + "/data",
+        async with my_session.get(session.url + EndPoints.data,
                                   params=params,
                                   ssl=session.ssl_context) as response:
             if response.status != 200:  # pragma: no cover
@@ -325,11 +325,8 @@ async def _send_data(session: BaseSession,
                      stream: DataStream,
                      pipe: Pipe,
                      merge_gap: int):
-    # TODO is this necssary?
-    output_complete = False
 
     async def _data_sender():
-        nonlocal output_complete
         try:
             last_ts = None
             while True:
@@ -341,22 +338,21 @@ async def _send_data(session: BaseSession,
                 if len(data) > 0:
                     yield data.tobytes()
                     last_ts = data['timestamp'][-1]
-                # warn if there is data in this chunk that is older than the keep value
-                # of the destination stream (-1 == KEEP ALL data)
-                if stream.keep_us != -1 and (data['timestamp'][0] < time_now() - stream.keep_us):
-                    log.warning("this data is older than the keep value of the destination stream, it may be discarded")
+                    # warn if there is data in this chunk that is older than the keep value
+                    # of the destination stream (-1 == KEEP ALL data)
+                    if stream.keep_us != -1 and (data['timestamp'][0] < time_now() - stream.keep_us):
+                        log.warning("this data is older than the keep value of the destination stream, it may be discarded")
                 if pipe.end_of_interval:
                     yield interval_token(stream.layout).tobytes()
                 pipe.consume(len(data))
         except EmptyPipe:
             yield interval_token(stream.layout).tobytes()
-        output_complete = True
 
     try:
-        result = await session.post("/data",
-                                    params={"id": stream.id, "merge-gap": int(merge_gap)},
-                                    data=_data_sender(),
-                                    chunked=True)
+        await session.post(EndPoints.data,
+                           params={"id": stream.id, "merge-gap": int(merge_gap)},
+                           data=_data_sender(),
+                           chunked=True)
     except Exception as e:
         pipe.fail()
         raise e

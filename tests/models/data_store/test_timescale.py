@@ -8,6 +8,7 @@ import shutil
 import os
 import sys
 import unittest
+import asyncio
 
 from joule.models import DataStream, Element, pipes
 from joule.models.data_store import psql_helpers
@@ -25,17 +26,20 @@ class TestTimescale(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         # set up the pscql database
         self.psql_dir = tempfile.TemporaryDirectory()
-        self.postgresql = testing.postgresql.Postgresql(base_dir=self.psql_dir.name)
-        self.postgresql.stop()
+        # run this asynchronously to avoid blocking the event loop
+        def start_postgresql_instance():
+            return testing.postgresql.Postgresql(base_dir=self.psql_dir.name)
+        self.postgresql = await asyncio.to_thread(start_postgresql_instance)
+        await asyncio.to_thread(self.postgresql.stop)
+
         # now that the directory structure is created, customize the *.conf file
         src = os.path.join(os.path.dirname(__file__), "postgresql.conf")
         dest = os.path.join(self.psql_dir.name, "data", "postgresql.conf")
         shutil.copyfile(src, dest)
         # restart the database
-        self.postgresql = testing.postgresql.Postgresql(base_dir=self.psql_dir.name)
+        self.postgresql = await asyncio.to_thread(start_postgresql_instance)
 
         self.db_url = self.postgresql.url()
-        # self.db_url = "postgresql://joule:joule@127.0.0.1:5432/joule"
         conn: asyncpg.Connection = await asyncpg.connect(self.db_url)
         await conn.execute("CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE ")
         await conn.execute("CREATE USER joule_module")
@@ -44,33 +48,29 @@ class TestTimescale(unittest.IsolatedAsyncioTestCase):
             file_path = os.path.join(SQL_DIR, file)
             with open(file_path, 'r') as f:
                 await conn.execute(f.read())
-        # await conn.execute("GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO joule_module;")
-        # await conn.execute("DROP SCHEMA IF EXISTS data CASCADE")
-        # await conn.execute("CREATE SCHEMA data")
-        # await conn.execute("GRANT ALL ON SCHEMA data TO public")
         await conn.close()
 
     async def asyncTearDown(self):
-        self.postgresql.stop()
+        await asyncio.to_thread(self.postgresql.stop)
         self.psql_dir.cleanup()
 
     async def test_runner(self):
         tests = [
             self._test_merge_gaps_on_write,
             self._test_basic_insert_extract,
-                 self._test_extract_data_with_intervals,
-                 self._test_extract_decimated_data,
-                 self._test_db_info,
-                 self._test_info,
-                 self._test_intervals,
-                 self._test_remove,
-                 self._test_destroy,
-                 self._test_row_count,
-                 self._test_actions_on_empty_streams,
-                 self._test_consolidate,
-                 self._test_consolidate_with_time_bounds,
-                 self._test_remove_decimations,
-                 self._test_redecimates_data]
+            self._test_extract_data_with_intervals,
+            self._test_extract_decimated_data,
+            self._test_db_info,
+            self._test_info,
+            self._test_intervals,
+            self._test_remove,
+            self._test_destroy,
+            self._test_row_count,
+            self._test_actions_on_empty_streams,
+            self._test_consolidate,
+            self._test_consolidate_with_time_bounds,
+            self._test_remove_decimations,
+            self._test_redecimates_data]
         for test in tests:
             conn: asyncpg.Connection = await asyncpg.connect(self.db_url)
             await conn.execute("DROP SCHEMA IF EXISTS data CASCADE")
@@ -294,21 +294,24 @@ class TestTimescale(unittest.IsolatedAsyncioTestCase):
         for chunk in helpers.to_chunks(data, 16):
             await source.put(chunk.tobytes())
             await source.put(pipes.interval_token(test_stream.layout).tobytes())
-        await task
+        await task # put the data in the database, 16 rows per interval
         conn: asyncpg.Connection = await asyncpg.connect(self.db_url)
         table_names = await psql_helpers.get_decimation_table_names(conn, test_stream, with_schema=False)
         # interval breaks cause decimation to stop after level 16 (level 64 is created but empty)
         self.assertEqual(len(table_names),3)
         orig_data = await conn.fetch("SELECT * FROM data.stream1_16")
-
         # redecimate doesn't change anything
         await self.store.decimate(test_stream)
         redecimated_data = await conn.fetch("SELECT * FROM data.stream1_16")
         self.assertEqual(orig_data, redecimated_data)
 
+        intervals = await self.store.intervals(test_stream, start=None, end=None)
+        self.assertEqual(len(intervals), 64)
         # now consolidate the intervals
         await self.store.consolidate(test_stream, start=None, end=None,
                                      max_gap = data['timestamp'][1]-data['timestamp'][0])
+        intervals = await self.store.intervals(test_stream, start=None, end=None)
+        self.assertEqual(len(intervals), 1)
         # redecimate
         await self.store.decimate(test_stream)
         table_names = await psql_helpers.get_decimation_table_names(conn, test_stream, with_schema=False)
@@ -426,8 +429,8 @@ class TestTimescale(unittest.IsolatedAsyncioTestCase):
         await self.store.destroy(self.test_stream)
         records = await self.store.info([self.test_stream])
         info = records[self.test_stream.id]
-        self.assertEqual(info.start, None)
-        self.assertEqual(info.end, None)
+        self.assertIsNone(info.start)
+        self.assertIsNone(info.end)
         self.assertEqual(info.total_time, 0)
         self.assertEqual(info.rows, 0)
         self.assertEqual(info.bytes, 0)
@@ -484,28 +487,10 @@ class TestTimescale(unittest.IsolatedAsyncioTestCase):
         # data: 100 samples spaced at 1000us
         test_stream = DataStream(id=1, name="stream1", datatype=DataStream.DATATYPE.FLOAT32, keep_us=DataStream.KEEP_ALL,
                                  decimate=True, elements=[Element(name="e%d" % x) for x in range(3)])
-        pipe = pipes.LocalPipe(test_stream.layout)
         nrows = 955
         orig_data = helpers.create_data(layout=test_stream.layout, length=nrows)
-        chunks = [orig_data[:300], orig_data[305:400], orig_data[402:700], orig_data[800:]]
-        # data: |++++++|  |+++++++++|    |++++++|    |++++|
-        #               ^--5000 us    ^--2000 us   ^---0.1 sec (retained)
-        chunks = [orig_data[:300], orig_data[305:400], orig_data[402:700], orig_data[800:850], orig_data[852:]]
-        # data: |++++++|  |+++++++++|    |++++++|    |++++|  |++++|
-        #               ^--5000 us    ^--2000 us   |        ^--- 2000 us
-        #                                          `---0.1 sec (retained)
-        task = await self.store.spawn_inserter(test_stream, pipe)
-        for chunk in chunks:
-            await pipe.write(chunk)
-            await pipe.close_interval()
-        await pipe.close()
-        await task
-
-        # extract data
-        extracted_data = []
 
         rx_chunks = []
-
         async def callback(rx_data, layout, factor):
             #if rx_data[0] != pipes.interval_token(layout):
             if rx_data[-1][0]==0:
@@ -513,6 +498,38 @@ class TestTimescale(unittest.IsolatedAsyncioTestCase):
             else:
                 rx_chunks.append(rx_data)
 
+        chunks = [orig_data[:300], orig_data[305:400], orig_data[402:700], orig_data[800:]]
+        # data: |++++++|  |+++++++++|    |++++++|    |++++|
+        #               ^--5000 us    ^--2000 us   ^---0.1 sec (retained)
+        pipe = pipes.LocalPipe(test_stream.layout)
+        task = await self.store.spawn_inserter(test_stream, pipe)
+        for chunk in chunks:
+            await pipe.write(chunk)
+            await pipe.close_interval()
+        await pipe.close()
+        await task
+
+        await self.store.consolidate(test_stream, start=None, end=None, max_gap=6e3)
+        await self.store.extract(test_stream, start=None, end=None, callback=callback)
+        # should only be two intervals left (the first three are consolidated)
+        np.testing.assert_array_equal(rx_chunks[0], np.hstack(chunks[:3]))
+        np.testing.assert_array_equal(rx_chunks[1], np.hstack(chunks[3:]))
+        self.assertEqual(len(rx_chunks), 2)
+        await self.store.remove(test_stream, start=None, end=None) # drop the data to get ready for the next test
+
+        chunks = [orig_data[:300], orig_data[305:400], orig_data[402:700], orig_data[800:850], orig_data[852:]]
+        # data: |++++++|  |+++++++++|    |++++++|    |++++|  |++++|
+        #               ^--5000 us    ^--2000 us   |        ^--- 2000 us
+        #                                          `---0.1 sec (retained)
+        pipe = pipes.LocalPipe(test_stream.layout)
+        task = await self.store.spawn_inserter(test_stream, pipe)
+        for chunk in chunks:
+            await pipe.write(chunk)
+            await pipe.close_interval()
+        await pipe.close()
+        await task
+
+        rx_chunks = [] # flush the rx buffer for the next test
         await self.store.consolidate(test_stream, start=None, end=None, max_gap=6e3)
         await self.store.extract(test_stream, start=None, end=None, callback=callback)
 
@@ -541,8 +558,6 @@ class TestTimescale(unittest.IsolatedAsyncioTestCase):
         await task
 
         # extract data
-        extracted_data = []
-
         rx_chunks = []
 
         async def callback(rx_data, layout, factor):
@@ -605,8 +620,8 @@ class TestTimescale(unittest.IsolatedAsyncioTestCase):
 
         # check the empty stream
         info = records[empty_stream.id]
-        self.assertEqual(info.start, None)
-        self.assertEqual(info.end, None)
+        self.assertIsNone(info.start)
+        self.assertIsNone(info.end)
         self.assertEqual(info.total_time, 0)
         self.assertEqual(info.rows, 0)
         self.assertEqual(info.bytes, 0)

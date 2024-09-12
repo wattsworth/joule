@@ -80,4 +80,4 @@ class TestElementErrors(unittest.TestCase):
                 "default_min": 100,
                 "default_max": 10
             })
-        self.assertTrue('default_min' in str(error.exception))
+        self.assertIn('default_min', str(error.exception))

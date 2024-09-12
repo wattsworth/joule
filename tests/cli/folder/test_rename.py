@@ -32,7 +32,7 @@ class TestFolderRename(FakeJouleTestCase):
         self.start_server(server)
         runner = CliRunner()
         result = runner.invoke(main, ['folder', 'rename', '/bad/path', 'new name'])
-        self.assertTrue("Error" in result.output)
+        self.assertIn("Error", result.output)
         self.stop_server()
 
     def test_when_server_returns_error_code(self):
@@ -43,7 +43,7 @@ class TestFolderRename(FakeJouleTestCase):
         self.start_server(server)
         runner = CliRunner()
         result = runner.invoke(main, ['folder', 'rename', '/folder/src', 'new name'])
-        self.assertTrue('500' in result.output)
-        self.assertTrue("test error" in result.output)
+        self.assertIn('500', result.output)
+        self.assertIn("test error", result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()

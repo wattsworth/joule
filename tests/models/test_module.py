@@ -25,7 +25,7 @@ class TestModule(unittest.TestCase):
         self.assertEqual(m.name, "test")
         self.assertEqual(m.description, "long text")
         self.assertEqual(m.exec_cmd, "/bin/runit.sh")
-        self.assertEqual(m.is_app, True)
+        self.assertTrue(m.is_app)
         self.assertEqual(len(m.arguments), 2)  # default value
         self.assertEqual(m.arguments["arg1"], "val1")
         self.assertEqual(m.arguments["arg2"], "val2")
@@ -36,7 +36,7 @@ class TestModule(unittest.TestCase):
         self.config.remove_option("Main", "description")
         m = module.from_config(self.config)
         self.assertEqual(m.description, "")
-        self.assertEqual(m.is_app, False)
+        self.assertFalse(m.is_app)
         self.assertEqual(len(m.arguments), 0)
 
     def test_requires_name_setting(self):

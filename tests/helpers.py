@@ -1,5 +1,4 @@
-import datetime
-
+from datetime import datetime, timezone
 import numpy as np
 import os
 import pdb
@@ -51,7 +50,7 @@ def create_stream(name, layout, id=0) -> DataStream:
     return DataStream(name=name, datatype=datatype, id=id,
                       elements=[Element(name="e%d" % j, index=j,
                                         display_type=Element.DISPLAYTYPE.CONTINUOUS) for j in range(lcount)],
-                      updated_at=datetime.datetime.utcnow())
+                      updated_at=datetime.now(timezone.utc))
 
 
 def to_chunks(data, chunk_size):
@@ -218,9 +217,8 @@ class TestingPipeOld(Pipe):
         self._reread = False
 
     async def write(self, data):
-        sarray = self._apply_dtype(data)
-        self.data_blocks.append(sarray)
-
+        self.write(data)
+        
     def write_nowait(self, data):
         sarray = self._apply_dtype(data)
         self.data_blocks.append(sarray)

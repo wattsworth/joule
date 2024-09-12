@@ -3,7 +3,7 @@ import yarl
 
 from joule import errors
 from .session import BaseSession
-
+from joule.constants import EndPoints
 
 class Proxy:
     """
@@ -43,10 +43,10 @@ async def proxy_get(session: BaseSession,
     else:
         raise errors.ApiError("Invalid proxy datatype. Must be Proxy, Name, or ID")
 
-    resp = await session.get("/proxy.json", params)
+    resp = await session.get(EndPoints.proxy, params)
     return from_json(resp)
 
 
 async def proxy_list(session: BaseSession) -> List[Proxy]:
-    resp = await session.get("/proxies.json")
+    resp = await session.get(EndPoints.proxies)
     return [from_json(item) for item in resp]

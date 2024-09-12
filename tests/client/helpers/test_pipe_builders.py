@@ -1,7 +1,7 @@
 import asyncio
 import numpy as np
 import logging
-import datetime
+from datetime import datetime, timezone
 from unittest import mock
 from icecream import ic
 import unittest
@@ -30,7 +30,7 @@ class TestPipeHelpers(FakeJouleTestCase):
         my_node = api.get_node()
 
         async def runner():
-            pipes_in, pipes_out = await build_network_pipes({'input': '/test/source:int16[x,y,z]'},
+            pipes_in, _ = await build_network_pipes({'input': '/test/source:int16[x,y,z]'},
                                                             {},
                                                             {},
                                                             my_node,
@@ -49,9 +49,8 @@ class TestPipeHelpers(FakeJouleTestCase):
                 await pipes_in['input'].read()
             await my_node.close()
 
-        with self.assertLogs(level='INFO') as log:
+        with self.assertLogs(level='INFO'):
             asyncio.run(runner())
-        log_dump = ' '.join(log.output)
         self.stop_server()
         
 
@@ -64,7 +63,7 @@ class TestPipeHelpers(FakeJouleTestCase):
         my_node = api.get_node()
 
         async def runner():
-            pipes_in, pipes_out = await build_network_pipes({'input': '/test/source:int16[x,y,z]'},
+            pipes_in, _ = await build_network_pipes({'input': '/test/source:int16[x,y,z]'},
                                                             {},
                                                             {},
                                                             my_node,
@@ -82,9 +81,8 @@ class TestPipeHelpers(FakeJouleTestCase):
                 await pipes_in['input'].read()
             await my_node.close()
 
-        with self.assertLogs(level='INFO') as log:
+        with self.assertLogs(level='INFO'):
             loop.run_until_complete(runner())
-        log_dump = ' '.join(log.output)
         self.stop_server()
         loop.close()
 
@@ -93,12 +91,12 @@ class TestPipeHelpers(FakeJouleTestCase):
         blk1 = helpers.create_data("int16_3", start=10, step=1, length=10)
         blk2 = helpers.create_data("int16_3", start=200, step=1, length=10)
 
-        create_destination(server)
+        create_destination(server,keep_us=DataStream.KEEP_ALL)
 
         self.start_server(server)
         my_node = api.get_node()
         async def runner():
-            pipes_in, pipes_out = await build_network_pipes({},
+            _, pipes_out = await build_network_pipes({},
                                                             {'output': '/test/dest:int16[e0,e1,e2]'},
                                                             {},
                                                             my_node,
@@ -200,7 +198,7 @@ class TestPipeHelpers(FakeJouleTestCase):
             # the destination does not exist
             with self.assertRaises(errors.ApiError):
                 await my_node.data_stream_get("/test/dest")
-            pipes_in, pipes_out = await build_network_pipes({},
+            _, pipes_out = await build_network_pipes({},
                                                             {'output': '/test/dest:int16[e0,e1,e2]'},
                                                             {},
                                                             my_node,
@@ -293,11 +291,11 @@ class TestPipeHelpers(FakeJouleTestCase):
         loop.close()
 
 
-def create_destination(server):
+def create_destination(server, keep_us=100):
     # create an empty destination stream
-    dest = DataStream(id=8, name="dest", keep_us=100,
+    dest = DataStream(id=8, name="dest", keep_us=keep_us,
                       datatype=DataStream.DATATYPE.INT16,
-                      updated_at=datetime.datetime.utcnow())
+                      updated_at=datetime.now(timezone.utc))
     dest.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
 
     # destination has no data
@@ -309,7 +307,7 @@ def create_source_data(server, is_destination=False):
     src = DataStream(id=0, name="source", keep_us=100,
                      datatype=DataStream.DATATYPE.INT16,
                      is_destination=is_destination,
-                      updated_at=datetime.datetime.utcnow())
+                      updated_at=datetime.now(timezone.utc))
     src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
 
     # source has 100 rows of data

@@ -54,7 +54,7 @@ class TestStreamDelete(FakeJouleTestCase):
         runner = CliRunner()
         result = runner.invoke(main, ['stream', 'delete', '/folder/stream'],
                                input='y\n')
-        self.assertTrue('%d' % error_code in result.output)
-        self.assertTrue(error_msg in result.output)
+        self.assertIn('%d' % error_code, result.output)
+        self.assertIn(error_msg, result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()

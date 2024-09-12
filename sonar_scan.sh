@@ -1,7 +1,8 @@
 #!/bin/bash
 set -e
 
-# run the unittests
+# run the unittests (install pytest pytest-xdist pytest-cov )
+#pytest --cov=joule tests/ -n auto -x
 coverage run -m unittest discover -f
 
 # run the e2e tests

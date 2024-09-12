@@ -17,6 +17,7 @@ import tempfile
 from tests import helpers
 from joule.models import DataStream, StreamInfo, pipes, data_stream, master
 from joule.api import annotation
+from joule.constants import EndPoints, ConfigFiles
 
 # from https://github.com/aio-libs/aiohttp/blob/master/examples/fake_server.py
 
@@ -46,46 +47,46 @@ class FakeJoule:
 
         self.app.router.add_routes(
             [
-                web.get('/', self.info),
-                web.get('/version.json', self.stub_get),
-                web.get('/dbinfo', self.dbinfo),
-                web.get('/folders.json', self.stub_get),
-                web.get('/stream.json', self.stream_info),
-                web.post('/stream.json', self.create_stream),
-                web.put('/stream.json', self.update_stream),
-                web.put('/stream/move.json', self.move_stream),
-                web.delete('/stream.json', self.delete_stream),
-                web.post('/data', self.data_write),
-                web.get('/data', self.data_read),
-                web.get('/data/intervals.json', self.data_intervals),
-                web.delete('/data', self.data_delete),
-                web.get('/modules.json', self.stub_get),
-                web.get('/module.json', self.stub_get),
-                web.get('/module/logs.json', self.stub_get),
-                web.put('/folder/move.json', self.move_folder),
-                web.delete('/folder.json', self.delete_folder),
-                web.get("/folder.json", self.folder_info),
-                web.put("/folder.json", self.update_folder),
-                web.get('/masters.json', self.stub_get),
-                web.post('/master.json', self.create_master),
-                web.delete('/master.json', self.delete_master),
-                web.get('/annotations/info.json', self.get_annotation_info),
-                web.get('/annotations.json', self.get_annotations),
-                web.put('/annotation.json', self.update_annotation),
-                web.post('/annotation.json', self.create_annotation),
-                web.delete('/annotation.json', self.delete_annotation),
-                web.delete('/stream/annotations.json', self.delete_all_annotations),
+                web.get(EndPoints.root, self.info),
+                web.get(EndPoints.version_json, self.stub_get),
+                web.get(EndPoints.db_info, self.dbinfo),
+                web.get(EndPoints.folders, self.stub_get),
+                web.get(EndPoints.stream, self.stream_info),
+                web.post(EndPoints.stream, self.create_stream),
+                web.put(EndPoints.stream, self.update_stream),
+                web.put(EndPoints.stream_move, self.move_stream),
+                web.delete(EndPoints.stream, self.delete_stream),
+                web.post(EndPoints.data, self.data_write),
+                web.get(EndPoints.data, self.data_read),
+                web.get(EndPoints.data_intervals, self.data_intervals),
+                web.delete(EndPoints.data, self.data_delete),
+                web.get(EndPoints.modules, self.stub_get),
+                web.get(EndPoints.module, self.stub_get),
+                web.get(EndPoints.module_logs, self.stub_get),
+                web.put(EndPoints.folder_move, self.move_folder),
+                web.delete(EndPoints.folder, self.delete_folder),
+                web.get(EndPoints.folder, self.folder_info),
+                web.put(EndPoints.folder, self.update_folder),
+                web.get(EndPoints.masters, self.stub_get),
+                web.post(EndPoints.master, self.create_master),
+                web.delete(EndPoints.master, self.delete_master),
+                web.get(EndPoints.annotations_info, self.get_annotation_info),
+                web.get(EndPoints.annotations, self.get_annotations),
+                web.put(EndPoints.annotation, self.update_annotation),
+                web.post(EndPoints.annotation, self.create_annotation),
+                web.delete(EndPoints.annotation, self.delete_annotation),
+                web.delete(EndPoints.stream_annotations, self.delete_all_annotations),
                 # --- event stream routes ---
-                web.get('/event.json', self.stub_get),
-                web.put('/event/move.json', self.move_stream),
-                web.put('/event.json', self.update_stream),
-                #web.post('/event.json', None),
-                #web.delete('/event.json', None),
+                web.get(EndPoints.event, self.stub_get),
+                web.put(EndPoints.event_move, self.move_stream),
+                web.put(EndPoints.event, self.update_stream),
+                #web.post(EndPoints.event, None),
+                #web.delete(EndPoints.event, None),
                 # --- event stream data routes ---
-                #web.get('/event/data.json', None),
-                #web.get('/event/data/count.json', None),
-                #web.post('/event/data.json', None),
-                #web.delete('/event/data.json', None),
+                #web.get(EndPoints.event_data, None),
+                #web.get(EndPoints.event_data_count, None),
+                #web.post(EndPoints.event_data, None),
+                #web.delete(EndPoints.event_data, None),
             ])
         self.stub_stream_info = False
         self.stub_stream_move = False
@@ -146,6 +147,7 @@ class FakeJoule:
             if not msgs.empty():
                 msgs.get()
                 break
+        await runner.cleanup()
 
     def add_stream(self, path, my_stream: DataStream, info: StreamInfo, data: Optional[np.ndarray],
                    intervals: Optional[List] = None):
@@ -435,11 +437,11 @@ class FakeJouleTestCase(helpers.AsyncTestCase):
             else:
                 time.sleep(0.1)
         # create a .joule config directory with key info
-        with open(os.path.join(self.conf_dir.name, "nodes.json"), 'w') as f:
+        with open(os.path.join(self.conf_dir.name, ConfigFiles.nodes), 'w') as f:
             f.write(json.dumps([{"name": "fake_joule",
                                  "key": key,
                                  "url": "http://127.0.0.1:%d" % port}]))
-        with open(os.path.join(self.conf_dir.name, "default_node.txt"), 'w') as f:
+        with open(os.path.join(self.conf_dir.name, ConfigFiles.default_node), 'w') as f:
             f.write("fake_joule")
         os.environ["JOULE_USER_CONFIG_DIR"] = self.conf_dir.name
 

@@ -41,8 +41,8 @@ class TestSupervisor(AsyncTestCase):
         asyncio.run(self.supervisor.stop())
         # make sure each worker ran
         for worker in self.workers:
-            self.assertTrue(worker.module.uuid in started_uuids)
-            self.assertTrue(worker.module.uuid in stopped_uuids)
+            self.assertIn(worker.module.uuid, started_uuids)
+            self.assertIn(worker.module.uuid, stopped_uuids)
 
         self.assertEqual(len(started_uuids), TestSupervisor.NUM_WORKERS)
         self.assertEqual(len(stopped_uuids), TestSupervisor.NUM_WORKERS)
@@ -69,11 +69,11 @@ class TestSupervisor(AsyncTestCase):
         with self.assertLogs(level="WARNING") as logs:
             asyncio.run(
                 self.supervisor.restart_producer(s, msg="test"))
-        self.assertTrue('restarting' in ''.join(logs.output).lower())
+        self.assertIn('restarting', ''.join(logs.output).lower())
         self.assertTrue(restarted)
         # check the worker logs
-        self.assertTrue("restarting" in ''.join(self.workers[0].logs).lower())
-        self.assertTrue("test" in ''.join(self.workers[0].logs).lower())
+        self.assertIn("restarting", ''.join(self.workers[0].logs).lower())
+        self.assertIn("test", ''.join(self.workers[0].logs).lower())
 
     def test_subscribes_to_remote_inputs(self):
         remote_stream = helpers.create_stream('remote', 'float64_2')
@@ -112,7 +112,7 @@ class TestSupervisor(AsyncTestCase):
         # make sure there is only one connection to the remote
         self.assertEqual(subscription_requests, 1)
         # p2 should be subscribed to p1
-        self.assertTrue(p1.subscribers[0] is p2)
+        self.assertIs(p1.subscribers[0], p2)
 
         # now "stop" the supervisor and the pipes should be closed
 
@@ -135,9 +135,7 @@ class TestSupervisor(AsyncTestCase):
         output_requested = False
 
         class MockNode:
-            def __init__(self):
-                pass
-
+            
             async def data_write(self, stream):
                 nonlocal output_requested
                 output_requested = True
@@ -145,6 +143,7 @@ class TestSupervisor(AsyncTestCase):
                 return pipe
 
             async def close(self):
+                # API compatability
                 pass
 
         def get_mock_node(name: str):

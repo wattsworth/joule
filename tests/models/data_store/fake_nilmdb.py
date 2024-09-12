@@ -3,6 +3,7 @@ from aiohttp import web
 from aiohttp.test_utils import unused_port
 import numpy as np
 import multiprocessing
+from joule.constants import EndPoints
 from tests import helpers
 
 
@@ -38,7 +39,7 @@ class FakeNilmdb:
         self.app = web.Application()
         self.app.router.add_routes(
             [web.get('/', self.info),
-             web.get('/dbinfo', self.dbinfo),
+             web.get(EndPoints.db_info, self.dbinfo),
              web.get('/stream/get_metadata', self.stream_get_metadata),
              web.post('/stream/set_metadata', self.stream_set_metadata),
              web.post('/stream/create', self.stream_create),

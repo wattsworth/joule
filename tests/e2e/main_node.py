@@ -128,7 +128,6 @@ def main():
 
         print("---------[%s]---------" % test_name)
         sys.stdout.flush()
-        print("Running tests with coverage!")
         test = subprocess.run(("coverage run --rcfile=/joule/.coveragerc "+os.path.join(test_path, "test.py")).split(" "))
         jouled.send_signal(signal.SIGINT)
         stdout, _ = jouled.communicate()

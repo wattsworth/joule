@@ -21,7 +21,7 @@ class TestElement(unittest.TestCase):
     def test_parses_base_config(self):
         e = element.from_config(self.base_config)
         self.assertEqual(e.name, "test")
-        self.assertEqual(e.plottable, False)
+        self.assertFalse(e.plottable)
         self.assertEqual(e.display_type, Element.DISPLAYTYPE.CONTINUOUS)  # default value
         self.assertEqual(e.offset, 0.0)  # default value
         self.assertEqual(e.scale_factor, 1.0)  # default value

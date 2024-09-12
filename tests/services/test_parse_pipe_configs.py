@@ -47,7 +47,7 @@ class TestParsePipeConfig(DbTestCase):
         # check elements
         self.assertEqual(len(my_stream.elements), 2)
         for elem in my_stream.elements:
-            self.assertTrue(elem.name in ['x', 'y'])
+            self.assertIn(elem.name, ['x', 'y'])
         # check parent folder
         self.assertEqual(my_stream.folder.name, "test")
 

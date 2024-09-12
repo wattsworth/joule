@@ -68,14 +68,14 @@ class TestNilmdbStore(unittest.IsolatedAsyncioTestCase):
         nrows = 300
         data = helpers.create_data(layout="int16_3", length=nrows)
         # first insert
-        await self.store.insert(self.stream1, data['timestamp'][0],
-                                data['timestamp'][-1] + 1, data)
+        await self.store.insert(self.stream1, data, data['timestamp'][0],
+                                data['timestamp'][-1] + 1)
         self.assertEqual(self.fake_nilmdb.streams["/joule/1"].rows, nrows)
         # another insert
         data = helpers.create_data(layout="int16_3", start=data['timestamp'][-1] + 1,
                                    length=nrows)
-        await self.store.insert(self.stream1, data['timestamp'][0],
-                                data['timestamp'][-1] + 1, data)
+        await self.store.insert(self.stream1, data, data['timestamp'][0],
+                                data['timestamp'][-1] + 1)
         self.assertEqual(self.fake_nilmdb.streams["/joule/1"].rows, nrows * 2)
 
     async def test_insert_error_on_overlapping_data(self):
@@ -85,8 +85,8 @@ class TestNilmdbStore(unittest.IsolatedAsyncioTestCase):
             layout=self.stream1.layout, start=0, end=500, rows=500)
         data = helpers.create_data(layout="int16_3", start=25, step=1, length=20)
         with self.assertRaises(DataError)as e:
-            await self.store.insert(self.stream1, 25, 1000, data)
-        self.assertTrue('overlaps' in str(e.exception))
+            await self.store.insert(self.stream1, data, 25, 1000)
+        self.assertIn('overlaps', str(e.exception))
 
     async def test_extract(self):
         await self.store.initialize([])
@@ -110,7 +110,7 @@ class TestNilmdbStore(unittest.IsolatedAsyncioTestCase):
         await self.store.extract(self.stream1, start=100, end=1000, callback=callback)
         self.assertEqual(len(self.fake_nilmdb.extract_calls), 1)
         path = self.fake_nilmdb.extract_calls[0]['path']
-        self.assertTrue(path, '/joule/1')
+        self.assertEqual(path, '/joule/1')
         rcvd_rows = 0
         last_row = []
         for chunk in extracted_data:
@@ -126,8 +126,8 @@ class TestNilmdbStore(unittest.IsolatedAsyncioTestCase):
                                  callback=callback, max_rows=int(1.5 * (nrows / 16)))
         # expect count req from raw and decim-16, and extract from data from decim-16
         self.assertEqual(len(self.fake_nilmdb.extract_calls), 3)
-        path = self.fake_nilmdb.extract_calls[0]['path']
-        self.assertTrue(path, '/joule/1~decim-16')
+        path = self.fake_nilmdb.extract_calls[2]['path']
+        self.assertEqual(path, '/joule/1~decim-16')
         rcvd_rows = 0
         last_row = []
         for chunk in extracted_data:
@@ -149,7 +149,7 @@ class TestNilmdbStore(unittest.IsolatedAsyncioTestCase):
         # expect extract from decim-64
         self.assertEqual(len(self.fake_nilmdb.extract_calls), 1)
         path = self.fake_nilmdb.extract_calls[0]['path']
-        self.assertTrue(path, '/joule/1~decim-64')
+        self.assertEqual(path, '/joule/1~decim-64')
         rcvd_rows = 0
         last_row = []
         for chunk in extracted_data:
@@ -212,7 +212,7 @@ class TestNilmdbStore(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(InsufficientDecimationError) as e:
             await self.store.extract(self.stream1, start=100, end=1000, callback=callback,
                                      max_rows=(nrows // 4 - 10))
-        self.assertTrue('empty' in str(e.exception))
+        self.assertIn('empty', str(e.exception))
 
     async def test_intervals(self):
         await self.store.initialize([])
@@ -269,7 +269,7 @@ class TestNilmdbStore(unittest.IsolatedAsyncioTestCase):
         paths = ['/joule/1', '/joule/1~decim-4',
                  '/joule/1~decim-16', '/joule/1~decim-64']
         for call in self.fake_nilmdb.remove_calls:
-            self.assertTrue(call["path"] in paths)
+            self.assertIn(call["path"], paths)
 
     async def test_info(self):
         await self.store.initialize([])
@@ -279,7 +279,7 @@ class TestNilmdbStore(unittest.IsolatedAsyncioTestCase):
         info = await self.store.info(streams)
         # streams 1, 2, 6, 7, 8 are in the json file but 8 is not in the streams request
         for stream_id in [1, 2, 6, 7]:
-            self.assertTrue(stream_id in info)
+            self.assertIn(stream_id, info)
         # S1 should be empty
         s1_info = info[1]
         self.assertIsNone(s1_info.start)
@@ -306,7 +306,7 @@ class TestNilmdbStore(unittest.IsolatedAsyncioTestCase):
         for layout in bad_layouts:
             with self.assertRaises(ValueError) as e:
                 bytes_per_row(layout)
-            self.assertTrue(layout in str(e.exception))
+            self.assertIn(layout, str(e.exception))
 
     async def test_dbinfo(self):
         await self.store.initialize([])
@@ -333,7 +333,7 @@ class TestNilmdbStore(unittest.IsolatedAsyncioTestCase):
         paths = ['/joule/1', '/joule/1~decim-4',
                  '/joule/1~decim-16', '/joule/1~decim-64']
         for call in self.fake_nilmdb.remove_calls:
-            self.assertTrue(call["path"] in paths)
+            self.assertIn(call["path"], paths)
         # and destroys the stream
         for call in self.fake_nilmdb.destroy_calls:
-            self.assertTrue(call["path"] in paths)
+            self.assertIn(call["path"], paths)

@@ -119,7 +119,7 @@ class TestNilmdbInserter(unittest.IsolatedAsyncioTestCase):
             await asyncio.sleep(0.1)
             task.cancel()
             await task
-        self.assertTrue("retrying request" in ''.join(logs.output))
+        self.assertIn("retrying request", ''.join(logs.output))
 
     async def test_inserter_clean(self):
         self.stream1.datatype = DataStream.DATATYPE.INT16
@@ -133,12 +133,12 @@ class TestNilmdbInserter(unittest.IsolatedAsyncioTestCase):
         task = await self.store.spawn_inserter(self.stream1, pipe, insert_period=0)
         await task
 
-        self.assertTrue(len(self.fake_nilmdb.remove_calls) > 0)
+        self.assertGreater(len(self.fake_nilmdb.remove_calls), 0)
         # make sure decimations have been removed too
         removed_paths = [x['path'] for x in self.fake_nilmdb.remove_calls]
-        self.assertTrue('/joule/1' in removed_paths)
-        self.assertTrue('/joule/1~decim-4' in removed_paths)
-        self.assertTrue('/joule/1~decim-16' in removed_paths)
+        self.assertIn('/joule/1', removed_paths)
+        self.assertIn('/joule/1~decim-4', removed_paths)
+        self.assertIn('/joule/1~decim-16', removed_paths)
         # make sure nilmdb cleanup executed with correct parameters
         params = self.fake_nilmdb.remove_calls[-1]
         self.assertEqual(int(params['start']), 0)

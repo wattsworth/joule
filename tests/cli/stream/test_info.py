@@ -28,7 +28,7 @@ class TestStreamInfo(FakeJouleTestCase):
         # make sure the items are populated correctly
         output = result.output.split('\n')
         row_line = [x for x in output if 'Rows' in x][0]
-        self.assertTrue("73820" in row_line)
+        self.assertIn("73820", row_line)
         start_line = [x for x in output if 'Start' in x][0]
 
         # note: hour depends on client's timezone
@@ -58,7 +58,7 @@ class TestStreamInfo(FakeJouleTestCase):
         # make sure the items are populated correctly
         output = result.output.split('\n')
         row_line = [x for x in output if 'Rows' in x][0]
-        self.assertTrue("73820" in row_line)
+        self.assertIn("73820", row_line)
         start_line = [x for x in output if 'Start' in x][0]
 
         # note: hour depends on client's timezone
@@ -114,7 +114,7 @@ class TestStreamInfo(FakeJouleTestCase):
         self.start_server(server)
         runner = CliRunner()
         result = runner.invoke(main, [ 'stream', 'info', '/bad/path'])
-        self.assertTrue("Error" in result.output)
+        self.assertIn("Error", result.output)
         self.stop_server()
 
     def test_when_server_returns_invalid_data(self):
@@ -124,7 +124,7 @@ class TestStreamInfo(FakeJouleTestCase):
         self.start_server(server)
         runner = CliRunner()
         result = runner.invoke(main, ['stream', 'info', 'folder/stream'])
-        self.assertTrue('Error' in result.output)
+        self.assertIn('Error', result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()
 
@@ -136,7 +136,7 @@ class TestStreamInfo(FakeJouleTestCase):
         self.start_server(server)
         runner = CliRunner()
         result = runner.invoke(main, ['stream', 'info', 'folder/stream'])
-        self.assertTrue('500' in result.output)
-        self.assertTrue("test error" in result.output)
+        self.assertIn('500', result.output)
+        self.assertIn("test error", result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()

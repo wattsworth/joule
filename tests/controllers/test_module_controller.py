@@ -6,6 +6,7 @@ from joule.models.supervisor import Supervisor
 import joule.controllers
 from tests.controllers.helpers import MockWorker
 from joule import app_keys
+from joule.constants import EndPoints
 
 class TestModuleController(AioHTTPTestCase):
 
@@ -19,7 +20,7 @@ class TestModuleController(AioHTTPTestCase):
 
 
     async def test_module_list(self):
-        resp: aiohttp.ClientResponse = await self.client.request("GET", "/modules.json?statistics=1")
+        resp: aiohttp.ClientResponse = await self.client.request("GET", f"{EndPoints.modules}?statistics=1")
         workers = await resp.json()
         # check some fields in the response
         self.assertEqual(len(workers), 2)
@@ -34,7 +35,7 @@ class TestModuleController(AioHTTPTestCase):
 
 
     async def test_module_info(self):
-        resp = await self.client.request("GET", "/module.json",
+        resp = await self.client.request("GET", EndPoints.module,
                                          params={'name': 'filter'})
         worker = await resp.json()
         self.assertEqual(worker['outputs']['output'], '/output/path')
@@ -43,7 +44,7 @@ class TestModuleController(AioHTTPTestCase):
 
 
     async def test_module_logs(self):
-        resp = await self.client.request("GET", "/module/logs.json",
+        resp = await self.client.request("GET", EndPoints.module_logs,
                                          params={'name': 'reader'})
         logs = await resp.json()
         # mock worker produces two log entries

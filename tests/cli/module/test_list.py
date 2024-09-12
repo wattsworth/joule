@@ -21,10 +21,10 @@ class TestModuleList(FakeJouleTestCase):
         output = result.output
         # make sure modules are listed
         for name in ['Module%d' % x for x in range(1,5)]:
-            self.assertTrue(name in output)
+            self.assertIn(name, output)
         # check a few streams
         for stream in ['folder_1/stream_1_1', '/folder_2/stream_2_1']:
-            self.assertTrue(stream in output)
+            self.assertIn(stream, output)
         self.stop_server()
 
     def test_when_server_returns_invalid_data(self):
@@ -33,7 +33,7 @@ class TestModuleList(FakeJouleTestCase):
         self.start_server(server)
         runner = CliRunner()
         result = runner.invoke(main, ['module', 'list'])
-        self.assertTrue('Error' in result.output)
+        self.assertIn('Error', result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()
 
@@ -46,7 +46,7 @@ class TestModuleList(FakeJouleTestCase):
         self.start_server(server)
         runner = CliRunner()
         result = runner.invoke(main, ['module', 'list'])
-        self.assertTrue('%d' % error_code in result.output)
-        self.assertTrue(error_msg in result.output)
+        self.assertIn('%d' % error_code, result.output)
+        self.assertIn(error_msg, result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()

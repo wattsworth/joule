@@ -10,6 +10,7 @@ from joule import utilities
 import testing
 import time
 from joule import app_keys
+from joule.constants import EndPoints
 
 import testing.postgresql
 psql_key = web.AppKey("psql", testing.postgresql.Postgresql)
@@ -48,7 +49,7 @@ class TestAnnotationController(AioHTTPTestCase):
 
     async def test_annotation_list(self):
         # 1.) retreive all annotations
-        resp = await self.client.request("GET", "/annotations.json",
+        resp = await self.client.request("GET", EndPoints.annotations,
                                          params=[("stream_id", str(self.stream1.id)),
                                                  ("stream_id", str(self.stream2.id))])
         all_annotations_json = await resp.json()
@@ -61,7 +62,7 @@ class TestAnnotationController(AioHTTPTestCase):
             else:
                 self.fail("invalid stream title")
         # 2.) retrieve a time bounded list
-        resp = await self.client.request("GET", "/annotations.json",
+        resp = await self.client.request("GET", EndPoints.annotations,
                                          params={"stream_id": self.stream1.id,
                                                  "start": 500,
                                                  "end": 3500})
@@ -74,7 +75,7 @@ class TestAnnotationController(AioHTTPTestCase):
             self.assertLess(annotation["start"], 3500)
 
         # 3.) retrieve annotation by path
-        resp = await self.client.request("GET", "/annotations.json",
+        resp = await self.client.request("GET", EndPoints.annotations,
                                          params=[("stream_id", self.stream1.id),
                                                  ("stream_path", "/top/middle/leaf/stream2")])
         annotations_json = await resp.json()
@@ -88,7 +89,7 @@ class TestAnnotationController(AioHTTPTestCase):
             "end": 1000,
             "stream_id": self.stream1.id
         }
-        resp = await self.client.request("POST", "/annotation.json",
+        resp = await self.client.request("POST", EndPoints.annotation,
                                          json=annotation_json)
         values = await resp.json()
         new_id = values["id"]
@@ -107,7 +108,7 @@ class TestAnnotationController(AioHTTPTestCase):
             "end": 1000,
             "stream_path": "/top/leaf/stream1"
         }
-        resp = await self.client.request("POST", "/annotation.json",
+        resp = await self.client.request("POST", EndPoints.annotation,
                                          json=annotation_json)
         values = await resp.json()
         new_id = values["id"]
@@ -127,7 +128,7 @@ class TestAnnotationController(AioHTTPTestCase):
             "end": 1000,  # should not update
             "id": old_annotation.id
         }
-        resp = await self.client.request("PUT", "/annotation.json",
+        resp = await self.client.request("PUT", EndPoints.annotation,
                                          json=annotation_json)
         self.assertEqual(resp.status, 200)
         new_annotation = self.db.get(Annotation,old_annotation.id)
@@ -139,7 +140,7 @@ class TestAnnotationController(AioHTTPTestCase):
     async def test_annotation_delete(self):
         old_annotation = self.db.query(Annotation).filter_by(stream_id=self.stream1.id).first()
 
-        resp = await self.client.request("DELETE", "/annotation.json",
+        resp = await self.client.request("DELETE", EndPoints.annotation,
                                          params={"id": old_annotation.id})
         self.assertEqual(resp.status, 200)
         self.assertIsNone(self.db.query(Annotation).filter_by(id=old_annotation.id).one_or_none())
@@ -156,7 +157,7 @@ class TestAnnotationController(AioHTTPTestCase):
         self.assertEqual(5, self.db.query(Annotation).
                          filter_by(stream_id=self.stream1.id).
                          count())
-        resp = await self.client.request("DELETE", "/stream/annotations.json",
+        resp = await self.client.request("DELETE", EndPoints.stream_annotations,
                                          params={"stream_id": self.stream1.id,
                                                  "start": 500,
                                                  "end": 3500})
@@ -172,7 +173,7 @@ class TestAnnotationController(AioHTTPTestCase):
                 self.fail("this annotation should be deleted")
 
         # delete by stream_id
-        resp = await self.client.request("DELETE", "/stream/annotations.json",
+        resp = await self.client.request("DELETE", EndPoints.stream_annotations,
                                          params={"stream_id": self.stream1.id})
         self.assertEqual(resp.status, 200)
         self.assertEqual(0, self.db.query(Annotation).
@@ -182,7 +183,7 @@ class TestAnnotationController(AioHTTPTestCase):
         self.assertEqual(5, self.db.query(Annotation).
                          filter_by(stream_id=self.stream2.id).
                          count())
-        resp = await self.client.request("DELETE", "/stream/annotations.json",
+        resp = await self.client.request("DELETE", EndPoints.stream_annotations,
                                          params={"stream_path": "/top/middle/leaf/stream2"})
         self.assertEqual(resp.status, 200)
         self.assertEqual(0, self.db.query(Annotation).

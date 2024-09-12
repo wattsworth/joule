@@ -6,6 +6,7 @@ from joule.models import master, Master
 import joule.controllers
 from tests.controllers.helpers import create_db, MockStore
 from joule import app_keys
+from joule.constants import EndPoints
 
 import testing.postgresql
 psql_key = web.AppKey("psql", testing.postgresql.Postgresql)
@@ -46,7 +47,7 @@ class TestMasterController(AioHTTPTestCase):
             "master_type": "user",
             "identifier": "johndoe"
         }
-        resp = await self.client.post("/master.json", json=payload,
+        resp = await self.client.post(EndPoints.master, json=payload,
                                       headers={'X-API-KEY': "grantor_key"})
         self.assertEqual(resp.status, 200)
         json = await resp.json()
@@ -55,7 +56,7 @@ class TestMasterController(AioHTTPTestCase):
         self.assertEqual(json['key'], m.key)
 
         # adding johndoe again returns an error and does not change the key
-        resp = await self.client.post("/master.json", json=payload,
+        resp = await self.client.post(EndPoints.master, json=payload,
                                       headers={'X-API-KEY': "grantor_key"})
         old_key = m.key
         m = db.query(Master).filter(Master.name == "johndoe").one_or_none()
@@ -75,7 +76,7 @@ class TestMasterController(AioHTTPTestCase):
             "master_type": "user",
             "name": "johndoe"
         }
-        resp = await self.client.delete("/master.json", params=payload,
+        resp = await self.client.delete(EndPoints.master, params=payload,
                                         headers={'X-API-KEY': "grantor_key"})
         self.assertEqual(resp.status, 200)
         m = db.query(Master).filter(Master.name == "johndoe").one_or_none()
@@ -89,7 +90,7 @@ class TestMasterController(AioHTTPTestCase):
         db.add(Master(name="lumen", key=master.make_key(), type=Master.TYPE.LUMEN_NODE))
         db.commit()
 
-        resp = await self.client.get("/masters.json",
+        resp = await self.client.get(EndPoints.masters,
                                      headers={'X-API-KEY': "grantor_key"})
         self.assertEqual(resp.status, 200)
         json = await resp.json()

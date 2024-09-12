@@ -9,6 +9,7 @@ from joule.models import folder, DataStream, Folder, Element, StreamInfo
 import joule.controllers
 from tests.controllers.helpers import create_db, MockStore
 from joule import app_keys
+from joule.constants import EndPoints
 
 import testing.postgresql
 psql_key = web.AppKey("psql", testing.postgresql.Postgresql)
@@ -45,12 +46,12 @@ class TestStreamController(AioHTTPTestCase):
         self.assertEqual(actual, expected)
         # can query by path
         payload = {'path': "/folder1/stream1"}
-        resp = await self.client.request("GET", "/stream.json", params=payload)
+        resp = await self.client.request("GET", EndPoints.stream, params=payload)
         actual = await resp.json()
         self.assertEqual(actual, expected)
         # adding no-info skips the data store query
         payload = {'path': "/folder1/stream1", 'no-info': ''}
-        resp = await self.client.request("GET", "/stream.json", params=payload)
+        resp = await self.client.request("GET", EndPoints.stream, params=payload)
         actual = await resp.json()
         self.assertEqual(actual, my_stream.to_json({}))
 
@@ -62,7 +63,7 @@ class TestStreamController(AioHTTPTestCase):
             "src_path": "/folder1/stream1",
             "dest_path": "/new/folder3"
         }
-        resp = await self.client.put("/stream/move.json", json=payload)
+        resp = await self.client.put(EndPoints.stream_move, json=payload)
         self.assertEqual(resp.status, 200)
         folder3 = db.query(Folder).filter_by(name="folder3").one()
         folder3_created_at = folder3.updated_at
@@ -79,7 +80,7 @@ class TestStreamController(AioHTTPTestCase):
             "src_path": "/new/folder3/stream1",
             "dest_id": folder1.id
         }
-        resp = await self.client.put("/stream/move.json", json=payload)
+        resp = await self.client.put(EndPoints.stream_move, json=payload)
         self.assertEqual(resp.status, 200)
         # check the destination
         self.assertEqual(folder1.data_streams[0].name, "stream1")
@@ -99,7 +100,7 @@ class TestStreamController(AioHTTPTestCase):
             "dest_path": "/deep/new folder",
             "stream": new_stream.to_json()
         }
-        resp = await self.client.post("/stream.json", json=payload)
+        resp = await self.client.post(EndPoints.stream, json=payload)
 
         self.assertEqual(resp.status, 200)
         # check the stream was created correctly
@@ -114,7 +115,7 @@ class TestStreamController(AioHTTPTestCase):
             "dest_id": folder1.id,
             "stream": new_stream.to_json()
         }
-        resp = await self.client.post("/stream.json", json=payload)
+        resp = await self.client.post(EndPoints.stream, json=payload)
 
         self.assertEqual(resp.status, 200)
         # check the stream was created correctly
@@ -130,7 +131,7 @@ class TestStreamController(AioHTTPTestCase):
         folder_created_at = folder.updated_at
         store: MockStore = self.app[app_keys.data_store]
         payload = {'path': "/folder1/stream1"}
-        resp = await self.client.delete("/stream.json", params=payload)
+        resp = await self.client.delete(EndPoints.stream, params=payload)
         self.assertEqual(resp.status, 200)
         # make sure the parent was updated
         self.assertGreater(folder.updated_at, folder_created_at)
@@ -145,7 +146,7 @@ class TestStreamController(AioHTTPTestCase):
         my_stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
         store: MockStore = self.app[app_keys.data_store]
         payload = {'id': my_stream.id}
-        resp = await self.client.delete("/stream.json", params=payload)
+        resp = await self.client.delete(EndPoints.stream, params=payload)
         self.assertEqual(resp.status, 200)
         # make sure it was removed from the data store
         self.assertEqual(store.destroyed_stream_id, my_stream.id)
@@ -163,7 +164,7 @@ class TestStreamController(AioHTTPTestCase):
             "id": my_stream.id,
             "stream": {"name": "new name"}
         }
-        resp = await self.client.put("/stream.json", json=payload)
+        resp = await self.client.put(EndPoints.stream, json=payload)
         self.assertEqual(resp.status, 200)
         my_stream: DataStream = db.get(DataStream, my_stream.id)
         self.assertEqual("new name", my_stream.name)

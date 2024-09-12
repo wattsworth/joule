@@ -43,7 +43,7 @@ class NilmdbStore(DataStore):
         except aiohttp.ClientError:
             raise errors.DataError("cannot contact NilmDB at [%s]" % self.server)
 
-    async def insert(self, stream: DataStream, start: int, end: int, data: np.array) -> None:
+    async def insert(self, stream: DataStream, data: np.array, start: int, end: int) -> None:
         """insert stream data"""
         url = "{server}/stream/insert".format(server=self.server)
         params = {"start": "%d" % start,

@@ -1,5 +1,5 @@
 from typing import Union, List, Optional, Dict, TYPE_CHECKING
-
+from joule.constants import EndPoints
 
 if TYPE_CHECKING:
     import sqlalchemy
@@ -33,8 +33,8 @@ class BaseNode:
 
     async def info(self) -> 'NodeInfo':
         from .node_info import NodeInfo
-        resp = await self.session.get("/version.json")
-        db_info = await self.session.get("/dbinfo")
+        resp = await self.session.get(EndPoints.version_json)
+        db_info = await self.session.get(EndPoints.db_info)
         return NodeInfo(version=resp["version"], name=resp["name"], path=db_info['path'],
                         size_other=db_info["other"], size_reserved=db_info["reserved"],
                         size_free=db_info["free"], size_db=db_info["size"])
@@ -301,18 +301,14 @@ class BaseNode:
         from joule.api.master import master_add
         return await master_add(self.session, master_type, identifier, lumen_parameters, api_key)
 
-    # Follower actions
     async def follower_list(self) -> List['BaseNode']:
-        pass
-
+        from joule.api.follower import follower_list
+        return await follower_list(self.session)
+        
     async def follower_delete(self, node: Union['BaseNode', str]):
-        if type(node) is not str:
-            name = node.name
-        else:
-            name = node
-        data = {"name": name}
-        await self.session.delete("/follower.json", params=data)
-
+        from joule.api.follower import follower_delete
+        return await follower_delete(self.session, node)
+        
     # Annotation actions
     async def annotation_get(self, stream: Union[int, str, 'DataStream'],
                              start: Optional[int] = None,

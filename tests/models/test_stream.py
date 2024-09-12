@@ -34,7 +34,7 @@ class TestStream(unittest.TestCase):
                                updated_at=datetime.datetime.now())
         self.assertIsNotNone(my_stream)
         # has a meaningful string representation
-        self.assertTrue("test" in "%r" % my_stream)
+        self.assertIn("test", "%r" % my_stream)
         # if remote is not set, the pseudo attributes are empty
         self.assertEqual(my_stream.remote_node, '')
         self.assertEqual(my_stream.remote_path, '')
@@ -52,7 +52,7 @@ class TestStream(unittest.TestCase):
                                               display_type=Element.DISPLAYTYPE.CONTINUOUS))
         # turns streams into json
         json = my_stream.to_json()
-        self.assertEqual(json['decimate'], True)
+        self.assertTrue(json['decimate'])
         self.assertEqual(json['name'], 'test')
         self.assertEqual(len(json['elements']), 4)
         # builds streams from json
@@ -158,13 +158,13 @@ class TestStream(unittest.TestCase):
         elem0 = my_stream.elements[0]
         self.assertEqual(elem0.index, 0)
         self.assertEqual(elem0.name, 'stream_0')
-        self.assertEqual(elem0.plottable, False)
+        self.assertFalse(elem0.plottable)
         self.assertEqual(elem0.default_min, -10)
-        self.assertEqual(elem0.default_max, None)
+        self.assertIsNone(elem0.default_max)
         elem2 = my_stream.elements[2]
         self.assertEqual(elem2.index, 2)
         self.assertEqual(elem2.name, 'stream_2')
-        self.assertEqual(elem2.plottable, True)
+        self.assertTrue(elem2.plottable)
         self.assertEqual(elem2.scale_factor, 1.0)
         self.assertEqual(elem2.offset, 10.5)
 
@@ -178,13 +178,13 @@ class TestStream(unittest.TestCase):
         elem0 = my_stream.elements[0]
         self.assertEqual(elem0.index, 0)
         self.assertEqual(elem0.name, 'Element1')
-        self.assertEqual(elem0.plottable, True)
-        self.assertEqual(elem0.default_min, None)
-        self.assertEqual(elem0.default_max, None)
+        self.assertTrue(elem0.plottable)
+        self.assertIsNone(elem0.default_min)
+        self.assertIsNone(elem0.default_max)
         elem2 = my_stream.elements[2]
         self.assertEqual(elem2.index, 2)
         self.assertEqual(elem2.name, 'Element3')
-        self.assertEqual(elem2.plottable, True)
+        self.assertTrue(elem2.plottable)
         self.assertEqual(elem2.scale_factor, 1.0)
         self.assertEqual(elem2.offset, 0.0)
 

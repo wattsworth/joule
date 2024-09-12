@@ -34,7 +34,7 @@ class TestFolderDelete(FakeJouleTestCase):
         self.assertEqual(result.exit_code, 0)
         params = self.msgs.get()
         self.assertEqual(params['path'], '/the/folder')
-        self.assertTrue('recursive' in params)
+        self.assertIn('recursive', params)
 
         self.stop_server()
 
@@ -48,7 +48,7 @@ class TestFolderDelete(FakeJouleTestCase):
         self.start_server(server)
         runner = CliRunner()
         result = runner.invoke(main, ['folder', 'delete', '/the/folder'])
-        self.assertTrue('%d' % error_code in result.output)
-        self.assertTrue(error_msg in result.output)
+        self.assertIn('%d' % error_code, result.output)
+        self.assertIn(error_msg, result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()

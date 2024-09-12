@@ -26,7 +26,7 @@ class TestModuleMethods(unittest.IsolatedAsyncioTestCase):
         modules = await self.node.module_list()
         self.assertEqual(len(modules),2)
         for m in modules:
-            self.assertTrue(type(m) is api.Module)
+            self.assertIs(type(m), api.Module)
 
     async def test_module_logs(self):
         logs = await self.node.module_logs("plus1")

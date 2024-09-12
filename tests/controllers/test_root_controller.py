@@ -3,6 +3,7 @@ from aiohttp import web
 import aiohttp
 
 import joule.controllers
+from joule.constants import EndPoints
 from tests.controllers.helpers import MockStore
 from joule import app_keys
 
@@ -25,13 +26,13 @@ class TestRootController(AioHTTPTestCase):
 
 
     async def test_version(self):
-        resp: aiohttp.ClientResponse = await self.client.request("GET", "/version")
+        resp: aiohttp.ClientResponse = await self.client.request("GET", EndPoints.version)
         version = await resp.text()
         self.assertEqual(resp.status, 200)
         # version is some non-empty string
         self.assertTrue(len(version) > 0)
         # check JSON version
-        resp: aiohttp.ClientResponse = await self.client.request("GET", "/version.json")
+        resp: aiohttp.ClientResponse = await self.client.request("GET", EndPoints.version_json)
         data = await resp.json()
         self.assertEqual(resp.status, 200)
         # version is some non-empty string
@@ -39,7 +40,7 @@ class TestRootController(AioHTTPTestCase):
 
 
     async def test_dbinfo(self):
-        resp: aiohttp.ClientResponse = await self.client.request("GET", "/dbinfo")
+        resp: aiohttp.ClientResponse = await self.client.request("GET", EndPoints.db_info)
         dbinfo = await resp.json()
         self.assertEqual(resp.status, 200)
         # check one of the keys to make sure this is a dbinfo object

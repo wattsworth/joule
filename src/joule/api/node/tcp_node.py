@@ -2,7 +2,7 @@ from typing import List
 from .base_node import BaseNode
 from .node_config import NodeConfig
 from joule.api.session import TcpSession
-
+from joule.constants import EndPoints
 
 class TcpNode(BaseNode):
     def __init__(self, name: str, url: str, key: str, cafile: str = ""):
@@ -18,6 +18,3 @@ class TcpNode(BaseNode):
     def to_config(self) -> NodeConfig:
         return NodeConfig(self.name, self.url, self._key)
 
-    async def follower_list(self) -> List[BaseNode]:
-        resp = await self.session.get("/followers.json")
-        return [TcpNode(item['name'], item['location'], item['key'], self.session.cafile) for item in resp]

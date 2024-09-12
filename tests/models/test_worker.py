@@ -23,6 +23,8 @@ from joule.models.supervisor import Supervisor
 from joule.models.worker import DataConnection
 from joule.models import pipes
 from tests import helpers
+from joule.constants import EndPoints
+
 
 LOG_SIZE = 10  # override module default
 
@@ -142,7 +144,7 @@ class TestWorker(unittest.TestCase):
             await self.worker.stop()
             await task
 
-        with self.assertLogs(level="WARNING") as logs:
+        with self.assertLogs(level="WARNING"):
             with self.check_fd_leakage():
                 asyncio.run(runner())
 
@@ -153,7 +155,6 @@ class TestWorker(unittest.TestCase):
     def test_collects_statistics(self):
         # child should listen for stop_requested flag
 
-        # loop = asyncio.get_event_loop()
         self.module.exec_cmd = "python3 " + MODULE_STOP_ON_SIGTERM
 
         async def get_statistics():
@@ -170,7 +171,7 @@ class TestWorker(unittest.TestCase):
 
         # no statistics available before worker starts
         stats = asyncio.run(self.worker.statistics())
-        self.assertEqual(stats.pid, None)
+        self.assertIsNone(stats.pid)
 
         async def runner():
             await asyncio.gather(
@@ -207,7 +208,7 @@ class TestWorker(unittest.TestCase):
         # check to make sure it was killed by SIGTERM
         self.assertEqual(self.worker.process.returncode, -1 * signal.SIGTERM)
         # the restart should be logged
-        self.assertTrue("restarting" in ''.join(logs.output).lower())
+        self.assertIn("restarting", ''.join(logs.output).lower())
         # make the the module started multiple times
         num_starts = 0
         for entry in self.worker.logs:
@@ -319,9 +320,9 @@ class TestWorker(unittest.TestCase):
         logs = self.worker.logs
         self.assertEqual(len(logs), LOG_SIZE)
         # make sure the entries have rolled
-        self.assertFalse('starting' in logs[0])
+        self.assertNotIn('starting', logs[0])
         # make sure the last entry is the most recent
-        self.assertTrue('terminated' in logs[-1])
+        self.assertIn('terminated', logs[-1])
 
     """
             Filter accepts two inputs and produces two outputs
@@ -350,7 +351,7 @@ class TestWorker(unittest.TestCase):
             stream_id = int(request.query['id'])
             return web.json_response(self.streams[stream_id].to_json())
 
-        app.add_routes([web.get('/stream.json', stub_stream_info)])
+        app.add_routes([web.get(EndPoints.stream, stub_stream_info)])
         web_runner = web.AppRunner(app)
         tmp_dir = tempfile.TemporaryDirectory()
         sock_file = os.path.join(tmp_dir.name, 'testing')
@@ -394,6 +395,7 @@ class TestWorker(unittest.TestCase):
                 await asyncio.sleep(10)
 
             async def close_interval(self):
+                # API compatability
                 pass
 
         slow_pipe = SlowPipe(stream=helpers.create_stream('slow stream', self.streams[2].layout), name='slow pipe')

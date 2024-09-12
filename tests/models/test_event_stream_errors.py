@@ -7,8 +7,6 @@ from tests import helpers
 
 
 class TestStream(unittest.TestCase):
-    def setUp(self):
-        pass
 
     def test_attribute_errors(self):
         my_stream = EventStream(name='test',

@@ -3,7 +3,7 @@ from typing import List, Union, Dict
 from joule import errors
 from . import data_stream
 from .session import BaseSession
-
+from joule.constants import EndPoints
 
 class ModuleStatistics:
     """
@@ -98,7 +98,7 @@ async def module_get(session: BaseSession,
     else:
         raise errors.ApiError("Invalid module datatype. Must be Module, Name, or ID")
 
-    resp = await session.get("/module.json", params)
+    resp = await session.get(EndPoints.module, params)
     return from_json(resp)
 
 
@@ -107,7 +107,7 @@ async def module_list(session: BaseSession,
     _statistics = 1
     if not statistics:
         _statistics = 0
-    resp = await session.get("/modules.json", {"statistics": _statistics})
+    resp = await session.get(EndPoints.modules, {"statistics": _statistics})
     return [from_json(item) for item in resp]
 
 
@@ -123,4 +123,4 @@ async def module_logs(session: BaseSession,
     else:
         raise errors.ApiError("Invalid module datatype. Must be Module, Name, or ID")
 
-    return await session.get("/module/logs.json", params)
+    return await session.get(EndPoints.module_logs, params)

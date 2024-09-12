@@ -14,9 +14,8 @@ from joule import errors
 @pass_config
 def data_delete(config, start, end, all, stream):
     """Remove data from a stream."""
-    if all:
-        if start is not None or end is not None:
-            raise click.ClickException("specify either --all or --start/--end")
+    if all and( start is not None or end is not None):
+        raise click.ClickException("specify either --all or --start/--end")
     if all is None and start is None and end is None:
         raise click.ClickException("specify either --all or --start/--end")
     if start is not None:
@@ -35,10 +34,6 @@ def data_delete(config, start, end, all, stream):
             stream, start, end))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
-    except:
-        import traceback
-        traceback.print_exc()
     finally:
-        asyncio.run(
-            config.close_node())
+        asyncio.run(config.close_node())
     click.echo("OK")

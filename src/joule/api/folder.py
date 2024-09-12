@@ -1,6 +1,7 @@
 from typing import Union
 
 from joule import errors
+from joule.constants import EndPoints
 from .folder_type import Folder
 from .session import BaseSession
 from .data_stream import from_json as data_stream_from_json
@@ -24,7 +25,7 @@ def from_json(json) -> Folder:
 
 
 async def folder_root(session: BaseSession) -> Folder:
-    resp = await session.get("/folders.json")
+    resp = await session.get(EndPoints.folders)
     return from_json(resp)
 
 
@@ -51,7 +52,7 @@ async def folder_move(session: BaseSession,
     else:
         raise errors.ApiError("Invalid destination datatype. Must be Folder, Path, or ID")
 
-    await session.put("/folder/move.json", data)
+    await session.put(EndPoints.folder_move, data)
 
 
 async def folder_delete(session: BaseSession,
@@ -71,12 +72,12 @@ async def folder_delete(session: BaseSession,
     else:
         raise errors.ApiError("Invalid folder datatype. Must be Folder, Path, or ID")
 
-    await session.delete("/folder.json", data)
+    await session.delete(EndPoints.folder, data)
 
 
 async def folder_update(session: BaseSession,
                         folder: Folder) -> None:
-    return await session.put("/folder.json", {"id": folder.id,
+    return await session.put(EndPoints.folder, {"id": folder.id,
                                               "folder": folder.to_json()})
 
 
@@ -92,5 +93,5 @@ async def folder_get(session: BaseSession,
     else:
         raise errors.ApiError("Invalid folder datatype. Must be Folder, Path, or ID")
 
-    resp = await session.get("/folder.json", params)
+    resp = await session.get(EndPoints.folder, params)
     return from_json(resp)

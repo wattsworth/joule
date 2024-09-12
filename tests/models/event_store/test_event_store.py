@@ -6,6 +6,7 @@ import tempfile
 import shutil
 import os
 import sys
+import asyncio
 
 from joule.models.data_store.event_store import EventStore, StreamInfo
 from joule.models.event_stream import EventStream
@@ -22,17 +23,20 @@ class TestEventStore(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         # set up the pscql database
         self.psql_dir = tempfile.TemporaryDirectory()
-        self.postgresql = testing.postgresql.Postgresql(base_dir=self.psql_dir.name)
-        self.postgresql.stop()
+        # run this asynchronously to avoid blocking the event loop
+        def start_postgresql_instance():
+            return testing.postgresql.Postgresql(base_dir=self.psql_dir.name)
+        self.postgresql = await asyncio.to_thread(start_postgresql_instance)
+        await asyncio.to_thread(self.postgresql.stop)
+
         # now that the directory structure is created, customize the *.conf file
         src = os.path.join(os.path.dirname(__file__), "postgresql.conf")
         dest = os.path.join(self.psql_dir.name, "data", "postgresql.conf")
         shutil.copyfile(src, dest)
         # restart the database
-        self.postgresql = testing.postgresql.Postgresql(base_dir=self.psql_dir.name)
+        self.postgresql = await asyncio.to_thread(start_postgresql_instance)
 
         self.db_url = self.postgresql.url()
-        # self.db_url = "postgresql://joule:joule@127.0.0.1:5432/joule"
         conn: asyncpg.Connection = await asyncpg.connect(self.db_url)
         await conn.execute("CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE ")
         await conn.execute("CREATE USER joule_module")
@@ -41,11 +45,10 @@ class TestEventStore(unittest.IsolatedAsyncioTestCase):
             file_path = os.path.join(SQL_DIR, file)
             with open(file_path, 'r') as f:
                 await conn.execute(f.read())
-
         await conn.close()
 
     async def asyncTearDown(self):
-        self.postgresql.stop()
+        await asyncio.to_thread(self.postgresql.stop)
         self.psql_dir.cleanup()
 
     async def test_runner(self):
@@ -94,8 +97,6 @@ class TestEventStore(unittest.IsolatedAsyncioTestCase):
                 else:
                     start = x * 1000 * 100
                     end = (x * 1000 + 20 + x - 1) * 100 + 10
-                    #if x == 10:  # handle rounding error in conversion between postgres and int timestamp
-                    #    end -= 1
                     results[x] = StreamInfo(start, end, 20 + x, end - start, 0)
             return results
 
@@ -118,13 +119,17 @@ class TestEventStore(unittest.IsolatedAsyncioTestCase):
             return acc
 
         # generate 200 events with start times between Aug 1 and Aug 2 2021
-        bounds1 = [h2ts("2021-08-01T00:00:00"), h2ts("2021-08-02T00:00:00")]
+        #[h2ts("2021-08-01T00:00:00"), h2ts("2021-08-02T00:00:00")]
+        # use microsecond timestamp to improve execution speed (avoid asyncio warning)
+        bounds1 = [1627790400000000, 1627876800000000]
         times = [random.randint(bounds1[0], bounds1[1]) for _ in range(200)]
         event_stream = EventStream(id=1, name='test_stream')
         events1 = [{'start_time': ts,
                     'end_time': ts + random.randint(int(10e6), int(100e6)),
                     'content': {'block': 1}} for ts in times]
-        bounds2 = [h2ts("2021-08-03T00:00:00"), h2ts("2021-08-04T00:00:00")]
+        # generate 150 events with start times between Aug 3 and Aug 4 2021
+        #[h2ts("2021-08-03T00:00:00"), h2ts("2021-08-04T00:00:00")] ^-- see above note
+        bounds2 = [1627963200000000, 1628049600000000]
         times = [random.randint(bounds2[0], bounds2[1]) for _ in range(150)]
         events2 = [{'start_time': ts,
                     'end_time': ts + random.randint(int(10e6), int(100e6)),

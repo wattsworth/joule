@@ -81,7 +81,7 @@ class TestMasterAdd(FakeJouleTestCase):
         self.start_server(server)
         runner = CliRunner()
         result = runner.invoke(main, ['module', 'list'])
-        self.assertTrue('Error' in result.output)
+        self.assertIn('Error', result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()
 
@@ -95,7 +95,7 @@ class TestMasterAdd(FakeJouleTestCase):
         self.start_server(server)
         runner = CliRunner()
         result = runner.invoke(main, ['module', 'list'])
-        self.assertTrue('%d' % error_code in result.output)
-        self.assertTrue(error_msg in result.output)
+        self.assertIn('%d' % error_code, result.output)
+        self.assertIn(error_msg, result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()

@@ -27,7 +27,7 @@ class TestEventInfo(FakeJouleTestCase):
         # make sure the items are populated correctly
         output = result.output.split('\n')
         row_line = [x for x in output if 'Events' in x][0]
-        self.assertTrue("282587" in row_line)
+        self.assertIn("282587", row_line)
         start_line = [x for x in output if 'Start' in x][0]
 
         # note: day and hour depends on client's timezone (check year and MM:SS)
@@ -38,12 +38,12 @@ class TestEventInfo(FakeJouleTestCase):
         # make sure the event fields are present
         for field in ["type", "phase"]:
             line = [x for x in output if field in x][0]
-            self.assertTrue("string" in line)
+            self.assertIn("string", line)
         for field in ['duration', 'isolated', 'position',
                       'real_power', 'power_factor', 'apparent_power',
                       'reactive_power', 'relative_variance']:
             line = [x for x in output if field in x][0]
-            self.assertTrue("numeric" in line)
+            self.assertIn("numeric", line)
         self.stop_server()
 
     def test_shows_empty_info(self):
@@ -59,16 +59,16 @@ class TestEventInfo(FakeJouleTestCase):
         # make sure the items are populated correctly
         output = result.output.split('\n')
         row_line = [x for x in output if 'Events' in x][0]
-        self.assertTrue("0" in row_line)
+        self.assertIn("0", row_line)
         start_line = [x for x in output if 'Start' in x][0]
 
         # no time bounds
-        self.assertTrue(u"\u2014" in start_line)
+        self.assertIn(u"\u2014", start_line)
         end_line = [x for x in output if 'End' in x][0]
-        self.assertTrue(u"\u2014" in end_line)
+        self.assertIn(u"\u2014", end_line)
 
         # no event fields printed
-        self.assertTrue("no fields specified" in result.output)
+        self.assertIn("no fields specified", result.output)
         self.stop_server()
 
     def test_errors_on_invalid_path(self):
@@ -79,6 +79,6 @@ class TestEventInfo(FakeJouleTestCase):
         self.start_server(server)
         runner = CliRunner()
         result = runner.invoke(main, ['event', 'info', '/bad/path'])
-        self.assertTrue("Error" in result.output)
+        self.assertIn("Error", result.output)
         self.stop_server()
 

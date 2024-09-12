@@ -54,7 +54,7 @@ class TestStream(unittest.TestCase):
         self.assertDictEqual(json_resp['event_fields'], my_stream.event_fields)
 
         # has a string representation
-        self.assertTrue(my_stream.name in str(my_stream))
+        self.assertIn(my_stream.name, str(my_stream))
 
         # can be recovered from JSON
         new_stream = event_stream.from_json(json_resp)
@@ -79,5 +79,5 @@ class TestStream(unittest.TestCase):
 
         # ignored when info is not available
         json_resp = my_stream.to_json(info={101: stream_info})
-        self.assertFalse('data_info' in json_resp)
+        self.assertNotIn('data_info', json_resp)
 

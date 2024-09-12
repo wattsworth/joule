@@ -9,6 +9,7 @@ import joule.controllers
 from tests.controllers.helpers import create_db, MockStore, MockSupervisor
 from tests import helpers
 from joule import app_keys
+from joule.constants import EndPoints
 
 import testing.postgresql
 psql_key = web.AppKey("psql", testing.postgresql.Postgresql)
@@ -40,7 +41,7 @@ class TestDataController(AioHTTPTestCase):
         nchunks = 10
         store.configure_extract(nchunks)
         resp: aiohttp.ClientResponse = await \
-            self.client.get("/data", params={"path": "/folder1/stream1"})
+            self.client.get(EndPoints.data, params={"path": "/folder1/stream1"})
         rx_chunks = 0
         async for data, _ in resp.content.iter_chunks():
             if len(data) > 0:
@@ -50,7 +51,7 @@ class TestDataController(AioHTTPTestCase):
         # can retrieve stream by id and as decimated data
         stream = db.query(DataStream).filter_by(name="stream1").one()
         resp: aiohttp.ClientResponse = await \
-            self.client.get("/data", params={"id": stream.id, 'decimation-level': 16})
+            self.client.get(EndPoints.data, params={"id": stream.id, 'decimation-level': 16})
         rx_chunks = 0
         async for data, _ in resp.content.iter_chunks():
             if len(data) > 0:
@@ -68,14 +69,14 @@ class TestDataController(AioHTTPTestCase):
         # mock data has 2 intervals retrieved as 10 chunks each
         store.configure_extract(n_chunks, n_intervals)
         resp: aiohttp.ClientResponse = await \
-            self.client.get("/data.json", params={"path": "/folder1/stream1"})
+            self.client.get(EndPoints.data_json, params={"path": "/folder1/stream1"})
         data = await resp.json()
         self.assertEqual(1, data['decimation_factor'])
         self.assertEqual(len(data['data'][0]), n_chunks * 25)
         # can retrieve stream by id and as decimated data as well
         stream = db.query(DataStream).filter_by(name="stream1").one()
         resp: aiohttp.ClientResponse = await \
-            self.client.get("/data.json", params={"id": stream.id, 'decimation-level': 16})
+            self.client.get(EndPoints.data_json, params={"id": stream.id, 'decimation-level': 16})
         data = await resp.json()
         self.assertEqual(data['decimation_factor'], 16)
         # only the interval is exposed, the chunking is transparent
@@ -95,7 +96,7 @@ class TestDataController(AioHTTPTestCase):
         my_pipe.write_nowait(blk2)
         my_pipe.close_nowait()
         self.supervisor.subscription_pipe = my_pipe
-        async with self.client.get("/data", params={"id": my_stream.id,
+        async with self.client.get(EndPoints.data, params={"id": my_stream.id,
                                                     "subscribe": '1'}) as resp:
             pipe = pipes.InputPipe(stream=my_stream, reader=resp.content)
             rx_blk1 = await pipe.read()
@@ -119,7 +120,7 @@ class TestDataController(AioHTTPTestCase):
         my_pipe = pipes.LocalPipe(my_stream.layout)
         my_pipe.close_nowait()
         self.supervisor.subscription_pipe = my_pipe
-        async with self.client.get("/data", params={"id": my_stream.id,
+        async with self.client.get(EndPoints.data, params={"id": my_stream.id,
                                                     "subscribe": '1'}):
             # ignore the data
             pass
@@ -134,7 +135,7 @@ class TestDataController(AioHTTPTestCase):
         stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
         data = helpers.create_data(stream.layout)
         resp: aiohttp.ClientResponse = await \
-            self.client.post("/data", params={"path": "/folder1/stream1"},
+            self.client.post(EndPoints.data, params={"path": "/folder1/stream1"},
                              data=data.tobytes())
         self.assertEqual(resp.status, 200)
         self.assertTrue(store.inserted_data)
@@ -143,21 +144,21 @@ class TestDataController(AioHTTPTestCase):
         store.inserted_data = False
         data = helpers.create_data(stream.layout)
         resp: aiohttp.ClientResponse = await \
-            self.client.post("/data", params={"id": stream.id},
+            self.client.post(EndPoints.data, params={"id": stream.id},
                              data=data.tobytes())
         self.assertEqual(resp.status, 200)
         self.assertTrue(store.inserted_data)
 
         # can set merge_gap value
         resp: aiohttp.ClientResponse = await \
-            self.client.post("/data", params={"id": stream.id, "merge-gap": 100},
+            self.client.post(EndPoints.data, params={"id": stream.id, "merge-gap": 100},
                              data=data.tobytes())
         self.assertEqual(resp.status, 200)
         self.assertEqual(store.merge_gap, 100)
 
         # merge gap is 0 by default
         resp: aiohttp.ClientResponse = await \
-            self.client.post("/data", params={"id": stream.id},
+            self.client.post(EndPoints.data, params={"id": stream.id},
                              data=data.tobytes())
         self.assertEqual(resp.status, 200)
         self.assertEqual(store.merge_gap, 0)
@@ -169,7 +170,7 @@ class TestDataController(AioHTTPTestCase):
         store: MockStore = self.app[app_keys.data_store]
         stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
         resp: aiohttp.ClientResponse = await \
-            self.client.delete("/data", params={"path": "/folder1/stream1",
+            self.client.delete(EndPoints.data, params={"path": "/folder1/stream1",
                                                 "start": "100", "end": "200"})
         self.assertEqual(resp.status, 200)
         (start, end) = store.removed_data_bounds
@@ -178,7 +179,7 @@ class TestDataController(AioHTTPTestCase):
 
         # can remove data by path as well
         resp: aiohttp.ClientResponse = await \
-            self.client.delete("/data", params={"id": stream.id,
+            self.client.delete(EndPoints.data, params={"id": stream.id,
                                                 "start": "800", "end": "900"})
         self.assertEqual(resp.status, 200)
         (start, end) = store.removed_data_bounds
@@ -189,7 +190,7 @@ class TestDataController(AioHTTPTestCase):
     async def test_interval_data(self):
         db: Session = self.app[app_keys.db]
         stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
-        resp = await self.client.get("/data/intervals.json",
+        resp = await self.client.get(EndPoints.data_intervals,
                                      params={"id": stream.id})
         # response should be a list of intervals
         data = await resp.json()
@@ -198,7 +199,7 @@ class TestDataController(AioHTTPTestCase):
             self.assertEqual(2, len(interval))
 
         # can query by path as well
-        resp = await self.client.get("/data/intervals.json",
+        resp = await self.client.get(EndPoints.data_intervals,
                                      params={"path": "/folder1/stream1"})
         # response should be a list of intervals
         data = await resp.json()
@@ -207,7 +208,7 @@ class TestDataController(AioHTTPTestCase):
             self.assertEqual(2, len(interval))
 
         # can specify time bounds
-        resp = await self.client.get("/data/intervals.json",
+        resp = await self.client.get(EndPoints.data_intervals,
                                      params={"path": "/folder1/stream1",
                                              "start": 10,
                                              "end": 20})

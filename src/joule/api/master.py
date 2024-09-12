@@ -2,7 +2,7 @@ from typing import List, TYPE_CHECKING, Dict, Optional
 
 from joule import errors
 from .session import BaseSession
-
+from joule.constants import EndPoints
 
 class Master:
     """
@@ -32,7 +32,7 @@ async def master_add(session: BaseSession, master_type: str,
             "lumen_params": parameters,
             "api_key": api_key}
     try:
-        resp = await session.post("/master.json", json=data)
+        resp = await session.post(EndPoints.master, json=data)
     except errors.ApiError as e:
         if "cannot contact node at" in str(e) and master_type == 'lumen':
             msg = str(e).split("[422]")[0]
@@ -54,9 +54,9 @@ async def master_add(session: BaseSession, master_type: str,
 async def master_delete(session: BaseSession, master_type: str, name: str):
     data = {"master_type": master_type,
             "name": name}
-    await session.delete("/master.json", params=data)
+    await session.delete(EndPoints.master, params=data)
 
 
 async def master_list(session: BaseSession) -> List[Master]:
-    resp = await session.get("/masters.json")
+    resp = await session.get(EndPoints.masters)
     return [from_json(item) for item in resp]

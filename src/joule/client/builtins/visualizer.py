@@ -8,6 +8,7 @@ import random
 import numpy as np
 
 from joule.client.filter_module import FilterModule
+from joule.constants import EndPoints
 
 CSS_DIR = os.path.join(os.path.dirname(__file__), 'assets', 'css')
 JS_DIR = os.path.join(os.path.dirname(__file__), 'assets', 'js')
@@ -17,6 +18,7 @@ ARGS_DESC = """
 TODO
 """
 
+MDASH = '&mdash;'
 # App Keys #
 title_key = web.AppKey("title", str)
 
@@ -34,9 +36,9 @@ class Visualizer(FilterModule):  # pragma: no cover
                 self.elements.append({
                     'stream': pipe.stream.name,
                     'element': element.name,
-                    'value': '&mdash;',
-                    'min': '&mdash;',
-                    'max': '&mdash;',
+                    'value': MDASH,
+                    'min': MDASH,
+                    'max': MDASH,
                     'id': dom_id
                 })
                 dom_id += 1
@@ -87,7 +89,7 @@ class Visualizer(FilterModule):  # pragma: no cover
     def routes(self):
         return [
             web.get('/', self.index),
-            web.get('/data.json', self.data),
+            web.get(EndPoints.data_json, self.data),
             web.post('/reset.json', self.reset),
             web.static('/assets/css', CSS_DIR),
             web.static('/assets/js', JS_DIR),
@@ -104,8 +106,8 @@ class Visualizer(FilterModule):  # pragma: no cover
 
         # clear the max and min values
         for element in self.elements:
-            element['min'] = "&mdash;"
-            element['max'] = "&mdash;"
+            element['min'] = MDASH
+            element['max'] = MDASH
 
         return web.json_response(data=self.elements)
 

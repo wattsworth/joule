@@ -30,6 +30,8 @@ def module_args():
         if args.module_config != "unset":
             arg_list += _append_args(args.module_config)
     except SystemExit:
+        # NOTE: argparse will call sys.exit() if --help is specified
+        # maybe this can be done more cleanly but more testing is needed
         pass
     finally:
         sys.stdout.close()

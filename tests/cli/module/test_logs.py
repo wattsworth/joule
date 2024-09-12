@@ -20,8 +20,8 @@ class TestModuleLogs(FakeJouleTestCase):
         result = runner.invoke(main, ['module', 'logs', 'my_module'])
         self.assertEqual(result.exit_code, 0)
         output = result.output
-        self.assertTrue(len(output) > 0)
-        self.assertTrue("starting" in output)
+        self.assertGreater(len(output), 0)
+        self.assertIn("starting", output)
         self.stop_server()
 
     def test_when_server_returns_invalid_data(self):
@@ -30,7 +30,7 @@ class TestModuleLogs(FakeJouleTestCase):
         self.start_server(server)
         runner = CliRunner()
         result = runner.invoke(main, ['module', 'logs', 'my_module'])
-        self.assertTrue('Error' in result.output)
+        self.assertIn('Error', result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()
 
@@ -43,7 +43,7 @@ class TestModuleLogs(FakeJouleTestCase):
         self.start_server(server)
         runner = CliRunner()
         result = runner.invoke(main, ['module', 'logs', 'my_module'])
-        self.assertTrue('%d' % error_code in result.output)
-        self.assertTrue(error_msg in result.output)
+        self.assertIn('%d' % error_code, result.output)
+        self.assertIn(error_msg, result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()

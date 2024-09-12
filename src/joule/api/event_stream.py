@@ -8,6 +8,7 @@ from .event import Event
 from .event import from_json as event_from_json
 from joule import errors
 from joule.utilities.validators import validate_event_fields
+from joule.constants import EndPoints
 
 class EventStream:
     """
@@ -30,7 +31,7 @@ class EventStream:
         self.description = description
         if chunk_duration_us is not None:
             if chunk_duration != "":
-                raise Exception("specify either chunk_duration or chunk_duration_us, not both")
+                raise errors.ApiError("specify either chunk_duration or chunk_duration_us, not both")
             self.chunk_duration_us = chunk_duration_us
         else:
             self.chunk_duration_us = self._parse_time_duration(chunk_duration)
@@ -162,9 +163,9 @@ async def event_stream_delete(session: BaseSession,
     elif type(stream) is str:
         data["path"] = stream
     else:
-        raise errors.ApiError("Invalid stream datatype. Must be EventStream, Path, or ID")
+        raise errors.InvalidEventStreamParameter()
 
-    await session.delete("/event.json", data)
+    await session.delete(EndPoints.event, data)
 
 
 async def event_stream_create(session: BaseSession,
@@ -180,7 +181,7 @@ async def event_stream_create(session: BaseSession,
     else:
         raise errors.ApiError("Invalid folder datatype. Must be Folder, Path, or ID")
 
-    resp = await session.post("/event.json", json=data)
+    resp = await session.post(EndPoints.event, json=data)
     return from_json(resp)
 
 
@@ -195,9 +196,9 @@ async def event_stream_info(session: BaseSession,
     elif type(stream) is str:
         data["path"] = stream
     else:
-        raise errors.ApiError("Invalid stream datatype. Must be EventStream, Path, or ID")
+        raise errors.InvalidEventStreamParameter()
 
-    resp = await session.get("/event.json", data)
+    resp = await session.get(EndPoints.event, data)
     return info_from_json(resp['data_info'])
 
 
@@ -217,10 +218,10 @@ async def event_stream_get(session: BaseSession,
     elif type(stream) is str:
         data["path"] = stream
     else:
-        raise errors.ApiError("Invalid stream datatype. Must be EventStream, Path, or ID")
+        raise errors.InvalidEventStreamParameter()
 
     try:
-        resp = await session.get("/event.json", data)
+        resp = await session.get(EndPoints.event, data)
     except errors.ApiError as e:
         # pass the error if the stream should not or cannot be created
         if not create or type(stream) is not str:
@@ -239,7 +240,7 @@ async def event_stream_update(session: BaseSession,
                               stream: EventStream) -> None:
     # validate the event fields before sending
     validate_event_fields(stream.event_fields)
-    await session.put("/event.json", {"id": stream.id,
+    await session.put(EndPoints.event, {"id": stream.id,
                                       "stream": stream.to_json()})
 
 
@@ -265,7 +266,7 @@ async def event_stream_move(session: BaseSession,
         data["dest_path"] = destination
     else:
         raise errors.ApiError("Invalid destination datatype. Must be Folder, Path, or ID")
-    await session.put("/event/move.json", data)
+    await session.put(EndPoints.event_move, data)
 
 
 async def event_stream_write(session: BaseSession,
@@ -279,13 +280,13 @@ async def event_stream_write(session: BaseSession,
     elif type(stream) is str:
         data["path"] = stream
     else:
-        raise errors.ApiError("Invalid stream datatype. Must be EventStream, Path, or ID")
+        raise errors.InvalidEventStreamParameter()
     # post events in blocks
     rx_events = []
     for idx in range(0, len(events), 500):
         chunk = events[idx:idx + 500]
         data['events'] = [e.to_json() for e in events[idx:idx + 500]]
-        resp = await session.post("/event/data.json", data)
+        resp = await session.post(EndPoints.event_data, data)
         rx_events += [event_from_json(e) for e in resp["events"]]
         # copy the ids over
         for i in range(len(chunk)):
@@ -307,7 +308,7 @@ async def event_stream_count(session: BaseSession,
     elif type(stream) is str:
         params["path"] = stream
     else:
-        raise errors.ApiError("Invalid stream datatype. Must be EventStream, Path, or ID")
+        raise errors.InvalidEventStreamParameter()
     if start_time is not None:
         params['start'] = int(start_time)
     if end_time is not None:
@@ -316,7 +317,7 @@ async def event_stream_count(session: BaseSession,
         params['filter'] = json_filter
     if include_on_going_events:
         params['include-on-going-events'] = 1
-    resp = await session.get("/event/data/count.json", params)
+    resp = await session.get(EndPoints.event_data_count, params)
     return resp["count"]
 
 
@@ -335,7 +336,7 @@ async def event_stream_read(session: BaseSession,
     elif type(stream) is str:
         params["path"] = stream
     else:
-        raise errors.ApiError("Invalid stream datatype. Must be EventStream, Path, or ID")
+        raise errors.InvalidEventStreamParameter()
     if start_time is not None:
         params['start'] = int(start_time)
     if end_time is not None:
@@ -350,7 +351,7 @@ async def event_stream_read(session: BaseSession,
         params['filter'] = json_filter
     if include_on_going_events:
         params['include-on-going-events'] = 1
-    resp = await session.get("/event/data.json", params)
+    resp = await session.get(EndPoints.event_data, params)
     events = [event_from_json(e) for e in resp["events"]]
     if len(events) > limit:
         print(f"WARNING: Only returning the first {limit} events in this stream, increase "
@@ -373,11 +374,11 @@ async def event_stream_remove(session: BaseSession,
     elif type(stream) is str:
         params["path"] = stream
     else:
-        raise errors.ApiError("Invalid stream datatype. Must be EventStream, Path, or ID")
+        raise errors.InvalidEventStreamParameter()
     if start_time is not None:
         params['start'] = int(start_time)
     if end_time is not None:
         params['end'] = int(end_time)
     if json_filter is not None:
         params['filter'] = json_filter
-    await session.delete("/event/data.json", params)
+    await session.delete(EndPoints.event_data, params)

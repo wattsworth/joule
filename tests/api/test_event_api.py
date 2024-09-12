@@ -1,16 +1,14 @@
 from tests.api import mock_session
-import random
 import unittest
 
 from joule.api.node import TcpNode
 from joule import errors
 
-from joule.api.data_stream import DataStream
 from joule.models.data_store.event_store import StreamInfo
 from joule.api.event_stream import EventStream, Event
 from joule.api.folder import Folder
 from joule.errors import ApiError
-from .helpers import build_stream
+from joule.constants import EndPoints
 
 
 class TestEventApi(unittest.IsolatedAsyncioTestCase):
@@ -29,12 +27,12 @@ class TestEventApi(unittest.IsolatedAsyncioTestCase):
         # can delete by ID
         await self.node.event_stream_delete(1)
         self.assertEqual(self.session.method, 'DELETE')
-        self.assertEqual(self.session.path, "/event.json")
+        self.assertEqual(self.session.path, EndPoints.event)
         self.assertEqual(self.session.request_data, {'id': 1})
         # can delete by path
         await self.node.event_stream_delete('/a/path')
         self.assertEqual(self.session.method, 'DELETE')
-        self.assertEqual(self.session.path, "/event.json")
+        self.assertEqual(self.session.path, EndPoints.event)
         self.assertEqual(self.session.request_data, {'path': '/a/path'})
 
         # can delete by Folder
@@ -42,7 +40,7 @@ class TestEventApi(unittest.IsolatedAsyncioTestCase):
         src.id = 1
         await self.node.event_stream_delete(src)
         self.assertEqual(self.session.method, 'DELETE')
-        self.assertEqual(self.session.path, "/event.json")
+        self.assertEqual(self.session.path, EndPoints.event)
         self.assertEqual(self.session.request_data, {'id': 1})
 
         # handles errors
@@ -60,7 +58,7 @@ class TestEventApi(unittest.IsolatedAsyncioTestCase):
         # creates with a folder object
         await self.node.event_stream_create(src, folder)
         self.assertEqual(self.session.method, 'POST')
-        self.assertEqual(self.session.path, "/event.json")
+        self.assertEqual(self.session.path, EndPoints.event)
         self.assertEqual(self.session.request_data, {'stream': src.to_json(),
                                                      'dest_id': 1})
 
@@ -83,7 +81,7 @@ class TestEventApi(unittest.IsolatedAsyncioTestCase):
         # gets the info by stream object
         info_returned = await self.node.event_stream_info(src)
         self.assertEqual(self.session.method, 'GET')
-        self.assertEqual(self.session.path, "/event.json")
+        self.assertEqual(self.session.path, EndPoints.event)
         self.assertEqual(self.session.request_data, {'id': 10})
         self.assertEqual(info.start, info_returned.start)
         self.assertEqual(info.end, info_returned.end)
@@ -102,8 +100,8 @@ class TestEventApi(unittest.IsolatedAsyncioTestCase):
         # returns empty info if there is no data for the event stream
         self.session.response_data = {'data_info': None}
         info_returned = await self.node.event_stream_info("/a/path")
-        self.assertEqual(info_returned.start, None)
-        self.assertEqual(info_returned.end, None)
+        self.assertIsNone(info_returned.start)
+        self.assertIsNone(info_returned.end)
         self.assertEqual(info_returned.event_count, 0)
         self.assertEqual(info_returned.total_time, 0)
         self.assertEqual(info_returned.bytes, 0)
@@ -116,7 +114,7 @@ class TestEventApi(unittest.IsolatedAsyncioTestCase):
         # gets the stream by stream object
         src_returned = await self.node.event_stream_get(src)
         self.assertEqual(self.session.method, 'GET')
-        self.assertEqual(self.session.path, "/event.json")
+        self.assertEqual(self.session.path, EndPoints.event)
         self.assertEqual(self.session.request_data, {'id': 10})
         self.assertEqual(src.name, src_returned.name)
         self.assertEqual(src.id, src_returned.id)
@@ -137,11 +135,11 @@ class TestEventApi(unittest.IsolatedAsyncioTestCase):
         src_returned = await self.node.event_stream_get("/does/not/exist", create=True)
         # tries and fails to retrieve the stream
         self.assertEqual(self.session.methods[0], 'GET')
-        self.assertEqual(self.session.paths[0], "/event.json")
+        self.assertEqual(self.session.paths[0], EndPoints.event)
         self.assertEqual(self.session.request_data[0], {'path': "/does/not/exist"})
         # submits another request to create it
         self.assertEqual(self.session.methods[1], 'POST')
-        self.assertEqual(self.session.paths[1], "/event.json")
+        self.assertEqual(self.session.paths[1], EndPoints.event)
         new_stream.id = None
         self.assertEqual(self.session.request_data[1], {'stream': new_stream.to_json(),
                                                         'dest_path': "/does/not"})
@@ -172,7 +170,7 @@ class TestEventApi(unittest.IsolatedAsyncioTestCase):
         # updates the event stream by object
         await self.node.event_stream_update(src)
         self.assertEqual(self.session.method, 'PUT')
-        self.assertEqual(self.session.path, "/event.json")
+        self.assertEqual(self.session.path, EndPoints.event)
         self.assertEqual(self.session.request_data, {'id': src.id, 'stream': src.to_json()})
 
         # updating with invalid fields raises an error
@@ -187,7 +185,7 @@ class TestEventApi(unittest.IsolatedAsyncioTestCase):
         folder.id = 1
         await self.node.event_stream_move(src, folder)
         self.assertEqual(self.session.method, 'PUT')
-        self.assertEqual(self.session.path, "/event/move.json")
+        self.assertEqual(self.session.path, EndPoints.event_move)
         self.assertEqual(self.session.request_data, {'src_id': src.id,
                                                      'dest_id': 1})
         # can move by ID
@@ -209,7 +207,7 @@ class TestEventApi(unittest.IsolatedAsyncioTestCase):
         self.session.multiple_calls = True
         await self.node.event_stream_write("/a/path", events)
         self.assertEqual(self.session.methods, ['POST', 'POST'])
-        self.assertEqual(self.session.paths, ['/event/data.json', '/event/data.json'])
+        self.assertEqual(self.session.paths, [EndPoints.event_data, EndPoints.event_data])
         self.assertEqual(self.session.request_data[0]['path'], "/a/path")
         self.assertEqual(len(self.session.request_data[0]['events']), 500)
         self.assertEqual(len(self.session.request_data[1]['events']), len(events[500:]))

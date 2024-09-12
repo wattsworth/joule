@@ -7,7 +7,7 @@ import asyncio
 import tempfile
 import h5py
 import unittest
-import datetime
+from datetime import datetime, timezone
 
 from ..fake_joule import FakeJoule, FakeJouleTestCase
 from joule.cli import main
@@ -26,7 +26,7 @@ class TestDataRead(FakeJouleTestCase):
         # create the source stream
         src = DataStream(id=0, name="source", keep_us=100,
                          datatype=DataStream.DATATYPE.FLOAT32,
-                         updated_at=datetime.datetime.utcnow())
+                         updated_at=datetime.now(timezone.utc))
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         # source has 100 rows of data between [0, 100]
         src_data = helpers.create_data(src.layout)
@@ -44,7 +44,7 @@ class TestDataRead(FakeJouleTestCase):
         for x in range(len(src_data)):
             row = src_data[x]
             expected = "%d %s" % (row['timestamp'], ' '.join('%f' % x for x in row['data']))
-            self.assertTrue(expected in output[x + 1])
+            self.assertIn(expected, output[x + 1])
 
         self.stop_server()
 
@@ -53,7 +53,7 @@ class TestDataRead(FakeJouleTestCase):
         server = FakeJoule()
         # create the source stream
         src = DataStream(id=0, name="source", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32,
-                         updated_at=datetime.datetime.utcnow())
+                         updated_at=datetime.now(timezone.utc))
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         # source has 200 rows of data between [0, 200] in two intervals
         src_data = np.hstack((helpers.create_data(src.decimated_layout, start=0, length=100, step=1),
@@ -80,7 +80,7 @@ class TestDataRead(FakeJouleTestCase):
             else:
                 expected = "%d %s" % (row['timestamp'], ' '.join('%f' % x for x in row['data']))
             # import pdb; pdb.set_trace()
-            self.assertTrue(expected in output[x + 1],msg=f"{output[x+2]}!={expected}")
+            self.assertIn(expected, output[x + 1],msg=f"{output[x+2]}!={expected}")
 
 
         # do not mark the intervals and hide the bounds
@@ -106,7 +106,7 @@ class TestDataRead(FakeJouleTestCase):
                 breakpoint()
                 print("hmmm")
                 
-            self.assertTrue(expected in output[x - offset + 1])
+            self.assertIn(expected, output[x - offset + 1])
 
         self.stop_server()
 
@@ -114,7 +114,7 @@ class TestDataRead(FakeJouleTestCase):
         server = FakeJoule()
         # create the source stream
         src = DataStream(id=0, name="source", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32,
-                         updated_at=datetime.datetime.utcnow())
+                         updated_at=datetime.now(timezone.utc))
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         # source has 200 rows of data between [0, 200] in two intervals
         src_data = np.hstack((helpers.create_data(src.decimated_layout, start=0, length=100, step=1),
@@ -141,7 +141,7 @@ class TestDataRead(FakeJouleTestCase):
             else:
                 data = row['data'][[0, 2, 3, 5, 6, 8]]
                 expected = "%d %s" % (row['timestamp'], ' '.join('%f' % x for x in data))
-            self.assertTrue(expected in output[x + 1])
+            self.assertIn(expected, output[x + 1])
 
         # do not mark the intervals and hide the bounds
         runner = CliRunner()
@@ -160,7 +160,7 @@ class TestDataRead(FakeJouleTestCase):
                 continue
             else:
                 expected = "%d %s" % (row['timestamp'], ' '.join('%f' % x for x in row['data'][:3]))
-            self.assertTrue(expected in output[x - offset + 1])
+            self.assertIn(expected, output[x - offset + 1])
 
         self.stop_server()
 
@@ -168,7 +168,7 @@ class TestDataRead(FakeJouleTestCase):
         server = FakeJoule()
         # create the source stream
         src = DataStream(id=0, name="source", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32,
-                         updated_at=datetime.datetime.utcnow())
+                         updated_at=datetime.now(timezone.utc))
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         # source has 100 rows of data between [0, 100]
         src_data = helpers.create_data(src.layout)
@@ -186,7 +186,7 @@ class TestDataRead(FakeJouleTestCase):
         for x in range(len(src_data)):
             row = src_data[x]
             expected = "%d %s" % (row['timestamp'], ' '.join('%f' % x for x in row['data'][[1, 0]]))
-            self.assertTrue(expected in output[x + 1])
+            self.assertIn(expected, output[x + 1])
 
         self.stop_server()
 
@@ -194,7 +194,7 @@ class TestDataRead(FakeJouleTestCase):
         server = FakeJoule()
         # create the source stream
         src = DataStream(id=0, name="source", keep_us=100, datatype=DataStream.DATATYPE.INT16,
-                         updated_at=datetime.datetime.utcnow())
+                         updated_at=datetime.now(timezone.utc))
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         # source has 100 rows of data between [0, 100]
         src_data = helpers.create_data(src.layout)
@@ -227,7 +227,7 @@ class TestDataRead(FakeJouleTestCase):
         server = FakeJoule()
         # create the source stream
         src = DataStream(id=0, name="source", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32,
-                         updated_at=datetime.datetime.utcnow())
+                         updated_at=datetime.now(timezone.utc))
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         # source has 100 rows of data between [0, 100]
         src_data = helpers.create_data(src.layout)
@@ -256,7 +256,7 @@ class TestDataRead(FakeJouleTestCase):
         server = FakeJoule()
         # create the source stream
         src = DataStream(id=0, name="source", keep_us=100, datatype=DataStream.DATATYPE.FLOAT32,
-                         updated_at=datetime.datetime.utcnow())
+                         updated_at=datetime.now(timezone.utc))
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         # source has 200 rows of data between [0, 200] in two intervals
         src_data = np.hstack((helpers.create_data(src.decimated_layout, start=0, length=100, step=1),

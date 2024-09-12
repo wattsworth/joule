@@ -380,8 +380,6 @@ async def convert_time_bounds(conn: asyncpg.Connection,
     Convert Unix us timestamps to datetime objects and populate [None] values with the
     start or end of the data respectively
     """
-    x = start
-    y = end
     if start is None:
         query = "SELECT time FROM data.stream%d ORDER BY time ASC LIMIT 1" % stream.id
         try:

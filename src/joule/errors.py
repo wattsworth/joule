@@ -39,6 +39,21 @@ class ApiError(Exception):
     """
     pass
 
+class InvalidDataStreamParameter(ApiError):
+    """
+    Passing an invalid datatype to an API function that expects a DataStream
+    """
+    def __init__(self):
+        message = "Invalid stream datatype. Must be DataStream, Path, or ID"
+        super().__init__(message)
+
+class InvalidEventStreamParameter(ApiError):
+    """
+    Passing an invalid datatype to an API function that expects an EventStream
+    """
+    def __init__(self):
+        message = "Invalid stream datatype. Must be EventStream, Path, or ID"
+        super().__init__(message)
 
 class StreamNotFound(ApiError):
     """

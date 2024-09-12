@@ -22,8 +22,8 @@ class TestHelpers(unittest.TestCase):
 
             configs = load_configs(conf_dir)
         self.assertEqual(2, len(configs))
-        self.assertTrue('stream1.conf' in configs.keys())
-        self.assertTrue('streamA-3.conf' in configs.keys())
+        self.assertIn('stream1.conf', configs.keys())
+        self.assertIn('streamA-3.conf', configs.keys())
 
     def test_logs_invalid_files(self):
         """parses files ending in *.conf and ignores others"""

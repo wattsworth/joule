@@ -6,7 +6,7 @@ from joule.models import folder, DataStream, Folder, Element, StreamInfo
 import joule.controllers
 from tests.controllers.helpers import create_db, MockStore, MockEventStore
 from joule import app_keys
-
+from joule.constants import EndPoints
 import testing.postgresql
 psql_key = web.AppKey("psql", testing.postgresql.Postgresql)
 
@@ -38,7 +38,7 @@ class TestFolderController(AioHTTPTestCase):
         mock_info = StreamInfo(start=0, end=100, rows=200)
         store.set_info(my_stream, mock_info)
 
-        resp = await self.client.request("GET", "/folders.json")
+        resp = await self.client.request("GET", EndPoints.folders)
         actual = await resp.json()
         # list of active streams should be in the response
         self.assertTrue("active_data_streams" in actual)
@@ -48,7 +48,7 @@ class TestFolderController(AioHTTPTestCase):
         expected = folder.root(db).to_json()
         self.assertEqual(actual, expected)
         # test to see if data-info flag works
-        resp = await self.client.request("GET", "/folders.json", params={"data-info": ""})
+        resp = await self.client.request("GET", EndPoints.folders, params={"data-info": ""})
         actual = await resp.json()
         expected = folder.root(db).to_json(data_stream_info={my_stream.id: mock_info})
         # remove active_streams from the response, so we can compare it with the database copy
@@ -61,14 +61,14 @@ class TestFolderController(AioHTTPTestCase):
         params = {
             "path": "/top/leaf"
         }
-        resp = await self.client.get("/folder.json", params=params)
+        resp = await self.client.get(EndPoints.folder, params=params)
         self.assertEqual(resp.status, 200)
         json = await resp.json()
         self.assertEqual(json["name"], "leaf")
         self.assertEqual(len(json["streams"]), 1)
         folder_id = json["id"]
         # query by id
-        resp = await self.client.get("/folder.json", params={"id": folder_id})
+        resp = await self.client.get(EndPoints.folder, params={"id": folder_id})
         self.assertEqual(resp.status, 200)
         json = await resp.json()
         self.assertEqual(json["name"], "leaf")
@@ -85,7 +85,7 @@ class TestFolderController(AioHTTPTestCase):
         source_parent_created_at = folder.find("/top", db).updated_at
         dest_parent_created_at = folder.find("/other", db).updated_at
         other_folder_created_at = folder.find("/other/middle", db).updated_at
-        resp = await self.client.put("/folder/move.json", json=payload)
+        resp = await self.client.put(EndPoints.folder_move, json=payload)
         self.assertEqual(resp.status, 200)
         f = folder.find("/other/leaf", db)
         self.assertEqual(f.data_streams[0].name, "stream1")
@@ -105,7 +105,7 @@ class TestFolderController(AioHTTPTestCase):
             "src_id": src_folder.id,
             "dest_id": dest_folder.id
         }
-        resp = await self.client.put("/folder/move.json", json=payload)
+        resp = await self.client.put(EndPoints.folder_move, json=payload)
         self.assertEqual(resp.status, 200)
         self.assertEqual(src_folder.id,
                          folder.find("/top/middle/leaf/leaf", db).id)
@@ -116,7 +116,7 @@ class TestFolderController(AioHTTPTestCase):
         db: Session = self.app[app_keys.db]
         f = folder.find("/top/leaf", db)
         payload = {'path': "/top/leaf"}
-        resp = await self.client.delete("/folder.json", params=payload)
+        resp = await self.client.delete(EndPoints.folder, params=payload)
         self.assertEqual(resp.status, 200)
 
         self.assertIsNone(folder.find("/top/leaf", db))
@@ -134,7 +134,7 @@ class TestFolderController(AioHTTPTestCase):
         top_parent_updated_at = f.parent.parent.updated_at
         self.assertEqual(db.query(Folder).count(), f_count + 3)
         payload = {'id': f.id}
-        resp = await self.client.delete("/folder.json", params=payload)
+        resp = await self.client.delete(EndPoints.folder, params=payload)
         self.assertEqual(resp.status, 200)
 
         self.assertIsNone(folder.find("/an/empty/folder", db))
@@ -149,7 +149,7 @@ class TestFolderController(AioHTTPTestCase):
         db: Session = self.app[app_keys.db]
         f = folder.find("/top", db)
         payload = {'path': "/top", 'recursive': "1"}
-        resp = await self.client.delete("/folder.json", params=payload)
+        resp = await self.client.delete(EndPoints.folder, params=payload)
         self.assertEqual(resp.status, 200)
         # this is the top folder so everything under it should be gone
         # there are three other folders: /, /other, and /other/middle
@@ -172,7 +172,7 @@ class TestFolderController(AioHTTPTestCase):
             "id": my_folder.id,
             "folder": {"name": "new name", "description": "new description"}
         }
-        resp = await self.client.put("/folder.json", json=payload)
+        resp = await self.client.put(EndPoints.folder, json=payload)
         self.assertEqual(200, resp.status)
         my_folder: DataStream = db.get(Folder,my_folder.id)
         self.assertEqual("new name", my_folder.name)

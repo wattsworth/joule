@@ -9,7 +9,7 @@ import shutil
 from datetime import datetime
 from joule import errors
 import aiohttp
-
+from joule.constants import EndPoints
 
 @click.command(name="backup")
 @click.option("-c", "--config", help="main configuration file", default="/etc/joule/main.conf")
@@ -95,6 +95,6 @@ def print_progress(dir, contents):
 
 async def get_nilmdb_dir(url):
     async with aiohttp.ClientSession() as session:
-        async with session.get(url + "/dbinfo") as resp:
+        async with session.get(url + EndPoints.db_info) as resp:
             data = await resp.json()
             return data['path']

@@ -7,6 +7,7 @@ import asyncio
 
 from joule.api import helpers, TcpNode
 from joule import errors
+from joule.constants import ConfigFiles
 
 CAFILE = os.path.join(os.path.dirname(__file__), 'ca.joule.crt')
 
@@ -37,7 +38,7 @@ class TestApiHelpers(unittest.TestCase):
                         "node1_key")
         node2 = TcpNode("node2", "https://localhost:8089",
                         "node2_key")
-        default_file = os.path.join(self.temp_dir.name, "default_node.txt")
+        default_file = os.path.join(self.temp_dir.name, ConfigFiles.default_node)
 
         helpers.save_node(node1)
         helpers.save_node(node2)
@@ -71,8 +72,8 @@ class TestApiHelpers(unittest.TestCase):
         # all nodes can be retrieved
         nodes = helpers.get_nodes()
         self.assertEqual(len(nodes), 2)
-        self.assertTrue(nodes[0].name in ["node1", "node2"])
-        self.assertTrue(nodes[1].name in ["node1", "node2"])
+        self.assertIn(nodes[0].name, ["node1", "node2"])
+        self.assertIn(nodes[1].name, ["node1", "node2"])
 
     def test_lists_all_nodes(self):
         pass

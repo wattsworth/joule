@@ -1,4 +1,6 @@
 from aiohttp import web
+from joule.constants import EndPoints
+
 from joule.controllers import (
     root_controller,
     stream_controller,
@@ -13,72 +15,72 @@ from joule.controllers import (
     annotation_controller)
 
 routes = [
-    web.get('/', root_controller.index),
-    web.get('/db/connection.json', root_controller.db_connection),
-    web.get('/dbinfo', root_controller.dbinfo),
-    web.get('/version', root_controller.version),
-    web.get('/version.json', root_controller.version_json),
+    web.get(EndPoints.root, root_controller.index),
+    web.get(EndPoints.db_connection, root_controller.db_connection),
+    web.get(EndPoints.db_info, root_controller.dbinfo),
+    web.get(EndPoints.version, root_controller.version),
+    web.get(EndPoints.version_json, root_controller.version_json),
     # --- event stream routes ---
-    web.get('/event.json', event_controller.info),
-    web.put('/event/move.json', event_controller.move),
-    web.put('/event.json', event_controller.update),
-    web.post('/event.json', event_controller.create),
-    web.delete('/event.json', event_controller.delete),
+    web.get(EndPoints.event, event_controller.info),
+    web.put(EndPoints.event_move, event_controller.move),
+    web.put(EndPoints.event, event_controller.update),
+    web.post(EndPoints.event, event_controller.create),
+    web.delete(EndPoints.event, event_controller.delete),
     # --- event stream data routes ---
-    web.get('/event/data.json', event_controller.read_events),
-    web.get('/event/data/count.json', event_controller.count_events),
-    web.post('/event/data.json', event_controller.write_events),
-    web.delete('/event/data.json', event_controller.remove_events),
+    web.get(EndPoints.event_data, event_controller.read_events),
+    web.get(EndPoints.event_data_count, event_controller.count_events),
+    web.post(EndPoints.event_data, event_controller.write_events),
+    web.delete(EndPoints.event_data, event_controller.remove_events),
     # --- stream routes ---
-    web.get('/streams.json', folder_controller.index),  # legacy support for Rails API
-    web.get('/stream.json', stream_controller.info),
-    web.put('/stream/move.json', stream_controller.move),
-    web.put('/stream.json', stream_controller.update),
-    web.post('/stream.json', stream_controller.create),
-    web.delete('/stream.json', stream_controller.delete),
+    #web.get('/streams.json', folder_controller.index),  # legacy support for Rails API
+    web.get(EndPoints.stream, stream_controller.info),
+    web.put(EndPoints.stream_move, stream_controller.move),
+    web.put(EndPoints.stream, stream_controller.update),
+    web.post(EndPoints.stream, stream_controller.create),
+    web.delete(EndPoints.stream, stream_controller.delete),
     # --- folder routes ---
-    web.get('/folders.json', folder_controller.index),
-    web.get("/folder.json", folder_controller.info),
-    web.put('/folder/move.json', folder_controller.move),
-    web.put('/folder.json', folder_controller.update),
-    web.delete('/folder.json', folder_controller.delete),
+    web.get(EndPoints.folders, folder_controller.index),
+    web.get(EndPoints.folder, folder_controller.info),
+    web.put(EndPoints.folder_move, folder_controller.move),
+    web.put(EndPoints.folder, folder_controller.update),
+    web.delete(EndPoints.folder, folder_controller.delete),
     # --- data routes ---
-    web.get('/data', data_controller.read),
-    web.get('/data.json', data_controller.read_json),
-    web.get('/data/intervals.json', data_controller.intervals),
-    web.post('/data/decimate.json', data_controller.decimate),
-    web.delete('/data/decimate.json', data_controller.drop_decimations),
-    web.post('/data/consolidate.json', data_controller.consolidate),
-    web.post('/data', data_controller.write),
-    web.delete('/data', data_controller.remove),
+    web.get(EndPoints.data, data_controller.read),
+    web.get(EndPoints.data_json, data_controller.read_json),
+    web.get(EndPoints.data_intervals, data_controller.intervals),
+    web.post(EndPoints.data_decimate, data_controller.decimate),
+    web.delete(EndPoints.data_decimate, data_controller.drop_decimations),
+    web.post(EndPoints.data_consolidate, data_controller.consolidate),
+    web.post(EndPoints.data, data_controller.write),
+    web.delete(EndPoints.data, data_controller.remove),
     # --- module routes ---
-    web.get('/modules.json', module_controller.index),
-    web.get('/module.json', module_controller.info),
-    web.get('/module/logs.json', module_controller.logs),
+    web.get(EndPoints.modules, module_controller.index),
+    web.get(EndPoints.module, module_controller.info),
+    web.get(EndPoints.module_logs, module_controller.logs),
     # --- app routes ---
-    web.get('/app/auth', app_controller.auth),
-    web.get('/app.json', app_controller.index),
+    web.get(EndPoints.app_auth, app_controller.auth),
+    web.get(EndPoints.app_json, app_controller.index),
 
     # --- proxy routes ---
-    web.get('/proxies.json', proxy_controller.index),
-    web.get('/proxy.json', proxy_controller.info),
+    web.get(EndPoints.proxies, proxy_controller.index),
+    web.get(EndPoints.proxy, proxy_controller.info),
     # -- master routes --
-    web.get('/masters.json', master_controller.index),
-    web.post('/master.json', master_controller.add),
-    web.delete('/master.json', master_controller.delete),
+    web.get(EndPoints.masters, master_controller.index),
+    web.post(EndPoints.master, master_controller.add),
+    web.delete(EndPoints.master, master_controller.delete),
     # -- follower routes --
-    web.get('/followers.json', follower_controller.index),
-    web.post('/follower.json', follower_controller.add),
-    web.delete('/follower.json', follower_controller.delete),
+    web.get(EndPoints.followers, follower_controller.index),
+    web.post(EndPoints.follower, follower_controller.add),
+    web.delete(EndPoints.follower, follower_controller.delete),
     # -- annotation routes --
-    web.get('/annotations/info.json', annotation_controller.info),
-    web.get('/annotations.json', annotation_controller.index),
-    web.put('/annotation.json', annotation_controller.update),
-    web.post('/annotation.json', annotation_controller.create),
-    web.delete('/annotation.json', annotation_controller.delete),
-    web.delete('/stream/annotations.json', annotation_controller.delete_all)
+    web.get(EndPoints.annotations_info, annotation_controller.info),
+    web.get(EndPoints.annotations, annotation_controller.index),
+    web.put(EndPoints.annotation, annotation_controller.update),
+    web.post(EndPoints.annotation, annotation_controller.create),
+    web.delete(EndPoints.annotation, annotation_controller.delete),
+    web.delete(EndPoints.stream_annotations, annotation_controller.delete_all)
 ]
 
 insecure_routes = [
-    ['POST', '/follower.json']
+    ['POST', EndPoints.follower]
 ]

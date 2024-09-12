@@ -9,7 +9,7 @@ class TestTimeUtilities(unittest.TestCase):
         now = time.time_now()
         time_str = time.timestamp_to_human(now)
         # make sure it doesn't raise any errors
-        self.assertTrue(len(time_str) > 0)
+        self.assertGreater(len(time_str), 0)
         # check special timestamps
         self.assertEqual("(minimum)", time.timestamp_to_human(time.min_timestamp))
         self.assertEqual("(maximum)", time.timestamp_to_human(time.max_timestamp))

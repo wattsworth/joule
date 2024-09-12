@@ -6,6 +6,7 @@ from tests.controllers.helpers import create_db
 from joule.models import DataStream, Annotation
 from joule import utilities
 from joule import app_keys
+from joule.constants import EndPoints
 
 import testing.postgresql
 psql_key = web.AppKey("psql", testing.postgresql.Postgresql)
@@ -45,25 +46,25 @@ class TestAnnotationControllerErrors(AioHTTPTestCase):
 
     async def test_annotation_list(self):
         # errors on invalid timestamps
-        resp = await self.client.request("GET", "/annotations.json",
+        resp = await self.client.request("GET", EndPoints.annotations,
                                          params=[("stream_id", self.stream1.id),
                                                  ("stream_id", self.stream2.id),
                                                  ("start", "January 1")])
         self.assertEqual(resp.status, 400)
         self.assertIn("timestamp", await resp.text())
         # must specify at least one stream_id
-        resp = await self.client.request("GET", "/annotations.json")
+        resp = await self.client.request("GET", EndPoints.annotations)
         self.assertEqual(resp.status, 400)
         self.assertIn("stream_id", await resp.text())
         # non-existent streams
         bad_id = self.stream1.id + self.stream2.id
-        resp = await self.client.request("GET", "/annotations.json",
+        resp = await self.client.request("GET", EndPoints.annotations,
                                          params=[("stream_id", bad_id)])
         json = await resp.json()
         self.assertEqual(0, len(json))
 
         bad_path = "/bad/stream/path"
-        resp = await self.client.request("GET", "/annotations.json",
+        resp = await self.client.request("GET", EndPoints.annotations,
                                          params=[("stream_path", bad_path)])
         self.assertIn("does not exist", await resp.text())
 
@@ -72,18 +73,18 @@ class TestAnnotationControllerErrors(AioHTTPTestCase):
 
     async def test_annotation_update(self):
         # must be a json request
-        resp = await self.client.request("PUT", "/annotation.json")
+        resp = await self.client.request("PUT", EndPoints.annotation)
         self.assertEqual(resp.status, 400)
         self.assertIn("json", await resp.text())
 
         # must specify id
-        resp = await self.client.request("PUT", "/annotation.json",
+        resp = await self.client.request("PUT", EndPoints.annotation,
                                          json={"title": "test"})
         self.assertEqual(resp.status, 400)
         self.assertIn("id", await resp.text())
         # annotation must exist
         bad_id = 1001
-        resp = await self.client.request("PUT", "/annotation.json",
+        resp = await self.client.request("PUT", EndPoints.annotation,
                                          json={
                                              "id": bad_id,
                                              "title": "test",
@@ -94,23 +95,23 @@ class TestAnnotationControllerErrors(AioHTTPTestCase):
 
     async def test_annotation_create(self):
         # must be a json request
-        resp = await self.client.request("POST", "/annotation.json")
+        resp = await self.client.request("POST", EndPoints.annotation)
         self.assertEqual(resp.status, 400)
         self.assertIn("json", await resp.text())
 
         # must specify stream_id or stream_path
-        resp = await self.client.request("POST", "/annotation.json",
+        resp = await self.client.request("POST", EndPoints.annotation,
                                          json={"title": "test"})
         self.assertEqual(resp.status, 400)
         self.assertIn("stream_id", await resp.text())
         # stream must exist
         bad_id = self.stream1.id + self.stream2.id
-        resp = await self.client.request("POST", "/annotation.json",
+        resp = await self.client.request("POST", EndPoints.annotation,
                                          json={"stream_id": bad_id})
         self.assertEqual(resp.status, 404)
         self.assertIn("does not exist", await resp.text())
         # invalid annotation parameters
-        resp = await self.client.request("POST", "/annotation.json",
+        resp = await self.client.request("POST", EndPoints.annotation,
                                          json={"stream_id": self.stream1.id,
                                                "title": "missing start",
                                                "end": 100})
@@ -121,28 +122,28 @@ class TestAnnotationControllerErrors(AioHTTPTestCase):
 
     async def test_annotation_delete(self):
         # must specify an id
-        resp = await self.client.request("DELETE", "/annotation.json")
+        resp = await self.client.request("DELETE", EndPoints.annotation)
         self.assertEqual(resp.status, 400)
         self.assertIn("id", await resp.text())
         # id must exist
         bad_id = 1001
-        resp = await self.client.request("DELETE", "/annotation.json", params={"id": bad_id})
+        resp = await self.client.request("DELETE", EndPoints.annotation, params={"id": bad_id})
         self.assertEqual(resp.status, 404)
         self.assertIn("does not exist", await resp.text())
 
 
     async def test_annotation_delete_all(self):
         # must specify a stream_id
-        resp = await self.client.request("DELETE", "/stream/annotations.json")
+        resp = await self.client.request("DELETE", EndPoints.stream_annotations)
         self.assertEqual(resp.status, 400)
         self.assertIn("stream_id", await resp.text())
         # stream_id must exist
         bad_id = self.stream1.id + self.stream2.id
-        resp = await self.client.request("DELETE", "/stream/annotations.json", params={"stream_id": bad_id})
+        resp = await self.client.request("DELETE", EndPoints.stream_annotations, params={"stream_id": bad_id})
         self.assertEqual(resp.status, 404)
         self.assertIn("does not exist", await resp.text())
         # start and end must be timestamps
-        resp = await self.client.request("DELETE", "/stream/annotations.json",
+        resp = await self.client.request("DELETE", EndPoints.stream_annotations,
                                          params={"stream_id": self.stream1.id,
                                                  "start": "notatimestamp"})
         self.assertEqual(resp.status, 400)

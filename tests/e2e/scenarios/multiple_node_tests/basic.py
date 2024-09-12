@@ -3,7 +3,7 @@ import unittest
 import joule.api
 import subprocess
 from joule import api
-
+import asyncio
 
 class TestBasicAPI(unittest.IsolatedAsyncioTestCase):
 
@@ -14,7 +14,8 @@ class TestBasicAPI(unittest.IsolatedAsyncioTestCase):
         self.node2 = followers[0]
         # add the root user as a follower to node2.joule
         user = await self.node2.master_add("user", "cli")
-        subprocess.run(f"coverage run --rcfile=/joule/.coveragerc -m joule.cli node add node2.joule https://node2.joule:8088 {user.key}".split(" "))
+        proc = await asyncio.create_subprocess_shell(f"coverage run --rcfile=/joule/.coveragerc -m joule.cli node add node2.joule https://node2.joule:8088 {user.key}")
+        await proc.communicate()
         """
         node1.joule:
         /main/folder/added:int32[x]
@@ -29,8 +30,8 @@ class TestBasicAPI(unittest.IsolatedAsyncioTestCase):
 
     async def test_retrieves_streams(self):
         logs = await self.node1.module_logs("Remote")
-        print(logs)
-        print('----------')
+        self.assertGreater(len(logs), 0)
+        self.assertIn("starting module", logs[0])
         added_stream = await self.node1.data_stream_get("/main/folder/added")
         base_stream = await self.node2.data_stream_get("/main/folder/base")
         # make sure added_stream has data
@@ -52,7 +53,8 @@ class TestBasicAPI(unittest.IsolatedAsyncioTestCase):
         event_stream = joule.api.EventStream("TestEvents")
         event_stream = await self.node1.event_stream_create(event_stream, "/eventstreams")
         await self.node1.event_stream_write(event_stream, events)
-        cmd = f"/usr/local/bin/joule event copy /eventstreams/TestEvents /eventstreams/TestEventsCopy -d node2.joule"
-        subprocess.run(cmd.split(" "))
+        cmd = "/usr/local/bin/joule event copy /eventstreams/TestEvents /eventstreams/TestEventsCopy -d node2.joule"
+        proc = await asyncio.create_subprocess_shell(cmd)
+        await proc.communicate()
         copied_events = await self.node2.event_stream_read("/eventstreams/TestEventsCopy")
         self.assertListEqual(events, copied_events)

@@ -53,7 +53,7 @@ class TimescaleStore(DataStore):
 
     async def insert(self, stream: 'DataStream',
                      data: np.ndarray, start: int, end: int):
-        pass
+        print("WARNING: insert called on timescale store this is a NOP, use spawn_inserter instead")
 
     async def drop_decimations(self, stream: 'DataStream'):
         async with self.pool.acquire() as conn:
@@ -81,9 +81,10 @@ class TimescaleStore(DataStore):
                     await decimator.process(conn, data)
 
             # start a data extraction task with the callback running
-            # the decimation
+            # the decimation, process the whole stream
+            start, end  = await psql_helpers.convert_time_bounds(conn, stream, None, None)
             await _extract_data(conn, stream, redecimator,
-                                decimation_level=1, start=None, end=None,
+                                decimation_level=1, start=start, end=end,
                                 block_size=50000)
 
     async def consolidate(self, stream: 'DataStream', start: int,
@@ -167,8 +168,6 @@ class TimescaleStore(DataStore):
         try:
             await _extract_data(conn, stream, callback, decimation_level, start, end,
                                 block_size=self.extract_block_size)
-        except Exception as e:
-            raise e
         finally:
             await self.pool.release(conn)
 
@@ -270,7 +269,7 @@ class TimescaleStore(DataStore):
 
 
 async def _extract_data(conn: asyncpg.Connection, stream: DataStream, callback,
-                        decimation_level: int = 1, start: int = None, end: int = None,
+                        decimation_level: int = 1, start: Optional[int] = None, end: Optional[int] = None,
                         block_size=50000):
     if decimation_level > 1:
         layout = stream.decimated_layout

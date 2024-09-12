@@ -6,6 +6,7 @@ from joule import errors
 from joule.api.data_stream import DataStream
 from joule.api.folder import Folder
 from .helpers import build_stream
+from joule.constants import EndPoints
 
 
 class TestStreamApi(unittest.IsolatedAsyncioTestCase):
@@ -20,13 +21,13 @@ class TestStreamApi(unittest.IsolatedAsyncioTestCase):
         # can move by ID
         await self.node.data_stream_move(1, 2)
         self.assertEqual(self.session.method, 'PUT')
-        self.assertEqual(self.session.path, "/stream/move.json")
+        self.assertEqual(self.session.path, EndPoints.stream_move)
         self.assertEqual(self.session.request_data,
                          {'src_id': 1, 'dest_id': 2})
         # can move by path
         await self.node.data_stream_move('/a/path', '/b/path')
         self.assertEqual(self.session.method, 'PUT')
-        self.assertEqual(self.session.path, "/stream/move.json")
+        self.assertEqual(self.session.path, EndPoints.stream_move)
         self.assertEqual(self.session.request_data,
                          {'src_path': '/a/path', 'dest_path': '/b/path'})
 
@@ -36,7 +37,7 @@ class TestStreamApi(unittest.IsolatedAsyncioTestCase):
         dest = Folder()
         dest.id = 2
         await self.node.data_stream_move(src, dest)
-        self.assertEqual(self.session.path, "/stream/move.json")
+        self.assertEqual(self.session.path, EndPoints.stream_move)
         self.assertEqual(self.session.request_data,
                          {'src_id': 1, 'dest_id': 2})
 
@@ -54,12 +55,12 @@ class TestStreamApi(unittest.IsolatedAsyncioTestCase):
         # can delete by ID
         await self.node.data_stream_delete(1)
         self.assertEqual(self.session.method, 'DELETE')
-        self.assertEqual(self.session.path, "/stream.json")
+        self.assertEqual(self.session.path, EndPoints.stream)
         self.assertEqual(self.session.request_data, {'id': 1})
         # can delete by path
         await self.node.data_stream_delete('/a/path')
         self.assertEqual(self.session.method, 'DELETE')
-        self.assertEqual(self.session.path, "/stream.json")
+        self.assertEqual(self.session.path, EndPoints.stream)
         self.assertEqual(self.session.request_data, {'path': '/a/path'})
 
         # can delete by DataStream
@@ -67,7 +68,7 @@ class TestStreamApi(unittest.IsolatedAsyncioTestCase):
         src.id = 1
         await self.node.data_stream_delete(src)
         self.assertEqual(self.session.method, 'DELETE')
-        self.assertEqual(self.session.path, "/stream.json")
+        self.assertEqual(self.session.path, EndPoints.stream)
         self.assertEqual(self.session.request_data, {'id': 1})
 
     async def test_stream_delete_errors(self):
@@ -83,19 +84,19 @@ class TestStreamApi(unittest.IsolatedAsyncioTestCase):
         stream = await self.node.data_stream_get(1)
         self.assertEqual(stream.to_json(), target.to_json())
         self.assertEqual(self.session.method, 'GET')
-        self.assertEqual(self.session.path, "/stream.json")
+        self.assertEqual(self.session.path, EndPoints.stream)
         self.assertEqual(self.session.request_data, {'id': 1, 'no-info':''})
         # can get by path
         await self.node.data_stream_get('/a/path')
         self.assertEqual(self.session.method, 'GET')
-        self.assertEqual(self.session.path, "/stream.json")
+        self.assertEqual(self.session.path, EndPoints.stream)
         self.assertEqual(self.session.request_data, {'path': '/a/path', 'no-info':''})
 
         # can get by DataStream
         src = DataStream()
         src.id = 1
         await self.node.data_stream_get(src)
-        self.assertEqual(self.session.path, "/stream.json")
+        self.assertEqual(self.session.path, EndPoints.stream)
         self.assertEqual(self.session.request_data, {'id': 1, 'no-info':''})
 
     async def test_stream_get_errors(self):

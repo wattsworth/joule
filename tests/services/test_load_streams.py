@@ -135,10 +135,10 @@ class TestConfigureStreams(DbTestCase):
         #   its elements should have new attributes
         self.assertEqual(stream1.elements[0].name, 'new_e1')
         self.assertEqual(stream1.elements[0].display_type, Element.DISPLAYTYPE.DISCRETE)
-        self.assertEqual(stream1.elements[0].default_min, None)
+        self.assertIsNone(stream1.elements[0].default_min)
         self.assertEqual(stream1.elements[1].name, 'new_e2')
         self.assertEqual(stream1.elements[1].display_type, Element.DISPLAYTYPE.EVENT)
-        self.assertEqual(stream1.elements[1].default_min, None)
+        self.assertIsNone(stream1.elements[1].default_min)
         self.assertEqual(stream1.elements[2].name, 'new_e3')
         self.assertEqual(stream1.elements[2].default_min, -10)
         # Check unconfigured streams are unchanged
@@ -181,6 +181,6 @@ class TestConfigureStreams(DbTestCase):
                 self.assertEqual(len(path.children), 0)
                 self.assertEqual(len(path.data_streams), 2)
                 for stream in path.data_streams:
-                    self.assertTrue(stream.name in ['stream4', 'stream5'])
+                    self.assertIn(stream.name, ['stream4', 'stream5'])
             else:
                 self.fail("unexpected name: " + f.name)
