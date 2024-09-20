@@ -200,7 +200,7 @@ class TestEventApi(unittest.IsolatedAsyncioTestCase):
     async def test_writes_events_to_stream(self):
         events = [Event(start_time=i, end_time=i + 1, content={'data': 'value'})
                   for i in range(800)]
-        events_returned = [{'id': i, 'start_time': i, 'end_time': i + 1, 'content': {'data': 'value'}}
+        events_returned = [{'id': i, 'event_stream_id': 1, 'start_time': i, 'end_time': i + 1, 'content': {'data': 'value'}}
                            for i in range(800)]
         self.session.response_data = [{'events': events_returned[:500]},
                                       {'events': events_returned[500:]}]
@@ -211,8 +211,3 @@ class TestEventApi(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.session.request_data[0]['path'], "/a/path")
         self.assertEqual(len(self.session.request_data[0]['events']), 500)
         self.assertEqual(len(self.session.request_data[1]['events']), len(events[500:]))
-
-        print("TODO!!")
-        # make sure events now have ids
-        #for i in range(len(events)):
-        #    self.assertEqual(events[i].id, i)

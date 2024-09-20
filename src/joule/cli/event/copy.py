@@ -44,8 +44,6 @@ async def _wrap_action_for_existing_events(node, stream, action, start, end):
     try:
         result = await _action_for_existing_events(node, stream, action, start, end)
         return result
-    except Exception as e:
-        raise e
     finally:
         await node.close()
 
@@ -120,7 +118,7 @@ async def _run(source_node, dest_node, start, end, new, replace, source, destina
         if start is not None:
             print(f"Starting copy at {ts2h(dest_info.end)}")
     elif replace:
-        print(f"Removing existing events from destination...", end="")
+        print("Removing existing events from destination...", end="")
         await dest_node.event_stream_remove(destination, start, end)
         print("[OK]")
 
@@ -128,7 +126,6 @@ async def _run(source_node, dest_node, start, end, new, replace, source, destina
     event_count = stream_info.event_count
     num_copied_events = 0
     with click.progressbar(length=event_count) as bar:
-        # seen_event_ids = set()
         while True:
             events = await source_node.event_stream_read(source, start=start, end=end,
                                                          limit=1000, include_on_going_events=False)

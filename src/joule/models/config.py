@@ -3,10 +3,9 @@ Configuration data structure for joule
 Use load_configs to retrieve Configs object
 """
 
-import enum
 from joule.models import Proxy
 from typing import Optional, List
-import ssl
+from dataclasses import dataclass
 
 DEFAULT_CONFIG = {
     "Main":
@@ -33,34 +32,19 @@ class SecurityConfig:
         self.keyfile = keyfile
         self.cafile = cafile
 
-
+@dataclass
 class JouleConfig:
-    def __init__(self,
-                 name: str,
-                 module_directory: str,
-                 stream_directory: str,
-                 ip_address: Optional[str],
-                 port: Optional[int],
-                 socket_directory: str,
-                 database: str,
-                 insert_period: int,
-                 cleanup_period: int,
-                 max_log_lines: int,
-                 nilmdb_url: Optional[str],
-                 users_file: Optional[str],
-                 proxies: List[Proxy],
-                 security: Optional[SecurityConfig]):
-        self.name = name
-        self.module_directory = module_directory
-        self.stream_directory = stream_directory
-        self.ip_address = ip_address
-        self.port = port
-        self.database = database
-        self.insert_period = insert_period
-        self.cleanup_period = cleanup_period
-        self.max_log_lings = max_log_lines
-        self.nilmdb_url = nilmdb_url
-        self.proxies = proxies
-        self.security = security
-        self.socket_directory = socket_directory
-        self.users_file = users_file
+    name: str
+    module_directory: str
+    stream_directory: str
+    ip_address: Optional[str]
+    port: Optional[int]
+    socket_directory: str
+    database: str
+    insert_period: int
+    cleanup_period: int
+    max_log_lines: int
+    nilmdb_url: Optional[str]
+    users_file: Optional[str]
+    proxies: List['Proxy']
+    security: Optional['SecurityConfig']

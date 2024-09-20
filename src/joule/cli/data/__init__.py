@@ -32,16 +32,3 @@ def filter():
     pass  # pragma: no cover
 
 data.add_command(filter)
-
-"""
-data.add_command(data_copy)
-data.add_command(merge)
-data.add_command(data_read)
-data.add_command(data_remove)
-data.add_command(intervals)
-data.add_command(consolidate)
-data.add_command(ingest)
-
-filter.add_command(mean)
-filter.add_command(median)
-"""

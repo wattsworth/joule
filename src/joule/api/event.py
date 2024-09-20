@@ -7,10 +7,12 @@ class Event:
                  start_time: int,
                  end_time: Optional[int] = None,
                  content: Optional[Dict] = None,
-                 id: Optional[int] = None):
+                 id: Optional[int] = None,
+                 event_stream_id: Optional[int] = None):
         self.id = id
         self.start_time = int(start_time)
         self.end_time = int(end_time)
+        self.event_stream_id = event_stream_id
         if content is None:
             self.content = {}
         else:
@@ -19,6 +21,7 @@ class Event:
     def to_json(self):
         return {
             'id': self.id,
+            'event_stream_id': self.event_stream_id,
             'start_time': self.start_time,
             'end_time': self.end_time,
             'content': self.content
@@ -45,4 +48,5 @@ def from_json(json):
     return Event(start_time=json['start_time'],
                  end_time=json['end_time'],
                  content=json['content'],
-                 id=json['id'])
+                 id=json['id'],
+                 event_stream_id=json['event_stream_id'])

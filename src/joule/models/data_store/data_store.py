@@ -12,7 +12,7 @@ Loop = asyncio.AbstractEventLoop
 # starting and ending timestamps
 Interval = Tuple[int, int]
 
-Data = Union[Interval, np.array]
+Data = Interval | np.array
 
 
 class StreamInfo:

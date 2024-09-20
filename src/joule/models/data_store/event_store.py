@@ -28,13 +28,27 @@ class EventStore:
         async with self.pool.acquire() as conn:
             await psql_helpers.create_event_table(conn, stream)
 
-    async def upsert(self, stream: 'EventStream', events: List):
-        updated_events = list(filter(lambda event: "id" in event and event["id"] is not None, events))
+    async def upsert(self, stream: 'EventStream', events: List) -> List:
+        updated_event_candidates = list(filter(lambda event: "id" in event and event["id"] is not None, events))
         new_events = list(filter(lambda event: "id" not in event or event["id"] is None, events))
+        
         async with self.pool.acquire() as conn:
+            # make sure the events with ID's are actually in this table (not copied from somewhere else)
+            # If their ID is not found put them in the new_events list instead
+            updated_events = []
+            for event in updated_event_candidates:
+                query = f"SELECT COUNT(*) FROM data.event{stream.id} WHERE id=$1"
+                exists = (await conn.fetch(query, event["id"]))[0]
+                if exists:
+                    updated_events.append(event)
+                else:
+                    new_events.append(event)
+
             # lazy stream creation, does nothing if stream already exists
             # keep for legacy nodes, current implementation creates tables at stream creation
             await psql_helpers.create_event_table(conn, stream)
+
+            # Add new events
             if len(new_events) > 0:
                 seq = f"'data.event{stream.id}_id_seq'"
                 query = await conn.fetch(
@@ -53,6 +67,7 @@ class EventStore:
                                                           'content'],
                                                  schema_name='data',
                                                  records=map(event_to_record, new_events))
+            # Update existing events
             query = f"UPDATE data.event{stream.id} SET start_time=$2, end_time=$3, content=$4 WHERE id=$1"
             if len(updated_events) > 0:
                 mapper = map(event_to_record, updated_events)
@@ -116,7 +131,6 @@ class EventStore:
             query += " GROUP BY bucket ORDER BY bucket ASC"
             records = await conn.fetch(query, start, end)
             return histogram_to_events(records)
-            # return [(joule.utilities.datetime_to_timestamp(r['bucket']), r['count']) for r in records]
 
     async def extract(self, stream: 'EventStream',
                       start: Optional[int] = None,
@@ -126,7 +140,7 @@ class EventStore:
                       include_on_going_events=False) -> List[Dict]:
         if end is not None and start is not None and end <= start:
             raise ValueError("Invalid time bounds start [%d] must be < end [%d]" % (start, end))
-        query = f"SELECT id, start_time, end_time, content FROM data.event{stream.id} "
+        query = f"SELECT id, start_time, end_time, content, {stream.id} as event_stream_id FROM data.event{stream.id} "
         if not include_on_going_events:
             end_col_name = None  # only return events that start within this interval
         else:
@@ -269,6 +283,7 @@ def record_to_event(record: asyncpg.Record) -> Dict:
         end = None
     return {
         'id': record['id'],
+        'event_stream_id': record['event_stream_id'],
         'start_time': joule.utilities.datetime_to_timestamp(record['start_time']),
         'end_time': end,
         'content': json.loads(record['content'])}

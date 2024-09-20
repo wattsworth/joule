@@ -32,7 +32,7 @@ def from_json(json: dict) -> Proxy:
 
 
 async def proxy_get(session: BaseSession,
-                    proxy: Union[Proxy, str, int]) -> Proxy:
+                    proxy: Proxy | str | int) -> Proxy:
     params = {}
     if type(proxy) is Proxy:
         params["id"] = proxy.id

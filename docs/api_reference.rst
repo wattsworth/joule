@@ -345,7 +345,7 @@ Data Actions
 Annotation Actions
 ''''''''''''''''''
 
-.. function:: Node.annotation_create(annotation: Annotation,  stream: Union[int, str, DataStream]) -> Annotation
+.. function:: Node.annotation_create(annotation: Annotation,  stream: int | str| DataStream) -> Annotation
 
     Add an annotation. Create a new :class:`joule.api.Annotation` object locally and associate it with a data stream.
     The stream may be specified by path, ID, or a :class:`joule.api.DataStream` object
@@ -546,7 +546,7 @@ Module Actions
          <joule.api.Module id=1 name='counter' description='counts up by 10s' is_app=False>]
 
 
-.. function:: Node.module_get(module: Union[Module, str, int], statistics: bool = False) -> Module
+.. function:: Node.module_get(module: Module | str | int, statistics: bool = False) -> Module
 
     Retrieve a specific module as a :class:`joule.api.Module` object. If statistics is True
     retrieve CPU and memory statistics for each module. Collecting statistics takes additional time
@@ -560,7 +560,7 @@ Module Actions
         <joule.api.ModuleStatistics pid=1460 create_time=1551805343.4 cpu_percent=5.60 memory_percent=6.23>
 
 
-.. function:: Node.module_logs(module: Union[Module, str, int]) -> List[str]
+.. function:: Node.module_logs(module: Module | str | int) -> List[str]
 
     Retrieve a list of module logs. Logs are the stdout and stderr streams from the module. The easiest way to generate
     logs is by adding print statements to a module. The maximum number of lines is controlled by the MaxLogLines parameter
@@ -591,7 +591,7 @@ Proxy Actions
           target_url='http://internal.domain.com'>]
 
 
-.. function:: Node.proxy_get(module: Union[Proxy, str, int]) -> Proxy
+.. function:: Node.proxy_get(module: Proxy | str | int) -> Proxy
 
     Retrieve a specific proxy as a :class:`joule.api.Proxy` object. Proxy may be specified by object,
     name, or numeric ID.

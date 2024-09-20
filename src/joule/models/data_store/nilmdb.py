@@ -136,18 +136,16 @@ class NilmdbStore(DataStore):
         # remove interval gaps less than or equal to max_gap duration (in us)
         intervals = await self.intervals(stream, start, end)
         if len(intervals) == 0:
-            return  # no data, nothing to do
+            return 0 # no data, nothing to do
         duration = [intervals[0][0], intervals[-1][1]]
 
         gaps = interval_tools.interval_difference([duration], intervals)
 
         if len(gaps) == 0:
-            return  # no interval breaks, nothing to do
+            return 0 # no interval breaks, nothing to do
         small_gaps = [gap for gap in gaps if (gap[1] - gap[0]) <= max_gap]
         # spawn an inserter to close each gap
 
-        info = await self._path_info([stream])
-        all_paths = info.keys()
         path = compute_path(stream)
         insert_url = "{server}/stream/insert".format(server=self.server)
         for gap in small_gaps:
@@ -272,7 +270,6 @@ class NilmdbStore(DataStore):
     async def _intervals_by_path(self, path: str, start: Optional[int],
                                  end: Optional[int]) -> List[Interval]:
         url = "{server}/stream/intervals".format(server=self.server)
-        base_path = path
         params = {"path": path}
         if start is not None:
             params["start"] = start

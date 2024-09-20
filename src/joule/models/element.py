@@ -112,7 +112,7 @@ class Element(Base):
             'units': self.units,
             'scale_factor': self.scale_factor,
             'offset': self.offset,
-            'plottable': True,  # TODO: check why elements have NULL fields here?
+            'plottable': True,
             'discrete': False,
             'default_min': self.default_min,
             'default_max': self.default_max

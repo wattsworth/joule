@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Tuple
 from datetime import datetime, timezone
 
 from joule.errors import ConfigurationError
@@ -63,7 +63,7 @@ def run(pipe_config: str, db: Session) -> DataStream:
     return my_stream
 
 
-def strip_remote_config(pipe_config: str) -> (str, str):
+def strip_remote_config(pipe_config: str) -> Tuple[str, str]:
     try:
         # check for the remote URL return stripped config and info
         if pipe_config[0] == '/':
@@ -77,7 +77,7 @@ def strip_remote_config(pipe_config: str) -> (str, str):
     return pipe_config, node
 
 
-def parse_pipe_config(pipe_config: str) -> (str, str, str):
+def parse_pipe_config(pipe_config: str) -> Tuple[str, str, str]:
     # convert /path/name:datatype[e0,e1,e2] into (/path, name, datatype[e0,e1,e2])
     if ':' in pipe_config:
         full_path = pipe_config.split(':')[0]
@@ -96,7 +96,7 @@ def parse_pipe_config(pipe_config: str) -> (str, str, str):
     return path, name, inline_config
 
 
-def parse_inline_config(inline_config: str) -> (DataStream.DATATYPE, List[str]):
+def parse_inline_config(inline_config: str) -> Tuple[DataStream.DATATYPE, List[str]]:
     if len(inline_config) == 0:
         return None, None
     try:

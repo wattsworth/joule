@@ -11,7 +11,7 @@ from joule.models.meta import Base
 
 logger = logging.getLogger('joule')
 
-Stream = Union[EventStream, DataStream]
+Stream = EventStream | DataStream
 
 if TYPE_CHECKING:
     from joule.models.data_store.event_store import StreamInfo as EventStreamInfo

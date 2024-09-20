@@ -27,6 +27,7 @@ def run(path: str, db: Session) -> Modules:
 
 def _parse_configs(configs: Configurations, db: Session) -> Modules:
     stage1_modules: List[(Module, ConfigParser, str)] = []
+    INVALID_MODULE_MSG = "Invalid module [%s]: %s"
     # Pass 1: parse module parameters
     uuid = 0
     for file_path, config in configs.items():
@@ -36,7 +37,7 @@ def _parse_configs(configs: Configurations, db: Session) -> Modules:
             stage1_modules.append((module, config, file_path))
             uuid += 1
         except ConfigurationError as e:
-            logger.error("Invalid module [%s]: %s" % (file_path, e))
+            logger.error(INVALID_MODULE_MSG % (file_path, e))
     # Pass 2: parse outputs
     stage2_modules: List[(Module, ConfigParser, str)] = []
     for module, config, file_path in stage1_modules:
@@ -44,7 +45,7 @@ def _parse_configs(configs: Configurations, db: Session) -> Modules:
             module.outputs = _connect_outputs(config, db)
             stage2_modules.append((module, config, file_path))
         except ConfigurationError as e:
-            logger.error("Invalid module [%s]: %s" % (file_path, e))
+            logger.error(INVALID_MODULE_MSG % (file_path, e))
     # Pass 3: parse inputs
     parsed_modules: Modules = []
     for module, config, file_path in stage2_modules:
@@ -52,7 +53,7 @@ def _parse_configs(configs: Configurations, db: Session) -> Modules:
             module.inputs = _connect_inputs(config, db)
             parsed_modules.append(module)
         except ConfigurationError as e:
-            logger.error("Invalid module [%s]: %s" % (file_path, e))
+            logger.error(INVALID_MODULE_MSG % (file_path, e))
     # Designate active streams
     for module in parsed_modules:
         for stream in module.outputs.values():

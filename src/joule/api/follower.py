@@ -10,7 +10,7 @@ async def follower_list(session: BaseSession) -> List['BaseNode']:
     resp = await session.get(EndPoints.followers)
     return [TcpNode(item['name'], item['location'], item['key'], session.cafile) for item in resp]
 
-async def follower_delete(session: BaseSession, node: Union['BaseNode', str]) -> None:
+async def follower_delete(session: BaseSession, node: 'BaseNode | str') -> None:
     if type(node) is not str:
         name = node.name
     else:

@@ -7,5 +7,4 @@ from .time import (time_now,
                    datetime_to_timestamp)
 from .misc import yesno
 from .interval_tools import interval_difference
-#from .stream import build_stream
 from .connection_info import ConnectionInfo

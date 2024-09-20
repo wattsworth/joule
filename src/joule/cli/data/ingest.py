@@ -59,13 +59,11 @@ def ingest(config, stream_path, file):
             dtype = compute_dtype(stream_obj.layout)
             if dtype[1].base != hdf_data.dtype:
                 raise click.ClickException("Incompatible datatypes, stream is [%s] and data file is [%s]" % (
-                    (dtype[1].base, hdf_data.dtype)
-                ))
+                    dtype[1].base, hdf_data.dtype))
             # make sure the number of elements match
             if len(stream_obj.elements) != hdf_data.shape[1]:
                 raise click.ClickException("DataStream has [%d] elements but data file has [%d] elements" % (
-                    len(stream_obj.elements), hdf_data.shape[1]
-                ))
+                    len(stream_obj.elements), hdf_data.shape[1]))
             # check if there is existing data in this time period
             if stream_info.rows > 0 and (
                     start < stream_info.end and end >= stream_info.start):

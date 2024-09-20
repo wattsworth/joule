@@ -51,6 +51,16 @@ class EndPoints:
     annotations_info = '/annotations/info.json'
 
 @dataclass
+class ApiErrorMessages:
+    stream_does_not_exist = 'stream does not exist'
+    specify_id_or_path = 'specify an id or a path'
+    start_must_be_before_end = '[start] must be before [end]'
+    invalid_filter_parameter = 'invalid filter parameter'
+
+    # Error messages that require formatting
+    f_parameter_must_be_an_int = "parameter {parameter} must be an int"
+
+@dataclass
 class ConfigFiles:
     default_node='default_node.txt'
     nodes = 'nodes.json'

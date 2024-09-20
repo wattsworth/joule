@@ -79,8 +79,7 @@ class Supervisor:
                 return worker.subscribe(stream, pipe)
             except SubscriptionError:
                 pass
-        else:
-            raise SubscriptionError("stream [%s] has no producer" % stream.name)
+        raise SubscriptionError("stream [%s] has no producer" % stream.name)
 
     def get_module_socket(self, uuid):
         for w in self.workers:

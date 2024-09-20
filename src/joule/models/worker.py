@@ -155,8 +155,7 @@ class Worker:
         for output in self.module.outputs.values():
             if output == stream:
                 return True
-        else:
-            return False
+        return False
 
     async def run(self, subscribe: Callable[[DataStream, pipes.Pipe, Loop], Callable], restart: bool = True) -> None:
         self.stop_requested = False
@@ -348,8 +347,6 @@ class Worker:
 
                     child_output.consume(len(data))
                     for pipe in subscribers[:]:
-                        # if child_output.name=='output2':
-                        #    print("writing to %d subscribers" % len(subscribers))
                         try:
 
                             await asyncio.wait_for(pipe.write(data),
@@ -396,7 +393,7 @@ class Worker:
                                                          pipe,
                                                          unsubscribe))
 
-    def _compose_cmd(self) -> str:
+    def _compose_cmd(self) -> List:
         cmd = shlex.split(self.module.exec_cmd)
         output_args = {}
         for c in self.output_connections:
@@ -445,11 +442,10 @@ class Worker:
             self.log(msg)
             return False
         # check to make sure the first timestamp is larger than the previous block
-        if last_ts is not None:
-            if last_ts >= data['timestamp'][0]:
-                msg = ("Non-monotonic timestamp between writes to stream [%s] (%d<=%d)" %
-                       (name, data['timestamp'][0], last_ts))
-                log.warning(msg)
-                self.log(msg)
-                return False
+        if (last_ts is not None) and (last_ts >= data['timestamp'][0]):
+            msg = ("Non-monotonic timestamp between writes to stream [%s] (%d<=%d)" %
+                    (name, data['timestamp'][0], last_ts))
+            log.warning(msg)
+            self.log(msg)
+            return False
         return True

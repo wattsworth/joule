@@ -12,10 +12,13 @@ from typing import Optional, Callable, Coroutine
 
 from joule.models.data_store.errors import DataError, InsufficientDecimationError
 from joule.models.data_store.event_store import EventStore
+from joule.models import folder
 from joule.models.data_store.event_store import StreamInfo as EventStreamInfo
+from joule.api.event_stream import EventStream as ApiEventStream
 from joule.models import (Base, DataStore, DataStream,
                           StreamInfo, DbInfo, pipes,
                           worker, EventStream)
+from joule.models.event_stream import from_json as event_stream_from_json
 from joule.errors import SubscriptionError
 from joule.services import parse_pipe_config
 from tests import helpers
@@ -23,7 +26,7 @@ from tests import helpers
 Loop = asyncio.AbstractEventLoop
 
 
-def create_db(pipe_configs: List[str]) -> Tuple[Session, testing.postgresql.Postgresql]:
+def create_db(pipe_configs: List[str], api_event_streams: Optional[List[ApiEventStream]]=None) -> Tuple[Session, testing.postgresql.Postgresql]:
     postgresql = testing.postgresql.Postgresql()
     db_url = postgresql.url()
     conn = psycopg2.connect(db_url)
@@ -36,17 +39,35 @@ def create_db(pipe_configs: List[str]) -> Tuple[Session, testing.postgresql.Post
     db = Session(bind=engine)
     for pipe_config in pipe_configs:
         parse_pipe_config.run(pipe_config, db)
+    db.commit()
+    if api_event_streams is None:
+        return db, postgresql
+    event_folder =  folder.find("/events", db, create=True)
 
+    for api_event_stream in api_event_streams or []:
+        event_stream = event_stream_from_json(api_event_stream.to_json())
+        event_folder.event_streams.append(event_stream)
+        event_stream.touch()
     db.commit()
     return db, postgresql
 
 
 class MockEventStore(EventStore):
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.stream_info = {}
         self.destroyed_stream_id = None
+        self.create_called = False
+        self.new_stream = None
+        self.upsert_called = False
+        self.upserted_events = []
+        self.count_called = False
+        self.count_params = None
 
-    async def initialize(self):
+    async def initialize(self, pool=None):
+        # API compatibility with DataStore, does not require any initialization
         pass
 
     async def info(self, streams: List[EventStream]) -> Dict[int, EventStreamInfo]:
@@ -59,6 +80,19 @@ class MockEventStore(EventStore):
     async def destroy(self, stream: EventStream):
         self.destroyed_stream_id = stream.id
 
+    async def create(self, new_stream):
+        self.new_stream = new_stream
+        self.create_called = True
+
+    async def upsert(self, stream, events):
+        self.upserted_events = events
+        self.upsert_called = True
+        return events
+    
+    async def count(self, stream, start=None, end=None, json_filter=None,include_on_going_events=False):
+        self.count_called = True
+        self.count_params = (stream, start, end, json_filter, include_on_going_events)
+        return 10
 
 class MockStore(DataStore):
     def __init__(self):

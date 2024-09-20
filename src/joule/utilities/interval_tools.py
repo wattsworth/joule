@@ -67,26 +67,26 @@ def imerge(*iterables):
     """
     import heapq
 
-    heappop, siftup, _Stop = heapq.heappop, heapq._siftup, StopIteration
+    heappop, siftup, _stop = heapq.heappop, heapq._siftup, StopIteration
 
     h = []
     h_append = h.append
     for it in map(iter, iterables):
         try:
-            next = it.__next__
-            h_append([next(), next])
-        except _Stop:
+            _next = it.__next__
+            h_append([_next(), _next])
+        except _stop:
             pass
     heapq.heapify(h)
 
     while 1:
         try:
             while 1:
-                v, next = s = h[0]  # raises IndexError when h is empty
+                v, _next = s = h[0]  # raises IndexError when h is empty
                 yield v
-                s[0] = next()  # raises StopIteration when exhausted
+                s[0] = _next()  # raises StopIteration when exhausted
                 siftup(h, 0)  # restore heap condition
-        except _Stop:
+        except _stop:
             heappop(h)  # remove empty iterator
         except IndexError:
             return

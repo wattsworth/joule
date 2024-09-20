@@ -67,7 +67,7 @@ async def _run(start, end, destination, primary, secondaries, node):
         if len(dest_stream.elements) != destination_width:
             raise click.ClickException(f"Destination must have {destination_width} elements")
         if not dest_stream.datatype.startswith('float'):
-            raise click.ClickException(f"Destination must be a float datatype")
+            raise click.ClickException("Destination must be a float datatype")
 
     except joule.errors.ApiError as e:
         dest_exists = False

@@ -46,7 +46,7 @@ def admin_authorize(config, url):
         username = os.environ["LOGNAME"]
 
     try:
-        nodes = api.get_nodes()
+        api.get_nodes()
     except ValueError as e:
         raise click.ClickException(str(e))
 

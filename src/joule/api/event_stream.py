@@ -10,6 +10,7 @@ from joule import errors
 from joule.utilities.validators import validate_event_fields
 from joule.constants import EndPoints
 
+
 class EventStream:
     """
         API EventStream model. See :ref:`sec-node-event-stream-actions` for details on using the API to
@@ -154,7 +155,7 @@ def info_from_json(json) -> EventStreamInfo:
 
 
 async def event_stream_delete(session: BaseSession,
-                              stream: Union[EventStream, str, int]) -> None:
+                              stream: EventStream | str | int) -> None:
     data = {}
     if type(stream) is EventStream:
         data["id"] = stream.id
@@ -186,7 +187,7 @@ async def event_stream_create(session: BaseSession,
 
 
 async def event_stream_info(session: BaseSession,
-                            stream: Union[EventStream, str, int]) -> EventStreamInfo:
+                            stream: EventStream | str | int) -> EventStreamInfo:
     data = {}
 
     if type(stream) is EventStream:
@@ -203,7 +204,7 @@ async def event_stream_info(session: BaseSession,
 
 
 async def event_stream_get(session: BaseSession,
-                           stream: Union[EventStream, str, int],
+                           stream: EventStream | str | int,
                            create: bool = False,
                            description: str = "",
                            chunk_duration: str = "",
@@ -245,7 +246,7 @@ async def event_stream_update(session: BaseSession,
 
 
 async def event_stream_move(session: BaseSession,
-                            source: Union[EventStream, str, int],
+                            source: EventStream | str | int,
                             destination: Folder | str | int) -> None:
     data = {}
 
@@ -270,7 +271,7 @@ async def event_stream_move(session: BaseSession,
 
 
 async def event_stream_write(session: BaseSession,
-                             stream: Union[EventStream, str, int],
+                             stream: EventStream | str | int,
                              events: List[Event]) -> List[Event]:
     data = {}
     if type(stream) is EventStream:
@@ -295,7 +296,7 @@ async def event_stream_write(session: BaseSession,
 
 
 async def event_stream_count(session: BaseSession,
-                             stream: Union[EventStream, str, int],
+                             stream: EventStream | str | int,
                              start_time: Optional[int],
                              end_time: Optional[int],
                              json_filter,
@@ -322,7 +323,7 @@ async def event_stream_count(session: BaseSession,
 
 
 async def event_stream_read(session: BaseSession,
-                            stream: Union[EventStream, str, int],
+                            stream: EventStream | str | int,
                             start_time: Optional[int],
                             end_time: Optional[int],
                             limit,
@@ -362,7 +363,7 @@ async def event_stream_read(session: BaseSession,
 
 
 async def event_stream_remove(session: BaseSession,
-                              stream: Union[EventStream, str, int],
+                              stream: EventStream | str | int,
                               start_time: Optional[int] = None,
                               end_time: Optional[int] = None,
                               json_filter=None) -> None:

@@ -44,7 +44,7 @@ def save_node(node: TcpNode) -> None:
     _write_node_configs(configs)
 
 
-def delete_node(node: Union[str, BaseNode]) -> None:
+def delete_node(node: str | BaseNode) -> None:
     configs = _get_node_configs()
     if type(node) is str:
         name = node
@@ -64,7 +64,7 @@ def delete_node(node: Union[str, BaseNode]) -> None:
         pass
 
 
-def set_default_node(node: Union[str, BaseNode]) -> None:
+def set_default_node(node: str | BaseNode) -> None:
     if type(node) is str:
         name = node
     else:

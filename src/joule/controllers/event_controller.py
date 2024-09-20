@@ -3,7 +3,8 @@ import json
 from sqlalchemy.orm import Session
 import datetime
 from joule.models import EventStream, EventStore, event_stream
-
+from joule.constants import ApiErrorMessages
+from joule.controllers.helpers import read_json
 from joule.models import folder, Folder
 from joule.errors import ConfigurationError
 from joule import app_keys
@@ -16,43 +17,42 @@ async def info(request: web.Request):
     elif 'id' in request.query:
         my_stream = db.get(EventStream, request.query["id"])
     else:
-        return web.Response(text="specify an id or a path", status=400)
+        raise web.HTTPBadRequest(reason=ApiErrorMessages.specify_id_or_path)
     if my_stream is None:
-        return web.Response(text="stream does not exist", status=404)
+        raise web.HTTPNotFound(reason=ApiErrorMessages.stream_does_not_exist)
     stream_info = await event_store.info([my_stream])
+    ## NOTE: this endpoint supports two separate API calls- event_stream_get and event_stream_info
+    # The JSON response has data for both
     return web.json_response(my_stream.to_json(stream_info))
 
 
 async def move(request: web.Request):
     db: Session = request.app[app_keys.db]
-    if request.content_type != 'application/json':
-        return web.Response(text='content-type must be application/json', status=400)
-    body = await request.json()
+    body = await read_json(request)
     # find the stream
     if 'src_path' in body:
         my_stream = folder.find_stream_by_path(body['src_path'], db, stream_type=EventStream)
     elif 'src_id' in body:
         my_stream = db.get(EventStream, body["src_id"])
     else:
-        return web.Response(text="specify a source id or a path", status=400)
+        raise web.HTTPBadRequest(reason=ApiErrorMessages.specify_id_or_path)
     if my_stream is None:
-        return web.Response(text="stream does not exist", status=404)
+        raise web.HTTPNotFound(reason=ApiErrorMessages.stream_does_not_exist)
     # find or create the destination folder
     if 'dest_path' in body:
         try:
             destination = folder.find(body['dest_path'], db, create=True)
         except ConfigurationError as e:
-            return web.Response(text="Destination error: %s" % str(e), status=400)
+            raise web.HTTPBadRequest(reason="Destination error: %s" % str(e))
     elif 'dest_id' in body:
         destination = db.get(Folder, body["dest_id"])
     else:
-        return web.Response(text="specify a destination", status=400)
+        raise web.HTTPBadRequest(reason="specify a destination")
     # make sure name is unique in this destination
     existing_names = [s.name for s in destination.data_streams + destination.event_streams]
     if my_stream.name in existing_names:
         db.rollback()
-        return web.Response(text="stream with the same name exists in the destination folder",
-                            status=400)
+        raise web.HTTPBadRequest(reason="stream with the same name exists in the destination folder")
     my_stream.folder.touch()
     destination.event_streams.append(my_stream)
     destination.touch()
@@ -63,23 +63,21 @@ async def move(request: web.Request):
 async def create(request):
     db: Session = request.app[app_keys.db]
     event_store: EventStore = request.app[app_keys.event_store]
-    if request.content_type != 'application/json':
-        return web.Response(text='content-type must be application/json', status=400)
-    body = await request.json()
+    body = await read_json(request)
 
     if 'stream' not in body:
-        return web.Response(text="provide a stream", status=400)
+        raise web.HTTPBadRequest(reason="provide a stream")
 
     # find or create the destination folder
     if 'dest_path' in body:
         try:
             destination = folder.find(body['dest_path'], db, create=True)
         except ConfigurationError as e:
-            return web.Response(text="Destination error: %s" % str(e), status=400)
+            raise web.HTTPBadRequest(reason="Destination error: %s" % str(e))
     elif 'dest_id' in body:
         destination = db.get(Folder, body["dest_id"])
     else:
-        return web.Response(text="specify a destination", status=400)
+        raise web.HTTPBadRequest(reason="specify a destination")
 
     try:
         new_stream = event_stream.from_json(body['stream'])
@@ -107,22 +105,19 @@ async def create(request):
 
 async def update(request: web.Request):
     db: Session = request.app[app_keys.db]
-    if request.content_type != 'application/json':
-        return web.Response(text='content-type must be application/json', status=400)
-
-    body = await request.json()
-    if 'id' not in body:
-        return web.Response(text="Invalid request: specify id", status=400)
+    body = await read_json(request)
+    if 'id' not in body or body['id'] is None:
+        raise web.HTTPBadRequest(reason="Invalid request: specify id")
 
     my_stream: EventStream = db.get(EventStream, body['id'])
     if my_stream is None:
-        return web.Response(text="stream does not exist", status=404)
+        raise web.HTTPNotFound(reason=ApiErrorMessages.stream_does_not_exist)
     if 'stream' not in body:
-        return web.Response(text="Invalid request: specify stream as JSON", status=400)
+        raise web.HTTPBadRequest(reason="Invalid request: specify stream as JSON")
     try:
         attrs = dict(body['stream'])
     except ValueError:
-        return web.Response(text="error: [stream] attribute must be JSON", status=400)
+        raise web.HTTPBadRequest(reason="error: [stream] attribute must be JSON")
     try:
         my_stream.update_attributes(attrs)
         # make sure name is unique in this destination
@@ -134,7 +129,7 @@ async def update(request: web.Request):
         db.commit()
     except (ValueError, ConfigurationError) as e:
         db.rollback()
-        return web.Response(text="Invalid stream specification: %s" % e, status=400)
+        raise web.HTTPBadRequest(reason="Invalid stream specification: %s" % e)
     return web.json_response(data=my_stream.to_json())
 
 
@@ -148,9 +143,9 @@ async def delete(request):
     elif 'id' in request.query:
         my_stream = db.get(EventStream, request.query["id"])
     else:
-        return web.Response(text="specify an id or a path", status=400)
+        raise web.HTTPBadRequest(reason=ApiErrorMessages.specify_id_or_path)
     if my_stream is None:
-        return web.Response(text="stream does not exist", status=404)
+        raise web.HTTPNotFound(reason=ApiErrorMessages.stream_does_not_exist)
     await data_store.destroy(my_stream)
     my_stream.folder.touch()
     db.delete(my_stream)
@@ -163,7 +158,7 @@ async def delete(request):
 async def write_events(request):
     db: Session = request.app[app_keys.db]
     event_store: EventStore = request.app[app_keys.event_store]
-    body = await request.json()
+    body = await read_json(request)
 
     # find the requested stream
     if 'path' in body:
@@ -172,12 +167,23 @@ async def write_events(request):
     elif 'id' in body:
         my_stream = db.get(EventStream, body["id"])
     else:
-        return web.Response(text="specify an id or a path!!", status=400)
+        raise web.HTTPBadRequest(reason=ApiErrorMessages.specify_id_or_path)
     if my_stream is None:
-        return web.Response(text="stream does not exist", status=404)
+        raise web.HTTPNotFound(reason=ApiErrorMessages.stream_does_not_exist)
     if 'events' not in body:
-        return web.Response(text="specify events to add", status=400)
-    events = await event_store.upsert(my_stream, body['events'])
+        raise web.HTTPBadRequest(reason="specify events to add")
+    # make sure the events belong to this stream, if event_stream_id does not match
+    # this stream's ID, create a new event, otherwise copying events to a new stream
+    # may lead to updating existing events (overwriting them) if the ID's collide
+    events = body['events']
+    for event in events:
+        if 'event_stream_id' not in event:
+            raise web.HTTPBadRequest(reason="all events must have an event_stream_id")
+        if event['event_stream_id'] != my_stream.id:
+            # this must have been copied from another stream, it is a new event, not an update
+            event['id'] = None
+            event['event_stream_id'] = my_stream.id
+    events = await event_store.upsert(my_stream, events)
     return web.json_response(data={'count': len(events), 'events': events})
 
 
@@ -191,35 +197,14 @@ async def count_events(request):
     elif 'id' in request.query:
         my_stream = db.get(EventStream, request.query["id"])
     else:
-        return web.Response(text="specify an id or a path", status=400)
+        raise web.HTTPBadRequest(reason=ApiErrorMessages.specify_id_or_path)
     if my_stream is None:
-        return web.Response(text="stream does not exist", status=404)
+        raise web.HTTPNotFound(reason="stream does not exist")
 
     # parse optional parameters
-    params = {'start': None, 'end': None, 'limit': None, 'include-ongoing-events': 0}
-    param = ""  # to appease type checker
-    try:
-        for param in params:
-            if param in request.query:
-                params[param] = int(request.query[param])
-    except ValueError:
-        return web.Response(text="parameter [%s] must be an int" % param, status=400)
-
-    # make sure parameters make sense
-    if ((params['start'] is not None and params['end'] is not None) and
-            (params['start'] >= params['end'])):
-        return web.Response(text="[start] must be < [end]", status=400)
-
-    # handle json filter parameter
-    json_filter = None
-    if 'filter' in request.query and request.query['filter'] is not None and len(request.query['filter']) > 0:
-        try:
-            json_filter = json.loads(request.query['filter'])
-            # TODO verify syntax
-        except (json.decoder.JSONDecodeError, ValueError):
-            return web.Response(text="invalid filter parameter", status=400)
-
-    # handle limit parameter, default is HARD, do not return unless count < limit
+    params = {'start': None, 'end': None, 'include-ongoing-events': 0}
+    json_filter = _validate_event_query_parameters(params, request.query)
+    
     event_count = await event_store.count(my_stream, params['start'], params['end'],
                                           json_filter=json_filter,
                                           include_on_going_events=params['include-ongoing-events'])
@@ -238,7 +223,7 @@ async def read_events(request):
     else:
         return web.Response(text="specify an id or a path", status=400)
     if my_stream is None:
-        return web.Response(text="stream does not exist", status=404)
+        raise web.HTTPNotFound(ApiErrorMessages.stream_does_not_exist)
     if 'limit' not in request.query:
         return web.Response(text="limit parameter is required", status=400)
     try:
@@ -247,30 +232,9 @@ async def read_events(request):
             raise ValueError
     except ValueError:
         return web.Response(text="limit parameter must be an integer > 0", status=400)
-    # parse optional parameters
     params = {'start': None, 'end': None, 'include-ongoing-events': 0}
-    param = ""  # to appease type checker
-    try:
-        for param in params:
-            if param in request.query:
-                params[param] = int(request.query[param])
-    except ValueError:
-        return web.Response(text="parameter [%s] must be an int" % param, status=400)
-
-    # make sure parameters make sense
-    if ((params['start'] is not None and params['end'] is not None) and
-            (params['start'] >= params['end'])):
-        return web.Response(text="[start] must be < [end]", status=400)
-
-    # handle json filter parameter
-    json_filter = None
-    if 'filter' in request.query and request.query['filter'] is not None and len(request.query['filter']) > 0:
-        try:
-            json_filter = json.loads(request.query['filter'])
-            # TODO verify syntax
-        except (json.decoder.JSONDecodeError, ValueError):
-            return web.Response(text="invalid filter parameter", status=400)
-
+    json_filter = _validate_event_query_parameters(params, request.query)
+    
     # handle limit parameter, default is HARD, do not return unless count < limit
     if 'return-subset' not in request.query:
         event_count = await event_store.count(my_stream, params['start'], params['end'],
@@ -299,33 +263,39 @@ async def remove_events(request):
     elif 'id' in request.query:
         my_stream = db.get(EventStream, request.query["id"])
     else:
-        return web.Response(text="specify an id or a path", status=400)
+        return web.Response(text=ApiErrorMessages.specify_id_or_path, status=400)
     if my_stream is None:
-        return web.Response(text="stream does not exist", status=404)
+        raise web.HTTPNotFound(ApiErrorMessages.stream_does_not_exist)
 
     # parse optional parameters
     params = {'start': None, 'end': None}
-    param = ""  # to appease type checker
+    json_filter = _validate_event_query_parameters(params, request.query)
+    
+    await event_store.remove(my_stream, params['start'], params['end'], json_filter=json_filter)
+    return web.Response(text="ok")
+
+def _validate_event_query_parameters(params, query):
+    # populate the params dictionary with query parameters if they exist
+    # return the parsed json_filter parameter if it exists
     try:
         for param in params:
-            if param in request.query:
-                params[param] = int(request.query[param])
+            if param in query:
+                params[param] = int(query[param])
     except ValueError:
-        return web.Response(text="parameter [%s] must be an int" % param, status=400)
-
+        raise web.HTTPBadRequest(reason=ApiErrorMessages.f_parameter_must_be_an_int.format(parameter=param))
+    
     # make sure parameters make sense
     if ((params['start'] is not None and params['end'] is not None) and
             (params['start'] >= params['end'])):
-        return web.Response(text="[start] must be < [end]", status=400)
+        raise web.HTTPBadRequest(reason=ApiErrorMessages.start_must_be_before_end)
 
     # handle json filter parameter
     json_filter = None
-    if 'filter' in request.query and request.query['filter'] is not None and len(request.query['filter']) > 0:
+    if 'filter' in query and query['filter'] is not None and len(query['filter']) > 0:
         try:
-            json_filter = json.loads(request.query['filter'])
+            json_filter = json.loads(query['filter'])
             # TODO verify syntax
         except (json.decoder.JSONDecodeError, ValueError):
-            return web.Response(text="invalid filter parameter", status=400)
+            raise web.HTTPBadRequest(reason=ApiErrorMessages.invalid_filter_parameter)
 
-    await event_store.remove(my_stream, params['start'], params['end'], json_filter=json_filter)
-    return web.Response(text="ok")
+    return json_filter

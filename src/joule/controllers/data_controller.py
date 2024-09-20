@@ -9,7 +9,7 @@ from joule.models import (folder, DataStore, DataStream,
                           InsufficientDecimationError, DataError,
                           pipes)
 from joule.models.supervisor import Supervisor
-
+from joule.constants import ApiErrorMessages
 from joule.errors import SubscriptionError
 
 log = logging.getLogger('joule')
@@ -53,7 +53,7 @@ async def _read(request: web.Request, json):
     # make sure parameters make sense
     if ((params['start'] is not None and params['end'] is not None) and
             (params['start'] >= params['end'])):
-        return web.Response(text="[start] must be < [end]", status=400)
+        raise web.HTTPBadRequest(reason=ApiErrorMessages.start_must_be_before_end)
     if params['max-rows'] is not None and params['max-rows'] <= 0:
         return web.Response(text="[max-rows] must be > 0", status=400)
     if params['decimation-level'] is not None and params['decimation-level'] <= 0:
@@ -219,7 +219,8 @@ async def intervals(request: web.Request):
 
     # make sure parameters make sense
     if (start is not None and end is not None) and start >= end:
-        return web.Response(text="[start] must be < [end]", status=400)
+        raise web.HTTPBadRequest(reason=ApiErrorMessages.start_must_be_before_end)
+
 
     return web.json_response(await data_store.intervals(stream, start, end))
 
@@ -291,7 +292,7 @@ async def remove(request: web.Request):
     # make sure bounds make sense
     if ((start is not None and end is not None) and
             (start >= end)):
-        return web.Response(text="[start] must be < [end]", status=400)
+        raise web.HTTPBadRequest(reason=ApiErrorMessages.start_must_be_before_end)
 
     await data_store.remove(stream, start, end)
     return web.Response(text="ok")
@@ -324,7 +325,8 @@ async def consolidate(request):
     # make sure bounds make sense
     if ((start is not None and end is not None) and
             (start >= end)):
-        return web.Response(text="[start] must be < [end]", status=400)
+        raise web.HTTPBadRequest(reason=ApiErrorMessages.start_must_be_before_end)
+
 
     # parse the max_gap parameter
     if 'max_gap' not in request.query:

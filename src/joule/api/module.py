@@ -82,7 +82,7 @@ def from_json(json) -> Module:
 
 
 async def module_get(session: BaseSession,
-                     module: Union[Module, str, int],
+                     module: Module | str | int,
                      statistics: bool = True) -> Module:
     _statistics = 0
     if statistics:
@@ -112,7 +112,7 @@ async def module_list(session: BaseSession,
 
 
 async def module_logs(session: BaseSession,
-                      module: Union[Module, str, int]) -> List[str]:
+                      module: Module | str | int) -> List[str]:
     params = {}
     if type(module) is Module:
         params["id"] = module.id

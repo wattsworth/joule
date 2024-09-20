@@ -1,4 +1,4 @@
-from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
+from aiohttp.test_utils import AioHTTPTestCase
 from aiohttp import web
 import aiohttp
 import numpy as np

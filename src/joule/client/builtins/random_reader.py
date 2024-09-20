@@ -93,14 +93,13 @@ class RandomReader(ReaderModule):
         wait_time = 1/OUTPUT_RATE
         BLOCK_SIZE = rate/OUTPUT_RATE
         fraction_remaining = 0
-        i = 0
-
+        generator = np.random.default_rng()
         # print("Starting random stream: %d elements @ %0.1fHz" % (width, rate))
         while not self.stop_requested:
             float_block_size = BLOCK_SIZE+fraction_remaining
             int_block_size = int(np.floor(float_block_size))
             fraction_remaining = float_block_size - int_block_size
-            data = np.random.rand(int_block_size, width)
+            data = generator.random((int_block_size, width))
             self.avg = np.average(data)
             self.stddev = np.std(data)
             top_ts = data_ts + int_block_size*data_ts_inc
@@ -110,7 +109,6 @@ class RandomReader(ReaderModule):
             data_ts = top_ts
             await output.write(np.hstack((ts[:, None], data)))
             await asyncio.sleep(wait_time)
-            i += 1
 
 
 def main():  # pragma: no cover

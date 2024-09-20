@@ -74,7 +74,7 @@ def from_json(json) -> Annotation:
 
 async def annotation_create(session: BaseSession,
                             annotation: Annotation,
-                            stream: Union[int, str, 'DataStream'], ) -> Annotation:
+                            stream: 'DataStream | str | int', ) -> Annotation:
     from .data_stream import DataStream
 
     data = {"title": annotation.title,

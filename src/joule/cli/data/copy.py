@@ -216,9 +216,6 @@ async def _run(config_node, start, end, new, destination_node, source, destinati
                                 # total time extents of this chunk
                                 bar.update(cur_ts - last_ts)
                                 last_ts = cur_ts
-                            # if pipe.end_of_interval:
-                            #    yield pipes.interval_token(dest_stream.layout). \
-                            #        tostring()
                     except pipes.EmptyPipe:
                         pass
                     bar.update(iend - last_ts)
@@ -263,7 +260,7 @@ async def _run(config_node, start, end, new, destination_node, source, destinati
             await source_node.close()
 
 
-async def _get_intervals(server: Union[BaseNode, str], my_stream: DataStream, path: str,
+async def _get_intervals(server: BaseNode | str, my_stream: DataStream, path: str,
                          start: Optional[int], end: Optional[int],
                          is_nilmdb: bool = False) -> List[Interval]:
     if is_nilmdb:
@@ -276,7 +273,7 @@ async def _get_intervals(server: Union[BaseNode, str], my_stream: DataStream, pa
         url = "{server}/stream/intervals".format(server=server)
         async with aiohttp.ClientSession() as session:
             async with session.get(url, params=params) as resp:
-                if not resp.status == 200:
+                if resp.status != 200:
                     raise errors.ApiError("unable to retrieve intervals for [%s]" % path)
                 body = await resp.text()
                 if body == '':
@@ -289,7 +286,7 @@ async def _get_intervals(server: Union[BaseNode, str], my_stream: DataStream, pa
         return await server.data_intervals(my_stream, start, end)
 
 
-async def _retrieve_source(server: Union[BaseNode, str], path: str, is_nilmdb: bool = False) -> DataStream:
+async def _retrieve_source(server: BaseNode | str, path: str, is_nilmdb: bool = False) -> DataStream:
     if is_nilmdb:
         src_stream, src_info = await _retrieve_nilmdb_stream(server, path)
         if src_stream is None:
@@ -303,10 +300,10 @@ async def _retrieve_source(server: Union[BaseNode, str], path: str, is_nilmdb: b
     return src_stream
 
 
-async def _retrieve_destination(server: Union[str, BaseNode], path: str, template: DataStream,
+async def _retrieve_destination(server: str | BaseNode, path: str, template: DataStream,
                                 is_nilmdb: bool = False) -> DataStream:
     if is_nilmdb:
-        dest_stream, dest_info = await _retrieve_nilmdb_stream(server, path)
+        dest_stream, _ = await _retrieve_nilmdb_stream(server, path)
         if dest_stream is None:
             return await _create_nilmdb_stream(server, path, template)
         else:
@@ -341,7 +338,7 @@ async def _create_nilmdb_stream(server: str, path: str, template: DataStream):
             "layout": dest_stream.layout}
     async with aiohttp.ClientSession() as session:
         async with session.post(url, data=data) as resp:
-            if not resp.status == 200:
+            if resp.status != 200:
                 raise click.ClickException("cannot create [%s] on [%s]" % (path, server))
 
         # add the metadata
@@ -351,7 +348,7 @@ async def _create_nilmdb_stream(server: str, path: str, template: DataStream):
             "data": json.dumps({"config_key__": json.dumps(dest_stream.to_nilmdb_metadata())})
         }
         async with session.post(url, data=data) as resp:
-            if not resp.status == 200:
+            if resp.status != 200:
                 raise click.ClickException("cannot create metadata for [%s] on [%s]" % (path, server))
     return dest_stream
 
@@ -363,7 +360,7 @@ async def _retrieve_nilmdb_stream(server: str, path: str) -> Tuple[Optional[Data
         async with session.get(url, params=params) as resp:
             if resp.status == 404:
                 return None, None
-            if not resp.status == 200:
+            if resp.status != 200:
                 raise errors.ApiError("[%s]: %s" % (server, resp.text))
             default_name = path.split("/")[-1]
             config_data = {'name': default_name}
@@ -434,7 +431,7 @@ async def _get_nilmdb_annotations(server: str, path: str, istart: Optional[int] 
         async with session.get(url, params=params) as resp:
             if resp.status == 404:
                 return []
-            if not resp.status == 200:
+            if resp.status != 200:
                 raise errors.ApiError("[%s]: %s" % (server, resp.text))
             try:
                 metadata = await resp.json()
@@ -462,5 +459,5 @@ async def _create_nilmdb_annotations(server: str, path: str, annotations: List[A
             "data": json.dumps(data)}
     async with aiohttp.ClientSession() as session:
         async with session.post(url, data=data) as resp:
-            if not resp.status == 200:
+            if resp.status != 200:
                 raise click.ClickException("cannot create metadata for [%s] on [%s]" % (path, server))

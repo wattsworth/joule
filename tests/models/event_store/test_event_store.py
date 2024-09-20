@@ -193,7 +193,11 @@ class TestEventStore(unittest.IsolatedAsyncioTestCase):
         self.assertListEqual(rx2_events, rx3_events)
         # ...the two event streams are independent
         rx_events = await self.store.extract(event_stream2)
-        # they should match but now have an id field
+        # they should match but now have an id field (which is not included in the equality test)
+        # the received events will also have an event_stream_id field
+        # so we put this field into events2 for comparison
+        for e in events2:
+            e['event_stream_id']=event_stream2.id
         self.assertListEqual(events2, rx_events)
         # now remove them
         await self.store.remove(event_stream1)
@@ -207,16 +211,19 @@ class TestEventStore(unittest.IsolatedAsyncioTestCase):
         event_stream1 = EventStream(id=1, name='test_stream1')
         early_events = [{'start_time': i * 100,
                          'end_time': i * 100 + 10,
+                         'event_stream_id': event_stream1.id,
                          'content': {'title': "Event%d" % i,
                                      'stream': event_stream1.name}
                          } for i in range(20)]
         mid_events = [{'start_time': i * 100,
                        'end_time': i * 100 + 10,
+                       'event_stream_id': event_stream1.id,
                        'content': {'title': "Event%d" % i,
                                    'stream': event_stream1.name}
                        } for i in range(30, 40)]
         late_events = [{'start_time': i * 100,
                         'end_time': i * 100 + 10,
+                        'event_stream_id': event_stream1.id,
                         'content': {'title': "Event%d" % i,
                                     'stream': event_stream1.name}
                         } for i in range(50, 60)]
@@ -241,16 +248,19 @@ class TestEventStore(unittest.IsolatedAsyncioTestCase):
 
         early_events = [{'start_time': i * 100,
                          'end_time': i * 100 + 10,
+                         'event_stream_id': event_stream1.id,
                          'content': {'title': "Event%d" % i,
                                      'stream': event_stream1.name}
                          } for i in range(20)]
         mid_events = [{'start_time': i * 100,
                        'end_time': i * 100 + 10,
+                       'event_stream_id': event_stream1.id,
                        'content': {'title': "Event%d" % i,
                                    'stream': event_stream1.name}
                        } for i in range(30, 40)]
         late_events = [{'start_time': i * 100,
                         'end_time': i * 100 + 10,
+                        'event_stream_id': event_stream1.id,
                         'content': {'title': "Event%d" % i,
                                     'stream': event_stream1.name}
                         } for i in range(50, 60)]
@@ -274,18 +284,21 @@ class TestEventStore(unittest.IsolatedAsyncioTestCase):
 
         early_events = [{'start_time': i * 100,
                          'end_time': i * 100 + 10,
+                         'event_stream_id': event_stream1.id,
                          'content': {'title': "Event%d" % i,
                                      'type': 'early',
                                      'stream': event_stream1.name}
                          } for i in range(20)]
         mid_events = [{'start_time': i * 100,
                        'end_time': i * 100 + 10,
+                       'event_stream_id': event_stream1.id,
                        'content': {'title': "Event%d" % i,
                                    'type': 'middle',
                                    'stream': event_stream1.name}
                        } for i in range(30, 40)]
         late_events = [{'start_time': i * 100,
                         'end_time': i * 100 + 10,
+                        'event_stream_id': event_stream1.id,
                         'content': {'title': "Event%d" % i,
                                     'stream': event_stream1.name}
                         } for i in range(50, 60)]
@@ -302,6 +315,7 @@ class TestEventStore(unittest.IsolatedAsyncioTestCase):
 
         events = [{'start_time': i * 100,
                    'end_time': i * 100 + 10,
+                   'event_stream_id': event_stream1.id,
                    'content': {'title': "Event%d" % i,
                                'type': 'early',
                                'stream': event_stream1.name}

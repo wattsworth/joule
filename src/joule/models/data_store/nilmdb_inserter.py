@@ -157,7 +157,7 @@ class NilmdbDecimator:
         self.buffer = []
         self.last_ts = None
         self.path_created = False
-        self.child: NilmdbDecimator = None
+        self.child: Optional[NilmdbDecimator] = None
         self.retry_interval = retry_interval
         self._get_client = session_factory
         # hold off to rate limit NilmDB traffic

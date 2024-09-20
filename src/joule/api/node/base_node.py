@@ -1,4 +1,4 @@
-from typing import Union, List, Optional, Dict, TYPE_CHECKING
+from typing import Union, List, Optional, Dict, TYPE_CHECKING, Type
 from joule.constants import EndPoints
 
 if TYPE_CHECKING:
@@ -16,7 +16,6 @@ if TYPE_CHECKING:
     from joule.utilities import ConnectionInfo
     from joule.api.session import BaseSession
     from .node_info import NodeInfo
-
 
 
 class BaseNode:
@@ -46,13 +45,13 @@ class BaseNode:
         return await folder_root(self.session)
 
     async def folder_get(self,
-                         folder: Union['Folder', str, int]) -> 'Folder':
+                         folder: 'Folder | str | int') -> 'Folder':
         from joule.api.folder import folder_get
         return await folder_get(self.session, folder)
 
     async def folder_move(self,
-                          source: Union['Folder', str, int],
-                          destination: Union['Folder', str, int]) -> None:
+                          source: 'Folder | str | int',
+                          destination: 'Folder | str | int') -> None:
         from joule.api.folder import folder_move
         await folder_move(self.session, source, destination)
 
@@ -62,7 +61,7 @@ class BaseNode:
         await folder_update(self.session, folder)
 
     async def folder_delete(self,
-                            folder: Union['Folder', str, int],
+                            folder: 'Folder | str | int',
                             recursive: bool = False) -> None:
         from joule.api.folder import folder_delete
         await folder_delete(self.session, folder, recursive)
@@ -70,13 +69,13 @@ class BaseNode:
     # DataStream actions
 
     async def data_stream_get(self,
-                              stream: Union['DataStream', str, int]) -> 'DataStream':
+                              stream: 'DataStream | str | int') -> 'DataStream':
         from joule.api.data_stream import data_stream_get
         return await data_stream_get(self.session, stream)
 
     async def data_stream_move(self,
-                               stream: Union['DataStream', str, int],
-                               folder: Union['Folder', str, int]) -> None:
+                               stream: 'DataStream | str | int',
+                               folder: 'Folder | str | int') -> None:
         from joule.api.data_stream import data_stream_move
         return await data_stream_move(self.session, stream, folder)
 
@@ -87,23 +86,23 @@ class BaseNode:
                                         stream)
 
     async def data_stream_delete(self,
-                                 stream: Union['DataStream', str, int]) -> None:
+                                 stream: 'DataStream | str | int') -> None:
         from joule.api.data_stream import data_stream_delete
         await data_stream_delete(self.session, stream)
 
     async def data_stream_create(self,
                                  stream: 'DataStream',
-                                 folder: Union['Folder', str, int]) -> 'DataStream':
+                                 folder: 'Folder | str | int') -> 'DataStream':
         from joule.api.data_stream import data_stream_create
         return await data_stream_create(self.session, stream, folder)
 
     async def data_stream_info(self,
-                               stream: Union['DataStream', str, int]) -> 'DataStreamInfo':
+                               stream: 'DataStream | str | int') -> 'DataStreamInfo':
         from joule.api.data_stream import data_stream_info
         return await data_stream_info(self.session, stream)
 
     async def data_stream_annotation_delete(self,
-                                            stream: Union['DataStream', str, int],
+                                            stream: 'DataStream | str | int',
                                             start: Optional[int] = None,
                                             end: Optional[int] = None):
         from joule.api.data_stream import data_stream_annotation_delete
@@ -112,7 +111,7 @@ class BaseNode:
     # EventStream actions
 
     async def event_stream_get(self,
-                               stream: Union['EventStream', str, int],
+                               stream: 'EventStream | str | int',
                                create: bool = False,
                                description: str = "",
                                chunk_duration: str = "",
@@ -126,8 +125,8 @@ class BaseNode:
                                       event_fields=event_fields)
 
     async def event_stream_move(self,
-                                stream: Union['EventStream', str, int],
-                                folder: Union['Folder', str, int]) -> None:
+                                stream: 'EventStream | str | int',
+                                folder: 'Folder | str | int') -> None:
         from joule.api.event_stream import event_stream_move
         return await event_stream_move(self.session, stream, folder)
 
@@ -138,29 +137,29 @@ class BaseNode:
                                          stream)
 
     async def event_stream_delete(self,
-                                  stream: Union['EventStream', str, int]) -> None:
+                                  stream: 'EventStream | str | int') -> None:
         from joule.api.event_stream import event_stream_delete
         await event_stream_delete(self.session, stream)
 
     async def event_stream_create(self,
                                   stream: 'EventStream',
-                                  folder: Union['Folder', str, int]) -> 'EventStream':
+                                  folder: 'Folder | str | int') -> 'EventStream':
         from joule.api.event_stream import event_stream_create
         return await event_stream_create(self.session, stream, folder)
 
     async def event_stream_info(self,
-                                stream: Union['EventStream', str, int]) -> 'EventStreamInfo':
+                                stream: 'EventStream | str | int') -> 'EventStreamInfo':
         from joule.api.event_stream import event_stream_info
         return await event_stream_info(self.session, stream)
 
     async def event_stream_write(self,
-                                 stream: Union['EventStream', str, int],
+                                 stream: 'EventStream | str | int',
                                  events: List['Event']) -> List['Event']:
         from joule.api.event_stream import event_stream_write
         return await event_stream_write(self.session, stream, events)
 
     async def event_stream_read(self,
-                                stream: Union['EventStream', str, int],
+                                stream: 'EventStream | str | int',
                                 start: Optional[int]=None,
                                 end: Optional[int]=None,
                                 limit: Optional[int]=10000,
@@ -173,7 +172,7 @@ class BaseNode:
                                        include_on_going_events=include_on_going_events)
 
     async def event_stream_count(self,
-                                 stream: Union['EventStream', str, int],
+                                 stream: 'EventStream | str | int',
                                  start: Optional[int] = None,
                                  end: Optional[int] = None,
                                  json_filter: Optional[Dict[str, str]] = None,
@@ -182,7 +181,7 @@ class BaseNode:
         return await event_stream_count(self.session, stream, start, end, json_filter, include_on_going_events)
 
     async def event_stream_remove(self,
-                                  stream: Union['EventStream', str, int],
+                                  stream: 'EventStream | str | int',
                                   start: Optional[int] = None,
                                   end: Optional[int] = None,
                                   json_filter=None) -> None:
@@ -192,7 +191,7 @@ class BaseNode:
     # Data actions
 
     async def data_read(self,
-                        stream: Union['DataStream', str, int],
+                        stream: 'DataStream | str | int',
                         start: Optional[int] = None,
                         end: Optional[int] = None,
                         max_rows: Optional[int] = None) -> 'Pipe':
@@ -201,7 +200,7 @@ class BaseNode:
                                max_rows)
 
     async def data_read_array(self,
-                              stream: Union['DataStream', str, int],
+                              stream: 'DataStream | str | int',
                               start: Optional[int] = None,
                               end: Optional[int] = None,
                               max_rows: int = 10000,
@@ -214,19 +213,19 @@ class BaseNode:
         self.session.set_nilmdb_url(nilmdb_url)
 
     async def data_subscribe(self,
-                             stream: Union['DataStream', str, int]) -> 'Pipe':
+                             stream: 'DataStream | str | int') -> 'Pipe':
         from joule.api.data import data_subscribe
         return await data_subscribe(self.session, stream)
 
     async def data_intervals(self,
-                             stream: Union['DataStream', str, int],
+                             stream: 'DataStream | str | int',
                              start: Optional[int] = None,
                              end: Optional[int] = None) -> List:
         from joule.api.data import data_intervals
         return await data_intervals(self.session, stream, start, end)
 
     async def data_consolidate(self,
-                               stream: Union['DataStream', str, int],
+                               stream: 'DataStream | str | int',
                                max_gap: int,
                                start: Optional[int] = None,
                                end: Optional[int] = None) -> List:
@@ -234,23 +233,23 @@ class BaseNode:
         return await data_consolidate(self.session, stream, start, end, max_gap)
 
     async def data_drop_decimations(self,
-                                    stream: Union['DataStream', str, int]):
+                                    stream: 'DataStream | str | int'):
         from joule.api.data import data_drop_decimations
         return await data_drop_decimations(self.session, stream)
 
     async def data_decimate(self,
-                            stream: Union['DataStream', str, int]):
+                            stream: 'DataStream | str | int'):
         from joule.api.data import data_decimate
         return await data_decimate(self.session, stream)
 
-    async def data_write(self, stream: Union['DataStream', str, int],
+    async def data_write(self, stream: 'DataStream | str | int',
                          start: Optional[int] = None,
                          end: Optional[int] = None,
                          merge_gap:int = 0) -> 'Pipe':
         from joule.api.data import data_write
         return await data_write(self.session, stream, start, end, merge_gap=merge_gap)
 
-    async def data_delete(self, stream: Union['DataStream', str, int],
+    async def data_delete(self, stream: 'DataStream | str | int',
                           start: Optional[int] = None,
                           end: Optional[int] = None) -> None:
         from joule.api.data import data_delete
@@ -264,13 +263,13 @@ class BaseNode:
         return await module_list(self.session, statistics)
 
     async def module_get(self,
-                         module: Union['Module', str, int],
+                         module: 'Module | str | int',
                          statistics: bool = False) -> 'Module':
         from joule.api.module import module_get
         return await module_get(self.session, module, statistics)
 
     async def module_logs(self,
-                          module: Union['Module', str, int]) -> List[str]:
+                          module: 'Module | str | int') -> List[str]:
         from joule.api.module import module_logs
         return await module_logs(self.session, module)
 
@@ -281,7 +280,7 @@ class BaseNode:
         return await proxy_list(self.session)
 
     async def proxy_get(self,
-                        proxy: Union['Proxy', str, int]) -> 'Proxy':
+                        proxy: 'Proxy | str | int') -> 'Proxy':
         from joule.api.proxy import proxy_get
         return await proxy_get(self.session, proxy)
 
@@ -305,12 +304,12 @@ class BaseNode:
         from joule.api.follower import follower_list
         return await follower_list(self.session)
         
-    async def follower_delete(self, node: Union['BaseNode', str]):
+    async def follower_delete(self, node: 'BaseNode | str'):
         from joule.api.follower import follower_delete
         return await follower_delete(self.session, node)
         
     # Annotation actions
-    async def annotation_get(self, stream: Union[int, str, 'DataStream'],
+    async def annotation_get(self, stream: 'DataStream | str | int',
                              start: Optional[int] = None,
                              end: Optional[int] = None) -> List['Annotation']:
         from joule.api.annotation import annotation_get
@@ -318,13 +317,13 @@ class BaseNode:
 
     async def annotation_create(self,
                                 annotation: 'Annotation',
-                                stream: Union[int, str, 'DataStream'], ) -> 'Annotation':
+                                stream: 'DataStream | str | int', ) -> 'Annotation':
         from joule.api.annotation import annotation_create
         return await annotation_create(self.session,
                                        annotation, stream)
 
     async def annotation_delete(self,
-                                annotation: Union[int, 'Annotation']):
+                                annotation: 'Annotation | int'):
         from joule.api.annotation import annotation_delete
         return await annotation_delete(self.session, annotation)
 
@@ -334,7 +333,7 @@ class BaseNode:
         return await annotation_update(self.session, annotation)
 
     async def annotation_info(self,
-                              stream: Union[int, str, 'DataStream'], ) -> 'AnnotationInfo':
+                              stream: 'DataStream | str | int', ) -> 'AnnotationInfo':
         from joule.api.annotation import annotation_info
         return await annotation_info(self.session, stream)
 

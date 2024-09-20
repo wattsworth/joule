@@ -28,15 +28,3 @@ def main(config, node):
 
 if __name__ == '__main__':
     main()
-"""
-main.add_command(admin)
-main.add_command(streams)
-main.add_command(events)
-main.add_command(data)
-main.add_command(module)
-main.add_command(folders)
-main.add_command(proxies)
-main.add_command(master)
-main.add_command(follower)
-main.add_command(node)
-"""
