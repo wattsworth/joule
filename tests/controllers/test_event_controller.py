@@ -174,22 +174,22 @@ class TestEventController(AioHTTPTestCase):
         event_store = self.app[app_keys.event_store]
         ### writes events given an event stream id
         events = [Event(start_time=i,end_time=i+1000,content={"field1": i}, 
-                        event_stream_id=self.test_stream.id, id=i) for i in range(0,10000,1000)]
+                        event_stream_id=self.test_stream.id, id=i, node_name='test') for i in range(0,10000,1000)]
         resp: aiohttp.ClientResponse = await \
-            self.client.post(EndPoints.event_data, json={"id": self.test_stream_id, "events": [e.to_json() for e in events]})
+            self.client.post(EndPoints.event_data, json={"id": self.test_stream_id, "events": [e.to_json(destination_node_name='test') for e in events]})
         self.assertEqual(resp.status, 200)
         # make sure the events are written to the event store
         self.assertTrue(event_store.upsert_called)
-        self.assertEqual(event_store.upserted_events, [e.to_json() for e in events])
+        self.assertEqual(event_store.upserted_events, [e.to_json(destination_node_name='test') for e in events])
         event_store.reset()
 
         ### writes events given an event stream path
         resp: aiohttp.ClientResponse = await \
-            self.client.post(EndPoints.event_data, json={"path": "/events/test", "events": [e.to_json() for e in events]})
+            self.client.post(EndPoints.event_data, json={"path": "/events/test", "events": [e.to_json(destination_node_name='test') for e in events]})
         self.assertEqual(resp.status, 200)
         # make sure the events are written to the event store
         self.assertTrue(event_store.upsert_called)
-        self.assertEqual(event_store.upserted_events, [e.to_json() for e in events])
+        self.assertEqual(event_store.upserted_events, [e.to_json(destination_node_name='test') for e in events])
         # the correct event_stream_id is used
         self.assertEqual(event_store.upserted_events[0]['event_stream_id'], self.test_stream_id)
         event_store.reset()
@@ -197,7 +197,7 @@ class TestEventController(AioHTTPTestCase):
         ### resets ID field when events do not have the right event_stream_id
         events[0].event_stream_id = 999
         resp: aiohttp.ClientResponse = await \
-            self.client.post(EndPoints.event_data, json={"id": self.test_stream_id, "events": [e.to_json() for e in events]})
+            self.client.post(EndPoints.event_data, json={"id": self.test_stream_id, "events": [e.to_json(destination_node_name='test') for e in events]})
         self.assertEqual(resp.status, 200)
         # make sure the events are written to the event store
         self.assertTrue(event_store.upsert_called)
@@ -205,7 +205,7 @@ class TestEventController(AioHTTPTestCase):
         self.assertIsNone(modified_event['id']) # ID is removed so it will be treated as a new event
         self.assertEqual(modified_event['event_stream_id'], self.test_stream_id) # event_stream_id is corrected
         # the rest of the events are unchanged
-        self.assertEqual(event_store.upserted_events[1:], [e.to_json() for e in events[1:]])
+        self.assertEqual(event_store.upserted_events[1:], [e.to_json(destination_node_name='test') for e in events[1:]])
 
     async def test_event_stream_count_events(self):
         event_store = self.app[app_keys.event_store]
@@ -215,7 +215,7 @@ class TestEventController(AioHTTPTestCase):
                                      params={"id": self.test_stream_id})
         self.assertEqual(resp.status, 200)
         data = await resp.json()
-        self.assertEqual(data['count'], 10) # from MockEventStore
+        self.assertEqual(data['count'], 0) # no events loaded to will always return 0
         # make sure the event store is queried
         self.assertTrue(event_store.count_called)
         # default parameters passed to count
@@ -237,7 +237,7 @@ class TestEventController(AioHTTPTestCase):
                                              "include_on_going_events": 0})
         self.assertEqual(resp.status, 200)
         data = await resp.json()
-        self.assertEqual(data['count'], 10)
+        self.assertEqual(data['count'], 0)
         self.assertTrue(event_store.count_called)
         # optional parameters are correctly parsed
         self.assertEqual(event_store.count_params[0].id, self.test_stream.id)
@@ -252,6 +252,92 @@ class TestEventController(AioHTTPTestCase):
                                      params={"path": "/events/test"})
         self.assertEqual(resp.status, 200)
         data = await resp.json()
-        self.assertEqual(data['count'], 10)
+        self.assertEqual(data['count'], 0)
         self.assertTrue(event_store.count_called)
         self.assertEqual(event_store.count_params[0].id, self.test_stream.id)
+
+    async def test_event_stream_read_events(self):
+        event_store = self.app[app_keys.event_store]
+        mock_events = [{"start_time":i,"end_time":i+1000,"content": {"field1": i}, 
+                        "event_stream_id":self.test_stream_id, "id":i} for i in range(0,10000,1000)]
+        event_store.set_events(mock_events)
+
+        ### Works with default parameters
+        resp = await self.client.get(EndPoints.event_data, 
+                                     params={"id": self.test_stream_id, "limit": 20})
+        self.assertEqual(resp.status, 200)
+        data = await resp.json()
+        self.assertTrue(event_store.count_called)
+        self.assertEqual(len(data['events']), 10)
+        event_store.reset()
+
+        ### Returns histogram when there are too many events
+        event_store.set_events(mock_events)
+        resp = await self.client.get(EndPoints.event_data, 
+                                     params={"id": self.test_stream_id, "limit": len(mock_events)-1})
+        self.assertEqual(resp.status, 200)
+        data = await resp.json()
+        self.assertEqual(data['type'],'histogram')
+        # mock histogram function returns an empty []
+        self.assertListEqual(data['events'], [])
+        self.assertTrue(event_store.count_called)
+        self.assertFalse(event_store.extract_called)
+        self.assertTrue(event_store.histogram_called)
+        event_store.reset()
+
+        ### Can specify path instead of id and optional parameters, soft limit
+        event_store.set_events(mock_events)
+        start = 0
+        end = 100
+        limit = 5
+        json_filter = [[["id","=","3"]]]
+        resp = await self.client.get(EndPoints.event_data, 
+                                     params={"path": "/events/test",
+                                             "start": start,
+                                             "end": end,
+                                             "filter": json.dumps(json_filter),
+                                             "limit": limit,
+                                             'return-subset': 1,
+                                             "include-ongoing-events": 1})
+        self.assertEqual(resp.status, 200)
+        data = await resp.json()
+        self.assertTrue(event_store.extract_called)
+        self.assertFalse(event_store.histogram_called)
+        # make sure parameters are parsed
+        self.assertEqual(event_store.extract_params[0].id, self.test_stream.id)
+        self.assertEqual(event_store.extract_params[1], start)
+        self.assertEqual(event_store.extract_params[2], end)
+        self.assertEqual(event_store.extract_params[3], json_filter)
+        self.assertEqual(event_store.extract_params[4], limit)
+        self.assertTrue(event_store.extract_params[5])
+        # returns the subset of events, not a histogram because return-subset is set
+        self.assertNotEqual(len(data['events']), len(mock_events))
+        self.assertEqual(len(data['events']), limit)
+
+
+    async def test_event_stream_remove_events(self):
+        event_store = self.app[app_keys.event_store]
+        
+        ### Works with default parameters
+        resp = await self.client.delete(EndPoints.event_data, 
+                                        params={"id": self.test_stream_id})
+        self.assertEqual(resp.status, 200)
+        self.assertTrue(event_store.remove_called)
+        event_store.reset()
+
+        ### Can specify path instead of id and optional parameters
+        start = 0
+        end = 100
+        json_filter = [[["id","=","3"]]]
+        resp = await self.client.delete(EndPoints.event_data, 
+                                        params={"path": "/events/test",
+                                                "start": start,
+                                                "end": end,
+                                                "filter": json.dumps(json_filter)})
+        self.assertEqual(resp.status, 200)
+        self.assertTrue(event_store.remove_called)
+        # make sure parameters are parsed
+        self.assertEqual(event_store.remove_params[0].id, self.test_stream.id)
+        self.assertEqual(event_store.remove_params[1], start)
+        self.assertEqual(event_store.remove_params[2], end)
+        self.assertEqual(event_store.remove_params[3], json_filter)

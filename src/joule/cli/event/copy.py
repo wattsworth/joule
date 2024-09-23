@@ -132,10 +132,6 @@ async def _run(source_node, dest_node, start, end, new, replace, source, destina
 
             if len(events) == 0:
                 break
-            # remove the ID field so these events will get written as new items in the destination
-            # otherwise the destination will try to update an event that does not exist
-            for event in events:
-                event.id = None
             await dest_node.event_stream_write(destination, events)
             num_copied_events += len(events)
             bar.update(len(events))

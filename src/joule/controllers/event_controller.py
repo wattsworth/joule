@@ -221,17 +221,17 @@ async def read_events(request):
     elif 'id' in request.query:
         my_stream = db.get(EventStream, request.query["id"])
     else:
-        return web.Response(text="specify an id or a path", status=400)
+        raise web.HTTPBadRequest(reason="specify an id or a path")
     if my_stream is None:
-        raise web.HTTPNotFound(ApiErrorMessages.stream_does_not_exist)
+        raise web.HTTPNotFound(reason=ApiErrorMessages.stream_does_not_exist)
     if 'limit' not in request.query:
-        return web.Response(text="limit parameter is required", status=400)
+        raise web.HTTPBadRequest(reason="limit parameter is required")
     try:
         limit = int(request.query['limit'])
         if limit < 0:
             raise ValueError
     except ValueError:
-        return web.Response(text="limit parameter must be an integer > 0", status=400)
+        raise web.HTTPBadRequest(reason="limit parameter must be an integer > 0")
     params = {'start': None, 'end': None, 'include-ongoing-events': 0}
     json_filter = _validate_event_query_parameters(params, request.query)
     
@@ -263,9 +263,9 @@ async def remove_events(request):
     elif 'id' in request.query:
         my_stream = db.get(EventStream, request.query["id"])
     else:
-        return web.Response(text=ApiErrorMessages.specify_id_or_path, status=400)
+        raise web.HTTPBadRequest(reason=ApiErrorMessages.specify_id_or_path)
     if my_stream is None:
-        raise web.HTTPNotFound(ApiErrorMessages.stream_does_not_exist)
+        raise web.HTTPNotFound(reason=ApiErrorMessages.stream_does_not_exist)
 
     # parse optional parameters
     params = {'start': None, 'end': None}

@@ -156,7 +156,7 @@ class BaseNode:
                                  stream: 'EventStream | str | int',
                                  events: List['Event']) -> List['Event']:
         from joule.api.event_stream import event_stream_write
-        return await event_stream_write(self.session, stream, events)
+        return await event_stream_write(self.session, self.name, stream, events)
 
     async def event_stream_read(self,
                                 stream: 'EventStream | str | int',
@@ -166,7 +166,7 @@ class BaseNode:
                                 json_filter: Optional[Dict[str, str]]=None,
                                 include_on_going_events=True) -> List['Event']:
         from joule.api.event_stream import event_stream_read
-        return await event_stream_read(self.session, stream=stream,
+        return await event_stream_read(self.session, self.name, stream=stream,
                                        start_time=start, end_time=end,
                                        limit=limit, json_filter=json_filter,
                                        include_on_going_events=include_on_going_events)

@@ -65,10 +65,18 @@ class MockEventStore(EventStore):
         self.upserted_events = []
         self.count_called = False
         self.count_params = None
+        self.extract_params = None
+        self.extract_called = False
+        self.histogram_called = False
+        self.remove_called = False
+        self._events = []
 
     async def initialize(self, pool=None):
         # API compatibility with DataStore, does not require any initialization
         pass
+
+    def set_events(self, events):
+        self._events = events
 
     async def info(self, streams: List[EventStream]) -> Dict[int, EventStreamInfo]:
         info_dict = {}
@@ -92,7 +100,21 @@ class MockEventStore(EventStore):
     async def count(self, stream, start=None, end=None, json_filter=None,include_on_going_events=False):
         self.count_called = True
         self.count_params = (stream, start, end, json_filter, include_on_going_events)
-        return 10
+        return len(self._events)
+    
+    async def extract(self, stream, start=None, end=None, json_filter=None, limit=0, include_on_going_events=False):
+        self.extract_params = (stream, start, end, json_filter, limit, include_on_going_events)
+        self.extract_called = True
+        return self._events[:limit]
+    
+    async def histogram(self, stream, start=None, end=None, json_filter=None, nbuckets=0):
+        self.histogram_called = True
+        self.histogram_params = (stream, start, end, json_filter, nbuckets)
+        return [] # empty histogram
+    
+    async def remove(self, stream, start=None, end=None, json_filter=None):
+        self.remove_called = True
+        self.remove_params = (stream, start, end, json_filter)
 
 class MockStore(DataStore):
     def __init__(self):

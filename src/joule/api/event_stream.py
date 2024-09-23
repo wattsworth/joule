@@ -271,6 +271,7 @@ async def event_stream_move(session: BaseSession,
 
 
 async def event_stream_write(session: BaseSession,
+                             node_name: str,
                              stream: EventStream | str | int,
                              events: List[Event]) -> List[Event]:
     data = {}
@@ -286,9 +287,9 @@ async def event_stream_write(session: BaseSession,
     rx_events = []
     for idx in range(0, len(events), 500):
         chunk = events[idx:idx + 500]
-        data['events'] = [e.to_json() for e in events[idx:idx + 500]]
+        data['events'] = [e.to_json(destination_node_name=node_name) for e in events[idx:idx + 500]]
         resp = await session.post(EndPoints.event_data, data)
-        rx_events += [event_from_json(e) for e in resp["events"]]
+        rx_events += [event_from_json(e, node_name=node_name) for e in resp["events"]]
         # copy the ids over
         for i in range(len(chunk)):
             chunk[i].id = rx_events[i].id
@@ -323,6 +324,7 @@ async def event_stream_count(session: BaseSession,
 
 
 async def event_stream_read(session: BaseSession,
+                            node_name: str,
                             stream: EventStream | str | int,
                             start_time: Optional[int],
                             end_time: Optional[int],
@@ -353,7 +355,7 @@ async def event_stream_read(session: BaseSession,
     if include_on_going_events:
         params['include-on-going-events'] = 1
     resp = await session.get(EndPoints.event_data, params)
-    events = [event_from_json(e) for e in resp["events"]]
+    events = [event_from_json(e, node_name=node_name) for e in resp["events"]]
     if len(events) > limit:
         print(f"WARNING: Only returning the first {limit} events in this stream, increase "
               "the limit parameter to retrieve more data or use different "

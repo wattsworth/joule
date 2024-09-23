@@ -226,7 +226,7 @@ class TestEventController(AioHTTPTestCase):
         events = [Event(start_time=i,end_time=i+1000,content={"field1": i}, 
                         event_stream_id=self.test_stream.id, id=i) for i in range(0,10000,1000)]
         resp: aiohttp.ClientResponse = await \
-            self.client.post(EndPoints.event_data, json={"events": [e.to_json() for e in events]})
+            self.client.post(EndPoints.event_data, json={"events": [e.to_json(destination_node_name='test') for e in events]})
         self.assertEqual(resp.status, 400)
         self.assertFalse(event_store.upsert_called)
         msg = await resp.text()
@@ -234,7 +234,7 @@ class TestEventController(AioHTTPTestCase):
 
         ### stream must exist (valid path)
         resp: aiohttp.ClientResponse = await \
-            self.client.post(EndPoints.event_data, json={"events": [e.to_json() for e in events], "path": "/does/not/exist"})
+            self.client.post(EndPoints.event_data, json={"events": [e.to_json(destination_node_name='test') for e in events], "path": "/does/not/exist"})
         self.assertEqual(resp.status, 404)
         self.assertFalse(event_store.upsert_called)
         msg = await resp.text()
@@ -249,7 +249,7 @@ class TestEventController(AioHTTPTestCase):
         self.assertIn('events', msg)
 
         ### events must have an event_stream_id
-        events_json = [e.to_json() for e in events]
+        events_json = [e.to_json(destination_node_name='test') for e in events]
         events_json[0].pop('event_stream_id')
         resp: aiohttp.ClientResponse = await \
             self.client.post(EndPoints.event_data, json={"events": events_json, "path": "/events/test"})
@@ -258,7 +258,7 @@ class TestEventController(AioHTTPTestCase):
         msg = await resp.text()
         self.assertIn('event_stream_id', msg)
 
-    async def test_aevent_stream_count_errors(self):
+    async def test_event_stream_count_errors(self):
         event_store = self.app[app_keys.event_store]
         ### must specify an id or path
         resp: aiohttp.ClientResponse = await \
@@ -299,3 +299,75 @@ class TestEventController(AioHTTPTestCase):
         self.assertFalse(event_store.count_called)
         msg = await resp.text()
         self.assertIn(ApiErrorMessages.invalid_filter_parameter, msg)
+
+    async def test_event_stream_read_errors(self):
+        event_store = self.app[app_keys.event_store]
+        ### must specify an id or path
+        resp: aiohttp.ClientResponse = await \
+            self.client.get(EndPoints.event_data, params={"start": 0, "end": 10000})
+        self.assertEqual(resp.status, 400)
+        self.assertFalse(event_store.count_called)
+        self.assertFalse(event_store.extract_called)
+        msg = await resp.text()
+        self.assertIn(ApiErrorMessages.specify_id_or_path, msg)
+
+        ### stream must exist (valid path)
+        resp: aiohttp.ClientResponse = await \
+            self.client.get(EndPoints.event_data, params={"path": "/does/not/exist"})
+        self.assertEqual(resp.status, 404)
+        self.assertFalse(event_store.count_called)
+        self.assertFalse(event_store.extract_called)
+        msg = await resp.text()
+        self.assertIn(ApiErrorMessages.stream_does_not_exist, msg)
+
+        ### limit must be provided
+        resp: aiohttp.ClientResponse = await \
+            self.client.get(EndPoints.event_data, params={"path": "/events/test"})
+        self.assertEqual(resp.status, 400)
+        self.assertFalse(event_store.count_called)
+        self.assertFalse(event_store.extract_called)
+        msg = await resp.text()
+        self.assertIn("limit", msg)
+
+        ### limit must be > 0
+        resp: aiohttp.ClientResponse = await \
+            self.client.get(EndPoints.event_data, params={"path": "/events/test", "limit": -5})
+        self.assertEqual(resp.status, 400)
+        self.assertFalse(event_store.count_called)
+        self.assertFalse(event_store.extract_called)
+        msg = await resp.text()
+        self.assertIn("limit", msg)
+
+    async def test_event_stream_remove_errors(self):
+        event_store = self.app[app_keys.event_store]
+        ### must specify an id or path
+        resp: aiohttp.ClientResponse = await \
+            self.client.delete(EndPoints.event_data, params={"start": 0, "end": 10000})
+        self.assertEqual(resp.status, 400)
+        self.assertFalse(event_store.remove_called)
+        msg = await resp.text()
+        self.assertIn(ApiErrorMessages.specify_id_or_path, msg)
+
+        ### stream must exist (valid path)
+        resp: aiohttp.ClientResponse = await \
+            self.client.delete(EndPoints.event_data, params={"path": "/does/not/exist"})
+        self.assertEqual(resp.status, 404)
+        self.assertFalse(event_store.remove_called)
+        msg = await resp.text()
+        self.assertIn(ApiErrorMessages.stream_does_not_exist, msg)
+
+        ### parameters must have valid datatype (int)
+        resp: aiohttp.ClientResponse = await \
+            self.client.delete(EndPoints.event_data, params={"path": "/events/test", "start": "not an int", "end": 10000})
+        self.assertEqual(resp.status, 400)
+        self.assertFalse(event_store.remove_called)
+        msg = await resp.text()
+        self.assertIn(ApiErrorMessages.f_parameter_must_be_an_int.format(parameter='start'), msg)
+
+        ### start must be before end
+        resp: aiohttp.ClientResponse = await \
+            self.client.delete(EndPoints.event_data, params={"path": "/events/test", "start": 10000, "end": 0})
+        self.assertEqual(resp.status, 400)
+        self.assertFalse(event_store.remove_called)
+        msg = await resp.text()
+        self.assertIn(ApiErrorMessages.start_must_be_before_end, msg)
