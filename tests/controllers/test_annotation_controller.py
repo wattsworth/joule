@@ -81,6 +81,24 @@ class TestAnnotationController(AioHTTPTestCase):
         annotations_json = await resp.json()
         self.assertEqual(annotations_json, all_annotations_json)
 
+    async def test_annotation_info(self):
+        resp = await self.client.request("GET", EndPoints.annotations_info,
+                                         params={"stream_id": self.stream1.id})
+        self.assertEqual(resp.status, 200)
+        info = await resp.json()
+        self.assertEqual(info["count"], 5)
+        self.assertEqual(info["start"], 0)
+        self.assertEqual(info["end"], 4000)
+
+        # can get info by path
+        resp = await self.client.request("GET", EndPoints.annotations_info,
+                                            params={"stream_path": "/top/middle/leaf/stream2"})
+        self.assertEqual(resp.status, 200)
+        info = await resp.json()
+        self.assertEqual(info["count"], 5)
+        self.assertEqual(info["start"], 0)
+        self.assertEqual(info["end"], 4000)
+
     async def test_annotation_create_by_stream_id(self):
         annotation_json = {
             "title": "new_annotation",
@@ -189,3 +207,11 @@ class TestAnnotationController(AioHTTPTestCase):
         self.assertEqual(0, self.db.query(Annotation).
                          filter_by(stream_id=self.stream2.id).
                          count())
+
+        # make sure the info is updated
+        resp = await self.client.request("GET", EndPoints.annotations_info,
+                                         params={"stream_id": self.stream1.id})
+        info = await resp.json()
+        self.assertEqual(info["count"], 0)
+        self.assertIsNone(info["start"])
+        self.assertIsNone(info["end"])

@@ -1,12 +1,13 @@
 from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 from aiohttp import web
 import asyncio
+from sqlalchemy.orm import Session
 import joule.controllers
 from tests.controllers.helpers import create_db
 from joule.models import DataStream, Annotation
 from joule import utilities
 from joule import app_keys
-from joule.constants import EndPoints
+from joule.constants import EndPoints, ApiErrorMessages
 
 import testing.postgresql
 psql_key = web.AppKey("psql", testing.postgresql.Postgresql)
@@ -70,8 +71,21 @@ class TestAnnotationControllerErrors(AioHTTPTestCase):
 
         self.assertEqual(resp.status, 404)
 
+    async def test_annotation_info(self):
+        # must specify a path or an id
+        resp = await self.client.request("GET", EndPoints.annotations_info)
+        self.assertEqual(resp.status, 400)
+        self.assertIn(ApiErrorMessages.specify_id_or_path, await resp.text())
+
+        # stream must exist
+        bad_id = self.stream1.id + self.stream2.id
+        resp = await self.client.request("GET", EndPoints.annotations_info,
+                                         params={"stream_id": bad_id})
+        self.assertEqual(resp.status, 404)
+        self.assertIn("does not exist", await resp.text())
 
     async def test_annotation_update(self):
+        db: Session = self.app[app_keys.db]
         # must be a json request
         resp = await self.client.request("PUT", EndPoints.annotation)
         self.assertEqual(resp.status, 400)
@@ -91,6 +105,20 @@ class TestAnnotationControllerErrors(AioHTTPTestCase):
                                              "content": ""})
         self.assertEqual(resp.status, 404)
         self.assertIn("does not exist", await resp.text())
+
+        # title cannot be empty
+        old_annotation = self.db.query(Annotation).filter_by(stream_id=self.stream1.id).first()
+        resp = await self.client.request("PUT", EndPoints.annotation,
+                                            json={
+                                                "id": old_annotation.id,
+                                                "title": "",
+                                                "content": "--should not be in database--"})
+        self.assertEqual(resp.status, 400)
+        self.assertIn("title", await resp.text())
+
+        # make sure the annotation was not updated
+        new_annotation = db.get(Annotation, old_annotation.id)
+        self.assertNotEqual(new_annotation.content, "--should not be in database--")
 
 
     async def test_annotation_create(self):
@@ -119,6 +147,25 @@ class TestAnnotationControllerErrors(AioHTTPTestCase):
         self.assertIn("invalid values", await resp.text())
         # NOTE: invalid id format is covered by middleware
 
+        # title cannot be empty
+        resp = await self.client.request("POST", EndPoints.annotation,
+                                            json={"stream_id": self.stream1.id,
+                                                "title": "",
+                                                "start": 400,
+                                                "end": 800,
+                                                "content": ""})
+        self.assertEqual(resp.status, 400)
+        self.assertIn("title", await resp.text())
+
+        # start must be before end
+        resp = await self.client.request("POST", EndPoints.annotation,
+                                         json={"stream_id": self.stream1.id,
+                                               "title": "bad time",
+                                               "start": 800,
+                                               "end": 800,
+                                               "content": ""})
+        self.assertEqual(resp.status, 400)
+        self.assertIn("start", await resp.text())
 
     async def test_annotation_delete(self):
         # must specify an id
@@ -136,7 +183,7 @@ class TestAnnotationControllerErrors(AioHTTPTestCase):
         # must specify a stream_id
         resp = await self.client.request("DELETE", EndPoints.stream_annotations)
         self.assertEqual(resp.status, 400)
-        self.assertIn("stream_id", await resp.text())
+        self.assertIn(ApiErrorMessages.specify_id_or_path, await resp.text())
         # stream_id must exist
         bad_id = self.stream1.id + self.stream2.id
         resp = await self.client.request("DELETE", EndPoints.stream_annotations, params={"stream_id": bad_id})

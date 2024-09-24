@@ -1,18 +1,14 @@
-from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
+from aiohttp.test_utils import AioHTTPTestCase
 from aiohttp import web
 import aiohttp
 import json
-import numpy as np
-from sqlalchemy.orm import Session
 import asyncio
-from joule.models import DataStream, pipes
 import joule.controllers
 from joule.models import Folder, EventStream
 from joule.models.folder import find as find_folder
 from tests.controllers.helpers import create_db, MockSupervisor, MockEventStore
 from joule.api.event_stream import EventStream as ApiEventStream, from_json as event_stream_from_json
-from joule.api.event import Event, from_json as event_from_json
-from tests import helpers
+from joule.api.event import Event
 from joule import app_keys
 from joule.constants import EndPoints
 

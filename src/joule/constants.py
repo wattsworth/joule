@@ -56,7 +56,7 @@ class ApiErrorMessages:
     specify_id_or_path = 'specify an id or a path'
     start_must_be_before_end = '[start] must be before [end]'
     invalid_filter_parameter = 'invalid filter parameter'
-
+    id_not_found = 'id not found'
     # Error messages that require formatting
     f_parameter_must_be_an_int = "parameter {parameter} must be an int"
 

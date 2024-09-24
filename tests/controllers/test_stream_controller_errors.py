@@ -86,7 +86,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         resp = await self.client.put(EndPoints.stream_move, json={"src_path": "/folder1/stream1",
                                                                 "dest_path": "/folder8"})
         self.assertEqual(resp.status, 400)
-        self.assertTrue('locked' in await resp.text())
+        self.assertIn('locked', await resp.text())
 
     async def test_stream_create(self):
         # must be json
@@ -182,7 +182,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         my_stream.is_configured = True
         resp = await self.client.delete(EndPoints.stream, params={"id": my_stream.id})
         self.assertEqual(resp.status, 400)
-        self.assertTrue('locked' in await resp.text())
+        self.assertIn('locked', await resp.text())
         self.assertIsNotNone(db.query(DataStream).filter_by(name="stream1").one())
 
     async def test_stream_update(self):
@@ -205,7 +205,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         }
         resp = await self.client.put(EndPoints.stream, json=payload)
         self.assertEqual(resp.status, 400)
-        self.assertTrue('display_type' in await resp.text())
+        self.assertIn('display_type', await resp.text())
 
         my_stream: DataStream = db.get(DataStream, my_stream.id)
         self.assertEqual("stream1", my_stream.name)
@@ -219,7 +219,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         }
         resp = await self.client.put(EndPoints.stream, json=payload)
         self.assertEqual(resp.status, 400)
-        self.assertTrue('id' in await resp.text())
+        self.assertIn('id', await resp.text())
 
         # request must have streams attr
         payload = {
@@ -227,7 +227,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         }
         resp = await self.client.put(EndPoints.stream, json=payload)
         self.assertEqual(resp.status, 400)
-        self.assertTrue('stream' in await resp.text())
+        self.assertIn('stream', await resp.text())
 
         # streams attr must be valid json
         payload = {
@@ -236,7 +236,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         }
         resp = await self.client.put(EndPoints.stream, json=payload)
         self.assertEqual(resp.status, 400)
-        self.assertTrue('JSON' in await resp.text())
+        self.assertIn('JSON', await resp.text())
 
         # cannot modify locked streams
         my_stream.is_configured = True
@@ -246,7 +246,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         }
         resp = await self.client.put(EndPoints.stream, json=payload)
         self.assertEqual(resp.status, 400)
-        self.assertTrue('locked' in await resp.text())
+        self.assertIn('locked', await resp.text())
 
         # stream must exist
         payload = {
@@ -255,7 +255,7 @@ class TestStreamControllerErrors(AioHTTPTestCase):
         }
         resp = await self.client.put(EndPoints.stream, json=payload)
         self.assertEqual(resp.status, 404)
-        self.assertTrue('exist' in await resp.text())
+        self.assertIn('exist', await resp.text())
 
         # stream name must be unique in the folder
         my_stream.is_configured = False  # unlock

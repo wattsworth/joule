@@ -237,6 +237,8 @@ class MockWorker:
         self.uuid = uuid
         self.interface_socket = socket
         self.input_connections = []
+        self.workers = []
+        self.proxies = []
         for (name, path) in inputs.items():
             self.input_connections.append(argparse.Namespace(name=name, location=path))
         self.output_connections = []
@@ -261,6 +263,18 @@ class MockSupervisor:
         self.unsubscribe_mock = mock.Mock()
         self.unsubscribe_calls = 0
 
+    def get_module_socket(self, uuid):
+        for worker in self.workers:
+            if worker.uuid == uuid:
+                return f"--{uuid}--"
+        return None
+    
+    def get_proxy_url(self, uuid):
+        for proxy in self.proxies:
+            if proxy.uuid == uuid:
+                return proxy.url
+        return None
+    
     def unsubscribe(self):
         self.unsubscribe_calls += 1
 
