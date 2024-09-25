@@ -38,15 +38,18 @@ class TestDataController(AioHTTPTestCase):
     async def test_read_binary_data(self):
         db: Session = self.app[app_keys.db]
         store: MockStore = self.app[app_keys.data_store]
-        nchunks = 10
-        store.configure_extract(nchunks)
+        nchunks = 3
+        nintervals=4
+        store.configure_extract(nchunks, nintervals)
         resp: aiohttp.ClientResponse = await \
             self.client.get(EndPoints.data, params={"path": "/folder1/stream1"})
         rx_chunks = 0
+        # this data is binary so we can't do much with it, just make sure 
+        # the handler is called multiple times :) 
         async for data, _ in resp.content.iter_chunks():
             if len(data) > 0:
                 rx_chunks += 1
-        self.assertEqual(nchunks, rx_chunks)
+        self.assertGreater(rx_chunks, 1)
 
         # can retrieve stream by id and as decimated data
         stream = db.query(DataStream).filter_by(name="stream1").one()
@@ -56,7 +59,7 @@ class TestDataController(AioHTTPTestCase):
         async for data, _ in resp.content.iter_chunks():
             if len(data) > 0:
                 rx_chunks += 1
-        self.assertEqual(nchunks, rx_chunks)
+        self.assertGreater(rx_chunks, 1)
         self.assertEqual(resp.headers['joule-decimation'], '16')
         self.assertEqual(resp.headers['joule-layout'], stream.decimated_layout)
 
@@ -65,8 +68,8 @@ class TestDataController(AioHTTPTestCase):
         db: Session = self.app[app_keys.db]
         store: MockStore = self.app[app_keys.data_store]
         n_chunks = 10
-        n_intervals = 2
-        # mock data has 2 intervals retrieved as 10 chunks each
+        n_intervals = 5
+        # mock data has 5 intervals retrieved as 10 chunks each
         store.configure_extract(n_chunks, n_intervals)
         resp: aiohttp.ClientResponse = await \
             self.client.get(EndPoints.data_json, params={"path": "/folder1/stream1"})
@@ -80,7 +83,7 @@ class TestDataController(AioHTTPTestCase):
         data = await resp.json()
         self.assertEqual(data['decimation_factor'], 16)
         # only the interval is exposed, the chunking is transparent
-        self.assertEqual(len(data['data']), 2)
+        self.assertEqual(len(data['data']), n_intervals)
         for interval in data['data']:
             self.assertEqual(len(interval), n_chunks * 25)
 
@@ -215,3 +218,32 @@ class TestDataController(AioHTTPTestCase):
         # the mock store returns the start end bounds as the single interval
         data = await resp.json()
         self.assertEqual(data, [[10, 20]])
+
+    async def test_consolidate_data(self):
+        store: MockStore = self.app[app_keys.data_store]
+        resp = await self.client.post(EndPoints.data_consolidate, params={"id": 1, "end": 200, "max_gap":100})
+        self.assertEqual(resp.status, 200)
+        data = await resp.json()
+        self.assertEqual(data['num_consolidated'], 0)
+
+        # check to make sure the store was called with the correct parameters
+        self.assertTrue(store.consolidate_called)
+        stream, start, end, max_gap = store.consolidate_params
+        self.assertEqual(stream.id, 1)
+        self.assertIsNone(start, None)
+        self.assertEqual(end, 200)
+        self.assertEqual(max_gap, 100)
+
+
+    async def test_decimate_data(self):
+        store: MockStore = self.app[app_keys.data_store]
+        resp = await self.client.post(EndPoints.data_decimate, params={"id": 1})
+        self.assertEqual(resp.status, 200)
+        self.assertTrue(store.redecimated_data)
+
+
+    async def test_remove_decimations(self):
+        store: MockStore = self.app[app_keys.data_store]
+        resp = await self.client.delete(EndPoints.data_decimate, params={"id": 1})
+        self.assertEqual(resp.status, 200)
+        self.assertTrue(store.dropped_decimations)

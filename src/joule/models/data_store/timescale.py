@@ -25,6 +25,8 @@ class TimescaleStore(DataStore):
         self.insert_period = insert_period
         self.cleanup_period = cleanup_period
         self.pool = None
+        # Unlike NilmDB data store TimescaleDB supports decimation management
+        self.supports_decimation_management = True 
         # tunable constants
         self.extract_block_size = 50000
 

@@ -11,7 +11,7 @@ from joule.models import (folder, DataStore, DataStream,
 from joule.models.supervisor import Supervisor
 from joule.constants import ApiErrorMessages
 from joule.errors import SubscriptionError
-
+from joule.controllers.helpers import validate_query_parameters
 log = logging.getLogger('joule')
 
 
@@ -29,35 +29,16 @@ async def read(request: web.Request, json=False):
 async def _read(request: web.Request, json):
     db: Session = request.app[app_keys.db]
     data_store: DataStore = request.app[app_keys.data_store]
-    # find the requested stream
-    if 'path' in request.query:
-        stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
-    elif 'id' in request.query:
-        stream = db.get(DataStream,request.query["id"])
-    else:
-        return web.Response(text="specify an id or a path", status=400)
-    if stream is None:
-        return web.Response(text="stream does not exist", status=404)
-
+    stream = _get_stream(request, db)
+    
     # parse optional parameters
     params = {'start': None, 'end': None, 'max-rows': None, 'decimation-level': None}
-    param = ""  # to appease type checker
-
-    try:
-        for param in params:
-            if param in request.query:
-                params[param] = int(request.query[param])
-    except ValueError:
-        return web.Response(text="parameter [%s] must be an int" % param, status=400)
-
-    # make sure parameters make sense
-    if ((params['start'] is not None and params['end'] is not None) and
-            (params['start'] >= params['end'])):
-        raise web.HTTPBadRequest(reason=ApiErrorMessages.start_must_be_before_end)
+    validate_query_parameters(params, request.query)
+    # additional parameter checks
     if params['max-rows'] is not None and params['max-rows'] <= 0:
-        return web.Response(text="[max-rows] must be > 0", status=400)
+        raise web.HTTPBadRequest(reason="[max-rows] must be > 0")
     if params['decimation-level'] is not None and params['decimation-level'] <= 0:
-        return web.Response(text="[decimation-level] must be > 0", status=400)
+        raise web.HTTPBadRequest(reason="[decimation-level] must be > 0")
 
     # --- Binary Streaming Handler ---
     resp = None
@@ -82,30 +63,33 @@ async def _read(request: web.Request, json):
     async def retrieve_data(data: np.ndarray, layout, factor):
         nonlocal data_blocks, data_segment, decimation_factor
         decimation_factor = factor
+        ## CASE 1: Interval token by itself, no data
         if np.array_equal(data, pipes.interval_token(layout)):
             if data_segment is not None:
                 data_blocks.append(data_segment.tolist())
                 data_segment = None
-        # previously interval boundaries were always sent separately
-        # now they are appended to the end of a chunk of data when possible
-        # this requires an additional check here
+        ## CASE 2: Data followed by an interval token
         elif len(data)>0 and np.array_equal([data[-1]],pipes.interval_token(layout)):
             # flatten the structured array
             data = np.c_[data['timestamp'][:, None], data['data']]
             # remove the interval token
             data = data[:-1,:]
-            # put the chunk in the list
+            # CASE 2.1: Last segment of data from the interval (we already have part of it)
             if data_segment is not None:
                 data_segment = np.vstack((data_segment, data))
                 data_blocks.append(data_segment.tolist())
                 data_segment = None
+            # CASE 2.2: This chunk of data is the entire interval (no existing data from this interval)
             elif len(data)>0: 
                 # only need to create a data block if there's actually data in this segment
                 data_blocks.append(data.tolist())
+        ## CASE 3: Just data- no interval token
         else:
             data = np.c_[data['timestamp'][:, None], data['data']]
+            ## CASE 3.1: First segment of data from a new interval
             if data_segment is None:
                 data_segment = data
+            ## CASE 3.2: Subsequent segments of data from the same interval
             else:
                 data_segment = np.vstack((data_segment, data))
 
@@ -121,13 +105,9 @@ async def _read(request: web.Request, json):
                                  max_rows=params['max-rows'],
                                  decimation_level=params['decimation-level'])
     except InsufficientDecimationError as e:
-        return web.Response(text="decimated data is not available: %s" % e, status=400)
+        raise web.HTTPBadRequest(reason="decimated data is not available: %s" % e)
     except DataError as e:
-        msg = str(e)
-        if 'no such stream' in msg.lower() and (params['decimation-level'] is not None):  # pragma: no cover
-            # clean up error message when user requested a particular decimation level
-            msg = "requested decimation level [%d] does not exist" % params['decimation-level']
-        return web.Response(text="read error: %s" % msg, status=400)
+        raise web.HTTPBadRequest(reason=f"read error: {str(e)}")
 
     if json:
         # put the last data_segment on
@@ -144,22 +124,13 @@ async def _subscribe(request: web.Request, json: bool):
     db: Session = request.app[app_keys.db]
     supervisor: Supervisor = request.app[app_keys.supervisor]
     if json:
-        return web.Response(text="JSON subscription not implemented", status=400)
-
-    # find the requested stream
-    if 'path' in request.query:
-        stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
-    elif 'id' in request.query:
-        stream = db.get(DataStream,request.query["id"])
-    else:
-        return web.Response(text="specify an id or a path", status=400)
-    if stream is None:
-        return web.Response(text="stream does not exist", status=404)
+        raise web.HTTPBadRequest(reason="JSON subscription not implemented")
+    stream = _get_stream(request, db)
     pipe = pipes.LocalPipe(stream.layout)
     try:
         unsubscribe = supervisor.subscribe(stream, pipe)
     except SubscriptionError:
-        return web.Response(text="stream is not being produced", status=400)
+        raise web.HTTPBadRequest(reason="stream is not being produced")
     resp = web.StreamResponse(status=200,
                               headers={'joule-layout': stream.layout,
                                        'joule-decimation': '1'})
@@ -167,76 +138,36 @@ async def _subscribe(request: web.Request, json: bool):
 
     try:
         await resp.prepare(request)
-    except ConnectionResetError:
-        unsubscribe()
-        return resp
-
-    try:
         while True:
             try:
                 data = await pipe.read()
             except pipes.EmptyPipe:
-                unsubscribe()
                 return resp
             pipe.consume(len(data))
             if len(data) > 0:
                 await resp.write(data.tobytes())
             if pipe.end_of_interval:
                 await resp.write(pipes.interval_token(stream.layout).tobytes())
-    except asyncio.CancelledError as e:
-        unsubscribe()
-        # propogate the CancelledError up
-        raise e
     except ConnectionResetError:
+        pass # ignore client disconnect
+    finally:
         unsubscribe()
-        return resp
-
+    return resp
 
 async def intervals(request: web.Request):
     db: Session = request.app[app_keys.db]
     data_store: DataStore = request.app[app_keys.data_store]
-    # find the requested stream
-    if 'path' in request.query:
-        stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
-    elif 'id' in request.query:
-        stream = db.get(DataStream,request.query["id"])
-    else:
-        return web.Response(text="specify an id or a path", status=400)
-    if stream is None:
-        return web.Response(text="stream does not exist", status=404)
-    # parse time bounds if specified
-    try:
-        if 'start' in request.query:
-            start = int(request.query['start'])
-        else:
-            start = None
-        if 'end' in request.query:
-            end = int(request.query['end'])
-        else:
-            end = None
-    except ValueError:
-        return web.Response(text="[start] and [end] must be an integers", status=400)
+    stream = _get_stream(request, db)
+    params = {'start': None, 'end': None}
+    validate_query_parameters(params, request.query)
 
-    # make sure parameters make sense
-    if (start is not None and end is not None) and start >= end:
-        raise web.HTTPBadRequest(reason=ApiErrorMessages.start_must_be_before_end)
-
-
-    return web.json_response(await data_store.intervals(stream, start, end))
+    return web.json_response(await data_store.intervals(stream, params['start'], params['end']))
 
 
 async def write(request: web.Request):
     db: Session = request.app[app_keys.db]
     data_store: DataStore = request.app[app_keys.data_store]
-    # find the requested stream
-    if 'path' in request.query:
-        stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
-    elif 'id' in request.query:
-        stream = db.get(DataStream,request.query["id"])
-    else:
-        return web.Response(text="specify an id or a path", status=400)
-    if stream is None:
-        return web.Response(text="stream does not exist", status=404)
+    stream = _get_stream(request, db)
     # spawn in inserter task
     stream.is_destination = True
     db.commit()
@@ -246,10 +177,10 @@ async def write(request: web.Request):
         try:
             merge_gap = int(request.query['merge-gap'])
         except ValueError:
-            return web.Response(text="merge-gap must be an integer", status=400)
+            raise web.HTTPBadRequest(reason="merge-gap must be an integer")
         
         if merge_gap < 0:
-            return web.Response(text="merge-gap must be >= 0", status=400)
+            raise web.HTTPBadRequest(reason="merge-gap must be >= 0")
     else:
         merge_gap = 0
     try:
@@ -258,7 +189,7 @@ async def write(request: web.Request):
     except DataError as e:
         stream.is_destination = False
         db.commit()
-        return web.Response(text=str(e), status=400)
+        raise web.HTTPBadRequest(reason=str(e))
     finally:
         stream.is_destination = False
         db.commit()
@@ -268,105 +199,68 @@ async def write(request: web.Request):
 async def remove(request: web.Request):
     db: Session = request.app[app_keys.db]
     data_store: DataStore = request.app[app_keys.data_store]
-    # find the requested stream
-    if 'path' in request.query:
-        stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
-    elif 'id' in request.query:
-        stream = db.get(DataStream,request.query["id"])
-    else:
-        return web.Response(text="specify an id or a path", status=400)
-    if stream is None:
-        return web.Response(text="stream does not exist", status=404)
+    stream = _get_stream(request, db)
 
-    # parse time bounds
-    start = None
-    end = None
-    try:
-        if 'start' in request.query:
-            start = int(request.query['start'])
-        if 'end' in request.query:
-            end = int(request.query['end'])
-    except ValueError:
-        return web.Response(text="[start] and [end] must be integers", status=400)
+    params = {'start': None, 'end': None}
+    validate_query_parameters(params, request.query)
 
-    # make sure bounds make sense
-    if ((start is not None and end is not None) and
-            (start >= end)):
-        raise web.HTTPBadRequest(reason=ApiErrorMessages.start_must_be_before_end)
-
-    await data_store.remove(stream, start, end)
+    await data_store.remove(stream, params['start'], params['end'])
     return web.Response(text="ok")
 
 
 async def consolidate(request):
     db: Session = request.app[app_keys.db]
     data_store: DataStore = request.app[app_keys.data_store]
-    # find the requested stream
-    if 'path' in request.query:
-        stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
-    elif 'id' in request.query:
-        stream = db.get(DataStream,request.query["id"])
-    else:
-        return web.Response(text="specify an id or a path", status=400)
-    if stream is None:
-        return web.Response(text="stream does not exist", status=404)
+    _validate_support(data_store)
 
-    # parse time bounds
-    start = None
-    end = None
-    try:
-        if 'start' in request.query:
-            start = int(request.query['start'])
-        if 'end' in request.query:
-            end = int(request.query['end'])
-    except ValueError:
-        return web.Response(text="[start] and [end] must be integers", status=400)
-
-    # make sure bounds make sense
-    if ((start is not None and end is not None) and
-            (start >= end)):
-        raise web.HTTPBadRequest(reason=ApiErrorMessages.start_must_be_before_end)
-
-
+    stream = _get_stream(request, db)
+    params = {'start': None, 'end': None}
+    validate_query_parameters(params, request.query)
+    
     # parse the max_gap parameter
     if 'max_gap' not in request.query:
-        return web.Response(text="specify max_gap as us integer", status=400)
+        raise web.HTTPBadRequest(reason="specify max_gap as us integer")
     try:
         max_gap = int(request.query['max_gap'])
         if max_gap <= 0:
             raise ValueError()
     except ValueError:
-        return web.Response(text="max_gap must be postive integer", status=400)
-    num_removed = await data_store.consolidate(stream, start, end, max_gap)
+        raise web.HTTPBadRequest(reason="max_gap must be postive integer")
+    num_removed = await data_store.consolidate(stream, params['start'], params['end'], max_gap)
     return web.json_response(data={"num_consolidated": num_removed})
 
 
 async def decimate(request):
     db: Session = request.app[app_keys.db]
     data_store: DataStore = request.app[app_keys.data_store]
-    # find the requested stream
-    if 'path' in request.query:
-        stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
-    elif 'id' in request.query:
-        stream = db.get(DataStream,request.query["id"])
-    else:
-        return web.Response(text="specify an id or a path", status=400)
-    if stream is None:
-        return web.Response(text="stream does not exist", status=404)
+    stream = _get_stream(request, db)
+    _validate_support(data_store)
     await data_store.decimate(stream)
     return web.Response(text="ok")
 
 async def drop_decimations(request):
     db: Session = request.app[app_keys.db]
     data_store: DataStore = request.app[app_keys.data_store]
-    # find the requested stream
+    _validate_support(data_store)
+    stream = _get_stream(request, db)
+    await data_store.drop_decimations(stream)
+    return web.Response(text="ok")
+
+### Helper Functions ###
+
+def _get_stream(request: web.Request, db: Session) -> DataStream:
     if 'path' in request.query:
         stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
     elif 'id' in request.query:
-        stream = db.get(DataStream, request.query["id"])
+        stream = db.get(DataStream,request.query["id"])
     else:
-        return web.Response(text="specify an id or a path", status=400)
+        raise web.HTTPBadRequest(reason="specify an id or a path")
     if stream is None:
-        return web.Response(text="stream does not exist", status=404)
-    await data_store.drop_decimations(stream)
-    return web.Response(text="ok")
+        raise web.HTTPNotFound(reason="stream does not exist")
+    return stream
+
+def _validate_support(data_store: DataStore):
+    # TimeScale supports decimation management
+    # while NilmDB does not
+    if not data_store.supports_decimation_management:
+        raise web.HTTPBadRequest(reason="data store does not support decimation")

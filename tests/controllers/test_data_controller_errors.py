@@ -252,4 +252,33 @@ class TestDataController(AioHTTPTestCase):
             self.client.post(EndPoints.data, params={"path": "/folder1/stream1"},
                              data=data.tobytes())
         self.assertEqual(resp.status, 400)
-        self.assertIn(await resp.text(), 'test error')
+        self.assertIn('test error', await resp.text())
+
+    async def test_cannot_use_decimation_tools_with_nilmdb(self):
+        store: MockStore = self.app[app_keys.data_store]
+        store.supports_decimation_management = False
+        resp: aiohttp.ClientResponse = await \
+            self.client.post(EndPoints.data_decimate, params={"path": "/folder1/stream1"})
+        self.assertEqual(resp.status, 400)
+        self.assertIn('support', await resp.text())
+        resp: aiohttp.ClientResponse = await \
+            self.client.post(EndPoints.data_consolidate, params={"path": "/folder1/stream1"})
+        self.assertEqual(resp.status, 400)
+        self.assertIn('support', await resp.text())
+        resp: aiohttp.ClientResponse = await \
+            self.client.delete(EndPoints.data_decimate, params={"path": "/folder1/stream1"})
+        self.assertEqual(resp.status, 400)
+        self.assertIn('support', await resp.text())
+
+    async def test_data_stream_consolidation(self):
+        store: MockStore = self.app[app_keys.data_store]
+        store.supports_consolidation = True
+        resp: aiohttp.ClientResponse = await \
+            self.client.post(EndPoints.data_consolidate, params={"path": "/folder1/stream1"})
+        self.assertEqual(resp.status, 400)
+        self.assertIn('max_gap', await resp.text())
+
+        resp: aiohttp.ClientResponse = await \
+            self.client.post(EndPoints.data_consolidate, params={"path": "/folder1/stream1", "max_gap": -2})
+        self.assertEqual(resp.status, 400)
+        self.assertIn('max_gap', await resp.text())

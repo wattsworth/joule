@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 import datetime
 from joule.models import EventStream, EventStore, event_stream
 from joule.constants import ApiErrorMessages
-from joule.controllers.helpers import read_json
+from joule.controllers.helpers import read_json, validate_query_parameters
 from joule.models import folder, Folder
 from joule.errors import ConfigurationError
 from joule import app_keys
@@ -203,7 +203,8 @@ async def count_events(request):
 
     # parse optional parameters
     params = {'start': None, 'end': None, 'include-ongoing-events': 0}
-    json_filter = _validate_event_query_parameters(params, request.query)
+    validate_query_parameters(params, request.query)
+    json_filter = _parse_json_filter(request.query)
     
     event_count = await event_store.count(my_stream, params['start'], params['end'],
                                           json_filter=json_filter,
@@ -233,7 +234,8 @@ async def read_events(request):
     except ValueError:
         raise web.HTTPBadRequest(reason="limit parameter must be an integer > 0")
     params = {'start': None, 'end': None, 'include-ongoing-events': 0}
-    json_filter = _validate_event_query_parameters(params, request.query)
+    validate_query_parameters(params, request.query)
+    json_filter = _parse_json_filter(request.query)
     
     # handle limit parameter, default is HARD, do not return unless count < limit
     if 'return-subset' not in request.query:
@@ -269,26 +271,13 @@ async def remove_events(request):
 
     # parse optional parameters
     params = {'start': None, 'end': None}
-    json_filter = _validate_event_query_parameters(params, request.query)
+    validate_query_parameters(params, request.query)
+    json_filter = _parse_json_filter(request.query)
     
     await event_store.remove(my_stream, params['start'], params['end'], json_filter=json_filter)
     return web.Response(text="ok")
 
-def _validate_event_query_parameters(params, query):
-    # populate the params dictionary with query parameters if they exist
-    # return the parsed json_filter parameter if it exists
-    try:
-        for param in params:
-            if param in query:
-                params[param] = int(query[param])
-    except ValueError:
-        raise web.HTTPBadRequest(reason=ApiErrorMessages.f_parameter_must_be_an_int.format(parameter=param))
-    
-    # make sure parameters make sense
-    if ((params['start'] is not None and params['end'] is not None) and
-            (params['start'] >= params['end'])):
-        raise web.HTTPBadRequest(reason=ApiErrorMessages.start_must_be_before_end)
-
+def _parse_json_filter(query):
     # handle json filter parameter
     json_filter = None
     if 'filter' in query and query['filter'] is not None and len(query['filter']) > 0:
@@ -297,5 +286,4 @@ def _validate_event_query_parameters(params, query):
             # TODO verify syntax
         except (json.decoder.JSONDecodeError, ValueError):
             raise web.HTTPBadRequest(reason=ApiErrorMessages.invalid_filter_parameter)
-
     return json_filter

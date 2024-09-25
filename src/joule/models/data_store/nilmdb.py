@@ -28,6 +28,7 @@ class NilmdbStore(DataStore):
         self.decimation_factor = 4
         self.insert_period = insert_period
         self.cleanup_period = cleanup_period
+        self.supports_decimation_management = False # not implemented on NilmDB
         self.connector = None
 
     async def initialize(self, streams: List[DataStream]) -> None:

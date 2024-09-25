@@ -55,6 +55,7 @@ class ApiErrorMessages:
     stream_does_not_exist = 'stream does not exist'
     specify_id_or_path = 'specify an id or a path'
     start_must_be_before_end = '[start] must be before [end]'
+    start_and_end_must_be_integers = '[start] and [end] must be integers'
     invalid_filter_parameter = 'invalid filter parameter'
     id_not_found = 'id not found'
     # Error messages that require formatting

@@ -119,9 +119,10 @@ class MockEventStore(EventStore):
 class MockStore(DataStore):
     def __init__(self):
         self.stream_info = {}
+        self.supports_decimation_management = True # act like TimescaleDB
         # stubs to track data controller execution
         self.nchunks = 3
-        self.nintervals = 1
+        self.nintervals = 4
         self.raise_data_error = False
         self.raise_decimation_error = False
         self.no_data = False
@@ -133,12 +134,16 @@ class MockStore(DataStore):
         self.dropped_decimations = False
         self.redecimated_data = False
         self.merge_gap = None
+        self.consolidate_called = False
+        self.consolidate_params = None
 
     async def initialize(self, streams: List[DataStream]):
+        # API compatibility with DataStore, does not require any initialization
         pass
 
     async def insert(self, stream: DataStream,
                      data: np.ndarray, start: int, end: int):
+        # API compatibility with DataStore, no action required
         pass
 
     async def spawn_inserter(self, stream: DataStream, pipe: pipes.InputPipe, insert_period=None, merge_gap=0) -> asyncio.Task:
@@ -150,11 +155,12 @@ class MockStore(DataStore):
 
         return asyncio.create_task(task())
 
-    def configure_extract(self, nchunks, nintervals=1,
+    def configure_extract(self, nchunks, nintervals=4,
                           decimation_error=False,
                           data_error=False,
                           no_data=False):
         self.nchunks = nchunks
+        assert nintervals >= 4
         self.nintervals = nintervals
         self.raise_decimation_error = decimation_error
         self.raise_data_error = data_error
@@ -174,11 +180,37 @@ class MockStore(DataStore):
         else:
             decimation_level = 1
             layout = stream.layout
-        for i in range(self.nintervals):
-            for x in range(self.nchunks):
+        # We always send at least 4 intervals to cover all the cases
+        assert self.nintervals >= 4
+        first_half = self.nintervals // 2
+        second_half = self.nintervals - first_half
+        ### This tries to simulate the behavior of the extract function in the data store
+        ### with multiple network conditions and store versions
+        ###
+        # CASE 1: send the data in multiple batches with interval tokens separate from the data (old behavior)
+        for i in range(first_half-1): 
+            for _ in range(self.nchunks):
                 await callback(helpers.create_data(layout, length=25), layout, decimation_level)
             if i < (self.nintervals - 1):
                 await callback(pipes.interval_token(layout), layout, decimation_level)
+        # CASE 2: send the data in multiple batches with interval tokens at the end of the data (new behavior)
+        for i in range(second_half-1):
+            for _ in range(self.nchunks-1):
+                await callback(helpers.create_data(layout, length=25), layout, decimation_level)
+            last_chunk = helpers.create_data(layout, length=25)
+            if i < (self.nintervals - 1): # put the token at the end of the chunk
+                data_with_token = np.hstack((last_chunk,pipes.interval_token(layout)))
+                await callback(data_with_token, layout, decimation_level)
+            else:
+                await callback(last_chunk, layout, decimation_level)
+        # CASE 3: send an entire interval at once with the token at the end
+        full_data_with_token = np.hstack((helpers.create_data(layout, length=25*self.nchunks),
+                                          pipes.interval_token(layout)))
+        await callback(full_data_with_token, layout, decimation_level)
+        # Last interval has no token
+        full_data_no_token = helpers.create_data(layout, length=25*self.nchunks)
+        await callback(full_data_no_token, layout, decimation_level)
+
 
     async def intervals(self, stream: 'DataStream', start: Optional[int], end: Optional[int]):
         if start is None:
@@ -205,6 +237,9 @@ class MockStore(DataStore):
     async def destroy(self, stream: DataStream):
         self.destroyed_stream_id = stream.id
 
+    async def consolidate(self, stream: 'DataStream', start: Optional[int], end: Optional[int], max_gap: int) -> int:
+        return 0
+
     async def destroy_all(self):
         raise Exception("not implemented!")
 
@@ -219,6 +254,8 @@ class MockStore(DataStore):
         return DbInfo('/file/path', 0, 0, 0, 0)
 
     async def consolidate(self, stream: 'DataStream', start: Optional[int], end: Optional[int], max_gap: int) -> int:
+        self.consolidate_called = True
+        self.consolidate_params = (stream, start, end, max_gap)
         return 0
 
     def close(self):
