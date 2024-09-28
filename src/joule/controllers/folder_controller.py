@@ -3,6 +3,7 @@ from sqlalchemy.exc import CircularDependencyError
 from sqlalchemy.orm import Session
 from typing import List
 
+from joule.constants import ApiErrorMessages
 from joule.models import folder, Folder, EventStore, DataStore, DataStream, EventStream
 from joule.errors import ConfigurationError
 from joule import app_keys
@@ -37,16 +38,16 @@ async def info(request: web.Request):
     elif 'id' in request.query:
         my_folder = db.get(Folder, request.query["id"])
     else:
-        return web.Response(text="specify an id or path", status=400)
+        raise web.HTTPBadRequest(reason=ApiErrorMessages.specify_id_or_path)
     if my_folder is None:
-        return web.Response(text="folder does not exist", status=404)
+        raise web.HTTPNotFound(reason=ApiErrorMessages.folder_does_not_exist)
     return web.json_response(my_folder.to_json())
 
 
 async def move(request):
     db: Session = request.app[app_keys.db]
     if request.content_type != 'application/json':
-        return web.Response(text='content-type must be application/json', status=400)
+        raise web.HTTPBadRequest(reason='content-type must be application/json')
     body = await request.json()
     # find the folder
     if 'src_path' in body:
@@ -54,28 +55,28 @@ async def move(request):
     elif 'src_id' in body:
         my_folder = db.get(folder.Folder, body["src_id"])
     else:
-        return web.Response(text="specify an id or a path", status=400)
+        raise web.HTTPBadRequest(reason=ApiErrorMessages.specify_id_or_path)
     if my_folder is None:
-        return web.Response(text="folder does not exist", status=404)
+        raise web.HTTPNotFound(reason=ApiErrorMessages.folder_does_not_exist)
     # make sure the folder is not locked
     if my_folder.locked:
-        return web.Response(text="folder is locked", status=400)
+        raise web.HTTPBadRequest(reason=ApiErrorMessages.folder_is_locked)
     # find or create the destination folder
     if 'dest_path' in body:
         try:
             destination = folder.find(body['dest_path'], db, create=True)
         except ConfigurationError as e:
-            return web.Response(text="Destination error: %s" % str(e), status=400)
+            raise web.HTTPBadRequest(reason="Destination error: %s" % str(e))
     elif 'dest_id' in body:
         destination = db.get(Folder, body["dest_id"])
     else:
-        return web.Response(text="specify a destination", status=400)
+        raise web.HTTPBadRequest(reason="specify a destination")
+    
     # make sure name is unique in the folder
     peer_names = [f.name for f in destination.children]
     if my_folder.name in peer_names:
         db.rollback()
-        return web.Response(text="a folder with this name is in the destination folder",
-                            status=400)
+        raise web.HTTPBadRequest(reason="a folder with this name is in the destination folder")
     try:
         # make sure this does not create a circular graph
         parent = destination.parent
@@ -89,30 +90,29 @@ async def move(request):
         db.commit()
     except (CircularDependencyError, ValueError):
         db.rollback()
-        return web.Response(text="cannot place a parent in a child folder",
-                            status=400)
+        raise web.HTTPBadRequest(reason="cannot place a parent in a child folder")
     return web.json_response({"stream": my_folder.to_json()})
 
 
 async def update(request):
     db: Session = request.app[app_keys.db]
     if request.content_type != 'application/json':
-        return web.Response(text='content-type must be application/json', status=400)
+        raise web.HTTPBadRequest(reason='content-type must be application/json')
     body = await request.json()
     if 'id' not in body:
-        return web.Response(text="Invalid request: specify id", status=400)
+        raise web.HTTPBadRequest(reason="Invalid request: specify id")
 
     my_folder: Folder = db.get(Folder, body['id'])
     if my_folder is None:
-        return web.Response(text="folder does not exist", status=404)
+        raise web.HTTPNotFound(reason=ApiErrorMessages.folder_does_not_exist)
     if my_folder.locked:
-        return web.Response(text="folder is locked", status=400)
+        raise web.HTTPBadRequest(reason=ApiErrorMessages.folder_is_locked)
     if 'folder' not in body:
-        return web.Response(text="Invalid request: specify folder as JSON", status=400)
+        raise web.HTTPBadRequest(reason="Invalid request: specify folder as JSON")
     try:
         attrs = dict(body['folder'])
     except ValueError:
-        return web.Response(text="error: [folder] attribute must be JSON", status=400)
+        raise web.HTTPBadRequest(reason="error: [folder] attribute must be JSON")
     try:
         my_folder.update_attributes(attrs)
         # make sure name is unique in the folder
@@ -125,7 +125,7 @@ async def update(request):
         db.commit()
     except (ValueError, ConfigurationError) as e:
         db.rollback()
-        return web.Response(text="error: %s" % e, status=400)
+        raise web.HTTPBadRequest(reason="error: %s" % e)
     return web.json_response(data=my_folder.to_json())
 
 
@@ -139,20 +139,20 @@ async def delete(request):
     elif 'id' in request.query:
         my_folder = db.get(Folder, request.query["id"])
     else:
-        return web.Response(text="specify an id or a path", status=400)
+        raise web.HTTPBadRequest(reason="specify an id or a path")
     if my_folder is None:
-        return web.Response(text="folder does not exist", status=404)
+        raise web.HTTPNotFound(reason=ApiErrorMessages.folder_does_not_exist)
     if my_folder.locked:
-        return web.Response(text="folder is locked", status=400)
+        raise web.HTTPBadRequest(reason=ApiErrorMessages.folder_is_locked)
     if 'recursive' in request.query and request.query["recursive"] == '1':
         await _recursive_delete(my_folder.children, db, data_store, event_store)
     elif len(my_folder.children) > 0:
-        return web.Response(text="specify [recursive] or remove child folders first", status=400)
+        raise web.HTTPBadRequest(reason="specify [recursive] or remove child folders first")
 
     for stream in my_folder.data_streams:
         if stream.locked:  # pragma: no cover
             # shouldn't ever get here because of the check above, but just in case
-            return web.Response(text="cannot delete folder with locked streams", status=400)
+            raise web.HTTPBadRequest(reason="cannot delete folder with locked streams")
         await data_store.destroy(stream)
         db.delete(stream)
     for stream in my_folder.event_streams:
@@ -174,7 +174,7 @@ async def _recursive_delete(folders: List[Folder], db: Session, data_store: Data
         for stream in f.data_streams:
             if stream.locked:  # pragma: no cover
                 # shouldn't ever get here because a locked folder shouldn't call us
-                raise ConfigurationError("cannot delete folder with locked streams")
+                raise web.HTTPBadRequest(reason="cannot delete folder with locked streams")
             await data_store.destroy(stream)
             db.delete(stream)
         for stream in f.event_streams:

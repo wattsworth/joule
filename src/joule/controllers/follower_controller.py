@@ -6,14 +6,14 @@ from sqlalchemy.orm import Session
 from joule.models import Follower
 from joule.api import TcpNode
 from joule import app_keys
+from joule.errors import ApiError
+
 async def index(request: web.Request):
     db: Session = request.app[app_keys.db]
     followers = db.query(Follower)
     return web.json_response([f.to_json() for f in followers])
 
-
-# Note: this is covered with e2e tests
-async def add(request: web.Request):  # pragma: no cover
+async def add(request: web.Request):
     """
     Called by a Joule node to allow *this* node to control it
     Parameters:
@@ -25,7 +25,7 @@ async def add(request: web.Request):  # pragma: no cover
     db: Session = request.app[app_keys.db]
     cafile = request.app[app_keys.cafile]
     if request.content_type != 'application/json':
-        return web.Response(text='content-type must be application/json', status=400)
+        raise web.HTTPBadRequest(reason='content-type must be application/json')
     body = await request.json()
 
     try:
@@ -37,15 +37,14 @@ async def add(request: web.Request):  # pragma: no cover
             location = scheme+"://" + body["name"] + ":" + str(port) + base_uri
         else:
             location = scheme+"://" + request.remote + ":" + str(port) + base_uri
+        node = TcpNode("new_follower", location, key, cafile)
         try:
-            node = TcpNode("new_follower", location, key, cafile)
             info = await node.info()
-            await node.close()
             follower_name = info.name
-        except aiohttp.ClientError:
-            return web.Response(text="no route to node", status=400)
-        except ValueError as e:
-            return web.Response(text=str(e), status=400)
+        except (aiohttp.ClientError, ApiError):
+            raise web.HTTPBadRequest(reason=f"no route to node at {location}")
+        finally:
+            await node.close()
         follower = Follower(key=key, location=location,
                             name=follower_name)
         # update the follower if this is a repeat
@@ -53,9 +52,9 @@ async def add(request: web.Request):  # pragma: no cover
         db.add(follower)
         db.commit()
     except KeyError as e:
-        return web.Response(text="Invalid request, missing [%s]" % str(e), status=400)
+        raise web.HTTPBadRequest(reason="Invalid request, missing [%s]" % str(e))
     except ValueError as e:
-        return web.Response(text="Invalid request, bad argument format", status=400)
+        raise web.HTTPBadRequest(reason="Invalid request, bad argument format")
     return web.json_response(data={'name': request.app[app_keys.name]})
 
 
@@ -66,8 +65,11 @@ async def delete(request: web.Request):
     db: Session = request.app[app_keys.db]
     try:
         name = request.query["name"]
+        # if the name is not in the database return 404
+        if db.query(Follower).filter(Follower.name == name).count() == 0:
+            raise web.HTTPNotFound(reason="follower not found")
         db.query(Follower).filter(name == name).delete()
         db.commit()
     except KeyError:
-        return web.Response(text="specify name to remove", status=400)
+        raise web.HTTPBadRequest(reason="specify name to remove")
     return web.Response(text="OK")

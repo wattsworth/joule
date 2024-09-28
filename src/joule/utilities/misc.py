@@ -28,18 +28,17 @@ async def detect_url(host, port: Optional[int] = None):  # pragma: no cover
     if port is not None:
         host = host + ":" + str(port)
 
-    async with aiohttp.ClientSession(conn_timeout=5) as session:
+    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(5)) as session:
         # try to connect over https
         try:
-            async with session.get("https://" + host) as resp:
-                pass
+            await session.get("https://" + host)
             return "https://" + host
-        except ClientError as e:
+        except ClientError:
             # try again over http
             try:
-                async with session.get("http://" + host) as resp:
-                    pass
+                await session.get("http://" + host)
                 return "http://" + host
+            # unable to determine the URL
             except ClientError:
                 return None
 
@@ -55,8 +54,7 @@ def timestamps_are_monotonic(data, last_ts: Optional[int], name: str):
         print(msg)
         return False
     # check to make sure the first timestamp is larger than the previous block
-    if last_ts is not None:
-        if last_ts >= data['timestamp'][0]:
+    if last_ts is not None and (last_ts >= data['timestamp'][0]):
             msg = ("Non-monotonic timestamp between writes to stream [%s] (%d<=%d)" %
                    (name, data['timestamp'][0], last_ts))
             print(msg)

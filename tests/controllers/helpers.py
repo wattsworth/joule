@@ -26,7 +26,9 @@ from tests import helpers
 Loop = asyncio.AbstractEventLoop
 
 
-def create_db(pipe_configs: List[str], api_event_streams: Optional[List[ApiEventStream]]=None) -> Tuple[Session, testing.postgresql.Postgresql]:
+def create_db(pipe_configs: List[str], 
+              api_event_streams: Optional[List[ApiEventStream]]=None,
+              event_path="/events") -> Tuple[Session, testing.postgresql.Postgresql]:
     postgresql = testing.postgresql.Postgresql()
     db_url = postgresql.url()
     conn = psycopg2.connect(db_url)
@@ -42,7 +44,7 @@ def create_db(pipe_configs: List[str], api_event_streams: Optional[List[ApiEvent
     db.commit()
     if api_event_streams is None:
         return db, postgresql
-    event_folder =  folder.find("/events", db, create=True)
+    event_folder =  folder.find(event_path, db, create=True)
 
     for api_event_stream in api_event_streams or []:
         event_stream = event_stream_from_json(api_event_stream.to_json())

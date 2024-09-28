@@ -187,6 +187,14 @@ class TestEventController(AioHTTPTestCase):
         # database is not updated
         stream = db.query(EventStream).filter_by(id=self.test_stream_id).one()
         self.assertEqual(stream.updated_at, prev_update)
+
+        ### JSON data must be valid
+        resp: aiohttp.ClientResponse = await \
+            self.client.put(EndPoints.event, headers={'Content-Type':'application/json'}, data='not json')
+        self.assertEqual(resp.status, 400)
+        # database is not updated
+        stream = db.query(EventStream).filter_by(id=self.test_stream_id).one()
+        self.assertEqual(stream.updated_at, prev_update)
         
         ### must send id
         resp: aiohttp.ClientResponse = await \

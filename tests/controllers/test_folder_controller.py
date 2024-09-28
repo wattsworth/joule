@@ -2,7 +2,8 @@ from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 from aiohttp import web
 from sqlalchemy.orm import Session
 import asyncio
-from joule.models import folder, DataStream, Folder, Element, StreamInfo
+from joule.models import folder, DataStream, Folder, Element, StreamInfo, EventStream
+from joule.api.event_stream import EventStream as ApiEventStream
 import joule.controllers
 from tests.controllers.helpers import create_db, MockStore, MockEventStore
 from joule import app_keys
@@ -23,10 +24,19 @@ class TestFolderController(AioHTTPTestCase):
         # this takes a while, adjust the expected coroutine execution time
         loop = asyncio.get_running_loop()
         loop.slow_callback_duration = 2.0
+        # create two event streams to try recursive dele\ operations
+        stream1 = ApiEventStream(name="test",description="test stream",keep_us=10e6, 
+                            event_fields={"field1": "string",
+                                        "field2": 'category:["1","2","3"]'})
+        stream2 = ApiEventStream(name="test2",description="test stream2",keep_us=10e6,
+                            event_fields={"field1": "string",
+                                        "field2": 'category:["1","2","3"]'})
+        # place the events under /top/leaf to test delete operations
         app[app_keys.db], app[psql_key] = create_db([
             "/other/middle/stream3:int16[val1, val2]",
             "/top/leaf/stream1:float32[x, y, z]",
-            "/top/middle/leaf/stream2:int16[val1, val2]"])
+            "/top/middle/leaf/stream2:int16[val1, val2]"],
+            [stream1,stream2],"/top/leaf")
         app[app_keys.data_store] = MockStore()
         app[app_keys.event_store] = MockEventStore()
         return app
@@ -114,14 +124,18 @@ class TestFolderController(AioHTTPTestCase):
 
     async def test_folder_delete_by_path(self):
         db: Session = self.app[app_keys.db]
-        f = folder.find("/top/leaf", db)
+        folder.find("/top/leaf", db)
         payload = {'path': "/top/leaf"}
+        # there are 2 event streams associated with this folder
+        self.assertEqual(2, db.query(EventStream).count())
         resp = await self.client.delete(EndPoints.folder, params=payload)
         self.assertEqual(resp.status, 200)
 
         self.assertIsNone(folder.find("/top/leaf", db))
         # deletes the streams
         self.assertIsNone(folder.find_stream_by_path("/top/leaf/stream1", db))
+        # deletes the event streams
+        self.assertEqual(0, db.query(EventStream).count())
         # keeps the parent folders
         self.assertIsNotNone(folder.find("/top", db))
 
@@ -157,7 +171,8 @@ class TestFolderController(AioHTTPTestCase):
         # there is one other stream: /other/middle/stream3:int16[val1, val2]
         self.assertEqual(1, db.query(DataStream).count())
         self.assertEqual(2, db.query(Element).count())
-
+        # the event streams are gone
+        self.assertEqual(0, db.query(EventStream).count())
 
     async def test_folder_update(self):
         db: Session = self.app[app_keys.db]

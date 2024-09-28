@@ -7,7 +7,7 @@ from joule.models import folder, DataStream, Folder
 import joule.controllers
 from tests.controllers.helpers import create_db, MockStore, MockEventStore
 from joule import app_keys
-from joule.constants import EndPoints
+from joule.constants import EndPoints, ApiErrorMessages
 
 import testing.postgresql
 psql_key = web.AppKey("psql", testing.postgresql.Postgresql)
@@ -37,7 +37,7 @@ class TestFolderControllerErrors(AioHTTPTestCase):
         # must specify an id or path
         resp = await self.client.get(EndPoints.folder, params={})
         self.assertEqual(resp.status, 400)
-        self.assertIn("specify an id or path", await resp.text())
+        self.assertIn(ApiErrorMessages.specify_id_or_path, await resp.text())
 
         # folder must exist
         resp = await self.client.get(EndPoints.folder, params={"id": 2343})

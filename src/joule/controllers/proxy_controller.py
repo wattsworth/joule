@@ -2,6 +2,7 @@ from aiohttp import web
 
 from joule.models.supervisor import Supervisor
 from joule import app_keys
+from joule.constants import ApiErrorMessages
 
 async def index(request):
     supervisor: Supervisor = request.app[app_keys.supervisor]
@@ -24,9 +25,9 @@ async def info(request):
     elif 'id' in request.query:
         proxy = [p for p in supervisor.proxies if p.uuid == int(request.query['id'])]
     else:
-        return web.Response(text="specify a name or id", status=400)
+        raise web.HTTPBadRequest(reason=ApiErrorMessages.specify_id_or_path)
     if len(proxy) == 0:
-        return web.Response(text="proxy does not exist", status=404)
+        raise web.HTTPNotFound(reason="proxy does not exist")
     proxy = proxy[0]
 
     data = {

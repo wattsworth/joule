@@ -7,7 +7,7 @@ async def read_json(request: web.Request):
         raise web.HTTPBadRequest(reason='content-type must be application/json')
     try:
         return await request.json()
-    except json.DecodeError:
+    except json.JSONDecodeError:
         raise web.HTTPBadRequest(reason='invalid json')
 
 def validate_query_parameters(params, query):
@@ -25,4 +25,3 @@ def validate_query_parameters(params, query):
             (params['start'] >= params['end'])):
         raise web.HTTPBadRequest(reason=ApiErrorMessages.start_must_be_before_end)
 
-   

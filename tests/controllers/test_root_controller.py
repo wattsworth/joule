@@ -6,6 +6,7 @@ import joule.controllers
 from joule.constants import EndPoints
 from tests.controllers.helpers import MockStore
 from joule import app_keys
+from joule.utilities import ConnectionInfo
 
 class TestRootController(AioHTTPTestCase):
 
@@ -14,6 +15,12 @@ class TestRootController(AioHTTPTestCase):
         app.add_routes(joule.controllers.routes)
         app[app_keys.data_store] = MockStore()
         app[app_keys.name] = "test_suite"
+        self.connection_info = ConnectionInfo(username="test",
+                                            password="test", 
+                                            port=5432, 
+                                            database="test", 
+                                            host="test", nilmdb_url="")
+        app[app_keys.module_connection_info] = self.connection_info
         return app
 
 
@@ -45,3 +52,9 @@ class TestRootController(AioHTTPTestCase):
         self.assertEqual(resp.status, 200)
         # check one of the keys to make sure this is a dbinfo object
         self.assertTrue('path' in dbinfo)
+
+    async def test_db_connection(self):
+        resp: aiohttp.ClientResponse = await self.client.request("GET", EndPoints.db_connection)
+        dbinfo = await resp.json()
+        self.assertEqual(resp.status, 200)
+        self.assertDictEqual(dbinfo, self.connection_info.to_json())
