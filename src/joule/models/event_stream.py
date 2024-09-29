@@ -10,7 +10,7 @@ from joule.models.meta import Base
 from joule.utilities.validators import validate_event_fields
 
 if TYPE_CHECKING:
-    from joule.models import (Folder)  # pragma: no cover
+    from joule.models import (Folder)  
     from joule.models.data_store.event_store import StreamInfo
 
 force_instant_defaults()

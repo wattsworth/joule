@@ -32,7 +32,7 @@ class Folder(Base):
     event_streams: Mapped[List[EventStream]] = relationship("EventStream", back_populates="folder")
     parent_id: int = Column(Integer, ForeignKey('metadata.folder.id'))
     updated_at: datetime = Column(DateTime(timezone=True), nullable=False)
-    if TYPE_CHECKING:  # pragma: no cover
+    if TYPE_CHECKING:  
         parent: 'Folder'
 
     def find_stream_by_segments(self, segments: List[str]) -> Optional[Stream]:

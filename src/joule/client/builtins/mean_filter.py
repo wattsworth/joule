@@ -84,7 +84,7 @@ ARGS_DESC = """
 class MeanFilter(FIRFilterModule):
     """Compute the moving average of the input"""
     
-    def custom_args(self, parser):  # pragma: no cover
+    def custom_args(self, parser):  
         grp = parser.add_argument_group("module",
                                         "module specific arguments")
         
@@ -98,7 +98,7 @@ class MeanFilter(FIRFilterModule):
         return np.ones((window,))/window
 
                 
-def main():  # pragma: no cover
+def main():  
     r = MeanFilter()
     r.start()
 

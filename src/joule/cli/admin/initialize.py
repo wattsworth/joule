@@ -14,7 +14,7 @@ import secrets
 @click.option("--bind", help="IP address (0.0.0.0 for all)")
 @click.option("--port", help="TCP port (default is 8080)")
 @click.option("--nilmdb", help="NilmDB URL")
-def admin_initialize(dsn, bind, port, nilmdb):  # pragma: no cover
+def admin_initialize(dsn, bind, port, nilmdb):
     """Run initial system configuration."""
     import pkg_resources
 
@@ -115,7 +115,7 @@ def admin_initialize(dsn, bind, port, nilmdb):  # pragma: no cover
         click.echo(" [" + click.style("EXISTS", fg="yellow") + "]")
 
 
-def _make_joule_directory(path):  # pragma: no cover
+def _make_joule_directory(path):  
     try:
         if os.path.isfile(path):
             click.echo("\n " + click.style("ERROR", fg='red') +
@@ -130,7 +130,7 @@ def _make_joule_directory(path):  # pragma: no cover
         _run_as_root()
 
 
-def _run_as_root():  # pragma: no cover
+def _run_as_root():  
     click.echo("[" + click.style("ERROR", fg="red") + "]\n run as [sudo joule initialize]")
     exit(1)
 

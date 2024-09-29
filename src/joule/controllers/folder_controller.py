@@ -150,7 +150,7 @@ async def delete(request):
         raise web.HTTPBadRequest(reason="specify [recursive] or remove child folders first")
 
     for stream in my_folder.data_streams:
-        if stream.locked:  # pragma: no cover
+        if stream.locked:  
             # shouldn't ever get here because of the check above, but just in case
             raise web.HTTPBadRequest(reason="cannot delete folder with locked streams")
         await data_store.destroy(stream)
@@ -172,7 +172,7 @@ async def _recursive_delete(folders: List[Folder], db: Session, data_store: Data
         return
     for f in folders:
         for stream in f.data_streams:
-            if stream.locked:  # pragma: no cover
+            if stream.locked:  
                 # shouldn't ever get here because a locked folder shouldn't call us
                 raise web.HTTPBadRequest(reason="cannot delete folder with locked streams")
             await data_store.destroy(stream)

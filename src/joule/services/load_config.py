@@ -106,7 +106,7 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
         database = "postgresql://" + main_config['Database']
     elif verify:
         raise ConfigurationError("Missing [Database] configuration")
-    else:  # pragma: no cover
+    else:  
         database = ''  # this is invalid of course, just used in unit testing
     if verify:
         # check to see if this is a valid database DSN

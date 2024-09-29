@@ -22,7 +22,7 @@ MDASH = '&mdash;'
 # App Keys #
 title_key = web.AppKey("title", str)
 
-class Visualizer(FilterModule):  # pragma: no cover
+class Visualizer(FilterModule):  
 
     async def setup(self, parsed_args, app, inputs, outputs):
         loader = jinja2.FileSystemLoader(TEMPLATES_DIR)
@@ -137,7 +137,7 @@ def create_app():
     return r.create_dev_app()
 
 
-def main():  # pragma: no cover
+def main():  
     r = Visualizer()
     r.start()
 

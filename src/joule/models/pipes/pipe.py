@@ -5,7 +5,7 @@ import logging
 
 from joule.models.pipes.errors import PipeError
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:  
     from joule.models import (Module, DataStream)
 
 log = logging.getLogger('joule')
@@ -229,7 +229,7 @@ class Pipe:
         not be used. Instead use the coroutine :meth:`close_interval`.
 
         """
-        pass  # pragma: no cover
+        pass  
 
     def subscribe(self, pipe):
         if self.direction == Pipe.DIRECTION.INPUT:
@@ -250,7 +250,7 @@ class Pipe:
 
         """
         # close the pipe, optionally implemented by the child
-        pass  # pragma: no cover
+        pass  
 
     def change_layout(self, layout: str):
         raise PipeError("layout cannot be changed")

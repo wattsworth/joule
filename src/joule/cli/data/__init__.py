@@ -21,7 +21,7 @@ from joule.cli.lazy_group import LazyGroup
                                "ingest": "joule.cli.data.ingest.ingest"})
 def data():
     """Interact with data streams."""
-    pass  # pragma: no cover
+    pass  
 
 @click.group(name="filter",
              cls=LazyGroup,
@@ -29,6 +29,6 @@ def data():
                                "median": "joule.cli.data.median"})
 def filter():
     """Filter stream data."""
-    pass  # pragma: no cover
+    pass  
 
 data.add_command(filter)

@@ -47,7 +47,7 @@ class FilterModule(base_module.BaseModule):
 
                 #... other module code
         """
-        assert False, "implement in child class"  # pragma: no cover
+        assert False, "implement in child class"  
 
     async def run_as_task(self, parsed_args, app) -> asyncio.Task:
         (input_streams, output_streams) = await self._parse_streams(parsed_args)

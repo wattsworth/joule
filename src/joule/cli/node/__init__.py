@@ -12,5 +12,5 @@ from joule.cli.lazy_group import LazyGroup
              })
 def node():
     """Configure local settings."""
-    pass  # pragma: no cover
+    pass  
 

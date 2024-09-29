@@ -66,7 +66,7 @@ async def data_write(session: BaseSession,
         # raise a warning if the element names do not match
         actual_names = [e.name for e in dest_stream.elements]
         requested_names = [e.name for e in stream.elements]
-        if actual_names != requested_names:  # pragma: no cover
+        if actual_names != requested_names:
             log.warning("[%s] elements do not match the existing stream" % stream.name)
 
     # make sure the stream is not currently produced
@@ -246,7 +246,7 @@ async def _live_reader(session: BaseSession, my_stream: DataStream,
         async with raw_session.get(session.url + EndPoints.data,
                                    params=params,
                                    ssl=session.ssl_context) as response:
-            if response.status != 200:  # pragma: no cover
+            if response.status != 200:
                 msg = await response.text()
                 log.error("Error reading input [%s]: %s" % (my_stream.name, msg))
                 await pipe_out.close()
@@ -288,7 +288,7 @@ async def _historic_reader(session: BaseSession,
         async with my_session.get(session.url + EndPoints.data,
                                   params=params,
                                   ssl=session.ssl_context) as response:
-            if response.status != 200:  # pragma: no cover
+            if response.status != 200:
                 msg = await response.text()
                 log.error("Error reading input [%s]: %s" % (my_stream.name, msg))
                 await pipe_out.close()

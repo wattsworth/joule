@@ -85,7 +85,7 @@ def parse_pipe_config(pipe_config: str) -> Tuple[str, str, str]:
     else:
         full_path = pipe_config
         inline_config = ""
-    if '/' not in full_path:  # pragma: no cover
+    if '/' not in full_path:  
         # this is a double check, missing / will be caught earlier
         raise ConfigurationError("invalid path [%s]" % pipe_config)
     path_chunks = full_path.split('/')

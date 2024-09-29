@@ -11,5 +11,5 @@ from joule.cli.lazy_group import LazyGroup
              })
 def module():
     """Retrieve module information."""
-    pass  # pragma: no cover
+    pass  
 

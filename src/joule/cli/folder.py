@@ -259,7 +259,7 @@ Select an option (use a captial letter to use this action for all event streams)
 @click.group(name="folder")
 def folders():
     """Manage folders."""
-    pass  # pragma: no cover
+    pass  
 
 
 folders.add_command(copy)

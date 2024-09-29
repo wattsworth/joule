@@ -78,7 +78,7 @@ ARGS_DESC = """
 class MergeFilter(FilterModule):
     """Merge input streams"""
 
-    def custom_args(self, parser):  # pragma: no cover
+    def custom_args(self, parser):  
         grp = parser.add_argument_group("module",
                                         "module specific arguments")
         grp.add_argument("--primary", type=str, required=True,
@@ -223,7 +223,7 @@ async def consume_data(source_pipe: Pipe, ts: int) -> None:
         source_pipe.interval_break = False
 
 
-def main():  # pragma: no cover
+def main():  
     r = MergeFilter()
     r.start()
 

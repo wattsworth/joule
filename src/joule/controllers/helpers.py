@@ -1,5 +1,7 @@
 from aiohttp import web
 from joule.constants import ApiErrorMessages
+from joule.models import DataStream, folder
+from sqlalchemy.orm import Session
 import json
 
 async def read_json(request: web.Request):
@@ -25,3 +27,13 @@ def validate_query_parameters(params, query):
             (params['start'] >= params['end'])):
         raise web.HTTPBadRequest(reason=ApiErrorMessages.start_must_be_before_end)
 
+def get_stream_from_request_params(request: web.Request, db: Session) -> DataStream:
+    if 'path' in request.query:
+        stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
+    elif 'id' in request.query:
+        stream = db.get(DataStream,request.query["id"])
+    else:
+        raise web.HTTPBadRequest(reason="specify an id or a path")
+    if stream is None:
+        raise web.HTTPNotFound(reason="stream does not exist")
+    return stream

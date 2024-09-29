@@ -7,5 +7,5 @@ from joule.cli.lazy_group import LazyGroup
                                "delete": "joule.cli.follower.delete.follower_delete"})
 def follower():
     """Manage node followers."""
-    pass  # pragma: no cover
+    pass  
 

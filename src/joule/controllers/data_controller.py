@@ -11,7 +11,7 @@ from joule.models import (folder, DataStore, DataStream,
 from joule.models.supervisor import Supervisor
 from joule.constants import ApiErrorMessages
 from joule.errors import SubscriptionError
-from joule.controllers.helpers import validate_query_parameters
+from joule.controllers.helpers import validate_query_parameters, get_stream_from_request_params
 log = logging.getLogger('joule')
 
 
@@ -29,7 +29,7 @@ async def read(request: web.Request, json=False):
 async def _read(request: web.Request, json):
     db: Session = request.app[app_keys.db]
     data_store: DataStore = request.app[app_keys.data_store]
-    stream = _get_stream(request, db)
+    stream = get_stream_from_request_params(request, db)
     
     # parse optional parameters
     params = {'start': None, 'end': None, 'max-rows': None, 'decimation-level': None}
@@ -125,7 +125,7 @@ async def _subscribe(request: web.Request, json: bool):
     supervisor: Supervisor = request.app[app_keys.supervisor]
     if json:
         raise web.HTTPBadRequest(reason="JSON subscription not implemented")
-    stream = _get_stream(request, db)
+    stream = get_stream_from_request_params(request, db)
     pipe = pipes.LocalPipe(stream.layout)
     try:
         unsubscribe = supervisor.subscribe(stream, pipe)
@@ -157,7 +157,7 @@ async def _subscribe(request: web.Request, json: bool):
 async def intervals(request: web.Request):
     db: Session = request.app[app_keys.db]
     data_store: DataStore = request.app[app_keys.data_store]
-    stream = _get_stream(request, db)
+    stream = get_stream_from_request_params(request, db)
     params = {'start': None, 'end': None}
     validate_query_parameters(params, request.query)
 
@@ -167,7 +167,7 @@ async def intervals(request: web.Request):
 async def write(request: web.Request):
     db: Session = request.app[app_keys.db]
     data_store: DataStore = request.app[app_keys.data_store]
-    stream = _get_stream(request, db)
+    stream = get_stream_from_request_params(request, db)
     # spawn in inserter task
     stream.is_destination = True
     db.commit()
@@ -199,7 +199,7 @@ async def write(request: web.Request):
 async def remove(request: web.Request):
     db: Session = request.app[app_keys.db]
     data_store: DataStore = request.app[app_keys.data_store]
-    stream = _get_stream(request, db)
+    stream = get_stream_from_request_params(request, db)
 
     params = {'start': None, 'end': None}
     validate_query_parameters(params, request.query)
@@ -213,7 +213,7 @@ async def consolidate(request):
     data_store: DataStore = request.app[app_keys.data_store]
     _validate_support(data_store)
 
-    stream = _get_stream(request, db)
+    stream = get_stream_from_request_params(request, db)
     params = {'start': None, 'end': None}
     validate_query_parameters(params, request.query)
     
@@ -233,7 +233,7 @@ async def consolidate(request):
 async def decimate(request):
     db: Session = request.app[app_keys.db]
     data_store: DataStore = request.app[app_keys.data_store]
-    stream = _get_stream(request, db)
+    stream = get_stream_from_request_params(request, db)
     _validate_support(data_store)
     await data_store.decimate(stream)
     return web.Response(text="ok")
@@ -242,22 +242,13 @@ async def drop_decimations(request):
     db: Session = request.app[app_keys.db]
     data_store: DataStore = request.app[app_keys.data_store]
     _validate_support(data_store)
-    stream = _get_stream(request, db)
+    stream = get_stream_from_request_params(request, db)
     await data_store.drop_decimations(stream)
     return web.Response(text="ok")
 
 ### Helper Functions ###
 
-def _get_stream(request: web.Request, db: Session) -> DataStream:
-    if 'path' in request.query:
-        stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
-    elif 'id' in request.query:
-        stream = db.get(DataStream,request.query["id"])
-    else:
-        raise web.HTTPBadRequest(reason="specify an id or a path")
-    if stream is None:
-        raise web.HTTPNotFound(reason="stream does not exist")
-    return stream
+
 
 def _validate_support(data_store: DataStore):
     # TimeScale supports decimation management

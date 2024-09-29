@@ -164,7 +164,7 @@ class Worker:
             # to the child and jouled which can cause jouled to restart the
             # child and then kill it
             if self.stop_requested:
-                break  # pragma: no cover
+                break  
             self.log("---starting module---")
             try:
                 await self._spawn_child(subscribe)
@@ -209,7 +209,7 @@ class Worker:
                 "Cannot stop %s with SIGTERM, killing process" % self.module.name)
             try:
                 self.process.kill()
-            except ProcessLookupError:  # pragma: no cover
+            except ProcessLookupError:  
                 pass  # if the process stopped after the timeout
 
     def log(self, msg):
@@ -277,7 +277,7 @@ class Worker:
             try:
                 await output_task
             # should be caught but on fast fails they can bubble up
-            except asyncio.CancelledError:  # pragma: no cover
+            except asyncio.CancelledError:  
                 pass
             return
         self._close_child_fds()
@@ -295,7 +295,7 @@ class Worker:
             await output_task
             await logger_task
         # should be caught but on fast fails they can bubble up
-        except asyncio.CancelledError:  # pragma: no cover
+        except asyncio.CancelledError:  
             pass
 
     async def _logger(self):
@@ -307,7 +307,7 @@ class Worker:
                     break
                 line = bline.decode('UTF-8').rstrip()
                 self.log(line)
-        except asyncio.CancelledError:  # pragma: no cover
+        except asyncio.CancelledError:  
             return
 
     async def _spawn_outputs(self) -> asyncio.Task:

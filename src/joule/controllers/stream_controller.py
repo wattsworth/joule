@@ -4,25 +4,18 @@ from aiohttp import web
 from sqlalchemy.orm import Session
 from joule.models import (
     DataStream,
-    EventStream,
     DataStore,
     data_stream)
 
 from joule.models import folder, Folder
+from joule.controllers.helpers import read_json, get_stream_from_request_params
 from joule.errors import ConfigurationError
 from joule import app_keys
 
 async def info(request: web.Request):
     db: Session = request.app[app_keys.db]
     data_store: DataStore = request.app[app_keys.data_store]
-    if 'path' in request.query:
-        my_stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
-    elif 'id' in request.query:
-        my_stream = db.get(DataStream, request.query["id"])
-    else:
-        return web.Response(text="specify an id or a path", status=400)
-    if my_stream is None:
-        return web.Response(text="stream does not exist", status=404)
+    my_stream = get_stream_from_request_params(request, db)
     if "no-info" in request.query:
         stream_info = None
     else:
@@ -32,36 +25,33 @@ async def info(request: web.Request):
 
 async def move(request: web.Request):
     db: Session = request.app[app_keys.db]
-    if request.content_type != 'application/json':
-        return web.Response(text='content-type must be application/json', status=400)
-    body = await request.json()
+    body = await read_json(request)
     # find the stream
     if 'src_path' in body:
         my_stream = folder.find_stream_by_path(body['src_path'], db, stream_type=DataStream)
     elif 'src_id' in body:
         my_stream = db.get(DataStream, body["src_id"])
     else:
-        return web.Response(text="specify a source id or a path", status=400)
+        raise web.HTTPBadRequest(reason="specify a source id or a path")
     if my_stream is None:
-        return web.Response(text="stream does not exist", status=404)
+        raise web.HTTPNotFound(reason="stream does not exist")
     if my_stream.locked:
-        return web.Response(text="locked streams cannot be moved", status=400)
+        raise web.HTTPBadRequest(reason="locked streams cannot be moved")
     # find or create the destination folder
     if 'dest_path' in body:
         try:
             destination = folder.find(body['dest_path'], db, create=True)
         except ConfigurationError as e:
-            return web.Response(text="Destination error: %s" % str(e), status=400)
+            raise web.HTTPBadRequest(reason="Destination error: %s" % str(e))
     elif 'dest_id' in body:
         destination = db.get(Folder, body["dest_id"])
     else:
-        return web.Response(text="specify a destination", status=400)
+        raise web.HTTPBadRequest(reason="specify a destination")
     # make sure name is unique in this destination
     existing_names = [s.name for s in destination.data_streams + destination.event_streams]
     if my_stream.name in existing_names:
         db.rollback()
-        return web.Response(text="stream with the same name exists in the destination folder",
-                            status=400)
+        raise web.HTTPBadRequest(reason="stream with the same name exists in the destination folder")
     my_stream.touch()
     destination.data_streams.append(my_stream)
     destination.touch()
@@ -71,23 +61,21 @@ async def move(request: web.Request):
 
 async def create(request):
     db: Session = request.app[app_keys.db]
-    if request.content_type != 'application/json':
-        return web.Response(text='content-type must be application/json', status=400)
-    body = await request.json()
+    body = await read_json(request)
 
     if 'stream' not in body:
-        return web.Response(text="provide a stream", status=400)
+        raise web.HTTPBadRequest(reason="provide a stream")
 
     # find or create the destination folder
     if 'dest_path' in body:
         try:
             destination = folder.find(body['dest_path'], db, create=True)
         except ConfigurationError as e:
-            return web.Response(text="Destination error: %s" % str(e), status=400)
+            raise web.HTTPBadRequest(reason="Destination error: %s" % str(e))
     elif 'dest_id' in body:
         destination = db.get(Folder, body["dest_id"])
     else:
-        return web.Response(text="specify a destination", status=400)
+        raise web.HTTPBadRequest(reason="specify a destination")
 
     try:
         new_stream = data_stream.from_json(body['stream'])
@@ -116,36 +104,33 @@ async def create(request):
         db.commit()
     except (TypeError, ValueError) as e:
         db.rollback()
-        return web.Response(text="Invalid stream JSON: %r" % e, status=400)
+        raise web.HTTPBadRequest(reason="Invalid stream JSON: %r" % e)
     except ConfigurationError as e:
         db.rollback()
-        return web.Response(text="Invalid stream specification: %s" % e, status=400)
+        raise web.HTTPBadRequest(reason="Invalid stream specification: %s" % e)
     except KeyError as e:
         db.rollback()
-        return web.Response(text="Invalid or missing stream attribute: %s" % e, status=400)
+        raise web.HTTPBadRequest(reason="Invalid or missing stream attribute: %s" % e)
     return web.json_response(data=new_stream.to_json())
 
 
 async def update(request: web.Request):
     db: Session = request.app[app_keys.db]
-    if request.content_type != 'application/json':
-        return web.Response(text='content-type must be application/json', status=400)
-
-    body = await request.json()
+    body = await read_json(request)
     if 'id' not in body:
-        return web.Response(text="Invalid request: specify id", status=400)
+        raise web.HTTPBadRequest(reason="Invalid request: specify id")
 
     my_stream: DataStream = db.get(DataStream, body['id'])
     if my_stream is None:
-        return web.Response(text="stream does not exist", status=404)
+        raise web.HTTPNotFound(reason="stream does not exist")
     if my_stream.locked:
-        return web.Response(text="stream is locked", status=400)
+        raise web.HTTPBadRequest(reason="stream is locked")
     if 'stream' not in body:
-        return web.Response(text="Invalid request: specify stream as JSON", status=400)
+        raise web.HTTPBadRequest(reason="Invalid request: specify stream as JSON")
     try:
         attrs = dict(body['stream'])
     except ValueError:
-        return web.Response(text="error: [stream] attribute must be JSON", status=400)
+        raise web.HTTPBadRequest(reason="error: [stream] attribute must be JSON")
     try:
         my_stream.update_attributes(attrs)
         # make sure name is unique in this destination
@@ -157,7 +142,7 @@ async def update(request: web.Request):
         db.commit()
     except (ValueError, ConfigurationError) as e:
         db.rollback()
-        return web.Response(text="Invalid stream specification: %s" % e, status=400)
+        raise web.HTTPBadRequest(reason="Invalid stream specification: %s" % e)
     return web.json_response(data=my_stream.to_json())
 
 
@@ -165,16 +150,9 @@ async def delete(request):
     db: Session = request.app[app_keys.db]
     data_store: DataStore = request.app[app_keys.data_store]
     # find the requested stream
-    if 'path' in request.query:
-        my_stream = folder.find_stream_by_path(request.query['path'], db, stream_type=DataStream)
-    elif 'id' in request.query:
-        my_stream = db.get(DataStream, request.query["id"])
-    else:
-        return web.Response(text="specify an id or a path", status=400)
-    if my_stream is None:
-        return web.Response(text="stream does not exist", status=404)
+    my_stream = get_stream_from_request_params(request, db)
     if my_stream.locked or my_stream.active:
-        return web.Response(text="locked streams cannot be deleted", status=400)
+        raise web.HTTPBadRequest(reason="locked streams cannot be deleted")
     await data_store.destroy(my_stream)
     my_stream.folder.touch()
     db.delete(my_stream)

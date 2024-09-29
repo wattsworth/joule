@@ -251,7 +251,7 @@ async def _run(config_node, start, end, new, destination_node, source, destinati
     # this should be caught by the stream info requests
     # it is only generated if the joule server stops during the
     # data read/write
-    except aiohttp.ClientError as e:  # pragma: no cover
+    except aiohttp.ClientError as e:  
         raise click.ClickException("Error: %s" % str(e))
     finally:
         if not nilmdb_dest:

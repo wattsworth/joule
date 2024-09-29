@@ -15,7 +15,7 @@ from joule.models.data_store.data_store import StreamInfo
 from joule.models import element, annotation
 
 if TYPE_CHECKING:
-    from joule.models import (Folder)  # pragma: no cover
+    from joule.models import (Folder)  
 
 
 class DataStream(Base):

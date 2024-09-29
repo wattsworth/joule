@@ -87,7 +87,7 @@ class Inserter:
                             last_ts = None
                             if self.decimator is not None:
                                 self.decimator.close_interval()
-            except aiohttp.ClientError as e:  # pragma: no cover
+            except aiohttp.ClientError as e:  
                 log.warning("NilmDB raw inserter error: %r, retrying request" % e)
                 await asyncio.sleep(self.retry_interval)  # retry the request
             except (pipes.EmptyPipe, asyncio.CancelledError) as e:
@@ -105,7 +105,7 @@ class Inserter:
                     async with session.post(self.create_url, data=data) as resp:
                         await check_for_error(resp, ignore=[ERRORS.STREAM_ALREADY_EXISTS])
                         break
-            except aiohttp.ClientError as e:  # pragma: no cover
+            except aiohttp.ClientError as e:  
                 log.warning("NilmDB inserter create_path error: %r, retrying request" % e)
                 await asyncio.sleep(self.retry_interval)  # retry the request
 
@@ -121,7 +121,7 @@ class Inserter:
                                   "end": "%d" % keep_time,
                                   "path": self.path}
                         async with session.post(self.remove_url, params=params) as resp:
-                            if resp.status != 200:  # pragma: no cover
+                            if resp.status != 200:  
                                 msg = await resp.text()
                                 log.error("NilmDB cleaning error: %s" % msg)
                         # remove decimation data
@@ -129,10 +129,10 @@ class Inserter:
                             for path in self.decimator.get_paths():
                                 params["path"] = path
                                 async with session.post(self.remove_url, params=params) as resp:
-                                    if resp.status != 200:  # pragma: no cover
+                                    if resp.status != 200:  
                                         msg = await resp.text()
                                         log.error("NilmDB cleaning error: %s" % msg)
-            except aiohttp.ClientError as e:  # pragma: no cover
+            except aiohttp.ClientError as e:  
                 log.warning("NilmDB cleaning error: %r" % e)
             except asyncio.CancelledError:
                 break
@@ -191,17 +191,17 @@ class NilmdbDecimator:
                               "binary": '1'}
                     async with session.put(self.insert_url, params=params,
                                            data=decim_data.tobytes()) as resp:
-                        if resp.status != 200:  # pragma: no cover
+                        if resp.status != 200:  
                             error = await resp.text()
                             raise errors.DataError("NilmDB(d) error: %s" % error)
                     # feed data to child decimator
                     await self.child.process(decim_data)
                     await asyncio.sleep(self.holdoff)
                     break  # success, leave the loop
-            except aiohttp.ClientError as e:  # pragma: no cover
+            except aiohttp.ClientError as e:  
                 log.warning("NilmDB decimation error: %r, retrying request" % e)
                 await asyncio.sleep(self.retry_interval)  # retry the request
-            except asyncio.CancelledError:  # pragma: no cover
+            except asyncio.CancelledError:  
                 break
 
     def close_interval(self):
@@ -279,6 +279,6 @@ class NilmdbDecimator:
                     async with session.post(self.create_url, data=data) as resp:
                         await check_for_error(resp, ignore=[ERRORS.STREAM_ALREADY_EXISTS])
                         break
-            except aiohttp.ClientError as e:  # pragma: no cover
+            except aiohttp.ClientError as e:  
                 log.warning("NilmDB decimator create_path error: %r, retrying request" % e)
                 await asyncio.sleep(self.retry_interval)  # retry the request

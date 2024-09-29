@@ -7,7 +7,7 @@ from typing import Optional, Dict, TYPE_CHECKING
 from joule.models.meta import Base
 from joule.errors import ConfigurationError
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:  
     from joule.models.folder import DataStream
 
 

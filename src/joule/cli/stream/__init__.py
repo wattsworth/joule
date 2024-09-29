@@ -13,7 +13,7 @@ from joule.cli.lazy_group import LazyGroup
              })
 def streams():
     """Manage data streams."""
-    pass  # pragma: no cover
+    pass  
 
 
 

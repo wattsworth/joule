@@ -24,7 +24,7 @@ def yesno(val: str):
         raise ValueError("must be 'yes' or 'no'")
 
 
-async def detect_url(host, port: Optional[int] = None):  # pragma: no cover
+async def detect_url(host, port: Optional[int] = None):  
     if port is not None:
         host = host + ":" + str(port)
 

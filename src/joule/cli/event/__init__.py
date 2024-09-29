@@ -13,5 +13,5 @@ from joule.cli.lazy_group import LazyGroup
              })
 def events():
     """Manage event streams."""
-    pass  # pragma: no cover
+    pass  
 

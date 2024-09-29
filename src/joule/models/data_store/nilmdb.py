@@ -59,7 +59,7 @@ class NilmdbStore(DataStore):
                         error = await resp.json()
                         # nilmdb rejected the data
                         raise errors.DataError(error["message"])
-                    raise errors.DataError(await resp.text())  # pragma: no cover
+                    raise errors.DataError(await resp.text())  
 
     async def spawn_inserter(self, stream: DataStream,
                              pipe: pipes.Pipe, insert_period=None, retry_interval=0.5) -> asyncio.Task:
@@ -103,7 +103,7 @@ class NilmdbStore(DataStore):
                         # no decimated data or required level does not exist
                         raise errors.InsufficientDecimationError("required level %d does not exist" % decimation_level)
                     # some other error, propogate it up
-                    raise e  # pragma: no cover
+                    raise e  
         elif max_rows is not None:
             # two constraints, make sure we aren't going to return too much data
             count = await self._count_by_path(compute_path(stream, decimation_level),
@@ -157,7 +157,7 @@ class NilmdbStore(DataStore):
                           "binary": '1'}
                 async with session.put(insert_url, params=params,
                                        data=None) as resp:
-                    if resp.status != 200:  # pragma: no cover
+                    if resp.status != 200:  
                         error = await resp.text()
                         raise errors.DataError("NilmDB(d) error: %s" % error)
         return len(small_gaps)
@@ -328,7 +328,7 @@ class NilmdbStore(DataStore):
         async with self._get_client() as session:
             async with session.get(url, params=params) as resp:
                 body = await resp.text()
-                if resp.status != 200:  # pragma: no cover
+                if resp.status != 200:  
                     raise errors.DataError(body)
                 data = json.loads(body)
                 info = {}

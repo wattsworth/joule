@@ -12,6 +12,6 @@ def proxies():
 
     Local URL's proxied by Joule.
     """
-    pass  # pragma: no cover
+    pass  
 
 

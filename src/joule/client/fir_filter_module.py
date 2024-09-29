@@ -11,7 +11,7 @@ class FIRFilterModule(filter_module.FilterModule):
     def make_filter(self, parsed_args) -> np.ndarray:
         # return [taps...]
         #  implement in child
-        assert False, "implement in child class"  # pragma: no cover
+        assert False, "implement in child class"  
 
     async def run(self, parsed_args, inputs, outputs):
         stream_in: Pipe = inputs["input"]
@@ -23,7 +23,7 @@ class FIRFilterModule(filter_module.FilterModule):
             sarray_in = await stream_in.read()
             if len(sarray_in) < (N * 2):
                 # check if the pipe is closed
-                if stream_in.closed:  # pragma: no cover
+                if stream_in.closed:  
                     return
                 # check if this is the end of an interval
                 # if so we can't use this data so discard it
@@ -47,7 +47,7 @@ class FIRFilterModule(filter_module.FilterModule):
             sarray_out['data'] = data_out
             await stream_out.write(sarray_out)
             # hard to isolate in test, usually hits line 30
-            if stream_in.end_of_interval:  # pragma: no cover
+            if stream_in.end_of_interval:  
                 await stream_out.close_interval()
                 # dump all of the data because we don't
                 # want to mix averages across intervals

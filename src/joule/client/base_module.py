@@ -43,7 +43,7 @@ class BaseModule:
         self.parsed_args = None
 
     async def run_as_task(self, parsed_args, app: web.Application) -> asyncio.Task:
-        assert False, "implement in child class"  # pragma: no cover
+        assert False, "implement in child class"  
 
     def custom_args(self, parser: argparse.ArgumentParser):
         """
@@ -74,7 +74,7 @@ class BaseModule:
 
         """
         # parser.add_argument("--custom_flag")
-        pass  # pragma: no cover
+        pass  
 
     def stop(self):
         """
@@ -134,7 +134,7 @@ class BaseModule:
                 my_module.start()
         """
 
-        if parsed_args is None:  # pragma: no cover
+        if parsed_args is None:  
             parser = argparse.ArgumentParser()
             self._build_args(parser)
             module_args = helpers.module_args()
@@ -189,7 +189,7 @@ class BaseModule:
         loop.run_until_complete(asyncio.sleep(0))
         loop.close()
 
-    def _build_args(self, parser):  # pragma: no cover
+    def _build_args(self, parser):  
         grp = parser.add_argument_group('joule',
                                         'control module execution')
         # --pipes: JSON argument set by jouled

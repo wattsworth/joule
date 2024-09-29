@@ -51,7 +51,7 @@ class ReaderModule(BaseModule):
                 #... other module code
 
         """
-        assert False, "implement in child class"  # pragma: no cover
+        assert False, "implement in child class"  
 
     async def run_as_task(self, parsed_args, app):
         # check if we should use stdout (no fd's and no configs)

@@ -26,7 +26,7 @@ class CompositeModule(base_module.BaseModule):
 
         """
 
-        assert False, "implement in child class"  # pragma: no cover
+        assert False, "implement in child class"  
 
     async def run_as_task(self, parsed_args, app) -> asyncio.Task:
         try:

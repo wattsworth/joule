@@ -8,5 +8,5 @@ from joule.cli.lazy_group import LazyGroup
                                "add": "joule.cli.master.add.cli_add"})
 def master():
     """Manage node access."""
-    pass  # pragma: no cover
+    pass  
 

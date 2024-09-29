@@ -72,7 +72,7 @@ OUTPUT_RATE = 1  # run in 1 second blocks
 class RandomReader(ReaderModule):
     """Generate a random stream of data"""
 
-    def custom_args(self, parser):  # pragma: no cover
+    def custom_args(self, parser):  
         grp = parser.add_argument_group("module",
                                         "module specific arguments")
         grp.add_argument("--width", type=int,
@@ -111,7 +111,7 @@ class RandomReader(ReaderModule):
             await asyncio.sleep(wait_time)
 
 
-def main():  # pragma: no cover
+def main():  
     r = RandomReader()
     r.start()
 

@@ -56,7 +56,7 @@ class DbInfo:
         }
 
 
-class DataStore(ABC):  # pragma: no cover
+class DataStore(ABC):  
 
     @abstractmethod
     async def initialize(self, streams: List['DataStream']):
