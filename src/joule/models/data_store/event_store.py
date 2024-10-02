@@ -44,10 +44,6 @@ class EventStore:
                 else:
                     new_events.append(event)
 
-            # lazy stream creation, does nothing if stream already exists
-            # keep for legacy nodes, current implementation creates tables at stream creation
-            await psql_helpers.create_event_table(conn, stream)
-
             # Add new events
             if len(new_events) > 0:
                 seq = f"'data.event{stream.id}_id_seq'"
@@ -82,7 +78,7 @@ class EventStore:
         if end is not None and start is not None and end <= start:
             raise ValueError("Invalid time bounds start [%d] must be < end [%d]" % (start, end))
         query = f"SELECT count(*) FROM data.event{stream.id} "
-        if include_on_going_events:
+        if not include_on_going_events:
             end_col_name = None  # only return events that start within this interval
         else:
             end_col_name = 'end_time'  # return all events that are active within this interval
@@ -94,13 +90,10 @@ class EventStore:
         where_clauses = [wc for wc in where_clauses if len(wc) > 0]
         if len(where_clauses) > 0:
             query += "WHERE " + " AND ".join(where_clauses)
-        try:
-            async with self.pool.acquire() as conn:
-                record = await conn.fetch(query)
-                return record[0]['count']
-        except asyncpg.UndefinedTableError: # legacy nodes may not have tables for empty streams
-            return 0  # no data
-
+        async with self.pool.acquire() as conn:
+            record = await conn.fetch(query)
+            return record[0]['count']
+        
     async def histogram(self, stream: 'EventStream',
                         start: Optional[int] = None, end: Optional[int] = None,
                         json_filter=None,
@@ -162,26 +155,20 @@ class EventStore:
             query += f" LIMIT {limit}"
         else:
             query += " ORDER BY start_time ASC"
-        try:
-            async with self.pool.acquire() as conn:
-                records = await conn.fetch(query)
-                events = list(map(record_to_event, records))
-                events.sort(key=lambda e: e["start_time"])
-                return events
-        except asyncpg.UndefinedTableError:  # legacy nodes may not have tables for empty streams
-            return []  # no data
-
+        async with self.pool.acquire() as conn:
+            records = await conn.fetch(query)
+            events = list(map(record_to_event, records))
+            events.sort(key=lambda e: e["start_time"])
+            return events
+       
     async def remove(self, stream: 'EventStream', start: Optional[int] = None,
                      end: Optional[int] = None,
                      json_filter=None):
         if start is None and end is None and json_filter is None:
             # flush the stream
-            try:
-                async with self.pool.acquire() as conn:
-                    return await conn.execute(f"TRUNCATE data.event{stream.id}")
-            except asyncpg.UndefinedTableError:
-                pass  # legacy nodes may not have tables for empty streams
-
+            async with self.pool.acquire() as conn:
+                return await conn.execute(f"TRUNCATE data.event{stream.id}")
+            
         query = f"DELETE FROM data.event{stream.id} "
         where_clauses = [psql_helpers.query_time_bounds(start, end,
                                                         start_col_name='start_time',
@@ -191,12 +178,9 @@ class EventStore:
         where_clauses = [wc for wc in where_clauses if len(wc) > 0]
         if len(where_clauses) > 0:
             query += " WHERE " + " AND ".join(where_clauses)
-        try:
-            async with self.pool.acquire() as conn:
-                return await conn.execute(query)
-        except asyncpg.UndefinedTableError:
-            pass  # legacy nodes may not have tables for empty streams
-
+        async with self.pool.acquire() as conn:
+            return await conn.execute(query)
+        
     async def destroy(self, stream: 'EventStream'):
         try:
             async with self.pool.acquire() as conn:
@@ -211,21 +195,17 @@ class EventStore:
 
         async with self.pool.acquire() as conn:
             for stream in streams:
-                try:
-                    query = "select count(*), min(start_time) as start_time," \
-                            f" max(end_time) as end_time from data.event{stream.id}"
-                    row = await conn.fetchrow(query)
-                    if row['count'] == 0:
-                        continue  # no events in stream
-                    end_time = joule.utilities.datetime_to_timestamp(row['end_time'])
-                    start_time = joule.utilities.datetime_to_timestamp(row['start_time'])
-                    total_time = end_time - start_time
-                    total_bytes = 0  # TODO
-                    info_objects[stream.id] = StreamInfo(start_time, end_time, row['count'],
-                                                         total_time, total_bytes)
-                except asyncpg.UndefinedTableError:
-                    # this stream has no data tables, leave the record empty
-                    pass
+                query = "select count(*), min(start_time) as start_time," \
+                        f" max(end_time) as end_time from data.event{stream.id}"
+                row = await conn.fetchrow(query)
+                if row['count'] == 0:
+                    continue  # no events in stream
+                end_time = joule.utilities.datetime_to_timestamp(row['end_time'])
+                start_time = joule.utilities.datetime_to_timestamp(row['start_time'])
+                total_time = end_time - start_time
+                total_bytes = 0  # TODO
+                info_objects[stream.id] = StreamInfo(start_time, end_time, row['count'],
+                                                        total_time, total_bytes)
         return info_objects
 
     async def close(self):

@@ -26,12 +26,14 @@ services:
     environment:
       POSTGRES_PASSWORD: password
     command: ["/joule/tests/e2e/bootstrap_inner.sh", "timescale_follower", "/joule/tests/e2e/follower_node.py"]
+  
   timescale:
     image: timescale/timescaledb:2.11.2-pg15
     environment:
       POSTGRES_PASSWORD: password
     logging:
       driver: none
+  
   timescale_follower:
     image: timescale/timescaledb:2.11.2-pg15
     environment:

@@ -21,7 +21,7 @@ class TestEventStore(unittest.IsolatedAsyncioTestCase):
     forbid_get_event_loop = True
 
     async def asyncSetUp(self):
-        # set up the pscql database
+        # set up the psql database
         self.psql_dir = tempfile.TemporaryDirectory()
         # run this asynchronously to avoid blocking the event loop
         def start_postgresql_instance():
@@ -58,7 +58,9 @@ class TestEventStore(unittest.IsolatedAsyncioTestCase):
                  self._test_remove_bound_queries,
                  self._test_json_queries,
                  self._test_limit_queries,
-                 self._test_info]
+                 self._test_info,
+                 self._test_count
+                 ]
         for test in tests:
             conn: asyncpg.Connection = await asyncpg.connect(self.db_url)
             await conn.execute("DROP SCHEMA IF EXISTS data CASCADE")
@@ -78,6 +80,7 @@ class TestEventStore(unittest.IsolatedAsyncioTestCase):
         streams = []
         for i in range(20):
             event_stream = EventStream(id=i, name=f'test_stream{i}')
+            await self.store.create(event_stream)
             streams.append(event_stream)
             if i % 2 == 0:  # only half the streams have events
                 events = [{'start_time': j * 100,
@@ -111,6 +114,31 @@ class TestEventStore(unittest.IsolatedAsyncioTestCase):
         ids = [s.id for s in streams[1:-1]]
         self.assertDictEqual(stream_info, _expected_info(ids))
 
+    async def _test_count(self):
+        event_stream = EventStream(id=1, name='test_stream')
+        await self.store.create(event_stream)
+        # create 20 events, 5 with a tag of A and 15 with a tag of B
+        events = [{'start_time': i * 100,
+                   'end_time': i * 100 + 10,
+                   'content': {'title': "Event%d" % i,
+                               'stream': event_stream.name,
+                               'tag': 'A' if(i < 5) else 'B'}
+                   } for i in range(20)]
+        await self.store.upsert(event_stream, events)
+        # basic count operation
+        count = await self.store.count(event_stream)
+        self.assertEqual(count, 20)
+        # count operation with filter to only return 'A' events
+        count = await self.store.count(event_stream, json_filter=[[['tag', 'is', 'A']]])
+        self.assertEqual(count, 5)
+        # count operation with time bounds to only return events between 1005 and  < 1500
+        count = await self.store.count(event_stream, start=1005, end=1500, include_on_going_events=False)
+        self.assertEqual(count, 4)
+        # includes on going events gets the event at 1000
+        count = await self.store.count(event_stream, start=1005, end=1500, include_on_going_events=True)
+        self.assertEqual(count, 5)
+
+
     async def _test_histogram(self):
         def _count_events(items):
             acc = 0
@@ -124,6 +152,7 @@ class TestEventStore(unittest.IsolatedAsyncioTestCase):
         bounds1 = [1627790400000000, 1627876800000000]
         times = [random.randint(bounds1[0], bounds1[1]) for _ in range(200)]
         event_stream = EventStream(id=1, name='test_stream')
+        await self.store.create(event_stream)
         events1 = [{'start_time': ts,
                     'end_time': ts + random.randint(int(10e6), int(100e6)),
                     'content': {'block': 1}} for ts in times]
@@ -167,6 +196,7 @@ class TestEventStore(unittest.IsolatedAsyncioTestCase):
 
     async def _test_basic_upsert_extract_remove(self):
         event_stream1 = EventStream(id=1, name='test_stream1')
+        await self.store.create(event_stream1)
         events1 = [{'start_time': i * 100,
                     'end_time': i * 100 + 10,
                     'content': {'title': "Event%d" % i,
@@ -174,6 +204,7 @@ class TestEventStore(unittest.IsolatedAsyncioTestCase):
                     } for i in range(20)]
         await self.store.upsert(event_stream1, events1)
         event_stream2 = EventStream(id=2, name='test_stream2')
+        await self.store.create(event_stream2)
         events2 = [{'start_time': (i * 100) + 3,
                     'end_time': (i * 100) + 13,
                     'content': {'title': "Event%d" % i,
@@ -209,6 +240,7 @@ class TestEventStore(unittest.IsolatedAsyncioTestCase):
 
     async def _test_time_bound_queries(self):
         event_stream1 = EventStream(id=1, name='test_stream1')
+        await self.store.create(event_stream1)
         early_events = [{'start_time': i * 100,
                          'end_time': i * 100 + 10,
                          'event_stream_id': event_stream1.id,
@@ -237,6 +269,13 @@ class TestEventStore(unittest.IsolatedAsyncioTestCase):
         rx_events = await self.store.extract(event_stream1, start=3000)
         self.assertListEqual(rx_events, mid_events + late_events)
 
+        # now try offset timebounds to verify include_ongoing_events
+        rx_events = await self.store.extract(event_stream1, start=3010, end=4500, include_on_going_events=False)
+        self.assertListEqual(rx_events, mid_events[1:]) # skips first event
+        rx_events = await self.store.extract(event_stream1, start=3010, end=4500, include_on_going_events=True)
+        self.assertListEqual(rx_events, mid_events) # includes first event
+
+
         # now try limited queries
         rx_events = await self.store.extract(event_stream1, start=3000, limit=10)
         self.assertListEqual(rx_events, mid_events[:10])
@@ -245,6 +284,7 @@ class TestEventStore(unittest.IsolatedAsyncioTestCase):
 
     async def _test_remove_bound_queries(self):
         event_stream1 = EventStream(id=20, name='test_stream1')
+        await self.store.create(event_stream1)
 
         early_events = [{'start_time': i * 100,
                          'end_time': i * 100 + 10,
@@ -281,6 +321,7 @@ class TestEventStore(unittest.IsolatedAsyncioTestCase):
 
     async def _test_json_queries(self):
         event_stream1 = EventStream(id=20, name='test_stream1')
+        await self.store.create(event_stream1)
 
         early_events = [{'start_time': i * 100,
                          'end_time': i * 100 + 10,
@@ -312,6 +353,7 @@ class TestEventStore(unittest.IsolatedAsyncioTestCase):
 
     async def _test_limit_queries(self):
         event_stream1 = EventStream(id=20, name='test_stream1')
+        await self.store.create(event_stream1)
 
         events = [{'start_time': i * 100,
                    'end_time': i * 100 + 10,
