@@ -3,7 +3,6 @@ import os
 JOULE_PATH = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir)
 sys.path.append(JOULE_PATH)
 from joule.client import FilterModule
-from joule.models.pipes import EmptyPipe
 import asyncio
 
 
@@ -16,23 +15,20 @@ class SimpleFilter(FilterModule):
         # input2 ----( *3 )---> output2
         input2 = inputs['input2']
         output2 = outputs['output2']
-        while not input1.is_empty():
+        while await input1.not_empty():
             data = await input1.read()
             input1.consume(len(data))
             data['data'] *= 2.0
             await output1.write(data)
             if input1.end_of_interval:
                 await output1.close_interval()
-        while True:
-            try:
+        while await input2.not_empty():
                 data = await input2.read()
                 input2.consume(len(data))
                 data['data'] *= 3.0
                 await output2.write(data)
                 if input2.end_of_interval:
                     await output2.close_interval()
-            except EmptyPipe:
-                break
         # delay so worker output handler has time to process
         # the results
         await output1.close()

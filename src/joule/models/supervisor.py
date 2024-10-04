@@ -164,17 +164,15 @@ class Supervisor:
             while True:
                 try:
                     src_pipe = await node.data_subscribe(src_stream.remote_path)
-                    try:
-                        while True:
-                            data = await src_pipe.read()
-                            if not dest_pipe.closed:
-                                await dest_pipe.write(data)
-                            else:
-                                log.info(
-                                    "destination [%s] is closed, OK if this is during shutdown" % dest_pipe.stream.name)
-                            src_pipe.consume(len(data))
-                    except pipes.EmptyPipe:
-                        await dest_pipe.close_interval()
+                    while await src_pipe.not_empty():
+                        data = await src_pipe.read()
+                        if not dest_pipe.closed:
+                            await dest_pipe.write(data)
+                        else:
+                            log.info(
+                                "destination [%s] is closed, OK if this is during shutdown" % dest_pipe.stream.name)
+                        src_pipe.consume(len(data))
+                    await dest_pipe.close_interval()
                     log.error("Subscriber:: _handle_remote_input: connection terminated unexepectedly")
                 except (ConfigurationError, ApiError) as e:
                     log.error("Subscriber::_handle_remote_input: %s" % str(e))

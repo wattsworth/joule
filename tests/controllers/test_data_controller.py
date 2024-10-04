@@ -10,6 +10,7 @@ from tests.controllers.helpers import create_db, MockStore, MockSupervisor
 from tests import helpers
 from joule import app_keys
 from joule.constants import EndPoints
+from joule.errors import EmptyPipeError
 
 import testing.postgresql
 psql_key = web.AppKey("psql", testing.postgresql.Postgresql)
@@ -110,7 +111,7 @@ class TestDataController(AioHTTPTestCase):
             rx_blk2 = await pipe.read()
             pipe.consume(len(rx_blk2))
             np.testing.assert_array_equal(blk2, rx_blk2)
-            with self.assertRaises(pipes.EmptyPipe):
+            with self.assertRaises(EmptyPipeError):
                 await pipe.read()
         self.assertEqual(self.supervisor.unsubscribe_calls, 1)
 

@@ -2,7 +2,7 @@ import numpy as np
 import asyncio
 import logging
 from joule.models.pipes import Pipe
-from joule.models.pipes.errors import PipeError, EmptyPipe
+from joule.errors import PipeError, EmptyPipeError
 
 Loop = asyncio.AbstractEventLoop
 log = logging.getLogger('joule')
@@ -47,17 +47,15 @@ class LocalPipe(Pipe):
 
     async def read(self, flatten=False) -> np.ndarray:
 
-        if self._failed:
-            await self.close()
-            raise PipeError('pipe failed')
-
         # if reread is set just return the old data
         if self._reread:
             self._reread = False
-            if len(self.read_buffer) == 0:
-                raise PipeError("No data left to reread")
             return self._format_data(self.read_buffer, flatten)
 
+        if self._failed:
+            await self.close()
+            raise PipeError('pipe failed')
+  
         self._interval_break = False
 
         # if the queue is empty and we have old data, just return the old data
@@ -86,7 +84,7 @@ class LocalPipe(Pipe):
         # is no reason to pass back empty data so raise an EmptyPipe exception instead
 
         if len(data_block) == 0 and self.closed:
-            raise EmptyPipe()
+            raise EmptyPipeError()
         return data_block
 
     def read_nowait(self, flatten=False):
@@ -119,7 +117,7 @@ class LocalPipe(Pipe):
 
         # if the buffer is empty and the queue is empty and the pipe is closed
         if self.queue.empty() and len(self.read_buffer) == 0 and self.closed:
-            raise EmptyPipe()
+            raise EmptyPipeError()
         # do not wait for new data, return an empty array if nothing else is available
         return self._read(flatten)
 
@@ -151,22 +149,9 @@ class LocalPipe(Pipe):
 
         return self._format_data(self.read_buffer, flatten)
 
-    def reread_last(self):
-        if len(self.read_buffer) == 0:
-            raise PipeError("No data left to reread")
-        self._reread = True
-
     @property
     def end_of_interval(self):
         return self._interval_break
-
-    def is_empty(self):
-        if self._last_read:
-            return True
-        if self.queue.empty() and len(self.read_buffer) == 0 and self.closed:
-            return True
-        # TODO: do another read to make sure there is still data available
-        return False
 
     def consume(self, num_rows):
         if num_rows == 0:

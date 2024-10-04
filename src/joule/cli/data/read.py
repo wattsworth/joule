@@ -89,7 +89,7 @@ def cmd(config, start, end, live, max_rows, show_bounds, mark_intervals, element
             raise click.ClickException("Maximum element is %d" % (pipe.width - 1))
         if element_indices is None:
             element_indices = list(range(len(stream_obj.elements)))
-        while not stop_requested and not pipe.is_empty():
+        while not stop_requested and await pipe.not_empty():
             # get new data from the pipe
             try:
                 # read structured data
@@ -98,11 +98,6 @@ def cmd(config, start, end, live, max_rows, show_bounds, mark_intervals, element
             except asyncio.TimeoutError:
                 # check periodically for Ctrl-C (SIGTERM) even if server is slow
                 continue
-            except errors.EmptyPipeError:
-                # this is unavoidable if the pipe closes between calls to read
-                if len(sdata)==0:
-                    break # nothing left to read
-                pipe.consume(len(sdata))
             # ===== Write to HDF File ======
             if write_to_file:
                 if len(sdata) > 0:  # ignore empty chunks

@@ -192,7 +192,7 @@ async def align_streams(primary: Pipe, secondaries: List[Pipe]):
         primary.reread_last()
         for secondary in secondaries:
             secondary.reread_last()
-    except ApiError:
+    except (ApiError, EmptyPipeError):
         return False
     return True
 

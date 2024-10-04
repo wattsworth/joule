@@ -14,8 +14,7 @@ from typing import Optional
 from icecream import ic
 from joule.models import DataStream, Element, Base, Pipe
 from joule.models.pipes import LocalPipe
-from joule.models.pipes.errors import PipeError
-from joule.errors import EmptyPipeError
+from joule.errors import EmptyPipeError, PipeError
 
 
 def create_data(layout: str,

@@ -14,7 +14,7 @@ from joule.models.data_stream import DataStream
 from joule.models.folder import get_stream_path
 from joule.errors import SubscriptionError
 from joule.models import pipes
-from joule.models.pipes.errors import EmptyPipe, PipeError
+from joule.errors import PipeError
 
 # custom types
 Loop = asyncio.AbstractEventLoop
@@ -334,7 +334,7 @@ class Worker:
            into each queue in [output_queues] """
         last_ts = None
         try:
-            while True:
+            while await child_output.not_empty():
                 data = await child_output.read()
                 if len(data) > 0:
 
@@ -361,7 +361,7 @@ class Worker:
                     for pipe in subscribers:
                         pipe.close_interval_nowait()
 
-        except (EmptyPipe, asyncio.CancelledError):
+        except asyncio.CancelledError:
             pass
         except PipeError as e:
             if 'closed pipe' in str(e):

@@ -9,6 +9,7 @@ from joule.utilities import interval_tools, timestamp_to_datetime
 from joule.models import DataStream, pipes
 from joule.models.data_store.data_store import DataStore, StreamInfo, DbInfo, Interval
 from joule.models.data_store import errors
+from joule.errors import EmptyPipeError
 from joule.models.data_store.nilmdb_inserter import Inserter
 from joule.models.data_store.nilmdb_helpers import (compute_path,
                                                     check_for_error,
@@ -261,7 +262,7 @@ class NilmdbStore(DataStore):
                             data = await reader.read()
                             await callback(data, layout, decimation_factor)
                             reader.consume(len(data))
-                        except pipes.EmptyPipe:
+                        except EmptyPipeError:
                             break
                 # insert the interval token to indicate a break
                 i += 1

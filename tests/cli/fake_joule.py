@@ -18,7 +18,7 @@ from tests import helpers
 from joule.models import DataStream, StreamInfo, pipes, data_stream, master
 from joule.api import annotation
 from joule.constants import EndPoints, ConfigFiles
-
+from joule.errors import EmptyPipeError
 # from https://github.com/aio-libs/aiohttp/blob/master/examples/fake_server.py
 
 
@@ -277,7 +277,7 @@ class FakeJoule:
                     istart = None
                     iend = None
                 mock_entry.add_data(chunk)
-            except pipes.EmptyPipe:
+            except EmptyPipeError:
                 break
         self.msgs.put(mock_entry)
         return web.Response(text="ok")

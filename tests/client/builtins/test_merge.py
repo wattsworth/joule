@@ -242,7 +242,7 @@ class TestMergeFilter(unittest.TestCase):
                                         'secondary1': secondary1},
                                 outputs={'output': output})
 
-            self.assertTrue(output.is_empty())
+            self.assertTrue(await output.is_empty())
             with self.assertRaises(EmptyPipeError):
                 await output.read()
 
@@ -425,7 +425,7 @@ class TestMergeFilter(unittest.TestCase):
 
             result = await output.read()
             output.consume(len(result))
-            self.assertTrue(output.is_empty())
+            self.assertTrue(await output.is_empty())
             # all elements should match the data
             np.testing.assert_array_almost_equal(result['data'][:, 0][:, None], values)
             np.testing.assert_array_almost_equal(result['data'][:, 1][:, None], values)

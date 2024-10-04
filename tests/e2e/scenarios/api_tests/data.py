@@ -4,6 +4,7 @@ import joule.errors
 from joule import api, utilities, models
 import numpy as np
 import asyncio
+import sys
 from sqlalchemy import text
 
 
@@ -19,29 +20,23 @@ class TestDataMethods(unittest.IsolatedAsyncioTestCase):
         stream = await self.node.data_read("/live/base")
         num_intervals = 0
         # data should start at 0 and count up by 10's every interval
-        while True:
-            try:
-                data = await stream.read()
-                # check the data
-                expected = np.arange(0, len(data) * 10, 10)
-                np.testing.assert_array_equal(data['data'], expected[:, None])
-                if stream.end_of_interval:
-                    num_intervals += 1
-                stream.consume(len(data))
-            except models.pipes.EmptyPipe:
-                break
+        while await stream.not_empty():
+            data = await stream.read()
+            # check the data
+            expected = np.arange(0, len(data) * 10, 10)
+            np.testing.assert_array_equal(data['data'], expected[:, None])
+            if stream.end_of_interval:
+                num_intervals += 1
+            stream.consume(len(data))
         await stream.close()
 
     async def test_data_read_max_rows(self):
         stream = await self.node.data_read("/live/base", max_rows=100)
         total_rows = 0
-        while True:
-            try:
-                data = await stream.read()
-                total_rows += len(data)
-                stream.consume(len(data))
-            except models.pipes.EmptyPipe:
-                break
+        while await stream.not_empty():
+            data = await stream.read()
+            total_rows += len(data)
+            stream.consume(len(data))
         self.assertLessEqual(total_rows, 105) # max rows is approximate, see joule/sql/row_count.sql
 
     async def test_data_subscribe(self):
@@ -50,7 +45,7 @@ class TestDataMethods(unittest.IsolatedAsyncioTestCase):
         TARGET_READS = 3
         MIN_DATA = 20
         # data should start at 0 and count up by 10's every interval
-        while True:
+        while await stream.not_empty():
             data = await stream.read()
             await asyncio.sleep(0.5)
             num_reads += 1
@@ -64,30 +59,45 @@ class TestDataMethods(unittest.IsolatedAsyncioTestCase):
         await stream.close()
 
     async def test_data_write(self):
+        time = utilities.time_now()
+        print("deleting data...", end="")
         await self.node.data_delete("/archive/data1")
+        print(f"OK {(utilities.time_now()-time)/1000:.2f}s")
+
+        print("writing data...", end="")
         pipe = await self.node.data_write("/archive/data1")
         blk_size = 100
-        nblks = 1000
-        time = utilities.time_now()
+        nblks = 10
+        _time = utilities.time_now()
+        sys.stdout.flush()
+        start_time = utilities.time_now()
+        ts = np.linspace(start_time, start_time+ nblks*blk_size*100, nblks*blk_size, dtype=int)
+        # make sure all timestamps are unique
+        self.assertGreaterEqual(min(np.diff(ts)), 99)
         for i in range(nblks):
-            ts = np.linspace(time, time + blk_size, blk_size)
-            self.assertEqual(min(np.diff(ts)), 1)
+            # ts is a monotonic increasing sequence of timestamps counting by 100's
+            ts_chunk = ts[i*blk_size:(i+1)*blk_size]
+            self.assertEqual(len(ts_chunk), blk_size)
             data1 = np.random.random((blk_size, 1))
             data2 = np.random.random((blk_size, 1))
-
-            res = np.hstack((ts[:, None], data1, data2))
+            res = np.hstack((ts_chunk[:, None], data1, data2))
             time = time + blk_size + 1
             await pipe.write(res)
+            print(f"[{int(ts[0])} - {int(ts[-1])}]")
         await pipe.close()
+        print(f"OK {(utilities.time_now()-_time)/1000:.2f}s")
+
+        print("reading data...", end="")
+        time = utilities.time_now()
         # now read the data back
         pipe = await self.node.data_read("/archive/data1", start=0)
         nrows = 0
-        while not pipe.is_empty():
+        while await pipe.not_empty():
             data = await pipe.read()
             nrows += len(data)
             pipe.consume(len(data))
-
         self.assertEqual(blk_size * nblks, nrows)
+        print(f"OK {(utilities.time_now()-time)/1000:.2f}s")
 
     async def test_data_merges_successive_writes(self):
         await self.node.data_delete("/archive/data1")
@@ -125,11 +135,8 @@ class TestDataMethods(unittest.IsolatedAsyncioTestCase):
         nrows = 0
         first_block = True
         #print("===== READING DATA ======")
-        while not pipe.is_empty():
-            try:
-                data = await pipe.read()
-            except models.pipes.EmptyPipe:
-                break
+        while await pipe.not_empty():
+            data = await pipe.read()
             #print([int(x) for x in data['timestamp']])
             nrows += len(data)
             #if pipe.end_of_interval:
@@ -200,7 +207,6 @@ class TestDataMethods(unittest.IsolatedAsyncioTestCase):
             self.fail("should have raised an exception")
         except joule.errors.ApiError as e:
             assert "already exists" in traceback.format_exc()
-            pass
         # write data with NaN's
         await self.node.data_delete("/archive/data1")
         pipe = await self.node.data_write("/archive/data1")
@@ -211,7 +217,6 @@ class TestDataMethods(unittest.IsolatedAsyncioTestCase):
             self.fail("should have raised an exception")
         except joule.errors.ApiError as e:
             assert "NaN" in traceback.format_exc()
-            pass
 
     async def test_data_delete(self):
         # copy data to a new stream
@@ -227,11 +232,8 @@ class TestDataMethods(unittest.IsolatedAsyncioTestCase):
         data_out = await self.node.data_write(dest)
         first_ts = None
         last_ts = None
-        while not data_in.is_empty():
-            try:
-                data = await data_in.read()
-            except models.pipes.EmptyPipe:
-                break
+        while await data_in.not_empty():
+            data = await data_in.read()
             if first_ts is None:
                 first_ts = data['timestamp'][0]
             last_ts = data['timestamp'][-1]

@@ -61,9 +61,14 @@ class StreamNotFound(ApiError):
     """
     pass
 
-
-class EmptyPipeError(ApiError):
+class PipeError(Exception):
     """
-    Type of APIError. Attempt to read from an empty pipe
+    Error reading from or writing to a pipe
+    """
+    pass
+
+class EmptyPipeError(PipeError):
+    """
+    Attempt to read from an empty pipe
     """
     pass

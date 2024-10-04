@@ -7,7 +7,6 @@ import asyncio
 
 from joule import api
 from joule.api.data_stream import DataStream, Element
-from joule.models.pipes import EmptyPipe
 
 NILMDB_URL = "http://nilmdb"
 
@@ -147,13 +146,10 @@ async def check_data(node: api.BaseNode):
         assert pipe.layout == "int32_1"
         num_intervals = 1
         len_data = 0
-        while True:
-            try:
-                data = await pipe.read()
-                len_data += len(data)
-                if len_data > 50:
-                    break
-            except EmptyPipe:
+        while await pipe.not_empty():
+            data = await pipe.read()
+            len_data += len(data)
+            if len_data > 50:
                 break
             if pipe.end_of_interval:
                 num_intervals += 1

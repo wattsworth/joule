@@ -2,7 +2,7 @@ import numpy as np
 import logging
 import asyncio
 from joule.models.pipes import Pipe, find_interval_token
-from joule.models.pipes.errors import PipeError, EmptyPipe
+from joule.errors import PipeError, EmptyPipeError
 
 log = logging.getLogger('joule')
 
@@ -33,6 +33,13 @@ class InputPipe(Pipe):
         self.last_index = 0
 
     async def read(self, flatten=False) -> np.ndarray:
+
+        # if reread is set just return the old data
+        if self._reread:
+            self._reread = False
+            return self._format_data(self.buffer[:self.last_index], flatten)
+
+
         if self.reader is None:
             self.reader, self._reader_close = await self.reader_factory()
         if self.closed:
@@ -48,13 +55,7 @@ class InputPipe(Pipe):
             # buffer is full, this must be consumed before a new read
             return self._format_data(self.buffer[:self.last_index], flatten)
 
-        # if reread is set just return the old data
-        if self._reread:
-            self._reread = False
-            if self.last_index == 0:
-                raise PipeError("No data left to reread")
-            return self._format_data(self.buffer[:self.last_index], flatten)
-
+        
         # make sure we get at least one full row of data from read (depends on datatype)
         raw = b''
         while True:
@@ -65,7 +66,7 @@ class InputPipe(Pipe):
                 #    raise EmptyPipe()  # this data has already been read once
                 if (len(self.unprocessed_np_buffer) == 0 and
                         self.last_index == 0):
-                    raise EmptyPipe()
+                    raise EmptyPipeError()
                 if len(self.unprocessed_np_buffer) == 0:
                     # no new data is coming in, read() will just return
                     # previously viewed data
@@ -124,11 +125,6 @@ class InputPipe(Pipe):
         self.last_index += len(data)
         return self._format_data(self.buffer[:self.last_index], flatten)
 
-    def reread_last(self):
-        if self.last_index == 0:
-            raise PipeError("No data left to reread")
-        self._reread = True
-
     def consume(self, num_rows):
         if num_rows == 0:
             return  # nothing to do
@@ -142,24 +138,7 @@ class InputPipe(Pipe):
 
     def consume_all(self):
         return self.consume(self.last_index)
-
-    def is_empty(self):
-        # 0.) if the read() has already signaled its finished the pipe is empty
-        if self._last_read:
-            return True
-        # 1.) make sure the sender is closed, reader may be None if no reads have happened yet
-        if self.reader is None:
-            if self.closed:
-                return True
-            else:
-                return False
-        if not self.reader.at_eof():
-            return False
-        # 2.) make sure there is no data left in the buffer
-        if len(self.unprocessed_np_buffer) == 0 and self.last_index == 0:
-            return True
-        return False
-
+        
     @property
     def end_of_interval(self):
         return self.interval_break

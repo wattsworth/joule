@@ -1,4 +1,4 @@
-from typing import Union, Optional, List, TYPE_CHECKING
+from typing import Optional, List, TYPE_CHECKING
 import asyncio
 import aiohttp
 from joule.models.pipes import compute_dtype
@@ -7,15 +7,13 @@ from joule.utilities.misc import timestamps_are_monotonic, validate_values
 from joule.constants import EndPoints
 from .session import BaseSession
 from .data_stream import (DataStream,
-                          data_stream_get,
-                          data_stream_create)
+                          data_stream_get)
 
 from joule.models.pipes import (Pipe,
                                 InputPipe,
-                                EmptyPipe,
-                                PipeError,
                                 LocalPipe,
                                 interval_token)
+from joule.errors import PipeError
 from joule import errors
 
 if TYPE_CHECKING:
@@ -262,7 +260,7 @@ async def _live_reader(session: BaseSession, my_stream: DataStream,
                 if pipe_in.end_of_interval:
                     await pipe_out.close_interval()
 
-    except (asyncio.CancelledError, EmptyPipe, aiohttp.ClientError, PipeError):
+    except (asyncio.CancelledError, PipeError, aiohttp.ClientError):
         pass
     except Exception as e:
         print("unexpected exception: ", e)
@@ -299,7 +297,7 @@ async def _historic_reader(session: BaseSession,
             pipe_out.decimation_level = int(response.headers['joule-decimation'])
             pipe_in = InputPipe(layout=pipe_out.layout,
                                 stream=my_stream, reader=response.content)
-            while True:
+            while await pipe_in.not_empty():
                 data = await pipe_in.read()
                 pipe_in.consume(len(data))
                 try:
@@ -312,11 +310,8 @@ async def _historic_reader(session: BaseSession,
                         break
                     else:
                         raise e # something else happened, propogate the error
-    except (asyncio.CancelledError, EmptyPipe):
+    except asyncio.CancelledError:
         pass
-    except Exception as e:
-        print("unexpected exception: ", e)
-        raise e
     finally:
         await pipe_out.close()
 
@@ -327,26 +322,24 @@ async def _send_data(session: BaseSession,
                      merge_gap: int):
 
     async def _data_sender():
-        try:
-            last_ts = None
-            while True:
-                data = await pipe.read()
-                if not timestamps_are_monotonic(data,last_ts,stream.name):
-                    raise errors.ApiError("timestamps are not monotonic")
-                if not validate_values(data):
-                    raise errors.ApiError("invalid values (NaN or Inf)")
-                if len(data) > 0:
-                    yield data.tobytes()
-                    last_ts = data['timestamp'][-1]
-                    # warn if there is data in this chunk that is older than the keep value
-                    # of the destination stream (-1 == KEEP ALL data)
-                    if stream.keep_us != -1 and (data['timestamp'][0] < time_now() - stream.keep_us):
-                        log.warning("this data is older than the keep value of the destination stream, it may be discarded")
-                if pipe.end_of_interval:
-                    yield interval_token(stream.layout).tobytes()
-                pipe.consume(len(data))
-        except EmptyPipe:
-            yield interval_token(stream.layout).tobytes()
+        last_ts = None
+        while await pipe.not_empty():
+            data = await pipe.read()
+            if not timestamps_are_monotonic(data,last_ts,stream.name):
+                raise errors.ApiError("timestamps are not monotonic")
+            if not validate_values(data):
+                raise errors.ApiError("invalid values (NaN or Inf)")
+            if len(data) > 0:
+                yield data.tobytes()
+                last_ts = data['timestamp'][-1]
+                # warn if there is data in this chunk that is older than the keep value
+                # of the destination stream (-1 == KEEP ALL data)
+                if stream.keep_us != -1 and (data['timestamp'][0] < time_now() - stream.keep_us):
+                    log.warning("this data is older than the keep value of the destination stream, it may be discarded")
+            if pipe.end_of_interval:
+                yield interval_token(stream.layout).tobytes()
+            pipe.consume(len(data))
+        yield interval_token(stream.layout).tobytes()
 
     try:
         await session.post(EndPoints.data,

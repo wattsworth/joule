@@ -19,15 +19,11 @@ warnings.simplefilter('always')
 class SimpleFilter(FilterModule):
     # multiplies data by 2
     async def run(self, parsed_args, inputs, outputs):
-        try:
-            while True:
-                data = await inputs['to_filter'].read()
-                inputs['to_filter'].consume(len(data))
-                data['data'] *= 2
-                await outputs['from_filter'].write(data)
-        except pipes.EmptyPipe:
-            pass
-
+        while await inputs['to_filter'].not_empty():
+            data = await inputs['to_filter'].read()
+            inputs['to_filter'].consume(len(data))
+            data['data'] *= 2
+            await outputs['from_filter'].write(data)
 
 class TestFilterModule(helpers.AsyncTestCase):
 

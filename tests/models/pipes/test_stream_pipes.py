@@ -1,6 +1,6 @@
-from joule.models.pipes import InputPipe, OutputPipe, PipeError, LocalPipe
+from joule.models.pipes import InputPipe, OutputPipe, LocalPipe
 from joule.models.pipes.factories import reader_factory, writer_factory
-
+from joule.errors import PipeError
 import os
 import numpy as np
 import asyncio

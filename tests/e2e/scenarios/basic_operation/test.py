@@ -2,7 +2,6 @@
 import time
 import numpy as np
 import asyncio
-from joule.models.pipes import EmptyPipe
 from joule import api
 import sys
 
@@ -72,11 +71,8 @@ async def check_data(node: api.BaseNode):
         else:
             assert pipe.layout == "float64_1"
         len_data = 0
-        while not pipe.is_empty():
-            try:
-                data = await pipe.read()
-            except EmptyPipe as e:
-                print(f"ERROR: got an empty pipe error on read of {path}: {e}")
+        while await pipe.not_empty():
+            data = await pipe.read()
             len_data += len(data)
             if len_data > 50:
                 break

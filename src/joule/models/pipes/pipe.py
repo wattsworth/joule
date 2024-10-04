@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, List
 import numpy as np
 import logging
 
-from joule.models.pipes.errors import PipeError
+from joule.errors import PipeError, EmptyPipeError
 
 if TYPE_CHECKING:  
     from joule.models import (Module, DataStream)
@@ -97,6 +97,7 @@ class Pipe:
         if self.direction == Pipe.DIRECTION.OUTPUT:
             raise PipeError("cannot read from an output pipe")
 
+        
         raise PipeError("abstract method must be implemented by child")
 
     def reread_last(self):
@@ -107,8 +108,8 @@ class Pipe:
         """
         if self.direction == Pipe.DIRECTION.OUTPUT:
             raise PipeError("cannot read from an output pipe")
-
-        raise PipeError("Not Implemented")
+       
+        self._reread = True
 
     async def read_all(self, flatten=False, maxrows=int(1e5), error_on_overflow=False) -> np.ndarray:
         """
@@ -187,9 +188,31 @@ class Pipe:
             raise PipeError("cannot consume from an output pipe")
         raise PipeError("abstract method must be implemented by child")
 
-    def is_empty(self):
-        raise PipeError("not implemented")
+    async def is_empty(self):
+        """ Returns True if the pipe is empty, otherwise returns False 
+           and garauntees that the next call to read will succeed, it does this by 
+           calling read() and catching the EmptyPipe exception, since consume is not called
+           the data will be available on the next read. By setting reread internally the next call
+           to read() is essentially a no-op and provides the data retrieved by this call"""
+        if self.direction == Pipe.DIRECTION.OUTPUT:
+            raise PipeError("cannot check output pipes for empty condition")
+        if self._reread:
+            return False # data is already available
+        try:
+            before_flag = self.end_of_interval
+            data = await self.read()
+            after_flag = self.end_of_interval
+            num_rows = len(data)
+            #print(f"### Interval Flag {before_flag}->{after_flag}, read {num_rows} rows")
+            self.reread_last() # next call to read will return this data and not try to get more
 
+        except EmptyPipeError:
+            return True
+        return False
+
+    async def not_empty(self):
+        return await self.is_empty() == False
+    
     def fail(self):
         self._failed = True
 

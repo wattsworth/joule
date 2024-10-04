@@ -7,6 +7,7 @@ import socket
 import psutil
 
 from joule.models import DataStream, pipes
+from joule.errors import EmptyPipeError
 from joule.models.data_store import psql_helpers
 from joule.models.data_store.errors import DataError
 import joule.utilities
@@ -117,7 +118,7 @@ class Inserter:
                     log.error(f"Timescale inserter: [{str(e)}, trying again in 2 seconds")
                     await asyncio.sleep(2)
 
-        except (pipes.EmptyPipe, asyncio.CancelledError):
+        except (EmptyPipeError, asyncio.CancelledError):
             pass
 
     async def cleanup(self, conn: asyncpg.Connection):

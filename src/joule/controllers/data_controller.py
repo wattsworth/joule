@@ -138,11 +138,8 @@ async def _subscribe(request: web.Request, json: bool):
 
     try:
         await resp.prepare(request)
-        while True:
-            try:
-                data = await pipe.read()
-            except pipes.EmptyPipe:
-                return resp
+        while await pipe.not_empty():
+            data = await pipe.read()
             pipe.consume(len(data))
             if len(data) > 0:
                 await resp.write(data.tobytes())

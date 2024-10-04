@@ -15,7 +15,7 @@ from joule import api
 from joule.api.data_stream import DataStream, Element
 from joule.client import helpers
 # import directly so it can be mocked easily in unit tests
-from joule.errors import ConfigurationError, EmptyPipeError, ApiError
+from joule.errors import ConfigurationError, ApiError
 from joule.models import pipes
 from joule.services.parse_pipe_config import parse_pipe_config, parse_inline_config
 from joule.utilities.interval_tools import interval_intersection, interval_difference
@@ -174,7 +174,7 @@ class BaseModule:
         loop.add_signal_handler(signal.SIGTERM, stop_task)
         try:
             loop.run_until_complete(task)
-        except (asyncio.CancelledError, pipes.EmptyPipe, EmptyPipeError) as e:
+        except asyncio.CancelledError as e:
             pass
         finally:
             self._cleanup(loop)

@@ -3,7 +3,7 @@ import numpy as np
 import logging
 
 from joule.models.pipes import Pipe, interval_token
-from joule.models.pipes.errors import PipeError
+from joule.errors import PipeError
 log = logging.getLogger('joule')
 
 

@@ -6,22 +6,6 @@ import unittest
 from joule import api
 import folder, stream, module, data
 
-
-async def setup():
-    node = api.Node()
-    """
-    live
-        sum1
-        filt1
-    arch
-        sum1
-        filt1
-        free:
-            stream1
-            stream2
-        """
-
-
 def main():
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
@@ -30,7 +14,7 @@ def main():
     suite.addTests(loader.loadTestsFromModule(module))
     suite.addTests(loader.loadTestsFromModule(data))
     output = io.StringIO()
-    runner = unittest.TextTestRunner(stream=output, failfast=True)
+    runner = unittest.TextTestRunner(failfast=True, verbosity=2)
     result = runner.run(suite)
     if result.wasSuccessful():
         print("OK")
@@ -44,4 +28,5 @@ def main():
 
 if __name__ == '__main__':
     time.sleep(1)
+    print("...running tests")
     exit(main())

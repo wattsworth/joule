@@ -206,18 +206,15 @@ async def _run(config_node, start, end, new, destination_node, source, destinati
                 async def _data_sender():
 
                     last_ts = istart
-                    try:
-                        while True:
-                            data = await pipe.read()
-                            pipe.consume(len(data))
-                            if len(data) > 0:
-                                cur_ts = data[-1]['timestamp']
-                                yield data.tobytes()
-                                # total time extents of this chunk
-                                bar.update(cur_ts - last_ts)
-                                last_ts = cur_ts
-                    except pipes.EmptyPipe:
-                        pass
+                    while await pipe.not_empty():
+                        data = await pipe.read()
+                        pipe.consume(len(data))
+                        if len(data) > 0:
+                            cur_ts = data[-1]['timestamp']
+                            yield data.tobytes()
+                            # total time extents of this chunk
+                            bar.update(cur_ts - last_ts)
+                            last_ts = cur_ts
                     bar.update(iend - last_ts)
 
                 if nilmdb_dest:

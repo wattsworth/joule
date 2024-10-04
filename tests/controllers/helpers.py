@@ -19,7 +19,7 @@ from joule.models import (Base, DataStore, DataStream,
                           StreamInfo, DbInfo, pipes,
                           worker, EventStream)
 from joule.models.event_stream import from_json as event_stream_from_json
-from joule.errors import SubscriptionError
+from joule.errors import SubscriptionError, EmptyPipeError
 from joule.services import parse_pipe_config
 from tests import helpers
 
@@ -327,7 +327,7 @@ class MockSupervisor:
                 data = self.subscription_pipe.read_nowait()
                 self.subscription_pipe.consume(len(data))
                 pipe.write_nowait(data)
-            except pipes.EmptyPipe:
+            except EmptyPipeError:
                 if not self.hang_pipe:
                     pipe.close_nowait()
                 break

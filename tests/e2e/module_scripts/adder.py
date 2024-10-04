@@ -16,20 +16,15 @@ class Adder(joule.client.FilterModule):
     async def run(self, parsed_args, inputs, outputs):
         stream_in: joule = inputs["input"]
         stream_out = outputs["output"]
-        while not self.stop_requested:
-            try:
-                sarray = await stream_in.read()
-                sarray["data"] += parsed_args.offset
-                await asyncio.sleep(0.25)
-                await stream_out.write(sarray)
-                stream_in.consume(len(sarray))
-                if stream_in.end_of_interval:
-                    print("closing interval")
-                    await stream_out.close_interval()
-
-            except joule.errors.EmptyPipeError:
-                print("got an empty pipe, exiting")
-                exit(1)
+        while not self.stop_requested and await stream_in.not_empty():
+            sarray = await stream_in.read()
+            sarray["data"] += parsed_args.offset
+            await asyncio.sleep(0.25)
+            await stream_out.write(sarray)
+            stream_in.consume(len(sarray))
+            if stream_in.end_of_interval:
+                print("closing interval")
+                await stream_out.close_interval()
             
 
 if __name__ == "__main__":

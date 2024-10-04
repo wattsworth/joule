@@ -7,6 +7,7 @@ from typing import List, Callable, Optional
 import logging
 
 from joule.models import DataStream, pipes
+from joule.errors import PipeError
 from joule.models.data_store import errors
 from joule.models.data_store.nilmdb_helpers import compute_path, ERRORS, check_for_error
 
@@ -90,7 +91,7 @@ class Inserter:
             except aiohttp.ClientError as e:  
                 log.warning("NilmDB raw inserter error: %r, retrying request" % e)
                 await asyncio.sleep(self.retry_interval)  # retry the request
-            except (pipes.EmptyPipe, asyncio.CancelledError) as e:
+            except (PipeError, asyncio.CancelledError) as e:
                 break  # terminate the inserter
         if cleaner_task is not None:
             cleaner_task.cancel()

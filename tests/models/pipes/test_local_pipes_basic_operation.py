@@ -2,7 +2,7 @@ import unittest
 import asyncio
 import numpy as np
 
-from joule.models.pipes import LocalPipe, PipeError, OutputPipe
+from joule.models.pipes import LocalPipe
 from tests import helpers
 from joule.errors import EmptyPipeError
 

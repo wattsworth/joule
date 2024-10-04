@@ -3,9 +3,7 @@ import numpy as np
 import logging
 from datetime import datetime, timezone
 from unittest import mock
-from icecream import ic
-import unittest
-from joule.models.pipes import interval_token, EmptyPipe
+from joule.models.pipes import interval_token
 from joule.models.data_stream import StreamInfo, DataStream
 from joule.models.element import Element
 from joule import api
@@ -14,7 +12,7 @@ from joule.client.helpers import build_network_pipes
 from joule import errors
 from tests import helpers
 from tests.cli.fake_joule import FakeJoule, FakeJouleTestCase, MockDbEntry
-
+from joule.errors import EmptyPipeError
 log = logging.getLogger('aiohttp.access')
 log.setLevel(logging.WARNING)
 
@@ -45,7 +43,7 @@ class TestPipeHelpers(FakeJouleTestCase):
                                  interval_token(pipes_in['input'].layout),
                                  blk2))
             np.testing.assert_array_equal(rx_data, src_data)
-            with self.assertRaises(EmptyPipe):
+            with self.assertRaises(EmptyPipeError):
                 await pipes_in['input'].read()
             await my_node.close()
 
@@ -77,7 +75,7 @@ class TestPipeHelpers(FakeJouleTestCase):
                                  interval_token(pipes_in['input'].layout),
                                  blk2))
             np.testing.assert_array_equal(rx_data, src_data)
-            with self.assertRaises(EmptyPipe):
+            with self.assertRaises(EmptyPipeError):
                 await pipes_in['input'].read()
             await my_node.close()
 

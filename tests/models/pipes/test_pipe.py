@@ -1,8 +1,9 @@
 import asyncio
 import numpy as np
 
-from joule.models.pipes import Pipe, PipeError, LocalPipe
+from joule.models.pipes import Pipe, LocalPipe
 from tests import helpers
+from joule.errors import PipeError
 
 
 class TestPipe(helpers.AsyncTestCase):

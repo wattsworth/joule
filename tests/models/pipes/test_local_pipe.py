@@ -3,8 +3,8 @@ from unittest import mock
 import numpy as np
 import asyncio
 from icecream import ic
-from joule.models.pipes import LocalPipe, PipeError, OutputPipe
-from joule.errors import EmptyPipeError
+from joule.models.pipes import LocalPipe, OutputPipe
+from joule.errors import EmptyPipeError, PipeError
 
 
 class TestLocalPipe(helpers.AsyncTestCase):
@@ -39,7 +39,7 @@ class TestLocalPipe(helpers.AsyncTestCase):
             # the data if the last read ignores data past blk_size
             blk_size = 600
             rx_idx = 0
-            while not my_pipe.is_empty():
+            while await my_pipe.not_empty():
                 # consume data in pipe
                 data_chunk = await my_pipe.read()
                 rows_used = min(len(data_chunk), blk_size)
@@ -49,22 +49,14 @@ class TestLocalPipe(helpers.AsyncTestCase):
 
         async def subscriber():
             rx_idx = 0
-            while not subscriber_pipe.is_empty():
+            while await subscriber_pipe.not_empty():
                 # consume data in pipe
-                try:
-                    data_chunk = await subscriber_pipe.read()
-                except EmptyPipeError:
-                    # can happen if the writer is finished but hasn't
-                    # closed the pipe before the subscriber calls read()
-                    break
+                data_chunk = await subscriber_pipe.read()
                 subscriber_rx_data[rx_idx:rx_idx + len(data_chunk)] = data_chunk
                 rx_idx += len(data_chunk)
                 subscriber_pipe.consume(len(data_chunk))
 
         async def runner():
-            #await writer()
-            #await reader()
-            #await subscriber()
             await asyncio.gather(writer(),
                                  reader(),
                                  subscriber())
@@ -118,7 +110,7 @@ class TestLocalPipe(helpers.AsyncTestCase):
             with self.assertRaises(EmptyPipeError):
                 await my_pipe.read()
             # the pipe should be empty
-            self.assertTrue(my_pipe.is_empty())
+            self.assertTrue(await my_pipe.is_empty())
 
         asyncio.run(reader())
 
@@ -136,7 +128,7 @@ class TestLocalPipe(helpers.AsyncTestCase):
             data = await my_pipe.read()
             assert len(data) == LENGTH - 100
             my_pipe.consume_all()
-            assert my_pipe.is_empty()
+            assert await my_pipe.is_empty()
 
         asyncio.run(reader())
 
