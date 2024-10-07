@@ -28,6 +28,24 @@ class TestDelete(FakeJouleTestCase):
         self.assertLess(int(end), int(dateparser.parse(end_str).timestamp() * 1e6))
         self.stop_server()
 
+    def test_invalid_parameters(self):
+        server = FakeJoule()
+        self.start_server(server)
+        runner = CliRunner()
+        # test invalid start and end times
+        result = runner.invoke(main, ['data', 'delete', '/folder/src', '--start', 'bad_time'])
+        self.assertIn("Error", result.output)
+        result = runner.invoke(main, ['data', 'delete', '/folder/src', '--end', 'bad_time'])
+        self.assertIn("Error", result.output)
+        # must specify time range or all
+        result = runner.invoke(main, ['data', 'delete', '/folder/src'])
+        self.assertIn("Error", result.output)
+        # cannot specify both time range and all
+        result = runner.invoke(main, ['data', 'delete', '/folder/src',
+                                       '--start', 'now', '--all'])
+        self.assertIn("Error", result.output)
+        self.stop_server()
+
     def test_when_stream_does_not_exist(self):
         server = FakeJoule()
         server.response = "stream does not exist"
@@ -46,7 +64,7 @@ class TestDelete(FakeJouleTestCase):
         server.stub_data_delete = True
         self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['data', 'delete', '/folder/src'])
+        result = runner.invoke(main, ['data', 'delete', '/folder/src', '--all'])
         self.assertIn('500', result.output)
         self.assertIn("test error", result.output)
         self.assertEqual(result.exit_code, 1)

@@ -38,8 +38,5 @@ def consolidate(config: Config, start, end, max_gap, redecimate, stream: str):
             print("OK")
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
     finally:
         asyncio.run(config.close_node())

@@ -25,7 +25,8 @@ def cli_add(config, type, identifier, key, remote_access_url):
             coro = _add_node(config.node, identifier)
         elif type == 'lumen':
             coro = _add_lumen(config.node, identifier, remote_access_url)
-        else:
+        else: # pragma: no cover
+            # this cannot be hit because of check in Click parameters above
             raise click.ClickException("invalid type [%s]" % type)
         asyncio.run(coro)
     except errors.ApiError as e:

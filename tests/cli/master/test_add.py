@@ -5,7 +5,6 @@ import warnings
 from tests.cli.fake_joule import FakeJoule, FakeJouleTestCase
 from joule.cli import main
 
-warnings.simplefilter('always')
 
 
 class TestMasterAdd(FakeJouleTestCase):
@@ -74,28 +73,33 @@ class TestMasterAdd(FakeJouleTestCase):
         self.assertEqual(result.exit_code, 0)
         self.stop_server()
 
-    @unittest.skip("temp")
+    def test_bad_arguments(self):
+        runner = CliRunner()
+        result = runner.invoke(main, ['master', 'add','invalid','node2'])
+        self.assertIn('Error', result.output)
+        self.assertEqual(result.exit_code, 2)
+
     def test_when_server_returns_invalid_data(self):
         server = FakeJoule()
         server.response = "notjson"
+        server.stub_master = True
         self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['module', 'list'])
+        result = runner.invoke(main, "master add user node2".split(" "))
         self.assertIn('Error', result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()
 
-    @unittest.skip("temp")
     def test_when_server_returns_error_code(self):
         server = FakeJoule()
         error_msg = "test error"
         error_code = 500
         server.response = error_msg
         server.http_code = error_code
+        server.stub_master = True
         self.start_server(server)
         runner = CliRunner()
-        result = runner.invoke(main, ['module', 'list'])
-        self.assertIn('%d' % error_code, result.output)
+        result = runner.invoke(main, "master add user node2".split(" "))
         self.assertIn(error_msg, result.output)
         self.assertEqual(result.exit_code, 1)
         self.stop_server()

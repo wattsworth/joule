@@ -32,7 +32,6 @@ routes = [
     web.post(EndPoints.event_data, event_controller.write_events),
     web.delete(EndPoints.event_data, event_controller.remove_events),
     # --- stream routes ---
-    #web.get('/streams.json', folder_controller.index),  # legacy support for Rails API
     web.get(EndPoints.stream, stream_controller.info),
     web.put(EndPoints.stream_move, stream_controller.move),
     web.put(EndPoints.stream, stream_controller.update),

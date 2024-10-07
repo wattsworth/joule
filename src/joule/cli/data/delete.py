@@ -16,7 +16,7 @@ def data_delete(config, start, end, all, stream):
     """Remove data from a stream."""
     if all and( start is not None or end is not None):
         raise click.ClickException("specify either --all or --start/--end")
-    if all is None and start is None and end is None:
+    if all==False and start is None and end is None:
         raise click.ClickException("specify either --all or --start/--end")
     if start is not None:
         try:
@@ -28,7 +28,7 @@ def data_delete(config, start, end, all, stream):
             end = human_to_timestamp(end)
         except ValueError:
             raise click.ClickException("invalid end time: [%s]" % end)
-
+    print(f"start: {start}, end: {end}, all: {all}")
     try:
         asyncio.run(config.node.data_delete(
             stream, start, end))

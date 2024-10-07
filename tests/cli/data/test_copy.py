@@ -239,7 +239,7 @@ class TestDataCopy(FakeJouleTestCase):
         server = FakeJoule()
         server.stub_data_read = True
         server.http_code = 400
-        server.response = 'nilmdb error'
+        server.response = 'joule error'
         create_source_data(server)
         self.start_server(server)
         runner = CliRunner()
@@ -253,7 +253,7 @@ class TestDataCopy(FakeJouleTestCase):
         server = FakeJoule()
         server.stub_data_write = True
         server.http_code = 400
-        server.response = 'nilmdb error'
+        server.response = 'joule error'
         create_source_data(server)
         self.start_server(server)
         runner = CliRunner()

@@ -7,14 +7,7 @@ from joule.constants import ApiErrorMessages
 async def index(request):
     supervisor: Supervisor = request.app[app_keys.supervisor]
     resp = []
-
-    for proxy in supervisor.proxies:
-        proxy_info = {
-            "id": proxy.uuid,
-            "name": proxy.name,
-            "url": str(proxy.url)
-        }
-        resp.append(proxy_info)
+    resp = [p.to_json() for p in supervisor.proxies]
     return web.json_response(data=resp)
 
 
@@ -29,10 +22,4 @@ async def info(request):
     if len(proxy) == 0:
         raise web.HTTPNotFound(reason="proxy does not exist")
     proxy = proxy[0]
-
-    data = {
-        "id": proxy.uuid,
-        "name": proxy.name,
-        "url": str(proxy.url)
-    }
-    return web.json_response(data)
+    return web.json_response(proxy.to_json())

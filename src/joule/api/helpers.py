@@ -1,4 +1,5 @@
 import os
+from os import chown
 from typing import List, Union, Dict
 import json
 
@@ -55,10 +56,10 @@ def delete_node(node: str | BaseNode) -> None:
     del configs[name]
     _write_node_configs(configs)
     # if this is the default node, pick a new one
+    # calling get_default_node will do this automatically
+    # or raise an exception if nothing is available
     try:
-        default_config = _get_default_node(configs)
-        if default_config.name == name:
-            set_default_node("")
+        _get_default_node(configs)
     except ValueError:
         # this was the last node, no other nodes available
         pass
@@ -66,6 +67,8 @@ def delete_node(node: str | BaseNode) -> None:
 
 def set_default_node(node: str | BaseNode) -> None:
     if type(node) is str:
+        if len(node) == 0:
+            raise errors.ApiError("Specify a node name, may not be empty")
         name = node
     else:
         name = node.name
@@ -74,27 +77,15 @@ def set_default_node(node: str | BaseNode) -> None:
     default_node_path = os.path.join(config_dir, ConfigFiles.default_node)
 
     node_configs = _get_node_configs()
-    if len(name) > 0 and name not in node_configs.keys():
-        raise ValueError("Invalid node name, view nodes with [joule node list]")
-    if name == "":
-        if len(node_configs) == 0:
-            return  # nothing to do, no nodes available
-        # pick a new default node
-        with open(default_node_path, 'w') as f:
-            first_name = list(node_configs.keys())[0]
-            f.write(first_name + "\n")
-            return
-
+    if name not in node_configs.keys():
+        raise errors.ApiError("Invalid node name, view nodes with [joule node list]")
+    
     with open(default_node_path, 'w') as f:
         f.write(name + "\n")
 
 
 def create_tcp_node(url: str, key: str, name: str = "node") -> TcpNode:
     return TcpNode(name, url, key, _get_cafile())
-
-
-def create_unix_node(path: str, name: str = "node") -> BaseNode:
-    return UnixNode(name, path)
 
 
 def _get_cafile():
@@ -199,11 +190,11 @@ def _fix_config_ownership():
     gid = int(os.environ["SUDO_GID"])
 
     config_dir = _user_config_dir()
-    os.chown(config_dir, uid, gid)
+    chown(config_dir, uid, gid)
     nodes_path = os.path.join(config_dir, ConfigFiles.nodes)
-    os.chown(nodes_path, uid, gid)
+    chown(nodes_path, uid, gid)
     default_node_path = os.path.join(config_dir, ConfigFiles.default_node)
-    os.chown(default_node_path, uid, gid)
+    chown(default_node_path, uid, gid)
 
 
 def _user_config_dir() -> str:

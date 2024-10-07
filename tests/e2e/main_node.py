@@ -53,10 +53,6 @@ async def wait_for_follower():
     return 0 # success
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--nilmdb", help="use nilmdb backend", action="store_true")
-    args = parser.parse_args()
-
     prep_system()
     tests = []
     for entry in os.scandir(SCENARIO_DIR):
@@ -85,6 +81,7 @@ def main():
             pass
         os.symlink(SECURITY_DIR, "/etc/joule/security")
 
+        main_conf = "/etc/joule/main.conf"
 
         if first_test:
             # get API permissions
@@ -95,16 +92,7 @@ def main():
                                stdout=devnull)
             shutil.copy("/etc/joule/security/ca.joule.crt", "/tmp/joule_user/ca.crt")
 
-        main_conf = "/etc/joule/main.conf"
-        if args.nilmdb:
-            # parse the main.conf file and enable nilmdb
-            configs = configparser.ConfigParser()
-            configs.read("/etc/joule/main.conf")
-            configs["Main"]["NilmdbUrl"] = "http://nilmdb"
-            (f, path) = tempfile.mkstemp()
-            configs.write(os.fdopen(f, mode='w'))
-            main_conf = path
-        if first_test:
+        
             jouled = subprocess.Popen(JOULED_CMD+["--config", main_conf],
                                       stdout=subprocess.PIPE,
                                       stderr=subprocess.STDOUT,

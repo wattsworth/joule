@@ -48,45 +48,72 @@ class FakeJoule:
         self.app.router.add_routes(
             [
                 web.get(EndPoints.root, self.info),
-                web.get(EndPoints.version_json, self.stub_get),
+                # GET db_connection
                 web.get(EndPoints.db_info, self.dbinfo),
-                web.get(EndPoints.folders, self.stub_get),
+                # GET version
+                web.get(EndPoints.version_json, self.stub_get),
+                # --- event stream routes ---
+                web.get(EndPoints.event, self.stub_get),
+                web.put(EndPoints.event_move, self.move_stream),
+                web.put(EndPoints.event, self.update_stream),
+                #web.post(EndPoints.event, None),
+                web.delete(EndPoints.event, self.delete_stream),
+                # --- event stream data routes ---
+                #web.get(EndPoints.event_data, None),
+                #web.get(EndPoints.event_data_count, None),
+                #web.post(EndPoints.event_data, None),
+                #web.delete(EndPoints.event_data, None),
+                # --- stream routes ---
+
                 web.get(EndPoints.stream, self.stream_info),
-                web.post(EndPoints.stream, self.create_stream),
-                web.put(EndPoints.stream, self.update_stream),
                 web.put(EndPoints.stream_move, self.move_stream),
+                web.put(EndPoints.stream, self.update_stream),
+                web.post(EndPoints.stream, self.create_stream),
                 web.delete(EndPoints.stream, self.delete_stream),
-                web.post(EndPoints.data, self.data_write),
+                # --- folder routes ---
+                web.get(EndPoints.folders, self.stub_get),
+                web.get(EndPoints.folder, self.folder_info),
+                web.put(EndPoints.folder_move, self.move_folder),
+                web.put(EndPoints.folder, self.update_folder),
+                web.delete(EndPoints.folder, self.delete_folder),
+                # --- data routes ---
                 web.get(EndPoints.data, self.data_read),
+                # GET data.json
                 web.get(EndPoints.data_intervals, self.data_intervals),
+                web.post(EndPoints.data_decimate, self.data_decimate),
+                # DELETE data_decimate
+                web.post(EndPoints.data_consolidate, self.data_consolidate),
+                web.post(EndPoints.data, self.data_write),
                 web.delete(EndPoints.data, self.data_delete),
+                # --- module routes ---
                 web.get(EndPoints.modules, self.stub_get),
                 web.get(EndPoints.module, self.stub_get),
                 web.get(EndPoints.module_logs, self.stub_get),
-                web.put(EndPoints.folder_move, self.move_folder),
-                web.delete(EndPoints.folder, self.delete_folder),
-                web.get(EndPoints.folder, self.folder_info),
-                web.put(EndPoints.folder, self.update_folder),
+                # --- app routes ---
+                # GET app_auth
+                # GET app_json
+                # --- proxy routes ---
+                web.get(EndPoints.proxies, self.stub_get),
+                web.get(EndPoints.proxy, self.stub_get),
+                # -- master routes --
                 web.get(EndPoints.masters, self.stub_get),
                 web.post(EndPoints.master, self.create_master),
                 web.delete(EndPoints.master, self.delete_master),
+                # --- follower routes ---
+                web.get(EndPoints.followers, self.stub_get),
+                # POST follower
+                web.delete(EndPoints.follower, self.stub_get),
+                # -- annotation routes --
                 web.get(EndPoints.annotations_info, self.get_annotation_info),
                 web.get(EndPoints.annotations, self.get_annotations),
                 web.put(EndPoints.annotation, self.update_annotation),
                 web.post(EndPoints.annotation, self.create_annotation),
                 web.delete(EndPoints.annotation, self.delete_annotation),
                 web.delete(EndPoints.stream_annotations, self.delete_all_annotations),
-                # --- event stream routes ---
-                web.get(EndPoints.event, self.stub_get),
-                web.put(EndPoints.event_move, self.move_stream),
-                web.put(EndPoints.event, self.update_stream),
-                #web.post(EndPoints.event, None),
-                #web.delete(EndPoints.event, None),
+
+                
                 # --- event stream data routes ---
-                #web.get(EndPoints.event_data, None),
-                #web.get(EndPoints.event_data_count, None),
-                #web.post(EndPoints.event_data, None),
-                #web.delete(EndPoints.event_data, None),
+
             ])
         self.stub_stream_info = False
         self.stub_stream_move = False
@@ -100,6 +127,8 @@ class FakeJoule:
         self.stub_folder_info = False
         self.stub_folder_update = False
         self.stub_data_intervals = False
+        self.stub_data_consolidate = False
+        self.stub_data_decimate = False
         self.stub_master = False
         self.stub_stream_update = False
         self.stub_annotation = False
@@ -107,6 +136,7 @@ class FakeJoule:
         self.response = ""
         # need this because node info cmd makes two requests
         self.dbinfo_response = "--fill-in--"
+        self.num_consolidated = 5
         self.http_code = 200
         self.streams: Dict[str, MockDbEntry] = {}
         self.msgs = None
@@ -228,7 +258,13 @@ class FakeJoule:
             tag = request.query['path']
         elif 'id' in request.query:
             tag = request.query['id']
-        self.msgs.put((tag, request.query['start'], request.query['end']))
+        start = None
+        if 'start'in request.query:
+            start = int(request.query['start'])
+        end = None
+        if 'end' in request.query:
+            end = int(request.query['end'])
+        self.msgs.put((tag, start, end))
         return web.Response(text="ok")
 
     async def data_read(self, request: web.Request):
@@ -290,6 +326,27 @@ class FakeJoule:
 
         return web.json_response(data=intervals)
 
+    async def data_consolidate(self, request: web.Request):
+        if self.stub_data_consolidate:
+            return web.Response(text=self.response, status=self.http_code)
+        path = request.query['path']
+        start = None
+        if 'start'in request.query:
+            start = int(request.query['start'])
+        end = None
+        if 'end' in request.query:
+            end = int(request.query['end'])
+        max_gap = int(request.query['max_gap'])
+        self.msgs.put((path, start, end, max_gap))
+        return web.json_response(data={"num_consolidated": self.num_consolidated})
+    
+    async def data_decimate(self, request: web.Request):
+        if self.stub_data_decimate:
+            return web.Response(text=self.response, status=self.http_code)
+        path = request.query['path']
+        self.msgs.put(('decimate',path))
+        return web.Response(text="ok")
+    
     async def move_stream(self, request: web.Request):
         if self.stub_stream_move:
             return web.Response(text=self.response, status=self.http_code)
@@ -472,3 +529,9 @@ class FakeJouleTestCase(helpers.AsyncTestCase):
             print("#### Error CLI Output #####: ")
             print(cli_result.output)
         self.assertEqual(cli_result.exit_code, 0)
+
+### Helper functions
+def print_result_on_error(result):
+    if result.exit_code != 0:
+        print("output: ", result.output)
+        print("exception: ", result.exception)

@@ -183,26 +183,6 @@ async def data_read(session: BaseSession,
     pipe.close_cb = close
     return pipe
 
-
-async def data_read_array(session: BaseSession,
-                          stream: DataStream | str | int,
-                          start: Optional[int] = None,
-                          end: Optional[int] = None,
-                          max_rows: int = 10000,
-                          flatten: bool = False) -> 'np.ndarray':
-    """ Read the requested data into a numpy array, raises ValueError
-    if the stream has more data than max_rows"""
-    if type(stream) is not DataStream:
-        stream = await data_stream_get(session, stream)
-    # check if the data can be retrieved directly from NilmDB
-    if await session.is_nilmdb_available():
-        return await _read_nilmdb_data(session.nilmdb_url, stream, start, end, max_rows, flatten)
-    else:
-        pipe = await data_read(session, stream, start, end, max_rows)
-        return await pipe.read_all(flatten=flatten)
-
-
-
 async def data_subscribe(session: BaseSession,
                          stream: DataStream | str | int) -> Pipe:
     # make sure the input is compatible
@@ -349,26 +329,3 @@ async def _send_data(session: BaseSession,
     except Exception as e:
         pipe.fail()
         raise e
-
-async def _read_nilmdb_data(nilmdb_url, stream, start, end, max_rows, flatten) -> 'np.ndarray':
-    import numpy as np
-    url = f"{nilmdb_url}/stream/extract"
-    params = {"path": f"/joule/{stream.id}",
-              "binary": 1,
-              "start": start,
-              "end": end}
-    dtype = compute_dtype(stream.layout)
-    max_bytes = max_rows * dtype.itemsize
-
-    data = b''
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url, params=params) as resp:
-            while not resp.content.at_eof() and len(data)<=max_bytes:
-                data += await resp.content.read(max_bytes)
-            if not resp.content.at_eof():
-                print(f"WARNING: Requested time interval has more data than {max_rows} rows of data")
-    sdata = np.frombuffer(data[:max_bytes], dtype=dtype)
-    if flatten:
-        return np.c_[sdata['timestamp'][:, None], sdata['data']]
-    else:
-        return sdata
