@@ -1,7 +1,7 @@
 import click
 from tabulate import tabulate
 from joule.cli.config import pass_config
-from joule import api
+from joule.api import get_nodes, get_node
 from joule import errors
 
 
@@ -10,8 +10,8 @@ from joule import errors
 def node_list(config):
     """Display authorized nodes."""
     try:
-        nodes = api.get_nodes()
-        default_node = api.get_node()
+        nodes = get_nodes()
+        default_node = get_node()
     except errors.ApiError as e:
         raise click.ClickException(str(e))
 

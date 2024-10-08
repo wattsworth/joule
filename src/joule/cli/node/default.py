@@ -1,6 +1,6 @@
 import click
 from joule.cli.config import pass_config
-from joule import api
+from joule.api import set_default_node
 from joule.errors import ApiError
 
 @click.command(name="default")
@@ -9,7 +9,7 @@ from joule.errors import ApiError
 def node_default(config, name):
     """Change the default node."""
     try:
-        api.set_default_node(name)
+        set_default_node(name)
         click.echo("Set [%s] as the default node" % name)
     except ApiError as e:
         raise click.ClickException(str(e))

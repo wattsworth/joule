@@ -1,8 +1,8 @@
 import click
 import asyncio
 from joule.cli.config import pass_config
-from joule import errors, api, utilities
-
+from joule import errors, utilities
+from joule.api import TcpNode, save_node
 
 @click.command(name="add")
 @click.argument("name")
@@ -16,13 +16,14 @@ def node_add(config, name: str, url: str, key: str):
     my_node = None
     try:
         if not url.startswith("http"):
+            orig_url = url
             url = asyncio.run(
                 utilities.misc.detect_url(url, 8088))
             if url is None:
                 raise click.ClickException(
-                    "unable to contact [%s], node not added" % url)
-        my_node = api.TcpNode(name, url, key)
-        api.save_node(my_node)
+                    f"unable to contact [{orig_url}], node not added")
+        my_node = TcpNode(name, url, key)
+        save_node(my_node)
         click.echo("Added [%s] to authorized nodes" % name)
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
