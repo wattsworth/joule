@@ -21,7 +21,7 @@ from joule.models import (Base, Worker, config, EventStore,
                           DataStore, DataStream, pipes)
 from joule.models.supervisor import Supervisor
 from joule.errors import ConfigurationError, SubscriptionError
-from joule.models import NilmdbStore, TimescaleStore, Follower
+from joule.models import TimescaleStore, Follower
 from joule.models.data_store.errors import DataError
 from joule.api import TcpNode
 from joule.services import (load_modules, load_streams, load_config)
@@ -72,15 +72,9 @@ class Daemon(object):
             f.write('%d\n' % os.getpid())
         os.chmod(pid_file, 0o640)
 
-        if self.config.nilmdb_url is not None:
-            self.data_store: DataStore = \
-                NilmdbStore(self.config.nilmdb_url,
-                            self.config.insert_period,
-                            self.config.cleanup_period)
-        else:
-            self.data_store: DataStore = \
-                TimescaleStore(self.config.database, self.config.insert_period,
-                               self.config.cleanup_period)
+        self.data_store: DataStore = \
+            TimescaleStore(self.config.database, self.config.insert_period,
+                           self.config.cleanup_period)
 
         self.event_store: EventStore = EventStore(self.config.database)
 
@@ -94,8 +88,7 @@ class Daemon(object):
                                                      password=password,
                                                      port=parsed_dsn.port,
                                                      host=parsed_dsn.host,
-                                                     database=parsed_dsn.database,
-                                                     nilmdb_url=self.config.nilmdb_url)
+                                                     database=parsed_dsn.database)
         # NOTE: joule user must be able to create a role and grant access to db
         # ALTER ROLE joule WITH CREATEROLE;
         # GRANT ALL PRIVILEGES ON DATABASE joule TO joule WITH GRANT OPTION;

@@ -44,7 +44,6 @@ class JouleConfig:
     insert_period: int
     cleanup_period: int
     max_log_lines: int
-    nilmdb_url: Optional[str]
     users_file: Optional[str]
     proxies: List['Proxy']
     security: Optional['SecurityConfig']

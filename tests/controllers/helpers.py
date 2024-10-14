@@ -174,7 +174,7 @@ class MockStore(DataStore):
         if self.no_data:
             return  # do not call the callback func
         if self.raise_data_error:
-            raise DataError("nilmdb error")
+            raise DataError("backend error")
         if self.raise_decimation_error:
             raise InsufficientDecimationError("insufficient decimation")
         if decimation_level is not None and decimation_level > 1:

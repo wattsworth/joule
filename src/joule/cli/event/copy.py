@@ -15,7 +15,7 @@ from joule.cli.config import Config, pass_config
 @click.option('-a', '--action', help="action to take if events already exist in the destination",
               type=click.Choice(['ignore', 'replace', 'prompt']), default='prompt')
 @click.option('-n', '--new', help="copy starts at the last timestamp of the destination", is_flag=True)
-@click.option('-d', '--destination-node', help="node name or Nilmdb URL")
+@click.option('-d', '--destination-node', help="node name")
 @click.argument("source")
 @click.argument("destination")
 @pass_config

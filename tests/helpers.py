@@ -21,7 +21,7 @@ def create_data(layout: str,
                 length=100,
                 step=1000,  # in us
                 start=1476152086000000):  # 10 Oct 2016 10:15PM
-    """Create a random block of NilmDB data with [layout] structure"""
+    """Create a random block of data with [layout] structure"""
     ts = np.arange(start, start + step * length, step, dtype=np.uint64)
 
     # Convert to structured array

@@ -95,18 +95,4 @@ class TestLoadConfigErrors(unittest.TestCase):
             with self.assertRaisesRegex(ConfigurationError, "MaxLogLines"):
                 load_config.run(custom_values=parser, verify=False)
 
-    def test_errors_if_nilmdb_not_available(self):
-        with tempfile.TemporaryDirectory() as module_dir:
-            with tempfile.TemporaryDirectory() as stream_dir:
-                with tempfile.TemporaryDirectory() as sock_dir:
-                    parser = configparser.ConfigParser()
-                    parser.read_string("""
-                                       [Main]
-                                       ModuleDirectory=%s
-                                       StreamDirectory=%s
-                                       SocketDirectory=%s
-                                       NilmdbUrl=http://127.0.0.1:234/bad_nilmdb
-                                   """ % (module_dir, stream_dir, sock_dir))
-                    with self.assertRaisesRegex(ConfigurationError, "NilmDB"):
-                        load_config.run(custom_values=parser)
-                        
+

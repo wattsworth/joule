@@ -13,8 +13,7 @@ import secrets
 @click.option("--dsn", help="PostgreSQL DSN", required=True)
 @click.option("--bind", help="IP address (0.0.0.0 for all)")
 @click.option("--port", help="TCP port (default is 8080)")
-@click.option("--nilmdb", help="NilmDB URL")
-def admin_initialize(dsn, bind, port, nilmdb):
+def admin_initialize(dsn, bind, port):
     """Run initial system configuration."""
     import pkg_resources
 
@@ -63,7 +62,6 @@ def admin_initialize(dsn, bind, port, nilmdb):
         file_contents = template.render(name='node_%s' % secrets.token_hex(2),
                                         bind=bind,
                                         port=port,
-                                        nilmdb=nilmdb,
                                         dsn=dsn)
         with open("/etc/joule/main.conf", 'w') as conf:
             conf.write(file_contents)

@@ -248,7 +248,6 @@ async def drop_decimations(request):
 
 
 def _validate_support(data_store: DataStore):
-    # TimeScale supports decimation management
-    # while NilmDB does not
+    # TimeScale supports decimation management (others may not)
     if not data_store.supports_decimation_management:
         raise web.HTTPBadRequest(reason="data store does not support decimation")

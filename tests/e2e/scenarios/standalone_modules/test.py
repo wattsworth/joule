@@ -8,9 +8,6 @@ import asyncio
 from joule import api
 from joule.api.data_stream import DataStream, Element
 
-NILMDB_URL = "http://nilmdb"
-
-
 def main():
     time.sleep(1)  # wait for jouled to boot
     asyncio.run(_run())
@@ -129,7 +126,7 @@ async def check_streams(node: api.BaseNode):
 
 async def check_data(node: api.BaseNode):
     """
-    Test: check data inserted into nilmdb
+    Test: check data inserted into correctly
     Goal:
       /counting/base is int32_1, 1 interval with >300 samples
       /counting/plus1 is int32_1, data is base+1

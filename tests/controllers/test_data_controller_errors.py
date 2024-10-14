@@ -68,7 +68,7 @@ class TestDataController(AioHTTPTestCase):
         self.assertTrue('decimated' in await resp.text())
 
 
-    async def test_read_errors_on_nilmdb_error(self):
+    async def test_read_errors_on_datastore_error(self):
         store: MockStore = self.app[app_keys.data_store]
         store.configure_extract(10, data_error=True)
         params = {'path': '/folder1/stream1', 'decimation-level': 64}
@@ -254,7 +254,7 @@ class TestDataController(AioHTTPTestCase):
         self.assertEqual(resp.status, 400)
         self.assertIn('test error', await resp.text())
 
-    async def test_cannot_use_decimation_tools_with_nilmdb(self):
+    async def test_cannot_use_decimation_tools_without_backend_support(self):
         store: MockStore = self.app[app_keys.data_store]
         store.supports_decimation_management = False
         resp: aiohttp.ClientResponse = await \

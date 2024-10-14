@@ -22,7 +22,6 @@ from joule.errors import ConfigurationError
   InsertPeriod = 5
   CleanupPeriod = 60
   MaxLogLines = 100
-  NilmdbUrl = http://localhost/nilmdb
 [Security]
    Certificate =  /etc/joule/security/server.crt
    Key = /etc/joule/security/server.key
@@ -90,16 +89,6 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
     if not os.access(socket_directory, os.W_OK) and verify:
         raise ConfigurationError(
             "SocketDirectory [%s] is not writable" % socket_directory)
-
-    # Nilmdb URL
-    if 'NilmdbUrl' in main_config and main_config['NilmdbUrl'] != '':
-        nilmdb_url = main_config['NilmdbUrl']
-        if verify:
-
-            asyncio.run(verify_nilmdb_url(nilmdb_url))
-
-    else:
-        nilmdb_url = None
 
     # Database
     if 'Database' in main_config:
@@ -181,23 +170,7 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
         insert_period=insert_period,
         cleanup_period=cleanup_period,
         max_log_lines=max_log_lines,
-        nilmdb_url=nilmdb_url,
         proxies=proxies,
         security=security,
         users_file=users_file
     )
-
-
-async def verify_nilmdb_url(url):
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as resp:
-                text = await resp.text()
-                if 'NilmDB' not in text:
-                    raise ConfigurationError(
-                        "Host at [%s] is not a NilmDB server" % url
-                    )
-    except aiohttp.ClientError:
-        raise ConfigurationError(
-            "Cannot contact NilmDB at [%s]" % url
-        )

@@ -80,10 +80,6 @@ async def run(config, delete_links):
             db.query(Follower).delete()
         db.commit()
 
-    if config.nilmdb_url is not None:
-        click.echo("Not erasing NilmDB data")
-        return
-
     # erase data
     data_store = TimescaleStore(config.database,
                                 config.insert_period,

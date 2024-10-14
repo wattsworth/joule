@@ -209,9 +209,6 @@ class BaseNode:
         from joule.api.data import data_read_array
         return await data_read_array(self.session, stream, start, end, max_rows, flatten)
 
-    def set_nilmdb_url(self, nilmdb_url):
-        self.session.set_nilmdb_url(nilmdb_url)
-
     async def data_subscribe(self,
                              stream: 'DataStream | str | int') -> 'Pipe':
         from joule.api.data import data_subscribe

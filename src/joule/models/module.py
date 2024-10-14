@@ -19,16 +19,16 @@ key = value
 [Inputs]
 #name = full_path:<stream config>
 labjack = /labjack/device3/data:float32[e0,e1,e2]
-path2 = /nilmdb/input/stream2
+path2 = /folder/input/stream2
   ....
-pathN = /nilmdb/input/streamN
+pathN = /folder/input/streamN
 
 [Outputs]
 #name = full_path:<stream config>
-path1 = /nilmdb/output/stream1:float32[x,y,z]
-path2 = /nilmdb/output/stream2
+path1 = /folder/output/stream1:float32[x,y,z]
+path2 = /folder/output/stream2
   ....
-pathN = /nilmdb/output/streamN
+pathN = /folder/output/streamN
 """
 
 

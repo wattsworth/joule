@@ -19,7 +19,7 @@ class TestRootController(AioHTTPTestCase):
                                             password="test", 
                                             port=5432, 
                                             database="test", 
-                                            host="test", nilmdb_url="")
+                                            host="test")
         app[app_keys.module_connection_info] = self.connection_info
         return app
 

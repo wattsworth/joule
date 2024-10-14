@@ -10,7 +10,6 @@ from joule.models.master import Master
 from joule.models.follower import Follower
 from joule.models.data_store.data_store import DataStore, StreamInfo, DbInfo
 from joule.models.data_store.errors import InsufficientDecimationError, DataError
-from joule.models.data_store.nilmdb import NilmdbStore
 from joule.models.data_store.event_store import EventStore
 from joule.models.data_store.timescale import TimescaleStore
 from joule.models.pipes.pipe import Pipe

@@ -48,7 +48,7 @@ async def check_modules(node: api.BaseNode):
 
 async def check_data(node: api.BaseNode):
     """
-    Test: check data inserted into nilmdb
+    Test: check data inserted correctly
     Goal:
       /bc/normal1/data is int32_1, has 1 interval with >500 samples
       /bc/normal2/subpath/data  is int32_1, >1 intervals each with 100 samples
