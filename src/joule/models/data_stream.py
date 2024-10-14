@@ -85,10 +85,19 @@ class DataStream(Base):
             raise ConfigurationError("incorrect number of elements")
         my_elements = sorted(self.elements, key=attrgetter('index'))
         other_elements = sorted(other.elements, key=attrgetter('index'))
-        updated_element = False
+        updated_config = False
         for i in range(len(my_elements)):
-            updated_element |= my_elements[i].merge_configs(other_elements[i])
+            updated_config |= my_elements[i].merge_configs(other_elements[i])
 
+        if (
+                self.keep_us != other.keep_us or
+                self.decimate != other.decimate or
+                self.description != other.description or
+                self.is_configured != other.is_configured or
+                self.is_destination != other.is_destination or
+                self.is_source != other.is_source
+        ):
+            updated_config = True
         # replace configurable attributes with other's values
         self.keep_us = other.keep_us
         self.decimate = other.decimate
@@ -97,19 +106,11 @@ class DataStream(Base):
         self.is_destination = other.is_destination
         self.is_source = other.is_source
 
-        if (
-                self.keep_us != other.keep_us or
-                self.decimate != other.decimate or
-                self.description != other.description or
-                self.is_configured != other.is_configured or
-                self.is_destination != other.is_destination or
-                self.is_source != other.is_source or
-                self.elements != other.elements or
-                updated_element
-        ):
+        if updated_config:
             self.updated_at = datetime.now(timezone.utc)
             return True
-        return False
+        else:
+            return False
 
     def update_attributes(self, attrs: Dict) -> None:
         updated = False
@@ -336,29 +337,6 @@ def from_config(config: configparser.ConfigParser) -> DataStream:
     if len(stream.elements) == 0:
         raise ConfigurationError(
             "missing element configurations, must have at least one")
-    return stream
-
-
-def from_nilmdb_metadata(config_data: Dict, layout: str) -> DataStream:
-    datatype = validate_datatype(layout.split('_')[0])
-    nelem = int(layout.split('_')[1])
-    if 'streams' in config_data:
-        elements = config_data['streams']
-    else:
-        elements = [{'column': i, 'name': "Element%d" % (i + 1), 'units': None,
-                     'scale_factor': 1.0, 'offset': 0.0, 'plottable': True,
-                     'discrete': False, 'default_min': None, 'default_max': None} for
-                    i in range(nelem)]
-    # make sure the name is valid
-    name = config_data["name"].replace("/", "_")
-    stream = DataStream(name=name, description='', datatype=datatype,
-                        keep_us=DataStream.KEEP_ALL, decimate=True,
-                        updated_at=datetime.now(timezone.utc))
-    idx = 0
-    for metadata in elements:
-        elem = element.from_nilmdb_metadata(metadata, idx)
-        idx += 1
-        stream.elements.append(elem)
     return stream
 
 

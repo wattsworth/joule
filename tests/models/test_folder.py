@@ -1,7 +1,8 @@
 
 from tests import helpers
+from datetime import datetime, timezone
 from joule.services import parse_pipe_config
-from joule.models import DataStream, folder, Folder
+from joule.models import DataStream, folder, Folder, EventStream
 from joule.errors import ConfigurationError
 
 
@@ -17,8 +18,14 @@ class TestFolder(helpers.DbTestCase):
         stream = DataStream(name="all alone")
         self.assertIsNone(folder.get_stream_path(stream))
 
+        # remote streams are [node] /path/to/stream
+        stream = DataStream(name="remote_stream")
+        stream.set_remote("remote_node", "/path/to/stream")
+        path = folder.get_stream_path(stream)
+        self.assertEqual("[remote_node] /path/to/stream", path)
+
     def test_find_or_create(self):
-        my_folder = folder.find("/new/folder/path", self.db, create=True)
+        folder.find("/new/folder/path", self.db, create=True)
         self.assertEqual(self.db.query(Folder).count(), 4)
         # trailing slash raises an error
         with self.assertRaisesRegex(ConfigurationError, 'invalid path'):
@@ -27,6 +34,9 @@ class TestFolder(helpers.DbTestCase):
         result = folder.find("/new/different/path", self.db)
         self.assertIsNone(result)
         self.assertEqual(self.db.query(Folder).count(), 4)
+        # raises error if the requested stream_type is not valid
+        with self.assertRaisesRegex(ValueError, 'type'):
+            folder.find_stream_by_path("/new/folder/path", self.db, stream_type="invalid")
 
     def test_updates_attributes(self):
         my_folder = folder.find("/new/folder/path", self.db, create=True)
@@ -45,6 +55,14 @@ class TestFolder(helpers.DbTestCase):
         self.db.add(my_folder)
         self.db.commit()
         f = folder.find("/new", self.db)
+        self.assertTrue(f.contains_streams())
+        self.assertTrue(my_folder.contains_streams())
+
+        my_folder = folder.find("/events/new/folder/path", self.db, create=True)
+        my_folder.event_streams = [EventStream(name="event_stream1", updated_at=datetime.now(timezone.utc))]
+        self.db.add(my_folder)
+        self.db.commit()
+        f = folder.find("/events", self.db)
         self.assertTrue(f.contains_streams())
         self.assertTrue(my_folder.contains_streams())
 

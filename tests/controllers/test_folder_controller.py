@@ -135,6 +135,7 @@ class TestFolderController(AioHTTPTestCase):
         # deletes the streams
         self.assertIsNone(folder.find_stream_by_path("/top/leaf/stream1", db))
         # deletes the event streams
+        self.assertIsNone(folder.find_stream_by_path("/top/leaf/test", db))
         self.assertEqual(0, db.query(EventStream).count())
         # keeps the parent folders
         self.assertIsNotNone(folder.find("/top", db))

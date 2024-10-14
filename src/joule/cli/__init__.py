@@ -26,5 +26,3 @@ def main(config, node):
     # if node_name is given use it, otherwise go with the default
     config.set_node_name(node)
 
-if __name__ == '__main__':
-    main()

@@ -1,7 +1,7 @@
 from click.testing import CliRunner
 import warnings
 import os
-import datetime
+from datetime import datetime, timezone
 
 from joule.models import DataStream, Element, StreamInfo
 from ..fake_joule import FakeJoule, FakeJouleTestCase
@@ -45,7 +45,7 @@ class TestStreamDelete(FakeJouleTestCase):
         server.http_code = error_code
         # actually create a stream so the stubbed API call is the delete one
         src = DataStream(id=0, name="source", keep_us=100,
-                         datatype=DataStream.DATATYPE.FLOAT32, updated_at=datetime.datetime.utcnow())
+                         datatype=DataStream.DATATYPE.FLOAT32, updated_at=datetime.now(timezone.utc))
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         src_info = StreamInfo(0, 0, 0)
         server.add_stream('/folder/stream', src, src_info, None, [])

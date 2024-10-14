@@ -44,7 +44,7 @@ def run(pipe_config: str, db: Session) -> DataStream:
         if local:
             msg = "add inline config or *.conf file for stream [%s]" % pipe_config
         else:
-            msg = "remote streams must have inline config"
+            msg = "invalid remote stream, must have inline config"
         raise ConfigurationError(msg)
 
     # build the stream from inline config
@@ -87,7 +87,7 @@ def parse_pipe_config(pipe_config: str) -> Tuple[str, str, str]:
         inline_config = ""
     if '/' not in full_path:  
         # this is a double check, missing / will be caught earlier
-        raise ConfigurationError("invalid path [%s]" % pipe_config)
+        raise ConfigurationError("invalid path [%s]" % pipe_config) #pragma: no cover
     path_chunks = full_path.split('/')
     name = path_chunks.pop()
     if name == "":

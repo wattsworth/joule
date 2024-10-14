@@ -43,13 +43,11 @@ class Folder(Base):
             for stream in self.event_streams:
                 if stream.name == segments[0]:
                     return stream
-            else:
-                return None
+            return None
         for child in self.children:
             if child.name == segments[0]:
                 return child.find_stream_by_segments(segments[1:])
-        else:
-            return None
+        return None
 
     def update_attributes(self, attrs: Dict) -> None:
         if 'name' in attrs:

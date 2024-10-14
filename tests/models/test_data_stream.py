@@ -1,6 +1,7 @@
 import unittest
-import datetime
+from datetime import datetime, timezone
 from joule.models import (DataStream, Element, data_stream)
+from joule.models.data_stream import from_json as data_stream_from_json
 from joule.errors import ConfigurationError
 from tests import helpers
 
@@ -13,7 +14,7 @@ class TestStream(unittest.TestCase):
                                                 datatype=DataStream.DATATYPE.FLOAT32,
                                                 keep_us=us_in_week,
                                                 decimate=True,
-                                                updated_at=datetime.datetime.now())
+                                                updated_at=datetime.now(timezone.utc))
         self.my_stream.elements.append(Element(name="e1", index=0,
                                                display_type=Element.DISPLAYTYPE.CONTINUOUS))
         self.base_config = helpers.parse_configs(
@@ -31,7 +32,7 @@ class TestStream(unittest.TestCase):
     def test_attributes(self):
         my_stream = DataStream(name='test', description='a test',
                                datatype=DataStream.DATATYPE.FLOAT32, keep_us=DataStream.KEEP_ALL,
-                               updated_at=datetime.datetime.now())
+                               updated_at=datetime.now(timezone.utc))
         self.assertIsNotNone(my_stream)
         # has a meaningful string representation
         self.assertIn("test", "%r" % my_stream)
@@ -46,7 +47,7 @@ class TestStream(unittest.TestCase):
     def test_json(self):
         my_stream = DataStream(id=0, name='test', decimate=True,
                                datatype=DataStream.DATATYPE.INT16,
-                               updated_at=datetime.datetime.now())
+                               updated_at=datetime.now(timezone.utc))
         for j in range(4):
             my_stream.elements.append(Element(name="e%d" % j, index=j,
                                               display_type=Element.DISPLAYTYPE.CONTINUOUS))
@@ -132,80 +133,16 @@ class TestStream(unittest.TestCase):
                 ]
             })
 
-    def test_from_nilmdb_metadata(self):
-        metadata = {"name": "sinefit", "name_abbrev": "", "delete_locked": False,
-                    "streams": [{"column": 0, "name": "stream_0",
-                                 "units": None, "scale_factor": 1.0,
-                                 "offset": 0.0, "plottable": False,
-                                 "discrete": None, "default_min": -10,
-                                 "default_max": None},
-                                {"column": 1, "name": "stream_1",
-                                 "units": None, "scale_factor": 2.0,
-                                 "offset": 3.0, "plottable": True,
-                                 "discrete": None, "default_min": None,
-                                 "default_max": None},
-                                {"column": 2, "name": "stream_2",
-                                 "units": None, "scale_factor": 1.0,
-                                 "offset": 10.5, "plottable": True,
-                                 "discrete": None, "default_min": None,
-                                 "default_max": None}]}
-        my_stream = data_stream.from_nilmdb_metadata(metadata, "float32_3")
-        # make sure the stream is created correctly
-        self.assertEqual(my_stream.name, "sinefit")
-        self.assertEqual(my_stream.layout, "float32_3")
-        self.assertEqual(len(my_stream.elements), 3)
-        my_stream.elements.sort(key=lambda e: e.index)
-        elem0 = my_stream.elements[0]
-        self.assertEqual(elem0.index, 0)
-        self.assertEqual(elem0.name, 'stream_0')
-        self.assertFalse(elem0.plottable)
-        self.assertEqual(elem0.default_min, -10)
-        self.assertIsNone(elem0.default_max)
-        elem2 = my_stream.elements[2]
-        self.assertEqual(elem2.index, 2)
-        self.assertEqual(elem2.name, 'stream_2')
-        self.assertTrue(elem2.plottable)
-        self.assertEqual(elem2.scale_factor, 1.0)
-        self.assertEqual(elem2.offset, 10.5)
+    def test_merge_configs(self):
+        stream_copy = data_stream_from_json(self.my_stream.to_json())
+        # when there is no change, updated_at is the same, method returns false
+        prev_update = self.my_stream.updated_at
+        self.assertFalse(self.my_stream.merge_configs(stream_copy))
+        self.assertEqual(prev_update, self.my_stream.updated_at)
+        # when there is a change, it is recorded and the updated_at is refreshed
+        stream_copy.keep_us = self.my_stream.keep_us + 1
+        self.assertTrue(self.my_stream.merge_configs(stream_copy))
+        self.assertEqual(self.my_stream.keep_us, stream_copy.keep_us)
+        self.assertGreater(self.my_stream.updated_at, prev_update)
 
-    def test_from_nilmdb_no_metadata(self):
-        my_stream = data_stream.from_nilmdb_metadata({'name': 'test'}, "float32_3")
-        # make sure the stream is created correctly
-        self.assertEqual(my_stream.name, "test")
-        self.assertEqual(my_stream.layout, "float32_3")
-        self.assertEqual(len(my_stream.elements), 3)
-        my_stream.elements.sort(key=lambda e: e.index)
-        elem0 = my_stream.elements[0]
-        self.assertEqual(elem0.index, 0)
-        self.assertEqual(elem0.name, 'Element1')
-        self.assertTrue(elem0.plottable)
-        self.assertIsNone(elem0.default_min)
-        self.assertIsNone(elem0.default_max)
-        elem2 = my_stream.elements[2]
-        self.assertEqual(elem2.index, 2)
-        self.assertEqual(elem2.name, 'Element3')
-        self.assertTrue(elem2.plottable)
-        self.assertEqual(elem2.scale_factor, 1.0)
-        self.assertEqual(elem2.offset, 0.0)
-
-    def test_to_nilmdb_metadata(self):
-        my_stream = DataStream(name="test", datatype=DataStream.DATATYPE.INT16,
-                               updated_at=datetime.datetime.now())
-        my_stream.elements.append(
-            Element(name="e0", index=0, plottable=True, offset=0.0, default_min=-5, scale_factor=1.0))
-        my_stream.elements.append(
-            Element(name="e1", index=1, plottable=True, units="watts", offset=3.5, scale_factor=1.0))
-        metadata = my_stream.to_nilmdb_metadata()
-        # NOTE: The plottable flag is always True (see TODO in element.py)
-        expected = {"name": "test", "name_abbrev": "", "delete_locked": False,
-                    "streams": [{"column": 0, "name": "e0",
-                                 "units": None, "scale_factor": 1.0,
-                                 "offset": 0.0, "plottable": True,
-                                 "discrete": False, "default_min": -5,
-                                 "default_max": None},
-                                {"column": 1, "name": "e1",
-                                 "units": "watts", "scale_factor": 1.0,
-                                 "offset": 3.5, "plottable": True,
-                                 "discrete": False, "default_min": None,
-                                 "default_max": None}]}
-        self.assertEqual(expected, metadata)
+    

@@ -74,6 +74,40 @@ class TestStreamInfo(FakeJouleTestCase):
                 self.fail("it looks like the elements are still included in the display")
         self.stop_server()
 
+    ## test alternate configurations by adjusting the JSON response
+
+    def test_shows_when_stream_is_active(self):
+        server = FakeJoule()
+        with open(STREAM_INFO, 'r') as f:
+            stream_data = json.loads(f.read())
+        stream_data['active'] = True
+        server.stub_stream_info = True  # use the response text
+        server.response = json.dumps(stream_data)
+        self.start_server(server)
+        runner = CliRunner()
+        result = runner.invoke(main, ['stream', 'info', '/folder_1/random'])
+        self.assertEqual(result.exit_code, 0)
+        # make sure the items are populated correctly
+        self.assertIn("active", result.output)
+        self.stop_server()
+
+    def test_shows_when_stream_is_idle(self):
+        server = FakeJoule()
+        with open(STREAM_INFO, 'r') as f:
+            stream_data = json.loads(f.read())
+        stream_data['active'] = False
+        stream_data['locked'] = False
+        server.stub_stream_info = True  # use the response text
+        server.response = json.dumps(stream_data)
+        self.start_server(server)
+        runner = CliRunner()
+        result = runner.invoke(main, ['stream', 'info', '/folder_1/random'])
+        self.assertEqual(result.exit_code, 0)
+        # make sure the items are populated correctly
+        self.assertIn("idle", result.output)
+        self.stop_server()
+
+
     def test_handles_different_stream_configurations(self):
         server = FakeJoule()
         with open(STREAM_INFO, 'r') as f:

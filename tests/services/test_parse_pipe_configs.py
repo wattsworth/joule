@@ -71,7 +71,7 @@ class TestParsePipeConfig(DbTestCase):
 
     def test_errors_on_invalid_configs(self):
         bad_configs = ["no/leading/slash", "/", "/invalid/datatype:uknown[x,y]",
-                       "/bad/syntax:int[", "/bad/syntax:missing"]
+                       "/bad/syntax:int[", "/bad/syntax:missing", "remote.node /missing/inline/config"]
         for config in bad_configs:
             with self.assertRaisesRegex(ConfigurationError, "invalid"):
                 parse_pipe_config.run(config, self.db)

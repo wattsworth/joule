@@ -3,6 +3,9 @@ from unittest import mock
 from joule.errors import ConfigurationError
 from joule.models import data_stream  # for helper functions
 from tests import helpers
+from datetime import datetime, timezone
+from joule.models import (DataStream, Element, data_stream)
+from joule.models.data_stream import from_json as data_stream_from_json
 
 
 class TestStreamErrors(unittest.TestCase):
@@ -48,6 +51,22 @@ class TestStreamErrors(unittest.TestCase):
         self.base_config.remove_section("Element1")
         with self.assertRaises(ConfigurationError):
             data_stream.from_config(self.base_config)
+
+    def test_errors_on_update_from_incompatible_stream(self):
+        """Streams must have the same number of elements"""
+        my_stream = data_stream.DataStream(name="test",
+                                           description="test_description",
+                                           datatype=DataStream.DATATYPE.FLOAT32,
+                                           keep_us=DataStream.KEEP_ALL,
+                                           decimate=True,
+                                           updated_at=datetime.now(timezone.utc))
+        my_stream.elements.append(Element(name="e1", index=0,
+                                          display_type=Element.DISPLAYTYPE.CONTINUOUS))
+        other_stream = data_stream_from_json(my_stream.to_json())
+        other_stream.elements.append(Element(name="e2", index=1,
+                                             display_type=Element.DISPLAYTYPE.CONTINUOUS))
+        with self.assertRaisesRegex(ConfigurationError, "elements"):
+            my_stream.merge_configs(other_stream)
 
     @mock.patch('joule.models.element.from_config')
     def test_errors_on_invalid_elements(self, from_config: mock.Mock):

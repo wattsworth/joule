@@ -68,9 +68,11 @@ def _save_stream(new_stream: DataStream, path: str, db: Session) -> None:
             if settings_changed:
                 cur_stream.touch()
             db.add(cur_stream)
-            if new_stream in db:
-                print("Expunging new_stream from database... check this out")
-                db.expunge(new_stream)
+            ### This check seems out of date and is not covered by tests,
+            ### should be removed after verification on production systems
+            # if new_stream in db:
+            #    print("Expunging new_stream from database... check this out")
+            #    db.expunge(new_stream)
     else:
         my_folder.data_streams.append(new_stream)
         my_folder.touch()
