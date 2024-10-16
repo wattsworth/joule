@@ -66,6 +66,8 @@ def main():
     # tests = [("standalone modules", "/joule/tests/e2e/scenarios/standalone_modules")]
     # tests = [("API", "/joule/tests/e2e/scenarios/api_tests")]
     # tests = [("Basic Operation", "/joule/tests/e2e/scenarios/basic_operation")]
+    # tests = [("Data Management", "/joule/tests/e2e/scenarios/data_management")]
+    # tests = [("System Initialization", "/joule/tests/e2e/scenarios/system_initialization")]
 
     first_test = True
     for (test_name, test_path) in tests:
@@ -88,8 +90,7 @@ def main():
             os.environ["LOGNAME"] = "e2e"
             os.environ["JOULE_USER_CONFIG_DIR"] = "/tmp/joule_user"
             with open(os.devnull, 'w') as devnull:
-                subprocess.run(JOULE_CMD+"admin authorize".split(" "),
-                               stdout=devnull)
+                subprocess.run(JOULE_CMD+"admin authorize".split(" "), stdout=devnull)
             shutil.copy("/etc/joule/security/ca.joule.crt", "/tmp/joule_user/ca.crt")
 
         
@@ -105,8 +106,9 @@ def main():
                 print(stdout)
                 return result
         # clear the existing database (keeping master/follower tables)
-        subprocess.run(JOULE_CMD+"admin erase --yes".split(" "))
-        subprocess.run(JOULE_CMD+"admin authorize".split(" "))
+        with open(os.devnull, 'w') as devnull:
+            subprocess.run(JOULE_CMD+"admin erase --yes".split(" "), stdout=devnull)
+            subprocess.run(JOULE_CMD+"admin authorize".split(" "), stdout=devnull)
 
         jouled = subprocess.Popen(JOULED_CMD+["--config", main_conf],
                                   stdout=subprocess.PIPE,

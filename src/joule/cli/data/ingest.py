@@ -17,7 +17,7 @@ BLOCK_SIZE = 10000  # insert blocks of datta
 
 
 @click.command(name="ingest")
-@click.option('-f', "--file", help="read data from hd5 file")
+@click.argument("file")
 @click.option("-s", "--stream", "stream_path", help="stream path")
 @pass_config
 def ingest(config, stream_path, file):

@@ -6,7 +6,7 @@ import logging
 import tempfile
 import h5py
 import json
-import datetime
+from datetime import datetime, timezone
 import unittest
 from icecream import ic
 from ..fake_joule import FakeJoule, FakeJouleTestCase
@@ -26,7 +26,7 @@ class TestDataIngest(FakeJouleTestCase):
         server = FakeJoule()
         # create the source stream
         src = DataStream(id=0, name="existing", keep_us=100,
-                         datatype=DataStream.DATATYPE.FLOAT32, updated_at=datetime.datetime.utcnow())
+                         datatype=DataStream.DATATYPE.FLOAT32, updated_at=datetime.now(timezone.utc))
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         src_data = helpers.create_data(src.layout, length=22000)
         src_info = StreamInfo(0, 0, 0, 0)
@@ -35,7 +35,7 @@ class TestDataIngest(FakeJouleTestCase):
         runner = CliRunner()
         with tempfile.NamedTemporaryFile() as data_file:
             write_hd5_data(data_file, src_data)
-            result = runner.invoke(main, ['data', 'ingest', '--file', data_file.name, '--stream', '/test/existing'])
+            result = runner.invoke(main, ['data', 'ingest', data_file.name, '--stream', '/test/existing'])
             _print_result_on_error(result)
             self.assertEqual(result.exit_code, 0)
         db_obj = self.msgs.get()
@@ -49,7 +49,7 @@ class TestDataIngest(FakeJouleTestCase):
         server = FakeJoule()
         # create the source stream
         src = DataStream(id=0, name="dest", keep_us=100,
-                         datatype=DataStream.DATATYPE.INT16, updated_at=datetime.datetime.utcnow())
+                         datatype=DataStream.DATATYPE.INT16, updated_at=datetime.now(timezone.utc))
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         # source has 100 rows of data between [0, 100]
         file_data = helpers.create_data('int32_3')
@@ -59,7 +59,7 @@ class TestDataIngest(FakeJouleTestCase):
         runner = CliRunner()
         with tempfile.NamedTemporaryFile() as data_file:
             write_hd5_data(data_file, file_data)
-            result = runner.invoke(main, ['data', 'ingest', '--file', data_file.name])
+            result = runner.invoke(main, ['data', 'ingest', data_file.name])
             self.assertIn("datatype", result.output)
             self.assertNotEqual(result.exit_code, 0)
 
@@ -70,7 +70,7 @@ class TestDataIngest(FakeJouleTestCase):
         server = FakeJoule()
         # create the source stream
         src = DataStream(id=0, name="dest", keep_us=100,
-                         datatype=DataStream.DATATYPE.FLOAT32, updated_at=datetime.datetime.utcnow())
+                         datatype=DataStream.DATATYPE.FLOAT32, updated_at=datetime.now(timezone.utc))
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(3)]
         # source has 100 rows of data between [0, 100]
         src_data = helpers.create_data(src.layout, length=1000)
@@ -84,7 +84,7 @@ class TestDataIngest(FakeJouleTestCase):
         runner = CliRunner()
         with tempfile.NamedTemporaryFile() as data_file:
             write_hd5_data(data_file, src_data[:750])
-            result = runner.invoke(main, ['data', 'ingest', '--file', data_file.name],
+            result = runner.invoke(main, ['data', 'ingest', data_file.name],
                                    input='N')
             _print_result_on_error(result)
             self.assertEqual(result.exit_code, 0)
@@ -103,7 +103,7 @@ class TestDataIngest(FakeJouleTestCase):
                 hdf_root.create_dataset('timestamp', (11, 1),
                                         dtype=np.dtype('float32'),
                                         compression='gzip')
-            result = runner.invoke(main, ['data', 'ingest', '--file', data_file.name])
+            result = runner.invoke(main, ['data', 'ingest', data_file.name])
             self.assertIn("Error", result.output)
             self.assertNotEqual(result.exit_code, 0)
 
@@ -112,7 +112,7 @@ class TestDataIngest(FakeJouleTestCase):
         server = FakeJoule()
         # create the source stream
         src = DataStream(id=0, name="dest", keep_us=100,
-                         datatype=DataStream.DATATYPE.INT16, updated_at=datetime.datetime.utcnow())
+                         datatype=DataStream.DATATYPE.INT16, updated_at=datetime.now(timezone.utc))
         src.elements = [Element(name="e%d" % x, index=x, display_type=Element.DISPLAYTYPE.CONTINUOUS) for x in range(4)]
         # source has 100 rows of data between [0, 100]
         file_data = helpers.create_data('int16_3')
@@ -122,7 +122,7 @@ class TestDataIngest(FakeJouleTestCase):
         runner = CliRunner()
         with tempfile.NamedTemporaryFile() as data_file:
             write_hd5_data(data_file, file_data)
-            result = runner.invoke(main, ['data', 'ingest', '--file', data_file.name])
+            result = runner.invoke(main, ['data', 'ingest', data_file.name])
             self.assertIn("elements", result.output)
             self.assertNotEqual(result.exit_code, 0)
 
@@ -137,7 +137,7 @@ class TestDataIngest(FakeJouleTestCase):
 
         with tempfile.NamedTemporaryFile() as data_file:
             write_hd5_data(data_file, src_data[:750])
-            result = runner.invoke(main, ['data', 'ingest', '--file', data_file.name],
+            result = runner.invoke(main, ['data', 'ingest', data_file.name],
                                    input='N')
             _print_result_on_error(result)
             self.assertEqual(result.exit_code, 0)
@@ -159,7 +159,7 @@ class TestDataIngest(FakeJouleTestCase):
                                         dtype=np.dtype('float32'),
                                         compression='gzip')
 
-            result = runner.invoke(main, ['data', 'ingest', '--file', data_file.name])
+            result = runner.invoke(main, ['data', 'ingest', data_file.name])
             self.assertIn("Error", result.output)
             self.assertNotEqual(result.exit_code, 0)
 
@@ -168,7 +168,7 @@ class TestDataIngest(FakeJouleTestCase):
         with tempfile.NamedTemporaryFile() as bad_file:
             with open(bad_file.name, 'w') as f:
                 f.write('invalid filetype')
-            result = runner.invoke(main, ['data', 'ingest', '--file', bad_file.name])
+            result = runner.invoke(main, ['data', 'ingest', bad_file.name])
             self.assertIn("Error", result.output)
             self.assertNotEqual(result.exit_code, 0)
 

@@ -43,7 +43,14 @@ def main():
                               stdout=sys.stdout,
                               stderr=sys.stderr,
                               universal_newlines=True)
-    time.sleep(3)
+    # wait until port 8088 on node1.joule is open
+    while True:
+        try:
+            s = socket.create_connection(("node1.joule", 8088))
+            s.close()
+            break
+        except ConnectionRefusedError:
+            time.sleep(1)
     # follow node1.joule
     subprocess.run("joule master add joule https://node1.joule:8088".split(" "))  # ,
 

@@ -25,8 +25,8 @@ def data():
 
 @click.group(name="filter",
              cls=LazyGroup,
-             lazy_subcommands={"mean": "joule.cli.data.mean",
-                               "median": "joule.cli.data.median"})
+             lazy_subcommands={"mean": "joule.cli.data.mean.mean",
+                               "median": "joule.cli.data.median.median"})
 def filter():
     """Filter stream data."""
     pass  
