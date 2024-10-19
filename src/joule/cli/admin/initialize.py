@@ -5,7 +5,7 @@ import subprocess
 from typing import Tuple
 from OpenSSL import crypto
 from jinja2 import Environment, FileSystemLoader
-
+from joule import constants
 import secrets
 
 
@@ -13,7 +13,8 @@ import secrets
 @click.option("--dsn", help="PostgreSQL DSN", required=True)
 @click.option("--bind", help="IP address (0.0.0.0 for all)")
 @click.option("--port", help="TCP port (default is 8080)")
-def admin_initialize(dsn, bind, port):
+@click.option("--name", help="Node name (default is random)")
+def admin_initialize(dsn, bind, port, name):
     """Run initial system configuration."""
     import pkg_resources
 
@@ -22,6 +23,8 @@ def admin_initialize(dsn, bind, port):
         raise click.ClickException("Must specify bind address with port")
     if bind is not None and port is None:
         port = "8080"
+    if name is None:
+        name = f"node_{secrets.token_hex(2)}"
     click.echo("1. creating joule user ", nl=False)
     proc = subprocess.run("useradd -r -G dialout joule".split(" "), stderr=subprocess.PIPE)
     if proc.returncode == 0:
@@ -50,7 +53,7 @@ def admin_initialize(dsn, bind, port):
     click.echo("3. copying configuration to /etc/joule ", nl=False)
     _make_joule_directory("/etc/joule")
     # check if main.conf exists
-    if not os.path.isfile("/etc/joule/main.conf"):
+    if not os.path.isfile(constants.ConfigFiles.main_config):
         template_path = pkg_resources.resource_filename(
             "joule", "resources/templates")
         # From https://stackoverflow.com/questions/11857530
@@ -59,17 +62,17 @@ def admin_initialize(dsn, bind, port):
         env.lstrip_blocks = True
         env.keep_trailing_newline = True
         template = env.get_template('main.conf.jinja2')
-        file_contents = template.render(name='node_%s' % secrets.token_hex(2),
+        file_contents = template.render(name=name,
                                         bind=bind,
                                         port=port,
                                         dsn=dsn)
-        with open("/etc/joule/main.conf", 'w') as conf:
+        with open(constants.ConfigFiles.main_config, 'w') as conf:
             conf.write(file_contents)
 
     # set ownership to joule user
-    shutil.chown("/etc/joule/main.conf", user="root", group="joule")
+    shutil.chown(constants.ConfigFiles.main_config, user="root", group="joule")
     # only root can write, and only joule members can read
-    os.chmod("/etc/joule/main.conf", 0o640)
+    os.chmod(constants.ConfigFiles.main_config, 0o640)
 
     # setup stream config directory
     _make_joule_directory("/etc/joule/stream_configs")

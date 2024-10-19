@@ -1,13 +1,4 @@
 import click
-#from .copy import data_copy
-#from .read import cmd as data_read
-#from .remove import data_remove
-#from .intervals import intervals
-#from .consolidate import consolidate
-#from .merge import merge
-#from .mean import mean
-#from .median import median
-#from .ingest import ingest
 from joule.cli.lazy_group import LazyGroup
 
 @click.group(name="data",

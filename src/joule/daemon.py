@@ -4,7 +4,6 @@ import asyncio
 import logging
 import time
 import argparse
-#import uvloop
 import signal
 import secrets
 from aiohttp import web
@@ -12,7 +11,7 @@ import faulthandler
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
-from typing import List
+from typing import List, Optional
 import psutil
 import dsnparse
 import sys
@@ -27,6 +26,7 @@ from joule.api import TcpNode
 from joule.services import (load_modules, load_streams, load_config)
 import joule.middleware
 import joule.controllers
+from joule import constants
 from joule.utilities import ConnectionInfo
 from joule.update_users import update_users_from_file
 import ssl
@@ -46,9 +46,9 @@ class Daemon(object):
         self.config: config.JouleConfig = my_config
         self.db: Session = None
         self.engine = None
-        self.supervisor: Supervisor = None
-        self.data_store: DataStore = None
-        self.event_store: EventStore = None
+        self.supervisor: Optional[Supervisor] = None
+        self.data_store: Optional[DataStore] = None
+        self.event_store: Optional[EventStore] = None
         self.module_connection_info = None
         self.tasks: List[asyncio.Task] = []
         self.stop_requested = False
@@ -294,7 +294,7 @@ class Daemon(object):
 
 def main(argv=None):
     parser = argparse.ArgumentParser("Joule Daemon")
-    parser.add_argument("--config", default="/etc/joule/main.conf")
+    parser.add_argument("--config", default=constants.ConfigFiles.main_config)
 
     xargs = parser.parse_args(argv)
 

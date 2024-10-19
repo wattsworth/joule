@@ -14,7 +14,7 @@ class TestBasicAPI(unittest.IsolatedAsyncioTestCase):
         self.node2 = followers[0]
         # add the root user as a follower to node2.joule
         user = await self.node2.master_add("user", "cli")
-        proc = await asyncio.create_subprocess_shell(f"coverage run --rcfile=/joule/.coveragerc -m joule.cli node add node2.joule https://node2.joule:8088 {user.key}")
+        proc = await asyncio.create_subprocess_shell(f"coverage run --rcfile=/joule/.coveragerc -m joule.cli node add node2.joule http://node2.joule {user.key}")
         await proc.communicate()
         """
         node1.joule:
@@ -53,7 +53,7 @@ class TestBasicAPI(unittest.IsolatedAsyncioTestCase):
         event_stream = joule.api.EventStream("TestEvents")
         event_stream = await self.node1.event_stream_create(event_stream, "/eventstreams")
         await self.node1.event_stream_write(event_stream, events)
-        cmd = "/usr/local/bin/joule event copy /eventstreams/TestEvents /eventstreams/TestEventsCopy -d node2.joule"
+        cmd = "coverage run --rcfile=/joule/.coveragerc -m joule.cli event copy /eventstreams/TestEvents /eventstreams/TestEventsCopy -d node2.joule"
         proc = await asyncio.create_subprocess_shell(cmd)
         await proc.communicate()
         copied_events = await self.node2.event_stream_read("/eventstreams/TestEventsCopy")

@@ -1,22 +1,18 @@
-#!/usr/bin/python3 -u
+#!/usr/bin/env -S python3 -u
 
 """
 Run through each scenario in scenarios
 """
 import os
-import socket
 import sys
 import subprocess
 import shlex
 import shutil
 import signal
-import tempfile
 import asyncio
-import configparser
-import time
-import argparse
-
+from helpers import wait_for_joule_host
 import joule
+import time
 from joule import api
 
 SOURCE_DIR = "/joule"
@@ -28,32 +24,26 @@ SECURITY_DIR = "/joule/tests/e2e/pki"
 JOULED_CMD ="coverage run --rcfile=/joule/.coveragerc -m joule.daemon".split(" ")
 JOULE_CMD = "coverage run --rcfile=/joule/.coveragerc -m joule.cli".split(" ")
 
-FORCE_DUMP = False
-
-
-def prep_system():
-    os.symlink(MODULE_SCRIPT_DIR, "/module_scripts")
-
-
-def run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL):
-    return subprocess.run(shlex.split(cmd), stdout=stdout, stderr=stderr)
+FORCE_DUMP = True
 
 
 async def wait_for_follower():
     node1 = api.get_node("node1.joule")
-    while True:
+    try_count=0
+    while try_count < 5:
         try:
             followers = await node1.follower_list()
             if len(followers) == 1:
-                break
+                return 0 # success
         except joule.errors.ApiError:
             # wait until node is online
             await asyncio.sleep(1)
-    await node1.close()
-    return 0 # success
+        finally:
+            await node1.close()
+    raise Exception("follower did not connect within 5 seconds")
+
 
 def main():
-    prep_system()
     tests = []
     for entry in os.scandir(SCENARIO_DIR):
         if not (entry.name.startswith('.') and entry.is_dir()):
@@ -67,56 +57,45 @@ def main():
     # tests = [("API", "/joule/tests/e2e/scenarios/api_tests")]
     # tests = [("Basic Operation", "/joule/tests/e2e/scenarios/basic_operation")]
     # tests = [("Data Management", "/joule/tests/e2e/scenarios/data_management")]
-    # tests = [("System Initialization", "/joule/tests/e2e/scenarios/system_initialization")]
+    # tests = [("Quick Start Pipeline", "/joule/tests/e2e/scenarios/quick_start_pipeline")]
 
-    first_test = True
+    # make module scripts available
+    os.symlink(MODULE_SCRIPT_DIR, "/module_scripts")
+
+    # get API permissions
+    os.environ["LOGNAME"] = "e2e"
+    os.environ["JOULE_USER_CONFIG_DIR"] = "/tmp/joule_user"
+    subprocess.run(JOULE_CMD+"admin authorize".split(" "))
+
+    # wait for the follower to connect
+    jouled = subprocess.Popen(JOULED_CMD,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT,
+                                    universal_newlines=True)
+    wait_for_joule_host('node1.joule')
+    asyncio.run(wait_for_follower())
+    jouled.send_signal(signal.SIGINT)
+            
     for (test_name, test_path) in tests:
-        if os.path.exists("/etc/joule/"):
-            if os.path.islink("/etc/joule"):
-                os.unlink("/etc/joule")  # this is a symlink
-            else:
-                shutil.rmtree("/etc/joule/")
-        os.symlink(test_path, "/etc/joule")
-        try:
-            os.unlink("/etc/joule/security")
-        except FileNotFoundError:
-            pass
-        os.symlink(SECURITY_DIR, "/etc/joule/security")
+        print("---------[%s]---------" % test_name)
+        # remove the contents of /etc/joule/module_configs and replace with this test's configs
+        shutil.rmtree("/etc/joule/module_configs")
+        shutil.rmtree("/etc/joule/stream_configs")
+        shutil.copytree(os.path.join(test_path, "module_configs"), "/etc/joule/module_configs")
+        shutil.copytree(os.path.join(test_path, "stream_configs"), "/etc/joule/stream_configs")
 
-        main_conf = "/etc/joule/main.conf"
-
-        if first_test:
-            # get API permissions
-            os.environ["LOGNAME"] = "e2e"
-            os.environ["JOULE_USER_CONFIG_DIR"] = "/tmp/joule_user"
-            with open(os.devnull, 'w') as devnull:
-                subprocess.run(JOULE_CMD+"admin authorize".split(" "), stdout=devnull)
-            shutil.copy("/etc/joule/security/ca.joule.crt", "/tmp/joule_user/ca.crt")
-
-        
-            jouled = subprocess.Popen(JOULED_CMD+["--config", main_conf],
-                                      stdout=subprocess.PIPE,
-                                      stderr=subprocess.STDOUT,
-                                      universal_newlines=True)
-            result = asyncio.run(wait_for_follower())
-            jouled.send_signal(signal.SIGINT)
-            stdout, _ = jouled.communicate()
-            if result != 0:
-                print("ERROR!")
-                print(stdout)
-                return result
         # clear the existing database (keeping master/follower tables)
         with open(os.devnull, 'w') as devnull:
             subprocess.run(JOULE_CMD+"admin erase --yes".split(" "), stdout=devnull)
-            subprocess.run(JOULE_CMD+"admin authorize".split(" "), stdout=devnull)
 
-        jouled = subprocess.Popen(JOULED_CMD+["--config", main_conf],
+        # start jouled
+        jouled = subprocess.Popen(JOULED_CMD,
                                   stdout=subprocess.PIPE,
                                   stderr=subprocess.STDOUT,
                                   universal_newlines=True)
-        result = asyncio.run(wait_for_follower())
+        wait_for_joule_host('node1.joule')
+        time.sleep(15)  # wait for jouled to boot and collect data
 
-        print("---------[%s]---------" % test_name)
         sys.stdout.flush()
         test = subprocess.run(("coverage run --rcfile=/joule/.coveragerc "+os.path.join(test_path, "test.py")).split(" "))
         jouled.send_signal(signal.SIGINT)

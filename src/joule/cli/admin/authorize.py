@@ -2,11 +2,10 @@ import click
 import os
 import configparser
 import requests
-from joule import api, errors
-
+from joule import api, errors, constants
 
 @click.command(name="authorize")
-@click.option("-c", "--config", help="main configuration file", default="/etc/joule/main.conf")
+@click.option("-c", "--config", help="main configuration file", default=constants.ConfigFiles.main_config)
 @click.option("-u", "--url", help="joule API URL (optional)")
 def admin_authorize(config, url):
     """Grant a local user CLI access."""

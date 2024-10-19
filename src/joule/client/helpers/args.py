@@ -90,9 +90,8 @@ def validate_time_bounds(start: str, end: str) -> Tuple[int, int]:
         start = int(dateparser.parse(start).timestamp() * 1e6)
     if end is not None:
         end = int(dateparser.parse(end).timestamp() * 1e6)
-    if start is not None and end is not None:
-        if start >= end:
-            raise ConfigurationError("start [%d] must be < end [%d]" % (start, end))
+    if (start is not None and end is not None) and start >= end:
+        raise ConfigurationError("start [%d] must be < end [%d]" % (start, end))
     return start, end
 
 

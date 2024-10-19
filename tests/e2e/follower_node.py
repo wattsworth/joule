@@ -1,4 +1,4 @@
-#!/usr/bin/python3 -u
+#!/usr/bin/env -S python3 -u
 
 """
 Run the configuration in follower
@@ -7,52 +7,40 @@ Run the configuration in follower
 import os
 import sys
 import subprocess
-import time
-import shlex
-import socket
-import signal
-
+import shutil
+from helpers import wait_for_joule_host
 SOURCE_DIR = "/joule"
 MODULE_SCRIPT_DIR = "/joule/tests/e2e/module_scripts"
 JOULE_CONF_DIR = "/joule/tests/e2e/follower"
+JOULE_CMD = "coverage run --rcfile=/joule/.coveragerc -m joule.cli".split(" ")
 
-
-def prep_system():
-    os.symlink(MODULE_SCRIPT_DIR, "/module_scripts")
-
-
-def run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL):
-    return subprocess.run(shlex.split(cmd), stdout=stdout, stderr=stderr)
 
 
 def main():
-    prep_system()
+    subprocess.run(("joule admin erase --yes").split(" "))
 
-    config_file = os.path.join(JOULE_CONF_DIR, "main.conf")
-    subprocess.run(("joule admin erase --yes --config %s" % config_file).split(" "))
+    # make module scripts available
+    os.symlink(MODULE_SCRIPT_DIR, "/module_scripts")
 
-    # add a key entry for the master node
     # get API permissions
     os.environ["LOGNAME"] = "e2e"
     os.environ["JOULE_USER_CONFIG_DIR"] = "/tmp/joule_user"
-    with open(os.devnull, 'w') as devnull:
-        subprocess.run(("joule admin authorize --config %s" % config_file).split(" "),
-                       stdout=devnull)
+    
+    # copy module configurations (no stream configs)
+    shutil.rmtree("/etc/joule/module_configs")
+    shutil.copytree(os.path.join(JOULE_CONF_DIR, "module_configs"), "/etc/joule/module_configs")
 
-    jouled = subprocess.Popen(["jouled", "--config", config_file],
+    jouled = subprocess.Popen("jouled",
                               stdout=sys.stdout,
                               stderr=sys.stderr,
                               universal_newlines=True)
-    # wait until port 8088 on node1.joule is open
-    while True:
-        try:
-            s = socket.create_connection(("node1.joule", 8088))
-            s.close()
-            break
-        except ConnectionRefusedError:
-            time.sleep(1)
+    wait_for_joule_host('node2.joule')
+
+    subprocess.run(JOULE_CMD+"admin authorize".split(" "))
+
     # follow node1.joule
-    subprocess.run("joule master add joule https://node1.joule:8088".split(" "))  # ,
+    wait_for_joule_host('node1.joule')
+    subprocess.run("joule master add joule http://node1.joule".split(" "))  # ,
 
     # this will just hang, node1 exits and terminates this container
     stdout, _ = jouled.communicate()

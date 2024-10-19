@@ -6,7 +6,7 @@ import configparser
 import sqlalchemy
 
 from joule.cli.config import pass_config
-
+from joule import constants
 WORKING_DIRECTORY = '/tmp/joule'
 
 
@@ -16,7 +16,7 @@ def abort_if_false(ctx, param, value):
 
 
 @click.command(name="erase")
-@click.option("-c", "--config", help="main configuration file", default="/etc/joule/main.conf")
+@click.option("-c", "--config", help="main configuration file", default=constants.ConfigFiles.main_config)
 @click.option("-l", "--links", is_flag=True, help="delete masters and followers as well as data")
 @click.option('--yes', is_flag=True, callback=abort_if_false,
               expose_value=False,

@@ -431,7 +431,7 @@ class TestWorker(unittest.TestCase):
         self.assertEqual(node_stream_info_api_call_count, 4)
         tmp_dir.cleanup()  # remove socket file and directory
         log_dump = '\n'.join(log.output)
-        self.assertIn("subscriber write error", log_dump)
+        self.assertIn("subscriber disconnected", log_dump)
         self.assertIn("timed out", log_dump)
         # check stream2, should be stream0*2.0 [] stream0*2.0
         output_data = output1.read_nowait()

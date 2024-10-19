@@ -1,9 +1,9 @@
 #!/bin/bash
-set -e
+#set -e
 #update the certificates in PKI
-cd pki
-bash update_certs.sh
-cd -
+#cd pki
+#bash update_certs.sh
+#cd -
 
 
 docker compose --file docker-compose.yml up \

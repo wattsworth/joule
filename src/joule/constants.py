@@ -67,4 +67,5 @@ class ApiErrorMessages:
 class ConfigFiles:
     default_node='default_node.txt'
     nodes = 'nodes.json'
+    main_config = '/etc/joule/main.conf'
 

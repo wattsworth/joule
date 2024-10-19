@@ -183,7 +183,8 @@ async def write(request: web.Request):
     try:
         task = await data_store.spawn_inserter(stream, pipe, insert_period=0, merge_gap=merge_gap)
         await task
-    except DataError as e:
+    # ConnectionError is raised when the client disconnects unexpectedly which can happen often (module stops, etc)
+    except (DataError, ConnectionError) as e:
         stream.is_destination = False
         db.commit()
         raise web.HTTPBadRequest(reason=str(e))

@@ -62,13 +62,12 @@ MaxLogLines = 100
 
 # rails_app = http://127.0.0.1:3000
 
-[Security]
+### Uncomment the following section to enable HTTPS
+### NOTE: the files below are automatically generated but cannot be used 
+### on most systems because they are self signed, consider substituting your own certificates
+### or preferably running Joule behind a reverse proxy that handles HTTPS like nginx
 
-# X.509 certificate
-Certificate =  /etc/joule/security/server.crt
-
-# Private key for X.509 certificate
-Key = /etc/joule/security/server.key
-
-# Optional CA Certificate when using a PKI
+# [Security]
+# Certificate =  /etc/joule/security/server.crt
+# Key = /etc/joule/security/server.key
 # CertificateAuthority = /etc/joule/security/ca.crt

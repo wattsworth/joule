@@ -3,12 +3,12 @@ import time
 import io
 
 import unittest
-from joule import api
-import folder, stream, module, data
+import folder, stream, module, data, db
 
 def main():
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
+    suite.addTests(loader.loadTestsFromModule(db))
     suite.addTests(loader.loadTestsFromModule(folder))
     suite.addTests(loader.loadTestsFromModule(stream))
     suite.addTests(loader.loadTestsFromModule(module))

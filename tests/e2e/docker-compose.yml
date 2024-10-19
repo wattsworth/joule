@@ -2,7 +2,7 @@ services:
   node1.joule:
     build:
       context: ../..
-      dockerfile: docker/development.dockerfile
+      dockerfile: tests/e2e/development.dockerfile
     links:
       - timescale
     depends_on:
@@ -17,7 +17,7 @@ services:
   node2.joule:
     build:
       context: ../..
-      dockerfile: docker/development.dockerfile
+      dockerfile: tests/e2e/development.dockerfile
     links:
       - timescale_follower
     depends_on:

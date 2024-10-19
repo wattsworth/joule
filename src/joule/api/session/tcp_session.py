@@ -4,10 +4,6 @@ import asyncio
 from .base_session import BaseSession
 from joule import errors
 
-
-# import logging
-# logging.basicConfig(filename='/home/vagrant/app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
-
 class TcpSession(BaseSession):
 
     def __init__(self, url: str, key: str, cafile: str):

@@ -7,7 +7,6 @@ import sys
 
 
 def main():
-    time.sleep(8)  # wait for jouled to boot and collect data
     asyncio.run(_run())
 
 

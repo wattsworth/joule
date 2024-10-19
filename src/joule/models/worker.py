@@ -352,7 +352,7 @@ class Worker:
                             await asyncio.wait_for(pipe.write(data),
                                                    self.SUBSCRIBER_TIMEOUT)
                         except (ConnectionResetError, BrokenPipeError):
-                            log.warning("subscriber write error [%s] " % pipe.stream)
+                            log.warning("subscriber disconnected [%s] " % pipe.stream)
                             subscribers.remove(pipe)
                         except asyncio.TimeoutError:
                             log.warning("subscriber [%s] timed out" % pipe.stream)
