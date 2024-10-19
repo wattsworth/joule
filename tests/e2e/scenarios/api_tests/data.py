@@ -151,30 +151,6 @@ class TestDataMethods(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(first_block) # make sure we already read the first block
         self.assertEqual(nrows, blk_size*2)
 
-        
-    @unittest.skip("TODO: something with postgres auth doesn't work on docker")
-    async def test_db_data_access(self):
-        # should be able to read data streams from postgres
-        await self.node.data_delete("/archive/data1")
-        stream = await self.node.data_stream_get("/archive/data1")
-        blk_size = 100
-        time = utilities.time_now()
-        ts = np.linspace(time, time + blk_size, blk_size)
-        self.assertEqual(min(np.diff(ts)), 1)
-        data1 = np.random.random((blk_size, 1))
-        data2 = np.random.random((blk_size, 1))
-        res = np.hstack((ts[:, None], data1, data2))
-        pipe = await self.node.data_write(stream)
-        await pipe.write(res)
-        await pipe.close()
-        stream_id = stream.id
-        engine = await self.node.db_connect()
-        with engine.connect() as conn:
-            resp = conn.execute(text(f"SELECT count(*) from data.stream{stream_id}"))
-            row_count = resp.fetchone()[0]
-            #print(f"resp is {row_count}")
-            assert row_count == blk_size
-
     async def test_data_write_invalid_values(self):
         # write duplicate data to a pipe
         await self.node.data_delete("/archive/data1")

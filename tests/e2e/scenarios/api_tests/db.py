@@ -1,7 +1,8 @@
 import unittest
 import sqlalchemy
+import numpy as np
 from joule import api, errors
-
+from joule.utilities import datetime_to_timestamp as dt2ts
 
 class TestDbMethods(unittest.IsolatedAsyncioTestCase):
 
@@ -10,13 +11,21 @@ class TestDbMethods(unittest.IsolatedAsyncioTestCase):
 
     async def asyncTearDown(self) -> None:
         await self.node.close()
-    @unittest.skip("skipping")
+
     async def test_db_connect(self):
+        # should be able to read data streams from postgres
         engine = await self.node.db_connect()
-        with engine.connect() as con:
-            result = con.execute(sqlalchemy.text("SELECT 1"))
-            row = result.fetchone()
-            self.assertEqual(row[0], 1)
+        stream = await self.node.data_stream_get("/live/base")
+        # compare the first row of data from Postgres to a pipe read
+        with engine.connect() as conn:
+            resp = conn.execute(sqlalchemy.text(f"SELECT time,elem0 from data.stream{stream.id} ORDER BY time ASC LIMIT 1"))
+            row = resp.fetchone()
+            sql_data = np.array([dt2ts(row[0]),row[1]])
+       
+        pipe = await self.node.data_read("/live/base")
+        pipe_data = await pipe.read(flatten=True)
+        await pipe.close()
+        np.testing.assert_array_equal(sql_data, pipe_data[0])
 
     async def test_db_connection_info(self):
         conn_info = await self.node.db_connection_info()
