@@ -27,7 +27,7 @@ class Visualizer(FilterModule):
     async def setup(self, parsed_args, app, inputs, outputs):
         loader = jinja2.FileSystemLoader(TEMPLATES_DIR)
         aiohttp_jinja2.setup(app, loader=loader)
-        app[title_key] = parsed_args.title
+        self.page_title = parsed_args.title
 
         self.elements = []
         dom_id = 0  # DOM id for javascript manipulation
@@ -89,7 +89,7 @@ class Visualizer(FilterModule):
     def routes(self):
         return [
             web.get('/', self.index),
-            web.get(EndPoints.data_json, self.data),
+            web.get('/data.json', self.data),
             web.post('/reset.json', self.reset),
             web.static('/assets/css', CSS_DIR),
             web.static('/assets/js', JS_DIR),
@@ -97,7 +97,7 @@ class Visualizer(FilterModule):
 
     @aiohttp_jinja2.template('index.jinja2')
     async def index(self, request):
-        return {'title': request.app[title_key], 'elements': self.elements}
+        return {'title': self.page_title, 'elements': self.elements}
 
     async def data(self, request):
         return web.json_response(data=self.elements)
@@ -131,7 +131,7 @@ class Visualizer(FilterModule):
 
         return elements
 
-
+# Support running under aiohttp-devtools (https://github.com/aio-libs/aiohttp-devtools)
 def create_app():
     r = Visualizer()
     return r.create_dev_app()

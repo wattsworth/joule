@@ -27,6 +27,7 @@ log = logging.getLogger('joule')
 DataStreams = Dict[str, api.DataStream]
 
 task_key = web.AppKey("task", asyncio.Task)
+state_key = web.AppKey("state", Dict)
 
 class BaseModule:
     """
@@ -85,6 +86,8 @@ class BaseModule:
         # override in client for alternate shutdown strategy
         self.stop_requested = True
 
+    # Alternative start code for running under aiohttp-devtools (https://github.com/aio-libs/aiohttp-devtools)
+    # Must be supported from the actual module with a method called create_app() (see visualizer for an example)
     def create_dev_app(self) -> web.Application:
         parser = argparse.ArgumentParser()
         self._build_args(parser)
@@ -101,8 +104,10 @@ class BaseModule:
         self.node = api.get_node(parsed_args.node)
 
         self.stop_requested = False
-        my_app = self._create_app()
-
+        routes = self.routes()
+        my_app = web.Application()
+        my_app.add_routes(routes)
+        my_app[state_key] = {} # initialize an empty application state (container for custom module-specific data)
         async def on_startup(app):
             app[task_key] = await self.run_as_task(parsed_args, app)
 
@@ -153,6 +158,7 @@ class BaseModule:
         else:
             self.node = api.get_node(parsed_args.node)
         self.runner: web.AppRunner = loop.run_until_complete(self._start_interface(parsed_args))
+        # the app object is passed to parsed_args so it can be accessed by the module
         app = None
         if self.runner is not None:
             app = self.runner.app
@@ -479,62 +485,52 @@ class BaseModule:
         """
         return []  # override in child to implement a web interface
 
-    def _create_app(self) -> web.Application:
+    async def _start_interface(self, args) -> Optional[web.AppRunner]:
+        # returns a web application object if this module has a web interface, and None otherwise
+
         routes = self.routes()
+        # if this module doesn't declare any routes there is nothing to do
+        if len(routes) == 0:
+            if args.socket != 'unset':
+                log.warning("Module has no web interface, but was configured as a data_app")
+            return None
         app = web.Application()
         app.add_routes(routes)
-        return app
+        app[state_key] = {} # initialize an empty application state (container for custom module-specific data)
+        runner = web.AppRunner(app)
+        await runner.setup()
 
-    async def _start_interface(self, args) -> Optional[web.AppRunner]:
-        routes = self.routes()
-        # socket config is 'unset' when run as a standalone process
+        # socket config is 'unset' when run as a standalone process, or when the module is not configured as a data_app
         if args.socket == 'unset':
-            if len(routes) == 0:
-                return None  # no routes requested, nothing to do
-            # create a local server
-            app = web.Application()
-            app.add_routes(routes)
-            runner = web.AppRunner(app)
-            await runner.setup()
             if args.port is None:
-                port = _find_port()
+                port = _find_port(args.host)
             else:
                 port = args.port
             site = web.TCPSite(runner, port=port, host=args.host)
-            await site.start()
-            print("starting web server at %s:%d" % (args.host, port))
-            return runner
-        # socket config is 'none' when joule does not connect a socket
-        if args.socket == 'none':
-            if len(routes) > 0:
-                logging.error("No socket available for the interface, check module configuration")
-            return None
-        # otherwise start a UNIX runner on the socket
-        if os.path.exists(args.socket):
-            log.error("Socket address [%s] is already in use, cannot start interface" % socket)
-            return None
-        app = web.Application()
-        app.add_routes(routes)
-        runner = web.AppRunner(app)
-        await runner.setup()
-        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        sock.bind(args.socket)
-        os.chmod(args.socket, 0o660)
-        site = web.SockSite(runner, sock)
+            log.info("starting web server at %s:%d" % (args.host, port))
+
+        # otherwise run as a UNIX socket under jouled
+        else: 
+            if os.path.exists(args.socket):
+                log.error("Socket address [%s] is already in use, cannot start interface" % args.socket)
+                return None
+            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            sock.bind(args.socket)
+            os.chmod(args.socket, 0o660)
+            site = web.SockSite(runner, sock)
+            log.info("starting web server at [%s]" % args.socket)
         await site.start()
-        print("starting web server at [%s]" % args.socket)
         return runner
 
 
-def _find_port():
+def _find_port(host):
     # return an available TCP port, check to make sure it is available
     # before returning
     for port in range(8000, 9000):
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.bind(('localhost', port))
-            sock.close()
-            return port
-        except OSError:
-            continue
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            try:
+                sock.bind((host, port))
+                return port
+            except OSError:
+                continue
     raise ConfigurationError("Could not find an available port for the web interface, specify with --port")

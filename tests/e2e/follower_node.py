@@ -34,13 +34,15 @@ def main():
                               stdout=sys.stdout,
                               stderr=sys.stderr,
                               universal_newlines=True)
-    wait_for_joule_host('node2.joule')
+    
+    ## The follower tests out the built-in HTTP server
+    wait_for_joule_host('node2.joule', port=8080)
 
     subprocess.run(JOULE_CMD+"admin authorize".split(" "))
 
     # follow node1.joule
     wait_for_joule_host('node1.joule')
-    subprocess.run("joule master add joule http://node1.joule".split(" "))  # ,
+    subprocess.run("joule master add joule http://node1.joule/joule".split(" "))  # ,
 
     # this will just hang, node1 exits and terminates this container
     stdout, _ = jouled.communicate()

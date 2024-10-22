@@ -36,13 +36,14 @@ COPY nginx.conf /etc/nginx/nginx.conf
 COPY nginx-joule.conf /etc/nginx/templates/joule.conf.template
 
 COPY runner.sh .
+RUN chmod +x runner.sh
 COPY nginx_scripts .
 # allow the user to override the configuration by mounting a volume to /etc/joule
 
 
 EXPOSE 80
 # allow the user to override the user configuration by mounting a volume to /etc/joule/configs
-CMD /bin/bash runner.sh
+CMD ./runner.sh
 
 
 

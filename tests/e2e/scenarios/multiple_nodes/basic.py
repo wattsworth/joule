@@ -14,7 +14,8 @@ class TestBasicAPI(unittest.IsolatedAsyncioTestCase):
         self.node2 = followers[0]
         # add the root user as a follower to node2.joule
         user = await self.node2.master_add("user", "cli")
-        proc = await asyncio.create_subprocess_shell(f"coverage run --rcfile=/joule/.coveragerc -m joule.cli node add node2.joule http://node2.joule {user.key}")
+        # follower uses built-in HTTP server on port 8080
+        proc = await asyncio.create_subprocess_shell(f"coverage run --rcfile=/joule/.coveragerc -m joule.cli node add node2.joule http://node2.joule:8080 {user.key}")
         await proc.communicate()
         """
         node1.joule:

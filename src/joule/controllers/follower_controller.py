@@ -33,10 +33,17 @@ async def add(request: web.Request):
         port = body["port"]
         scheme = body["scheme"]
         base_uri = body["base_uri"]
+        # figure out the correct location of the follower
         if "name_is_host" in body:
-            location = scheme+"://" + body["name"] + ":" + str(port) + base_uri
+            remote_host = body["name"]
+        elif "X-Forwarded-For" in request.headers: # received from a reverse proxy
+            remote_host = request.headers["X-Forwarded-For"]
+        elif request.remote: # direct connection to built-in HTTP server
+            remote_host = request.remote
         else:
-            location = scheme+"://" + request.remote + ":" + str(port) + base_uri
+            raise web.HTTPBadRequest(reason="could not determine remote host, specify with X-Forwarded-For if using a reverse proxy")
+        location = scheme+"://" + remote_host + ":" + str(port) + base_uri
+        
         node = TcpNode("new_follower", location, key, cafile)
         try:
             info = await node.info()

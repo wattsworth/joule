@@ -52,7 +52,7 @@ def main():
             tests.append((entry.name, entry.path))
 
     # override to run only particular test(s)
-    # tests = [("multinodes", "/joule/tests/e2e/scenarios/multiple_node_tests")]
+    # tests = [("multinodes", "/joule/tests/e2e/scenarios/multiple_nodes")]
     # tests = [("standalone modules", "/joule/tests/e2e/scenarios/standalone_modules")]
     # tests = [("API", "/joule/tests/e2e/scenarios/api_tests")]
     # tests = [("Basic Operation", "/joule/tests/e2e/scenarios/basic_operation")]
@@ -65,13 +65,16 @@ def main():
     # get API permissions
     os.environ["LOGNAME"] = "e2e"
     os.environ["JOULE_USER_CONFIG_DIR"] = "/tmp/joule_user"
-    subprocess.run(JOULE_CMD+"admin authorize".split(" "))
 
     # wait for the follower to connect
     jouled = subprocess.Popen(JOULED_CMD,
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT,
                                     universal_newlines=True)
+    time.sleep(2) # wait for jouled to start
+
+    ## The main node tests out the NGinx proxy functionality (follower uses built-in HTTP server)
+    subprocess.run(JOULE_CMD+"admin authorize --url=http://localhost/joule".split(" "))
     wait_for_joule_host('node1.joule')
     asyncio.run(wait_for_follower())
     jouled.send_signal(signal.SIGINT)

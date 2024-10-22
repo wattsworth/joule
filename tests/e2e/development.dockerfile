@@ -32,6 +32,9 @@ COPY docker/user.template.conf /config/user.template
 
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY docker/nginx-joule.conf /etc/nginx/templates/joule.conf.template
+COPY docker/runner.sh .
+RUN chmod +x runner.sh
+COPY docker/nginx_scripts .
 
 # install dependencies (should be cached)
 RUN python3 -m venv venv

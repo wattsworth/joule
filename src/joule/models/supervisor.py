@@ -56,6 +56,8 @@ class Supervisor:
             task.cancel()
             try:
                 await task
+            except ConnectionResetError:
+                pass # ignore client disconnect
             except Exception as e:
                 log.warning("Supervisor remote i/o shutdown exception: %s " % str(e))
                 raise e

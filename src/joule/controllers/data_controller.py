@@ -1,15 +1,13 @@
 from sqlalchemy.orm import Session
 from aiohttp import web
 import numpy as np
-import asyncio
 import logging
 from joule import app_keys
 
-from joule.models import (folder, DataStore, DataStream,
+from joule.models import (DataStore,
                           InsufficientDecimationError, DataError,
                           pipes)
 from joule.models.supervisor import Supervisor
-from joule.constants import ApiErrorMessages
 from joule.errors import SubscriptionError
 from joule.controllers.helpers import validate_query_parameters, get_stream_from_request_params
 log = logging.getLogger('joule')

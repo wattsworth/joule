@@ -64,7 +64,7 @@ async def start_standalone_procs2(node: api.BaseNode):
                         timeout=3)
     assert p3.stderr.find("layout") != -1
 
-    #  proc4 reads /counting/base and writes to /counting/plus3
+    #  proc1 reads /counting/base and writes to /counting/plus3
     p1 = subprocess.Popen(build_standalone_args("proc1"))
 
     stream = DataStream()

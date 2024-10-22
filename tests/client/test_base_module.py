@@ -8,7 +8,7 @@ import threading
 import tempfile
 from aiohttp import web
 from unittest import mock
-
+import unittest
 from joule.client import BaseModule
 from tests import helpers
 import warnings
@@ -46,16 +46,16 @@ class NetworkedModule(BaseModule):
 class TestBaseModule(helpers.AsyncTestCase):
 
     def sigint(self):
-        time.sleep(0.1)
+        time.sleep(1)
         os.kill(os.getpid(), signal.SIGINT)
 
-    # this test also checks for socket warnings if the module
-    # has routes but joule doesn't provide a socket (b/c the is_app
-    # flag is false in the config)
+    # this test starts a local server because the module
+    # is run in a standalone configuration or the data_app flag is false in the config
     def test_stops_on_sigint(self):
         module = SimpleModule()
         # generate a warning for the socket
-        args = argparse.Namespace(socket='none', pipes='unset',
+        args = argparse.Namespace(socket='unset', pipes='unset',
+                                  port=None, host='127.0.0.1',
                                   api_socket='dummval', node="",
                                   url="http://localhost:8088",
                                   stop_on_request=True)
@@ -63,22 +63,23 @@ class TestBaseModule(helpers.AsyncTestCase):
         t = threading.Thread(target=self.sigint)
         # run the module
         t.start()
-        with self.assertLogs(level="ERROR") as logs:
+        with self.assertLogs(level="INFO") as logs:
             module.start(args)
         all_logs = '\n'.join(logs.output).lower()
-        self.assertTrue('socket' in all_logs)
+        self.assertTrue('starting web server' in all_logs)
         asyncio.set_event_loop(self.loop)
         t.join()
         self.assertTrue(module.completed)
 
 
-    # this test also checks for socket warnings if the module
-    # has routes but joule doesn't provide a socket (b/c the is_app
-    # flag is false in the config)
+    # this test starts a local server because the module
+    # is run in a standalone configuration or the data_app flag is false in the config
     def test_cancels_execution_if_necessary(self):
         module = SimpleModule()
         module.STOP_TIMEOUT = 0.1
-        args = argparse.Namespace(socket='none',
+        args = argparse.Namespace(socket='unset',
+                                  port=None,
+                                  host='127.0.0.1',
                                   pipes='unset',
                                   api_socket='dummyval', node="",
                                   url="http://localhost:8088",
@@ -87,10 +88,10 @@ class TestBaseModule(helpers.AsyncTestCase):
         t = threading.Thread(target=self.sigint)
         # run the module
         t.start()
-        with self.assertLogs(level="ERROR") as logs:
+        with self.assertLogs() as logs:
             module.start(args)
         all_logs = '\n'.join(logs.output).lower()
-        self.assertTrue('socket' in all_logs)
+        self.assertTrue('starting web server' in all_logs)
         asyncio.set_event_loop(self.loop)
         t.join()
         self.assertFalse(module.completed)
@@ -134,7 +135,7 @@ class TestBaseModule(helpers.AsyncTestCase):
                 f.flush()
                 # set api_socket to dummyval to prevent module from requesting
                 # the node from the user configs which is not present here
-                args = argparse.Namespace(socket='none', pipes='unset',
+                args = argparse.Namespace(socket='unset', pipes='unset',
                                           api_socket='dummyval', node="",
                                           start_time='1 hour ago', end_time=None, force=True,
                                           module_config=f.name,
