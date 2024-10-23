@@ -8,6 +8,11 @@ ModuleDirectory = /etc/joule/module_configs
 #   files must end with *.conf
 StreamDirectory = /etc/joule/stream_configs
 
+{% if generate_user_file %}
+# User management file
+UsersFile = /etc/joule/users.conf
+{% endif %}
+
 # Listen on address
 # set to 0.0.0.0 to listen on all interfaces
 # omit to only listen on UNIX socket
@@ -34,13 +39,6 @@ SocketDirectory = /tmp/joule
 #   username:password@[domain|ip_address]:port/database
 Database = {{dsn}}
 
-# Use NilmDB backend (optional)
-{% if nilmdb is not none %}
-NilmdbUrl = {{ nilmdb }}
-{% else %}
-# NilmdbUrl = http://localhost/nilmdb
-{% endif %}
-
 # How often to flush stream data to database
 InsertPeriod = 5
 
@@ -50,11 +48,6 @@ CleanupPeriod = 60
 # How many lines to keep in each module log (rolling)
 MaxLogLines = 100
 
-# This section enables HTTPS, omit to run server with HTTP
-# The default configuration produced by [joule server initialize]
-# creates a self signed certificate and associated key.
-# To prevent MitM attacks, use a PKI to generate credentials
-
 [Proxies]
 # forward local sites as joule interfaces
 # list proxies by [site_name = URL] example:
@@ -62,10 +55,9 @@ MaxLogLines = 100
 
 # rails_app = http://127.0.0.1:3000
 
-### Uncomment the following section to enable HTTPS
-### NOTE: the files below are automatically generated but cannot be used 
-### on most systems because they are self signed, consider substituting your own certificates
-### or preferably running Joule behind a reverse proxy that handles HTTPS like nginx
+# This section enables HTTPS, omit to run server with HTTP,
+# you must create the appropriate keys and certificates seperately,
+# these paths are examples only
 
 # [Security]
 # Certificate =  /etc/joule/security/server.crt

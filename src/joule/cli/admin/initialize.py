@@ -14,7 +14,8 @@ import secrets
 @click.option("--bind", help="IP address (0.0.0.0 for all)")
 @click.option("--port", help="TCP port (default is 8080)")
 @click.option("--name", help="Node name (default is random)")
-def admin_initialize(dsn, bind, port, name):
+@click.option("--generate-user-file", help="Create file for dynamically managing users", is_flag=True)
+def admin_initialize(dsn, bind, port, name, generate_user_file):
     """Run initial system configuration."""
     import pkg_resources
 
@@ -65,11 +66,12 @@ def admin_initialize(dsn, bind, port, name):
         file_contents = template.render(name=name,
                                         bind=bind,
                                         port=port,
-                                        dsn=dsn)
+                                        dsn=dsn,
+                                        generate_user_file=generate_user_file)
         with open(constants.ConfigFiles.main_config, 'w') as conf:
             conf.write(file_contents)
-
-    # set ownership to joule user
+    
+    # set ownership to root and joule group
     shutil.chown(constants.ConfigFiles.main_config, user="root", group="joule")
     # only root can write, and only joule members can read
     os.chmod(constants.ConfigFiles.main_config, 0o640)
@@ -91,29 +93,18 @@ def admin_initialize(dsn, bind, port, name):
     # set ownership to joule user
     shutil.chown("/etc/joule/module_configs/module.example",
                  user="joule", group="joule")
-    click.echo("[" + click.style("OK", fg="green") + "]")
 
-    click.echo("4. creating SSL keys and certificates", nl=False)
-    SECURITY_FOLDER = "/etc/joule/security"
-    _make_joule_directory(SECURITY_FOLDER)
-    shutil.chown(SECURITY_FOLDER, user="root", group="joule")
-    os.chmod(SECURITY_FOLDER, 0o750)
-    # check if a certificate file exists
-    CERT_PATH = os.path.join(SECURITY_FOLDER, "server.crt")
-    KEY_PATH = os.path.join(SECURITY_FOLDER, "server.key")
-    if not os.path.isfile(KEY_PATH):
-        cert, key = _self_signed_cert("joule_node")
-        with open(CERT_PATH, "wb") as f:
-            f.write(crypto.dump_certificate(crypto.FILETYPE_PEM, cert))
-        with open(KEY_PATH, "wb") as f:
-            f.write(crypto.dump_privatekey(crypto.FILETYPE_PEM, key))
-        shutil.chown(CERT_PATH, user="root", group="joule")
-        os.chmod(CERT_PATH, 0o640)
-        shutil.chown(KEY_PATH, user="root", group="joule")
-        os.chmod(KEY_PATH, 0o640)
-        click.echo(" [" + click.style("OK", fg="green") + "]")
-    else:
-        click.echo(" [" + click.style("EXISTS", fg="yellow") + "]")
+    # setup user file if configured
+    if generate_user_file and not os.path.isfile("/etc/joule/users.conf"):
+        user_file = pkg_resources.resource_filename(
+            "joule", "resources/templates/users.conf")
+        shutil.copy(user_file, "/etc/joule/users.conf")
+        # set ownership to root and joule group
+        shutil.chown(constants.ConfigFiles.main_config, user="root", group="joule")
+        # only root can write, and only joule members can read
+        os.chmod(constants.ConfigFiles.main_config, 0o640)
+
+    click.echo("[" + click.style("OK", fg="green") + "]")
 
 
 def _make_joule_directory(path):  

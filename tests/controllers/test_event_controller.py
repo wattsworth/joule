@@ -170,22 +170,22 @@ class TestEventController(AioHTTPTestCase):
         event_store = self.app[app_keys.event_store]
         ### writes events given an event stream id
         events = [Event(start_time=i,end_time=i+1000,content={"field1": i}, 
-                        event_stream_id=self.test_stream.id, id=i, node_name='test') for i in range(0,10000,1000)]
+                        event_stream_id=self.test_stream.id, id=i, node_uuid='test') for i in range(0,10000,1000)]
         resp: aiohttp.ClientResponse = await \
-            self.client.post(EndPoints.event_data, json={"id": self.test_stream_id, "events": [e.to_json(destination_node_name='test') for e in events]})
+            self.client.post(EndPoints.event_data, json={"id": self.test_stream_id, "events": [e.to_json(destination_node_uuid='test') for e in events]})
         self.assertEqual(resp.status, 200)
         # make sure the events are written to the event store
         self.assertTrue(event_store.upsert_called)
-        self.assertEqual(event_store.upserted_events, [e.to_json(destination_node_name='test') for e in events])
+        self.assertEqual(event_store.upserted_events, [e.to_json(destination_node_uuid='test') for e in events])
         event_store.reset()
 
         ### writes events given an event stream path
         resp: aiohttp.ClientResponse = await \
-            self.client.post(EndPoints.event_data, json={"path": "/events/test", "events": [e.to_json(destination_node_name='test') for e in events]})
+            self.client.post(EndPoints.event_data, json={"path": "/events/test", "events": [e.to_json(destination_node_uuid='test') for e in events]})
         self.assertEqual(resp.status, 200)
         # make sure the events are written to the event store
         self.assertTrue(event_store.upsert_called)
-        self.assertEqual(event_store.upserted_events, [e.to_json(destination_node_name='test') for e in events])
+        self.assertEqual(event_store.upserted_events, [e.to_json(destination_node_uuid='test') for e in events])
         # the correct event_stream_id is used
         self.assertEqual(event_store.upserted_events[0]['event_stream_id'], self.test_stream_id)
         event_store.reset()
@@ -193,7 +193,7 @@ class TestEventController(AioHTTPTestCase):
         ### resets ID field when events do not have the right event_stream_id
         events[0].event_stream_id = 999
         resp: aiohttp.ClientResponse = await \
-            self.client.post(EndPoints.event_data, json={"id": self.test_stream_id, "events": [e.to_json(destination_node_name='test') for e in events]})
+            self.client.post(EndPoints.event_data, json={"id": self.test_stream_id, "events": [e.to_json(destination_node_uuid='test') for e in events]})
         self.assertEqual(resp.status, 200)
         # make sure the events are written to the event store
         self.assertTrue(event_store.upsert_called)
@@ -201,7 +201,7 @@ class TestEventController(AioHTTPTestCase):
         self.assertIsNone(modified_event['id']) # ID is removed so it will be treated as a new event
         self.assertEqual(modified_event['event_stream_id'], self.test_stream_id) # event_stream_id is corrected
         # the rest of the events are unchanged
-        self.assertEqual(event_store.upserted_events[1:], [e.to_json(destination_node_name='test') for e in events[1:]])
+        self.assertEqual(event_store.upserted_events[1:], [e.to_json(destination_node_uuid='test') for e in events[1:]])
 
     async def test_event_stream_count_events(self):
         event_store = self.app[app_keys.event_store]

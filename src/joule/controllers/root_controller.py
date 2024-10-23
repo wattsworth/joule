@@ -20,7 +20,8 @@ async def dbinfo(request: web.Request):
 
 async def version_json(request: web.Request):
     return web.json_response(data={'version': pkg_resources.get_distribution('joule').version,
-                                   'name': request.app[app_keys.name]})
+                                   'name': request.app[app_keys.name],
+                                   'uuid': str(request.app[app_keys.uuid])})
 
 
 async def version(request: web.Request):

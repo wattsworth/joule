@@ -9,7 +9,7 @@ class Event:
                  content: Optional[Dict] = None,
                  id: Optional[int] = None,
                  event_stream_id: Optional[int] = None,
-                 node_name: Optional[str] = None):
+                 node_uuid: Optional[str] = None):
         self.id = id
         self.start_time = int(start_time)
         self.end_time = int(end_time)
@@ -21,15 +21,15 @@ class Event:
         # could create an error where the update effectively erases an event
         # in the target table
         self.event_stream_id = event_stream_id
-        self.node_name = node_name 
+        self.node_uuid = node_uuid
         if content is None:
             self.content = {}
         else:
             self.content = content
 
-    def to_json(self, destination_node_name: str):
+    def to_json(self, destination_node_uuid: str):
         # remove the ID fields if the event is not destined for the same node
-        if self.node_name != destination_node_name:
+        if self.node_uuid != destination_node_uuid:
             _id_value = None
             _event_stream_id_value = None
         else:
@@ -60,10 +60,10 @@ class Event:
         return True
 
 
-def from_json(json: dict, node_name: str):
+def from_json(json: dict, node_uuid: str=""):
     return Event(start_time=json['start_time'],
                  end_time=json['end_time'],
                  content=json['content'],
                  id=json['id'],
                  event_stream_id=json['event_stream_id'],
-                 node_name=node_name)
+                 node_uuid=node_uuid)

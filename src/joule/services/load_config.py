@@ -14,8 +14,11 @@ from joule.errors import ConfigurationError
 # Example configuration (including optional lines)
 
 [Main]
+  Name = joule_node
   ModuleDirectory = /etc/joule/module_configs
   StreamDirectory = /etc/joule/stream_configs
+  UsersFile = /etc/joule/users.conf
+
   IPAddress = 127.0.0.1
   Port = 8088
   Database = joule:joule@localhost:5432/joule

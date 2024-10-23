@@ -1,6 +1,7 @@
 from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 from aiohttp import web
 import aiohttp
+import uuid
 
 import joule.controllers
 from joule.constants import EndPoints
@@ -15,6 +16,7 @@ class TestRootController(AioHTTPTestCase):
         app.add_routes(joule.controllers.routes)
         app[app_keys.data_store] = MockStore()
         app[app_keys.name] = "test_suite"
+        app[app_keys.uuid] = uuid.uuid4()
         self.connection_info = ConnectionInfo(username="test",
                                             password="test", 
                                             port=5432, 

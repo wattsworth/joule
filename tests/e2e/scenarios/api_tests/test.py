@@ -3,11 +3,12 @@ import time
 import io
 
 import unittest
-import folder, stream, module, data, db
+import folder, stream, module, data, db, users
 
 def main():
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
+    suite.addTests(loader.loadTestsFromModule(users))
     suite.addTests(loader.loadTestsFromModule(db))
     suite.addTests(loader.loadTestsFromModule(folder))
     suite.addTests(loader.loadTestsFromModule(stream))

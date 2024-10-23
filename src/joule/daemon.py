@@ -15,12 +15,14 @@ from typing import List, Optional
 import psutil
 import dsnparse
 import sys
+import ssl
 
+from .version import version_tuple
 from joule.models import (Base, Worker, config, EventStore,
                           DataStore, DataStream, pipes)
 from joule.models.supervisor import Supervisor
 from joule.errors import ConfigurationError, SubscriptionError
-from joule.models import TimescaleStore, Follower
+from joule.models import TimescaleStore, Follower, Node
 from joule.models.data_store.errors import DataError
 from joule.api import TcpNode
 from joule.services import (load_modules, load_streams, load_config)
@@ -29,7 +31,6 @@ import joule.controllers
 from joule import constants
 from joule.utilities import ConnectionInfo
 from joule.update_users import update_users_from_file
-import ssl
 from joule import app_keys
 log = logging.getLogger('joule')
 async_log = logging.getLogger('asyncio')
@@ -111,7 +112,7 @@ class Daemon(object):
                 conn.execute(text("GRANT CONNECT ON DATABASE %s TO joule_module" % parsed_dsn.database))
                 conn.execute(text("GRANT USAGE ON SCHEMA data TO joule_module"))
                 conn.execute(text("GRANT USAGE ON SCHEMA metadata TO joule_module"))
-                conn.execute(text("GRANT SELECT ON ALL TABLES IN SCHEMA metadata TO joule_module;"))
+                conn.execute(text("GRANT SELECT ON ALL TABLES IN SCHEMA metadata TO joule_module"))
                 # test out pg_read_all_settings command
                 conn.execute(text("show data_directory"))
                 # load custom functions
@@ -121,6 +122,10 @@ class Daemon(object):
                         conn.execute(text(f.read()))
                 conn.execute(text("GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO joule_module;"))
         Base.metadata.create_all(engine)
+        # restrict access to the metadata.node table, must be done in this order- 
+        # 1. create schema, 2. create metadata tables, 3. change access
+        with engine.connect() as conn:
+            conn.execute(text("REVOKE ALL PRIVILEGES ON TABLE metadata.node FROM joule_module"))
         self.db = Session(bind=engine)
 
         # reset flags on streams, these will be set by load_modules and load_streams
@@ -133,6 +138,21 @@ class Daemon(object):
         load_streams.run(self.config.stream_directory, self.db)
         modules = load_modules.run(self.config.module_directory, self.db)
 
+        # create any schemas requested by the modules
+        for module in modules:
+            if module.db_schema != "":
+                with engine.connect() as conn:
+                    conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {module.db_schema}")) 
+                    conn.execute(text(f"GRANT USAGE ON SCHEMA {module.db_schema} TO joule_module"))
+
+        # create private node data if it does not exist
+        if self.db.query(Node).count() == 0:
+            node = Node()
+            print(f"Creating node table data with UUID: {str(node.uuid)}")
+            self.db.add(node)   
+        # migrate database from previous versions if necessary
+        print(f"Version Tuple: {version_tuple}, previous version: TODO")
+       
         # configure security parameters
         self.ssl_context = None
         self.cafile = ""
@@ -200,7 +220,7 @@ class Daemon(object):
         app[app_keys.event_store] = self.event_store
         app[app_keys.db] = self.db
         # used to tell master's this node's info
-
+        app[app_keys.uuid] = self.db.query(Node).one().uuid
         # if the API is proxied the base_uri
         # will be retrieved from the X-Api-Base-Uri header
         app[app_keys.base_uri] = ""

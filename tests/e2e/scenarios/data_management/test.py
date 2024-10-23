@@ -46,7 +46,6 @@ async def setup():
     await pipe.write(_create_data(t1, t3))
     await pipe.write(_create_data(t4, t7))
     await pipe.write(_create_data(t8, tC))
-    await pipe.write(_create_data(tD, tE))
     await pipe.close()
 
     stream2 = api.DataStream("stream2", elements=[api.Element(name=f"elem2_{i}") for i in range(5)])
@@ -96,9 +95,23 @@ def process_data():
     result = runner.invoke(main, "data filter mean -w 3 /original/stream1 /filtered/mean1".split(" "), input="Y\n")
     _assert_success(result)
 
+    ## run time bounded filters
+    result = runner.invoke(main, f"data filter median -w 3 --start {t4} --end {tE} /original/stream1 /filtered/median2b".split(" "), input="Y\n")
+    _assert_success(result)
+    # expect /filtered/median2b to span t4 to tC
+
+async def validate():
+    node = api.get_node()
+    stream_info = await node.data_stream_info("/filtered/median2b")
+    # should be within 10 seconds of the time bounds (depends on the sample generation by create_data)
+    test_case.assertAlmostEqual(stream_info.start, t4, delta=10e6)
+    test_case.assertAlmostEqual(stream_info.end, tC, delta=10e6)
+    await node.close()
+
 if __name__ == "__main__":
     time.sleep(8)  # wait for jouled to boot
     asyncio.run(setup())
     process_data()
+    asyncio.run(validate())
     backup_data()
 

@@ -27,7 +27,7 @@ pip install -e . > /dev/null
 cp /joule/tests/e2e/stub_systemctl.sh /usr/local/bin/systemctl
 chmod +x /usr/local/bin/systemctl
 
-coverage run --rcfile=/joule/.coveragerc -m joule.cli admin initialize --dsn postgres:password@$host:5432/postgres --name $nodename --bind=0.0.0.0 --port=8080
+coverage run --rcfile=/joule/.coveragerc -m joule.cli admin initialize --dsn postgres:password@$host:5432/postgres --name $nodename --bind=0.0.0.0 --port=8080 --generate-user-file
 cat /tmp/systemctl.log
 
 #TODO is this needed?

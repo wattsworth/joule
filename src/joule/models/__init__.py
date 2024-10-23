@@ -2,6 +2,7 @@ from joule.models.annotation import Annotation
 from joule.models.element import Element
 from joule.models.event_stream import EventStream
 from joule.models.data_stream import DataStream
+from joule.models.node import Node
 from joule.models.folder import Folder
 from joule.models.module import Module
 from joule.models.worker import Worker

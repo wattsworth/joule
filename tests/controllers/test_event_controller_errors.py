@@ -234,7 +234,7 @@ class TestEventController(AioHTTPTestCase):
         events = [Event(start_time=i,end_time=i+1000,content={"field1": i}, 
                         event_stream_id=self.test_stream.id, id=i) for i in range(0,10000,1000)]
         resp: aiohttp.ClientResponse = await \
-            self.client.post(EndPoints.event_data, json={"events": [e.to_json(destination_node_name='test') for e in events]})
+            self.client.post(EndPoints.event_data, json={"events": [e.to_json(destination_node_uuid='test') for e in events]})
         self.assertEqual(resp.status, 400)
         self.assertFalse(event_store.upsert_called)
         msg = await resp.text()
@@ -242,7 +242,7 @@ class TestEventController(AioHTTPTestCase):
 
         ### stream must exist (valid path)
         resp: aiohttp.ClientResponse = await \
-            self.client.post(EndPoints.event_data, json={"events": [e.to_json(destination_node_name='test') for e in events], "path": "/does/not/exist"})
+            self.client.post(EndPoints.event_data, json={"events": [e.to_json(destination_node_uuid='test') for e in events], "path": "/does/not/exist"})
         self.assertEqual(resp.status, 404)
         self.assertFalse(event_store.upsert_called)
         msg = await resp.text()
@@ -257,7 +257,7 @@ class TestEventController(AioHTTPTestCase):
         self.assertIn('events', msg)
 
         ### events must have an event_stream_id
-        events_json = [e.to_json(destination_node_name='test') for e in events]
+        events_json = [e.to_json(destination_node_uuid='test') for e in events]
         events_json[0].pop('event_stream_id')
         resp: aiohttp.ClientResponse = await \
             self.client.post(EndPoints.event_data, json={"events": events_json, "path": "/events/test"})

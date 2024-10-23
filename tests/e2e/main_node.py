@@ -58,7 +58,7 @@ def main():
     # tests = [("Basic Operation", "/joule/tests/e2e/scenarios/basic_operation")]
     # tests = [("Data Management", "/joule/tests/e2e/scenarios/data_management")]
     # tests = [("Quick Start Pipeline", "/joule/tests/e2e/scenarios/quick_start_pipeline")]
-
+    # tests = [] # don't run any tests
     # make module scripts available
     os.symlink(MODULE_SCRIPT_DIR, "/module_scripts")
 
@@ -78,7 +78,12 @@ def main():
     wait_for_joule_host('node1.joule')
     asyncio.run(wait_for_follower())
     jouled.send_signal(signal.SIGINT)
-            
+
+    ## Add a user through the management file interface
+    ## this is verified by the API users test
+    with open("/etc/joule/users.conf", "w") as f:
+        f.write("auto_user, 044b1a5153e5f736cd787870cc9bcf2a\n")
+
     for (test_name, test_path) in tests:
         print("---------[%s]---------" % test_name)
         # remove the contents of /etc/joule/module_configs and replace with this test's configs

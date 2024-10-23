@@ -28,7 +28,7 @@ class MockSession:
         self.methods.append(self.method)
         return self._response_data()
 
-    async def get(self, path, params):
+    async def get(self, path, params=None):
         self.path = path
         self.paths.append(path)
         self._save_request_data(params)

@@ -1,5 +1,6 @@
 from tests.api import mock_session
 import unittest
+import uuid
 
 from joule.api.node import TcpNode
 from joule import errors
@@ -202,12 +203,13 @@ class TestEventApi(unittest.IsolatedAsyncioTestCase):
                   for i in range(800)]
         events_returned = [{'id': i, 'event_stream_id': 1, 'start_time': i, 'end_time': i + 1, 'content': {'data': 'value'}}
                            for i in range(800)]
-        self.session.response_data = [{'events': events_returned[:500]},
+        self.session.response_data = [{'uuid': uuid.uuid4()}, # version.json response
+                                      {'events': events_returned[:500]},
                                       {'events': events_returned[500:]}]
         self.session.multiple_calls = True
         await self.node.event_stream_write("/a/path", events)
-        self.assertEqual(self.session.methods, ['POST', 'POST'])
-        self.assertEqual(self.session.paths, [EndPoints.event_data, EndPoints.event_data])
-        self.assertEqual(self.session.request_data[0]['path'], "/a/path")
-        self.assertEqual(len(self.session.request_data[0]['events']), 500)
-        self.assertEqual(len(self.session.request_data[1]['events']), len(events[500:]))
+        self.assertEqual(self.session.methods, ['GET','POST', 'POST'])
+        self.assertEqual(self.session.paths, [EndPoints.version_json, EndPoints.event_data, EndPoints.event_data])
+        self.assertEqual(self.session.request_data[1]['path'], "/a/path")
+        self.assertEqual(len(self.session.request_data[1]['events']), 500)
+        self.assertEqual(len(self.session.request_data[2]['events']), len(events[500:]))
