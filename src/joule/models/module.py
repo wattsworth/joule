@@ -102,3 +102,4 @@ def validate_name(name: str) -> str:
 def validate_db_schema(schema: str) -> str:
     if schema in ["data","metadata"]:
         raise ConfigurationError(f"cannot use reserved schema name [{schema}]")
+    return schema

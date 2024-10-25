@@ -145,9 +145,11 @@ class Daemon(object):
         # create any schemas requested by the modules
         for module in modules:
             if module.db_schema != "":
+                print("===== Creating schema: %s" % module.db_schema)
                 with engine.connect() as conn:
-                    conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {module.db_schema}")) 
-                    conn.execute(text(f"GRANT USAGE ON SCHEMA {module.db_schema} TO joule_module"))
+                    with conn.begin():
+                        conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {module.db_schema}"))  
+                        conn.execute(text(f"GRANT ALL PRIVILEGES ON SCHEMA {module.db_schema} TO joule_module"))
 
         # create private node data if it does not exist
         if self.db.query(Node).count() == 0:
