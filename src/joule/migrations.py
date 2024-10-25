@@ -13,7 +13,7 @@ log = logging.getLogger('joule')
 def apply_database_migrations(engine):
     # if this is a new database, no need to run migrations
     if is_new_database(engine):
-        print("New database, no need to run migrations")
+        log.info("New database, no need to run migrations")
         return
     
     current_version = get_db_version(engine)
@@ -21,23 +21,24 @@ def apply_database_migrations(engine):
         return
     if current_version > packaging.version.parse(joule_version):
         raise ConfigurationError(f"Database version {current_version} is newer than Joule version {joule_version}. This is not supported")
-    print(f"Detected version: {current_version}, running migrations to version {joule_version} ")
+    log.info(f"Detected version: {current_version}, running migrations to version {joule_version} ")
     if current_version < packaging.version.parse("0.11"):
         # Apply migrations for version 0.11
-        print("Applying migration for version 0.11")
+        log.info("Applying migration for version 0.11")
         make_timestamps_timezone_aware(engine)
     else:
-        print("No migrations to apply")
+        log.info("No migrations to apply")
 
         
 def make_timestamps_timezone_aware(engine):
     with engine.connect() as conn:
-        for table,column in [("annotation","start"),
-                             ("annotation","end"),
-                             ("folder","updated_at"),
-                             ("stream","updated_at"),
-                             ("eventstream","updated_at"),]:
-            conn.execute(text(f"""ALTER TABLE metadata.{table} ALTER COLUMN "{column}" SET DATA TYPE TIMESTAMPTZ  USING "{column}" at time zone 'UTC'"""))
+        with conn.begin():
+            for table,column in [("annotation","start"),
+                                ("annotation","end"),
+                                ("folder","updated_at"),
+                                ("stream","updated_at"),
+                                ("eventstream","updated_at"),]:
+                conn.execute(text(f"""ALTER TABLE metadata.{table} ALTER COLUMN "{column}" SET DATA TYPE TIMESTAMPTZ  USING "{column}" at time zone 'UTC'"""))
 
 def get_db_version(engine):
     with engine.connect() as conn:
@@ -47,7 +48,7 @@ def get_db_version(engine):
                 return packaging.version.parse("0.0")
             return packaging.version.parse(row[0])
         except SQLAlchemyError:
-            print("missing table, returning version 0.0")
+            log.info("missing table, returning version 0.0")
             return packaging.version.parse("0.0")
        
 def is_new_database(engine):

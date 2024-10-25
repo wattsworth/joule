@@ -34,6 +34,7 @@ from joule.update_users import update_users_from_file
 from joule import app_keys
 from joule.migrations import apply_database_migrations
 log = logging.getLogger('joule')
+log.setLevel(logging.INFO)
 async_log = logging.getLogger('asyncio')
 async_log.setLevel(logging.WARNING)
 Loop = asyncio.AbstractEventLoop
@@ -145,7 +146,6 @@ class Daemon(object):
         # create any schemas requested by the modules
         for module in modules:
             if module.db_schema != "":
-                print("===== Creating schema: %s" % module.db_schema)
                 with engine.connect() as conn:
                     with conn.begin():
                         conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {module.db_schema}"))  
@@ -154,8 +154,10 @@ class Daemon(object):
         # create private node data if it does not exist
         if self.db.query(Node).count() == 0:
             node = Node(version=version)
-            print(f"Creating node table data with UUID: {str(node.uuid)}")
             self.db.add(node)   
+        else:
+            node = self.db.query(Node).one()
+            node.version = version
         
         # configure security parameters
         self.ssl_context = None
