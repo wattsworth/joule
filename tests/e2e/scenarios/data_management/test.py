@@ -3,7 +3,9 @@ import time
 import asyncio
 import numpy as np
 from joule import api
+from joule import api
 from joule.utilities import human_to_timestamp as h2ts
+from joule.utilities import timestamp_to_human as ts2h
 from click.testing import CliRunner
 import unittest
 from joule.cli import main
@@ -26,7 +28,7 @@ tE = h2ts('14 Sep 2020 00:00:00')
 test_case = unittest.TestCase()
 
 async def setup():
-    node = api.get_node()
+    node:api.BaseNode = api.get_node()
     print("loading test data...")
     # put sample data into /original/stream1 and /original/stream2, both have 5 elements
     #
@@ -39,7 +41,7 @@ async def setup():
     # Make all the time stamps 1 day apart
 
 
-    # create the streams
+    # create the data streams
     stream1 = api.DataStream("stream1", elements=[api.Element(name=f"elem1_{i}") for i in range(5)])
     stream1 = await node.data_stream_create(stream1,"/original")
     pipe = await node.data_write(stream1)
@@ -55,6 +57,17 @@ async def setup():
     await pipe.write(_create_data(t6, t9))
     await pipe.write(_create_data(tA, tB))
     await pipe.close()
+
+    # add annotations to the streams
+    await node.annotation_create(api.Annotation(title="note",start=t1,end=t3,content="api annotation"), "/original/stream1")
+    await node.annotation_create(api.Annotation(title="note2",start=t4,end=t7,content="api annotation"), "/original/stream2")
+
+    # create the event streams
+    events = []
+    for ts in [t1, t2, t3, t4, t5, t6, t7, t8, t9, tA, tB, tC, tD, tE]:
+        events.append(api.Event(start_time=ts,end_time=ts+60e6, content={"name": ts2h(ts)}))
+    event_stream = await node.event_stream_create(api.EventStream(name="events",event_fields={"name": "string"}), "/original")
+    await node.event_stream_write(event_stream, events)
     await node.close()
     
 def _create_data(start, end):
@@ -114,4 +127,3 @@ if __name__ == "__main__":
     process_data()
     asyncio.run(validate())
     backup_data()
-

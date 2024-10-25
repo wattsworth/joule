@@ -30,17 +30,20 @@ FORCE_DUMP = True
 async def wait_for_follower():
     node1 = api.get_node("node1.joule")
     try_count=0
-    while try_count < 5:
+    while try_count < 25:
+        try_count += 1
         try:
             followers = await node1.follower_list()
             if len(followers) == 1:
                 return 0 # success
+            else:
+                await asyncio.sleep(1)
         except joule.errors.ApiError:
             # wait until node is online
             await asyncio.sleep(1)
         finally:
             await node1.close()
-    raise Exception("follower did not connect within 5 seconds")
+    raise SystemExit("follower did not connect")
 
 
 def main():
@@ -67,6 +70,7 @@ def main():
     os.environ["JOULE_USER_CONFIG_DIR"] = "/tmp/joule_user"
 
     # wait for the follower to connect
+    ### NOTE: To debug problems with jouled initializing, comment out the stdout and stderr redirects below
     jouled = subprocess.Popen(JOULED_CMD,
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT,

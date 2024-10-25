@@ -16,7 +16,6 @@ class Node(Base):
     uuid: uuid_type.UUID = Column("uuid", UUID(as_uuid=True), primary_key=True, default=uuid_type.uuid4, unique=True)
     private_key: str = Column(String)
     public_key: str = Column(String)
-    version_tuple: str = Column(String)
-    version_string: str = Column(String)
+    version: str = Column(String)
 
     

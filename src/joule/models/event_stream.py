@@ -41,7 +41,7 @@ class EventStream(Base):
     description: str = Column(String)
     folder_id: int = Column(Integer, ForeignKey('metadata.folder.id'), nullable=False)
     folder: Mapped["Folder"] = relationship("Folder", back_populates="event_streams")
-    updated_at: datetime = Column(DateTime, nullable=False)
+    updated_at: datetime = Column(DateTime(timezone=True), nullable=False)
 
     def update_attributes(self, attrs: Dict) -> None:
         updated = False

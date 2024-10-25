@@ -42,12 +42,17 @@ def main():
 
     # follow node1.joule
     wait_for_joule_host('node1.joule')
-    subprocess.run("joule master add joule http://node1.joule/joule".split(" "))  # ,
+    result = subprocess.run("joule master add joule http://node1.joule/joule".split(" "))  # ,
+    if result.returncode != 0:
+        print("ERROR: failed to add master node")
+        jouled.send_signal(subprocess.signal.SIGINT)
 
     # this will just hang, node1 exits and terminates this container
-    stdout, _ = jouled.communicate()
+    stdout, stderr = jouled.communicate()
+    print("---- jouled stdout ----")
     print(stdout)
-    print(_)
+    print("---- jouled stderr ----")
+    print(stderr)
     return 0
 
 

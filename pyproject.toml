@@ -39,7 +39,8 @@ dependencies = [
     'pyopenssl',
     'dsnparse',
     'h5py',
-    'requests'
+    'requests',
+    'packaging'
 ]
 
 [project.urls]

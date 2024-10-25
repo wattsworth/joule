@@ -17,7 +17,7 @@ import dsnparse
 import sys
 import ssl
 
-from .version import version_tuple
+from joule.version import version
 from joule.models import (Base, Worker, config, EventStore,
                           DataStore, DataStream, pipes)
 from joule.models.supervisor import Supervisor
@@ -32,6 +32,7 @@ from joule import constants
 from joule.utilities import ConnectionInfo
 from joule.update_users import update_users_from_file
 from joule import app_keys
+from joule.migrations import apply_database_migrations
 log = logging.getLogger('joule')
 async_log = logging.getLogger('asyncio')
 async_log.setLevel(logging.WARNING)
@@ -73,14 +74,17 @@ class Daemon(object):
             f.write('%d\n' % os.getpid())
         os.chmod(pid_file, 0o640)
 
+        engine = create_engine(self.config.database, echo=False)
+        self.engine = engine  # keep for erasing database if needed
+
+        # check if migrations are needed
+        apply_database_migrations(engine)
+
         self.data_store: DataStore = \
             TimescaleStore(self.config.database, self.config.insert_period,
                            self.config.cleanup_period)
 
         self.event_store: EventStore = EventStore(self.config.database)
-
-        engine = create_engine(self.config.database, echo=False)
-        self.engine = engine  # keep for erasing database if needed
 
         # create a database user for modules
         password = secrets.token_hex(8)
@@ -147,12 +151,10 @@ class Daemon(object):
 
         # create private node data if it does not exist
         if self.db.query(Node).count() == 0:
-            node = Node()
+            node = Node(version=version)
             print(f"Creating node table data with UUID: {str(node.uuid)}")
             self.db.add(node)   
-        # migrate database from previous versions if necessary
-        print(f"Version Tuple: {version_tuple}, previous version: TODO")
-       
+        
         # configure security parameters
         self.ssl_context = None
         self.cafile = ""
@@ -182,6 +184,7 @@ class Daemon(object):
 
         # save the metadata
         self.db.commit()
+        return True # successfully initialized the system
 
     async def run(self):
         # initialize streams in the data store and event store
@@ -348,7 +351,8 @@ def main(argv=None):
     loop.set_debug(True)
     daemon = Daemon(my_config)
     try:
-        daemon.initialize()
+        if not daemon.initialize():
+            exit(1)
     except SQLAlchemyError as e:
         print("""
         Error initializing database, ensure user 'joule' has sufficient permissions:

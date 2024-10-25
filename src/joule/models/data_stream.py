@@ -64,7 +64,7 @@ class DataStream(Base):
     annotations: Mapped[List[annotation.Annotation]] = relationship("Annotation",
                                                                     cascade="all, delete-orphan",
                                                                     back_populates="stream")
-    updated_at: datetime = Column(DateTime, nullable=False)
+    updated_at: datetime = Column(DateTime(timezone=True), nullable=False)
 
     def merge_configs(self, other: 'DataStream') -> bool:
         # first update the elements, first make sure
