@@ -24,6 +24,37 @@ class TestEventApi(unittest.IsolatedAsyncioTestCase):
         self.assertNotEqual(Event(0, 1, content={'a': 'b'}), Event(10, 11, content={'b': 'c'}))
         self.assertEqual(Event(20, 30, content={'a': 'b'}), Event(20, 30, content={'a': 'b'}))
 
+    async def test_event_stream_count(self):
+        self.session.response_data = {'count': 10}
+        # can count by ID
+        await self.node.event_stream_count(1)
+        self.assertEqual(self.session.method, 'GET')
+        self.assertEqual(self.session.path, EndPoints.event_data_count)
+        self.assertEqual(self.session.request_data, {'id': 1, 'include-ongoing-events': 1})
+
+        # can count by path
+        await self.node.event_stream_count("/a/path")
+        self.assertEqual(self.session.method, 'GET')
+        self.assertEqual(self.session.path, EndPoints.event_data_count)
+        self.assertEqual(self.session.request_data, {'path': '/a/path', 'include-ongoing-events': 1})
+
+        # can count by EventStream object
+        src = EventStream()
+        src.id = 1
+        await self.node.event_stream_count(src)
+        self.assertEqual(self.session.method, 'GET')
+        self.assertEqual(self.session.path, EndPoints.event_data_count)
+        self.assertEqual(self.session.request_data, {'id': 1, 'include-ongoing-events': 1})
+
+        # can pass optional parameters
+        await self.node.event_stream_count(1, start=10, end=20, include_on_going_events=False, json_filter="[[['name','==','test']]]")
+        self.assertDictEqual(self.session.request_data, {'start': 10, 'end': 20, 'id': 1,
+                                                     'filter': "[[['name','==','test']]]"})
+
+        # handles errors
+        with self.assertRaises(errors.ApiError):
+            await self.node.event_stream_count(['invalid'])
+
     async def test_deletes_event_streams(self):
         # can delete by ID
         await self.node.event_stream_delete(1)

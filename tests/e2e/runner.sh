@@ -11,7 +11,7 @@ docker compose --file docker-compose.yml up \
 
 
 echo "POST: removing images and tmp files"
-docker compose --file docker-compose.yml rm -f
-docker image rm e2e-node2.joule
-docker image rm e2e-node1.joule
+docker compose --file docker-compose.yml rm -f > /dev/null
+docker image rm e2e-node2.joule > /dev/null
+docker image rm e2e-node1.joule > /dev/null
 exit $EXIT_CODE

@@ -1,6 +1,8 @@
 from typing import Optional, Dict, Union, List
 import json
 import re
+import logging
+log = logging.getLogger('joule')
 
 from .session import BaseSession
 from .folder_type import Folder
@@ -10,6 +12,7 @@ from joule import errors
 from joule.utilities.validators import validate_event_fields
 from joule.constants import EndPoints
 
+EVENT_READ_BLOCK_SIZE = 1000 # Read 1000 events at a time
 
 class EventStream:
     """
@@ -320,18 +323,35 @@ async def event_stream_count(session: BaseSession,
     if json_filter is not None:
         params['filter'] = json_filter
     if include_on_going_events:
-        params['include-on-going-events'] = 1
+        params['include-ongoing-events'] = 1
     resp = await session.get(EndPoints.event_data_count, params)
     return resp["count"]
 
-
+async def event_stream_read_list(session: BaseSession,
+                                stream: EventStream | str | int,
+                                start_time: Optional[int],
+                                end_time: Optional[int],
+                                json_filter,
+                                include_on_going_events,
+                                limit)-> List[Event]:
+    if limit <= 0:
+        raise errors.ApiError("limit must be an integer > 0")
+    all_events = []
+    async for events in event_stream_read(session=session, stream=stream, start_time=start_time, end_time=end_time, json_filter=json_filter,
+                                         include_on_going_events=include_on_going_events, block_size=EVENT_READ_BLOCK_SIZE):
+        all_events += events
+        if len(all_events) >= limit:
+            log.warning(f"Read limit of {limit} events reached before end of stream")
+            break
+    return all_events[:limit]
+        
 async def event_stream_read(session: BaseSession,
                             stream: EventStream | str | int,
                             start_time: Optional[int],
                             end_time: Optional[int],
-                            limit,
                             json_filter,
-                            include_on_going_events) -> List[Event]:
+                            include_on_going_events,
+                            block_size: Optional[int]):
     params = {}
     if type(stream) is EventStream:
         params["id"] = stream.id
@@ -345,28 +365,39 @@ async def event_stream_read(session: BaseSession,
         params['start'] = int(start_time)
     if end_time is not None:
         params['end'] = int(end_time)
-    # enforce a limit, do not allow arbitrarily large reads
-    limit = int(limit)
-    if limit <= 0:
-        raise errors.ApiError("Limit must be > 0")
-    params['limit'] = limit + 1  # pad by 1 to check for read overflow, see error message below
+    if block_size is None:
+        params['limit'] = EVENT_READ_BLOCK_SIZE
+    else:
+        params['limit'] = block_size
     params['return-subset'] = 1
     if json_filter is not None:
         params['filter'] = json_filter
     if include_on_going_events:
-        params['include-on-going-events'] = 1
+        params['include-ongoing-events'] = 1
+
     # get the node UUID to make sure events can be associated with the correct node during copy operations
     resp = await session.get(EndPoints.version_json)
     node_uuid = resp['uuid']
-    resp = await session.get(EndPoints.event_data, params)
-    events = [event_from_json(e, node_uuid=node_uuid) for e in resp["events"]]
-    if len(events) > limit:
-        print(f"WARNING: Only returning the first {limit} events in this stream, increase "
-              "the limit parameter to retrieve more data or use different "
-              "time bounds and/or filter parameters to reduce the number of events returned")
-        return events[:-1]
-    return events
-
+    
+    # read events in blocks and provide to client as a generator
+    while True:
+        resp = await session.get(EndPoints.event_data, params)
+        events_json = resp["events"]
+        events = [event_from_json(e, node_uuid=node_uuid) for e in events_json]
+        # if no events are returned, we are done
+        if len(events)==0:
+            break
+        #print(f"Retrieved {len(events)} from {ts2h(events[0].start_time)} to {ts2h(events[-1].start_time)}")
+        if block_size is not None:
+            yield events
+        else:
+            for event in events:
+                yield event
+        # update the start time to get the next block
+        params['start'] = events[-1].start_time+1
+        if end_time is not None and params['start'] >= end_time:
+            break
+        params['include-ongoing-events'] = 0 # should always be set false after the first pass
 
 async def event_stream_remove(session: BaseSession,
                               stream: EventStream | str | int,

@@ -5,5 +5,5 @@ cd tests/e2e
 cd -
 
 # consolidate the code coverage
-coverage combine
+coverage combine > /dev/null
 coverage html

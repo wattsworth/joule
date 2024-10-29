@@ -158,19 +158,34 @@ class BaseNode:
         from joule.api.event_stream import event_stream_write
         return await event_stream_write(self.session, stream, events)
 
-    async def event_stream_read(self,
+    def event_stream_read(self,
                                 stream: 'EventStream | str | int',
                                 start: Optional[int]=None,
                                 end: Optional[int]=None,
-                                limit: Optional[int]=10000,
                                 json_filter: Optional[Dict[str, str]]=None,
-                                include_on_going_events=True) -> List['Event']:
+                                include_on_going_events=True,
+                                block_size: Optional[int] = None) -> List['Event']:
         from joule.api.event_stream import event_stream_read
-        return await event_stream_read(self.session, stream=stream,
+        return event_stream_read(self.session, stream=stream,
                                        start_time=start, end_time=end,
-                                       limit=limit, json_filter=json_filter,
-                                       include_on_going_events=include_on_going_events)
+                                       json_filter=json_filter,
+                                       include_on_going_events=include_on_going_events,
+                                       block_size=block_size)
 
+    async def event_stream_read_list(self,
+                                stream: 'EventStream | str | int',
+                                start: Optional[int]=None,
+                                end: Optional[int]=None,
+                                json_filter: Optional[Dict[str, str]]=None,
+                                include_on_going_events=True,
+                                limit=10_000) -> List['Event']:
+        from joule.api.event_stream import event_stream_read_list
+        return await event_stream_read_list(self.session, stream=stream,
+                                       start_time=start, end_time=end,
+                                       json_filter=json_filter,
+                                       include_on_going_events=include_on_going_events,
+                                       limit=limit)
+    
     async def event_stream_count(self,
                                  stream: 'EventStream | str | int',
                                  start: Optional[int] = None,

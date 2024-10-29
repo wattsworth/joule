@@ -57,5 +57,5 @@ class TestBasicAPI(unittest.IsolatedAsyncioTestCase):
         cmd = "coverage run --rcfile=/joule/.coveragerc -m joule.cli event copy /eventstreams/TestEvents /eventstreams/TestEventsCopy -d node2.joule"
         proc = await asyncio.create_subprocess_shell(cmd)
         await proc.communicate()
-        copied_events = await self.node2.event_stream_read("/eventstreams/TestEventsCopy")
+        copied_events = await self.node2.event_stream_read_list("/eventstreams/TestEventsCopy")
         self.assertListEqual(events, copied_events)

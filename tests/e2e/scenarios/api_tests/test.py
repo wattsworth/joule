@@ -3,15 +3,16 @@ import time
 import io
 
 import unittest
-import folder, stream, module, data, db, users
+import folder, data_stream, event_stream, module, data, db, users
 
 def main():
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
+    suite.addTests(loader.loadTestsFromModule(event_stream))
     suite.addTests(loader.loadTestsFromModule(users))
     suite.addTests(loader.loadTestsFromModule(db))
     suite.addTests(loader.loadTestsFromModule(folder))
-    suite.addTests(loader.loadTestsFromModule(stream))
+    suite.addTests(loader.loadTestsFromModule(data_stream))
     suite.addTests(loader.loadTestsFromModule(module))
     suite.addTests(loader.loadTestsFromModule(data))
     output = io.StringIO()

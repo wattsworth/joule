@@ -46,7 +46,9 @@ async def setup():
     stream1 = await node.data_stream_create(stream1,"/original")
     pipe = await node.data_write(stream1)
     await pipe.write(_create_data(t1, t3))
+    await pipe.close_interval()
     await pipe.write(_create_data(t4, t7))
+    await pipe.close_interval()
     await pipe.write(_create_data(t8, tC))
     await pipe.close()
 
@@ -54,8 +56,12 @@ async def setup():
     stream2 = await node.data_stream_create(stream2,"/original")
     pipe = await node.data_write(stream2)
     await pipe.write(_create_data(t2, t5))
+    await pipe.close_interval()
     await pipe.write(_create_data(t6, t9))
+    await pipe.close_interval()
     await pipe.write(_create_data(tA, tB))
+    await pipe.close_interval()
+    await pipe.write(_create_data(tD, tE))
     await pipe.close()
 
     # add annotations to the streams
@@ -93,9 +99,20 @@ def backup_data():
     _assert_success(result)
     result = runner.invoke(main, "data ingest /tmp/stream1.h5 --stream /ingested/stream1".split(" "))
     _assert_success(result)
-    result = runner.invoke(main, "stream info /ingested/stream1".split(" "))
-    _assert_success(result)
-    print(result.output)
+    async def _validate():
+        node = api.get_node()
+        orig_info = await node.data_stream_info("/original/stream1")
+        new_info = await node.data_stream_info("/ingested/stream1")
+        # all data should be copied over
+        test_case.assertEqual(orig_info.start, new_info.start)
+        test_case.assertEqual(orig_info.end, new_info.end)
+        # just check to make sure the original stream has the expected data
+        test_case.assertAlmostEqual(orig_info.start, t1, delta=10e6)
+        test_case.assertAlmostEqual(orig_info.end, tC, delta=10e6)
+        print(await node.data_intervals("/original/stream1"))
+        print(await node.data_intervals("/ingested/stream1"))
+        await node.close()
+    asyncio.run(_validate())
     assert result.exit_code == 0
 
 def process_data():
@@ -109,21 +126,47 @@ def process_data():
     _assert_success(result)
 
     ## run time bounded filters
-    result = runner.invoke(main, f"data filter median -w 3 --start {t4} --end {tE} /original/stream1 /filtered/median2b".split(" "), input="Y\n")
+    # times:    1  2    3 4  5 6  7 8  9 A                      B  C  D       E
+    # stream1:  |-------| |-------| |------------------------------|
+    # stream2:     |---------| |-------| |----------------------|     |-------|
+    # =========
+    # merge1_2:    |----| |--| |--| |--| |----------------------|        
+    # median2b:           |--| |-------| |----|
+    #                                         ^--A_2
+    tA_2 = tA+2*60*60e6 # 2 hours after tA
+    result = runner.invoke(main, f"data filter median -w 3 --start {t4} --end {tA_2} /original/stream2 /filtered/median2b".split(" "), input="Y\n")
     _assert_success(result)
-    # expect /filtered/median2b to span t4 to tC
+  
+    async def _validate():
+        node = api.get_node()
+        #await print_intervals(node,"/original/stream1")
+        #await print_intervals(node,"/original/stream2")
+        #await print_intervals(node,"/filtered/median2b")
+        #await print_intervals(node,"/filtered/merge1_2")
+        # should be within 10 seconds of the time bounds (depends on the sample generation by create_data)
+        await assert_has_intervals(node, "/filtered/median2b", [(t4,t5),(t6,t9),(tA,tA_2)])
+        await assert_has_intervals(node, "/filtered/merge1_2", [(t2,t3),(t4,t5),(t6,t7),(t8,t9),(tA,tB)])
+        await node.close()
+    
+    asyncio.run(_validate())
 
-async def validate():
-    node = api.get_node()
-    stream_info = await node.data_stream_info("/filtered/median2b")
-    # should be within 10 seconds of the time bounds (depends on the sample generation by create_data)
-    test_case.assertAlmostEqual(stream_info.start, t4, delta=10e6)
-    test_case.assertAlmostEqual(stream_info.end, tC, delta=10e6)
-    await node.close()
+async def assert_has_intervals(node, stream, expected_intervals):
+    actual_intervals = await node.data_intervals(stream)
+    test_case.assertEqual(len(actual_intervals), len(expected_intervals))
+    for actual, expected in zip(actual_intervals, expected_intervals):
+        test_case.assertAlmostEqual(actual[0], expected[0], delta=2e6)
+        test_case.assertAlmostEqual(actual[1], expected[1], delta=2e6)
+
+async def print_intervals(node, stream):
+    intervals = await node.data_intervals(stream)
+    # expect /filtered/median2b to span t4 to tC
+    print(f"=== {stream} intervals ====")
+    for start,end in intervals:
+        print(f"\t{ts2h(start)} -> {ts2h(end)}")
+    print("==============================")
 
 if __name__ == "__main__":
     time.sleep(8)  # wait for jouled to boot
     asyncio.run(setup())
     process_data()
-    asyncio.run(validate())
     backup_data()

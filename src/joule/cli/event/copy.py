@@ -126,12 +126,8 @@ async def _run(source_node, dest_node, start, end, new, replace, source, destina
     event_count = stream_info.event_count
     num_copied_events = 0
     with click.progressbar(length=event_count) as bar:
-        while True:
-            events = await source_node.event_stream_read(source, start=start, end=end,
-                                                         limit=1000, include_on_going_events=False)
-
-            if len(events) == 0:
-                break
+        async for events in source_node.event_stream_read(source, start=start, end=end,
+                                                          include_on_going_events=False, block_size=10_000):
             await dest_node.event_stream_write(destination, events)
             num_copied_events += len(events)
             bar.update(len(events))
