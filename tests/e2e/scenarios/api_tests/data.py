@@ -83,7 +83,6 @@ class TestDataMethods(unittest.IsolatedAsyncioTestCase):
             res = np.hstack((ts_chunk[:, None], data1, data2))
             time = time + blk_size + 1
             await pipe.write(res)
-            print(f"[{int(ts[0])} - {int(ts[-1])}]")
         await pipe.close()
         print(f"OK {(utilities.time_now()-_time)/1000:.2f}s")
 
@@ -102,7 +101,6 @@ class TestDataMethods(unittest.IsolatedAsyncioTestCase):
     async def test_data_merges_successive_writes(self):
         await self.node.data_delete("/archive/data1")
         n = utilities.time_now()
-        #n = 0
         blk_size = 5
         ts = np.linspace(n+10e6, n+15e6, blk_size)
         data = np.random.random((blk_size, 2))

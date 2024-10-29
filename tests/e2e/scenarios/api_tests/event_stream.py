@@ -89,4 +89,39 @@ class TestStreamMethods(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(events[0].start_time, t1)
         self.assertEqual(events[-1].start_time, t2)
 
+    async def test_event_delete(self):
+        # can remove an interior time range
+        await self.node.event_stream_remove("/original/events", start=t5, end=tD+1)
+        expected_events = [t1, t2, t3, t4, tE, tF]
+        events = await self.node.event_stream_read_list("/original/events")
+        self.assertListEqual([e.start_time for e in events], expected_events)
+
+        # can remove the beginning
+        await self.node.event_stream_remove("/original/events", end=t2+1)
+        expected_events = [t3, t4, tE, tF]
+        events = await self.node.event_stream_read_list("/original/events")
+        self.assertListEqual([e.start_time for e in events], expected_events)
+
+        # can remove the end: NOTE: delete includes ongoing events
+        await self.node.event_stream_remove("/original/events", start=tE+1)
+        expected_events = [t3, t4]
+        events = await self.node.event_stream_read_list("/original/events")
+        self.assertListEqual([e.start_time for e in events], expected_events)
+
+        # can remove by JSON filter
+        await self.node.event_stream_remove("/original/events", json_filter=json.dumps([[['value','lt',t4]]]))
+        expected_events = [t4]
+        events = await self.node.event_stream_read_list("/original/events")
+        self.assertListEqual([e.start_time for e in events], expected_events)
+
+        # can remove all the events
+        await self.node.event_stream_remove("/original/events")
+        events = await self.node.event_stream_read_list("/original/events")
+        self.assertEqual(len(events), 0)
+
+        # can remove the stream itself
+        await self.node.event_stream_delete("/original/events")
+        with self.assertRaises(errors.ApiError):
+            await self.node.event_stream_info("/original/events")
+
         

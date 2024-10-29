@@ -3,10 +3,11 @@ import time
 import asyncio
 import numpy as np
 from joule import api
-from joule import api
+from joule import errors
 from joule.utilities import human_to_timestamp as h2ts
 from joule.utilities import timestamp_to_human as ts2h
 from click.testing import CliRunner
+from joule.constants import ApiErrorMessages
 import unittest
 from joule.cli import main
 
@@ -29,7 +30,7 @@ test_case = unittest.TestCase()
 
 async def setup():
     node:api.BaseNode = api.get_node()
-    print("loading test data...")
+    print("loading test data...", end="")
     # put sample data into /original/stream1 and /original/stream2, both have 5 elements
     #
     # times:    1  2    3 4  5 6  7 8  9 A                      B  C  D       E
@@ -66,7 +67,7 @@ async def setup():
 
     # add annotations to the streams
     await node.annotation_create(api.Annotation(title="note",start=t1,end=t3,content="api annotation"), "/original/stream1")
-    await node.annotation_create(api.Annotation(title="note2",start=t4,end=t7,content="api annotation"), "/original/stream2")
+    await node.annotation_create(api.Annotation(title="note2",start=t9,end=tA,content="api annotation"), "/original/stream2")
 
     # create the event streams
     events = []
@@ -75,25 +76,9 @@ async def setup():
     event_stream = await node.event_stream_create(api.EventStream(name="events",event_fields={"name": "string"}), "/original")
     await node.event_stream_write(event_stream, events)
     await node.close()
-    
-def _create_data(start, end):
-    num_points = int((end - start)//1e6)
-    step = 1e6
-    """Create a random block of data with [layout] structure"""
-    ts = np.arange(start, start + step * num_points, step, dtype=np.uint64)
-    sarray = np.zeros(len(ts), dtype=np.dtype([('timestamp', '<i8'), ('data', '<f4', (5,))]))
-    data = np.random.rand(num_points, 5)
-    sarray['timestamp'] = ts
-    sarray['data'] = data
-    return sarray
+    print("OK")
 
-def _assert_success(result):
-    if result.exit_code != 0:
-        print("output: ", result.output)
-        print("exception: ", result.exception)
-    test_case.assertEqual(result.exit_code, 0)
-
-def backup_data():
+def test_backup_data():
     runner = CliRunner()
     result = runner.invoke(main, "data read /original/stream1 --file /tmp/stream1.h5".split(" "))
     _assert_success(result)
@@ -115,7 +100,7 @@ def backup_data():
     asyncio.run(_validate())
     assert result.exit_code == 0
 
-def process_data():
+def test_process_data():
     print("running filters...")
     runner = CliRunner()
     result = runner.invoke(main, "data merge -p /original/stream1 -s /original/stream2 -d /filtered/merge1_2".split(" "), input="Y\n")
@@ -150,6 +135,67 @@ def process_data():
     
     asyncio.run(_validate())
 
+def test_copy_all_data():
+    print("copying all data...", end="")
+    runner = CliRunner()
+    result = runner.invoke(main, "folder copy /original /copy".split(" "), input="Y\n")
+    _assert_success(result)
+    async def _validate():
+        node = api.get_node()
+        orig_info = await node.data_stream_info("/original/stream1")
+        copied_info = await node.data_stream_info("/copy/stream1")
+        # all data should be copied over
+        test_case.assertEqual(orig_info.start, copied_info.start)
+        test_case.assertEqual(orig_info.end, copied_info.end)
+        # annotations should be copied over
+        orig_annotations = await node.annotation_get("/original/stream1")
+        copied_annotations = await node.annotation_get("/copy/stream1")
+        test_case.assertEqual(len(orig_annotations), len(copied_annotations))
+        # event stream should be copied over
+        orig_events = await node.event_stream_read_list("/original/events")
+        copied_events = await node.event_stream_read_list("/copy/events")
+        test_case.assertListEqual(orig_events, copied_events)
+        # clean up
+        await node.folder_delete("/copy", recursive=True)
+        try:
+            await node.folder_get("/copy")
+            raise test_case.fail("folder not deleted")
+        except errors.ApiError as e:
+            test_case.assertIn(ApiErrorMessages.folder_does_not_exist, str(e))
+        await node.close()
+    asyncio.run(_validate())
+    print("OK")
+
+def test_copy_data_range():
+    print("copying data range...",end="")
+    runner = CliRunner()
+    result = runner.invoke(main, f"folder copy /original /copy_range --start {ts2h(t8)} --end {ts2h(tB+1)}".split(" "), input="Y\n")
+    _assert_success(result)
+    async def _validate():
+        node = api.get_node()
+        copied_info = await node.data_stream_info("/copy/stream1")
+        # data range should be copied over
+        test_case.assertEqual(t8, copied_info.start)
+        test_case.assertAlmostEqual(tB, copied_info.end, delta=2*60*1e6) # within 2 minutes
+        # only annotations in the range be copied over
+        copied_annotations = await node.annotation_get("/copy/stream1")
+        test_case.assertEqual(len(copied_annotations), 1)
+        test_case.assertEqual(copied_annotations[0].title, "note2")
+        # events in the range should be copied over
+        copied_events = await node.event_stream_read_list("/copy/events")
+        test_case.assertListEqual([e.start_time for e in copied_events], [t8, t9, tA, tB])
+        await node.close()
+        # clean up
+        await node.folder_delete("/copy", recursive=True)
+        try:
+            await node.folder_get("/copy")
+            raise test_case.fail("folder not deleted")
+        except errors.ApiError as e:
+            test_case.assertIn(ApiErrorMessages.folder_does_not_exist, str(e))
+        await node.close()
+    asyncio.run(_validate())
+    print("OK")
+
 async def assert_has_intervals(node, stream, expected_intervals):
     actual_intervals = await node.data_intervals(stream)
     test_case.assertEqual(len(actual_intervals), len(expected_intervals))
@@ -165,8 +211,27 @@ async def print_intervals(node, stream):
         print(f"\t{ts2h(start)} -> {ts2h(end)}")
     print("==============================")
 
+
+def _create_data(start, end):
+    num_points = int((end - start)//1e6)
+    step = 1e6
+    """Create a random block of data with [layout] structure"""
+    ts = np.arange(start, start + step * num_points, step, dtype=np.uint64)
+    sarray = np.zeros(len(ts), dtype=np.dtype([('timestamp', '<i8'), ('data', '<f4', (5,))]))
+    data = np.random.rand(num_points, 5)
+    sarray['timestamp'] = ts
+    sarray['data'] = data
+    return sarray
+
+def _assert_success(result):
+    if result.exit_code != 0:
+        print("output: ", result.output)
+        print("exception: ", result.exception)
+    test_case.assertEqual(result.exit_code, 0)
+
 if __name__ == "__main__":
     time.sleep(8)  # wait for jouled to boot
     asyncio.run(setup())
-    process_data()
-    backup_data()
+    test_copy_all_data()
+    test_process_data()
+    test_backup_data()

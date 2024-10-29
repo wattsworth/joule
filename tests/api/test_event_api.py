@@ -4,7 +4,7 @@ import uuid
 
 from joule.api.node import TcpNode
 from joule import errors
-
+import json
 from joule.models.data_store.event_store import StreamInfo
 from joule.api.event_stream import EventStream, Event
 from joule.api.folder import Folder
@@ -78,6 +78,32 @@ class TestEventApi(unittest.IsolatedAsyncioTestCase):
         # handles errors
         with self.assertRaises(errors.ApiError):
             await self.node.event_stream_delete([1, 2, 3])
+
+    async def test_removes_events_from_stream(self):
+        # can remove by ID
+        await self.node.event_stream_remove(1, start=10, end=20)
+        self.assertEqual(self.session.method, 'DELETE')
+        self.assertEqual(self.session.path, EndPoints.event_data)
+        self.assertEqual(self.session.request_data, {'id': 1, 'start': 10, 'end': 20})
+
+        # can remove by path
+        filter_arg = json.dumps([[['name','==','test']]])
+        await self.node.event_stream_remove('/a/path', 10, 20, json_filter=filter_arg)
+        self.assertEqual(self.session.method, 'DELETE')
+        self.assertEqual(self.session.path, EndPoints.event_data)
+        self.assertEqual(self.session.request_data, {'path': '/a/path', 'start': 10, 'end': 20, 'filter': filter_arg})
+
+        # can remove by EventStream object
+        src = EventStream()
+        src.id = 1
+        await self.node.event_stream_remove(src, 10, 20)
+        self.assertEqual(self.session.method, 'DELETE')
+        self.assertEqual(self.session.path, EndPoints.event_data)
+        self.assertEqual(self.session.request_data, {'id': 1, 'start': 10, 'end': 20})
+
+        # handles errors
+        with self.assertRaises(errors.ApiError):
+            await self.node.event_stream_remove([1, 2, 3], 10, 20)
 
     async def test_creates_event_streams(self):
         src = EventStream(name="test")

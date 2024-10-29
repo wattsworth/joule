@@ -9,7 +9,7 @@ from joule.api import BaseNode
 from joule.api.folder import Folder
 from joule.api.data_stream import DataStream
 from joule.api.event_stream import EventStream
-
+import joule.constants
 
 @click.command(name="move")
 @click.argument("source")
@@ -159,101 +159,66 @@ action_on_event_conflict = None
 @click.argument("destination")
 @click.option('-s', "--start", help="timestamp or descriptive string")
 @click.option('-e', "--end", help="timestamp or descriptive string")
-@click.option('-n', '--new', help="copy starts at the last timestamp of the destination", is_flag=True)
-@click.option('-a', '--action', help="action to take if events already exist in the destination",
-              type=click.Choice(['skip', 'ignore', 'replace', 'prompt']), default='prompt')
 @click.option("-d", "--destination-node")
 @pass_config
-def copy(config, source, destination, start, end, new, action, destination_node):
-    """Recursively copy a folder to a new location"""
-    global action_on_event_conflict
-    action_on_event_conflict = action
+def copy(config, source, destination, start, end, destination_node):
+    """Recursively copy a folder to a new, empty location"""
     try:
         if destination_node is not None:
             destination_node = joule.api.get_node(destination_node)
         else:
             destination_node = config.node
+        asyncio.run(_validate_destination_is_empty(destination_node, destination))
         asyncio.run(
-            _run_copy(config.node, source, destination, start, end, new, destination_node))
+            _run_copy(config.node, source, destination, start, end, destination_node))
     except errors.ApiError as e:
         raise click.ClickException(str(e)) from e
     finally:
         asyncio.run(
             config.close_node())
 
-async def _run_copy(source_node, source, destination, start, end, new, destination_node) -> None:
+async def _validate_destination_is_empty(destination_node: BaseNode, destination: str):
+    try:
+        folder = await destination_node.folder_get(destination)
+        if len(folder.children) > 0 or len(folder.data_streams) > 0 or len(folder.event_streams) > 0:
+            raise click.ClickException(f"Destination folder [{destination}] is not empty")
+    except errors.ApiError as e:
+        if joule.constants.ApiErrorMessages.folder_does_not_exist in str(e):
+            return
+        raise e
+    
+async def _run_copy(source_node, source, destination, start, end, destination_node) -> None:
     from joule.cli.data.copy import _run as run_data_copy # lazy import
     from joule.cli.event.copy import _run as run_event_copy # lazy import
-    from joule.cli.event.copy import has_existing_events # lazy import
 
-    global action_on_event_conflict
-    if type(source) is str:
+    if type(source) is str: # initial call is a string, the recursive calls are Folder objects
         source_folder = await source_node.folder_get(source)
     else:
         source_folder = source
+    
     for child in source_folder.children:
-        await _run_copy(source_node, child, f"{destination}/{child.name}", start, end, new,
+        await _run_copy(source_node, child, f"{destination}/{child.name}", start, end,
                         destination_node)
     for data_stream in source_folder.data_streams:
         click.echo(f"Writing Data Stream {destination}/{data_stream.name}")
         try:
-            await run_data_copy(source_node, start, end, new, destination_node, data_stream,
-                                f"{destination}/{data_stream.name}")
+            await run_data_copy(source_node, start, end, new=False, 
+                                destination_node=destination_node, 
+                                source=data_stream,
+                                destination=f"{destination}/{data_stream.name}")
         except errors.ApiError as e:
             if "has no data" in str(e):
                 print("\t skipping, this stream has no data")
             else:
                 raise e
-    replace = False  # appease the typechecker
+            
     for source_stream in source_folder.event_streams:
         destination_stream = f"{destination}/{source_stream.name}"
         click.echo(f"Writing Event Stream {destination_stream}")
-        # handle potential event conflicts
-        if await has_existing_events(destination_node, destination_stream, start, end):
-            if action_on_event_conflict == 'prompt':
-                print("""
-There are already events in this destination, select how you want to proceed:
-[s]kip: skip this event stream
-[i]gnore: ignore existing destination events, add source events. This may result in duplicate events
-[r]eplace: remove all destination events, then add source events. This may result in data loss
-Select an option (use a captial letter to use this action for all event streams):""")
-                action = click.getchar()
-                if action == 's':
-                    print("\t skipping this event stream")
-                    current_action = 'skip'
-                elif action == 'S':
-                    print("\t skipping all event streams with conflicts")
-                    current_action = 'skip'
-                    action_on_event_conflict = 'skip'
-                elif action == 'i':
-                    print("\t ignoring existing events, running copy anyway")
-                    current_action = 'ignore'
-                elif action == 'I':
-                    print("\t ignoring existing events, running copy anyway on all event streams with conflicts")
-                    current_action = 'ignore'
-                    action_on_event_conflict = 'ignore'
-                elif action == 'r':
-                    print("\t removing events in destination before running copy")
-                    current_action = 'replace'
-                elif action == 'R':
-                    print("\t removing events in destination before running copy on all event streams with conflicts")
-                    current_action = 'replace'
-                    action_on_event_conflict = 'replace'
-                else:
-                    raise click.ClickException("\t invalid option, cancelling copy")
-            else:
-                current_action = action_on_event_conflict
-            if current_action == 'skip':
-                continue
-            elif current_action == 'ignore':
-                replace = False
-            elif current_action == 'replace':
-                replace = True
-            else:
-                raise click.ClickException(f"Invalid choice [{action_on_event_conflict}]")
-
-        await run_event_copy(source_node, destination_node, start, end, new, replace, source_stream,
-                             destination_stream)
+        
+        await run_event_copy(source_node, destination_node, start, end, 
+                             new=False, replace=False, source=source_stream,
+                             destination=destination_stream)
 
 
 @click.group(name="folder")
