@@ -68,17 +68,17 @@ class TestWorker(unittest.TestCase):
         self.module.inputs = {"input1": streams[0], "input2": streams[1]}
         self.module.outputs = {"output1": streams[2], "output2": streams[3]}
         self.module.log_size = LOG_SIZE
-        self.worker = Worker(self.module)
+        self.worker = Worker(self.module,socket_dir="/tmp")
         m_producers = [Module(name="producer1", exec_cmd="/bin/runit.sh"),
                        Module(name="producer2", exec_cmd="/bin/runit.sh")]
         m_producers[0].outputs = {"output": streams[0]}
         m_producers[1].outputs = {"output": streams[1]}
-        self.producers: List[Worker] = [Worker(m) for m in m_producers]
+        self.producers: List[Worker] = [Worker(m, socket_dir="/tmp") for m in m_producers]
         m_consumers = [Module(name="consumer1", exec_cmd="/bin/runit.sh"),
                        Module(name="consumer2", exec_cmd="/bin/runit.sh")]
         m_consumers[0].inputs = {"input1": streams[0], "input2": streams[2]}
         m_consumers[1].inputs = {"input1": streams[2], "input2": streams[3]}
-        self.consumers: List[Worker] = [Worker(m) for m in m_consumers]
+        self.consumers: List[Worker] = [Worker(m, socket_dir="/tmp") for m in m_consumers]
         self.supervisor = Supervisor(self.producers + self.consumers, [], None)
 
     def tearDown(self):
@@ -106,15 +106,6 @@ class TestWorker(unittest.TestCase):
         self.assertEqual(self.worker.is_app, self.module.is_app)
         connection = DataConnection("stub", 0, self.streams[0], pipes.Pipe())
         self.assertEqual(connection.location, "/mock/path")
-
-    def test_generates_socket_name(self):
-        self.assertIsNone(self.worker.interface_socket)
-        self.assertEqual(self.worker.interface_name, "none")
-        self.module.is_app = True
-        socket = self.worker.interface_socket
-        name = self.worker.interface_name
-        self.assertIn(str(self.module.uuid), socket)
-        self.assertIn(str(self.module.uuid), name)
 
     def test_produces_returns_true_if_worker_makes_output(self):
 
@@ -267,7 +258,7 @@ class TestWorker(unittest.TestCase):
         self.assertEqual(my_pipes['outputs']['output1']['id'], value)
         value = self.streams[3].id
         self.assertEqual(my_pipes['outputs']['output2']['id'], value)
-        self.assertEqual(socket_name, self.worker.interface_name)
+        self.assertEqual(socket_name, self.worker.app_socket)
         self.assertEqual(args.arg1, "value1")
         self.assertEqual(args.arg2, "value2")
 
@@ -331,7 +322,7 @@ class TestWorker(unittest.TestCase):
             Output1 is sent to
             """
 
-    def test_passes_data_across_pipes(self):
+    def test_aa_passes_data_across_pipes(self):
 
         # create worker connections
         # child runs until stopped
@@ -355,7 +346,7 @@ class TestWorker(unittest.TestCase):
         web_runner = web.AppRunner(app)
         tmp_dir = tempfile.TemporaryDirectory()
         sock_file = os.path.join(tmp_dir.name, 'testing')
-        self.worker.API_SOCKET = sock_file
+        self.worker.api_socket = sock_file
 
         async def mock_producers():
             # await asyncio.sleep(0.5)

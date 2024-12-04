@@ -30,21 +30,33 @@ class TestLoadConfigs(unittest.TestCase):
     def test_verifies_directories_exist(self):
         postgresql = testing.postgresql.Postgresql()
         db_url = postgresql.url()
-        with tempfile.TemporaryDirectory() as module_dir:
-            with tempfile.TemporaryDirectory() as stream_dir:
-                with tempfile.TemporaryDirectory() as socket_dir:
+        with(tempfile.TemporaryDirectory() as module_dir,
+             tempfile.TemporaryDirectory() as stream_dir,
+             tempfile.TemporaryDirectory() as socket_dir,
+             tempfile.TemporaryDirectory() as event_dir,
+             tempfile.TemporaryDirectory() as importer_dir,
+             tempfile.TemporaryDirectory() as exporter_dir,
+             tempfile.TemporaryDirectory() as importer_data_dir,
+             tempfile.TemporaryDirectory() as exporter_data_dir):
 
-                    parser = configparser.ConfigParser()
-                    parser.read_string("""
-                                [Main]
-                                ModuleDirectory=%s
-                                StreamDirectory=%s
-                                SocketDirectory=%s
-                                Database=%s
-                            """ % (module_dir, stream_dir, socket_dir, db_url[13:]))
-                    my_config = load_config.run(custom_values=parser)
-                    self.assertEqual(my_config.stream_directory, stream_dir)
-                    self.assertEqual(my_config.module_directory, module_dir)
+            parser = configparser.ConfigParser()
+            parser.read_string("""
+                        [Main]
+                        ModuleDirectory=%s
+                        DataStreamDirectory=%s
+                        SocketDirectory=%s
+                        EventStreamDirectory=%s
+                        ImporterConfigsDirectory=%s
+                        ExporterConfigsDirectory=%s
+                        ImporterDataDirectory=%s
+                        ExporterDataDirectory=%s
+                        Database=%s
+                    """ % (module_dir, stream_dir, socket_dir, event_dir,
+                           importer_dir, exporter_dir,
+                           importer_data_dir, exporter_data_dir, db_url[13:]))
+            my_config = load_config.run(custom_values=parser)
+            self.assertEqual(my_config.stream_directory, stream_dir)
+            self.assertEqual(my_config.module_directory, module_dir)
         postgresql.stop()
 
     def test_loads_proxies(self):

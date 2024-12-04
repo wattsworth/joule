@@ -105,7 +105,7 @@ def from_json(json) -> DataStream:
 
 class Element:
     """
-    API Element model. Streams have one or more elements. See :ref:`sec-streams` for details on the stream data model.
+    API Element model. Streams have one or more elements. See :ref:`sec-data-streams` for details on the stream data model.
 
     Parameters:
         id (int): unique numeric ID assigned by Joule

@@ -4,7 +4,9 @@ from sqlalchemy.dialects.postgresql import BIGINT, JSONB
 from typing import TYPE_CHECKING, Dict, Optional
 from datetime import datetime, timezone
 from sqlalchemy_utils import force_instant_defaults
-
+import configparser
+import re
+from joule.utilities import parse_time_interval
 from joule.errors import ConfigurationError
 from joule.models.meta import Base
 from joule.utilities.validators import validate_event_fields
@@ -111,6 +113,24 @@ def from_json(data: Dict) -> EventStream:
 
     Returns: EventStream
 
+    Example Config:
+
+        [Main]
+        #required settings
+        name = stream name
+        path = /stream/path
+        keep = 1w
+
+        #optional settings (defaults)
+        description = more info about the stream
+
+        # Field list is optional but if specified cannot be modified by the API
+
+        [Field1]
+        name = field name
+        type = string | numeric | category:["cat1","cat2",...]
+
+        #additional fields
     """
 
     return EventStream(id=data["id"],
@@ -121,6 +141,39 @@ def from_json(data: Dict) -> EventStream:
                        keep_us=validate_keep_us(data["keep_us"]),
                        updated_at=datetime.now(timezone.utc))
 
+
+
+def from_config(config: configparser.ConfigParser) -> EventStream:
+    """
+    Construct an EventStream from a configuration file
+
+    Args:
+        config: parsed *.conf file
+
+    Returns: EventStream
+
+    Raises: ConfigurationError
+
+    """
+    try:
+        main_configs: configparser.ConfigParser = config["Main"]
+    except KeyError as e:
+        raise ConfigurationError("Missing section [%s]" % e) from e
+    try:
+        keep_us = validate_keep(main_configs.get("keep", fallback="all"))
+        name = validate_name(main_configs["name"])
+        description = main_configs.get("description", fallback="")
+        stream = EventStream(name=name, description=description,
+                            keep_us=keep_us, event_fields={},
+                            updated_at=datetime.now(timezone.utc))
+    except KeyError as e:
+        raise ConfigurationError("[Main] missing %s" % e.args[0]) from e
+    # now try to load the fields
+    field_configs = filter(lambda sec: re.match(r"Field\d", sec),
+                             config.sections())
+    stream.event_fields = validate_event_fields({config['name']:config['type'] 
+                                                 for config in field_configs})
+    return stream
 
 def validate_chunk_duration(duration):
     try:
@@ -142,7 +195,12 @@ def validate_keep_us(keep_us):
     return keep_us
 
 
-
+def validate_keep(keep: str) -> int:
+    try:
+        return parse_time_interval(keep)
+    except ValueError as e:
+        raise ConfigurationError("Invalid Event Stream [keep] value: %s" % (e)) from e
+    
 
 def validate_name(name: str) -> str:
     if name is None or len(name) == 0:

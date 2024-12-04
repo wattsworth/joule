@@ -86,7 +86,10 @@ class Supervisor:
     def get_module_socket(self, uuid):
         for w in self.workers:
             if w.uuid == uuid:
-                return w.interface_socket
+                if w.module.is_app:
+                    return w.app_socket
+                else:
+                    return None
         return None
 
     def get_proxy_url(self, uuid) -> Optional[yarl.URL]:

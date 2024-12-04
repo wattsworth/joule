@@ -1,0 +1,16 @@
+[Main]
+#required settings
+name = stream name
+path = /stream/path
+keep = 1w
+
+#optional settings (defaults)
+description = more info about the stream
+
+# Field list is optional but if specified cannot be modified by the API
+
+[Field1]
+name = field name
+type = string | numeric | category:["cat1","cat2",...]
+
+#additional fields

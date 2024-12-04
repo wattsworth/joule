@@ -2,6 +2,8 @@
 from typing import Dict
 import json
 from joule.errors import ConfigurationError
+import re
+from typing import Optional
 
 def validate_event_fields(fields: Dict[str, str]) -> Dict[str, str]:
     """ 
@@ -29,6 +31,41 @@ def validate_event_fields(fields: Dict[str, str]) -> Dict[str, str]:
                 for category in categories:
                     if not isinstance(category, str):
                         raise ValueError()
-            except (json.JSONDecodeError, ValueError):
+            except ValueError:
                 raise ConfigurationError("invalid value in event_fields, category type must a have JSON list of categories after a ':'")
     return fields
+
+
+def validate_monotonic_timestamps(data, last_ts: Optional[int], name: str):
+    import numpy as np
+    if len(data) == 0:
+        return True
+    # if there are multiple rows, check that all timestamps are increasing
+    if len(data) > 1 and np.min(np.diff(data['timestamp'])) <= 0:
+        min_idx = np.argmin(np.diff(data['timestamp']))
+        msg = ("Non-monotonic timestamp in new data to stream [%s] (%d<=%d)" %
+               (name, data['timestamp'][min_idx + 1], data['timestamp'][min_idx]))
+        print(msg)
+        return False
+    # check to make sure the first timestamp is larger than the previous block
+    if last_ts is not None and (last_ts >= data['timestamp'][0]):
+            msg = ("Non-monotonic timestamp between writes to stream [%s] (%d<=%d)" %
+                   (name, data['timestamp'][0], last_ts))
+            print(msg)
+            return False
+    return True
+
+def validate_no_nan_values(data):
+    import numpy as np
+    if np.isnan(data['timestamp']).any():
+        return False
+    if np.isnan(data['data']).any():
+        return False
+    return True
+
+def validate_stream_path(path:str) -> str:
+    if path != '/' and re.fullmatch(r'^(/[\w -]+)+$', path) is None:
+        raise ValueError(
+            "invalid path, use format: /dir/subdir/../file "
+            "valid characters: [0-9,A-Z,a-z,_,-, ]")
+    return path

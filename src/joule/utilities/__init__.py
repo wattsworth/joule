@@ -5,6 +5,6 @@ from .time import (time_now,
                    human_to_timestamp,
                    timestamp_to_datetime,
                    datetime_to_timestamp)
-from .misc import yesno
+from .misc import (yesno, parse_time_interval)
 from .interval_tools import interval_difference
 from .connection_info import ConnectionInfo

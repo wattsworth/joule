@@ -5,6 +5,7 @@ After = syslog.target
 [Service]
 Type = simple
 ExecStart = /usr/local/bin/jouled
+RuntimeDirectory = joule
 StandardOutput = journal
 StandardError = journal
 Restart = always

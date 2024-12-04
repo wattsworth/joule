@@ -24,7 +24,7 @@ SECURITY_DIR = "/joule/tests/e2e/pki"
 JOULED_CMD ="coverage run --rcfile=/joule/.coveragerc -m joule.daemon".split(" ")
 JOULE_CMD = "coverage run --rcfile=/joule/.coveragerc -m joule.cli".split(" ")
 
-FORCE_DUMP = True
+FORCE_DUMP = False
 
 
 async def wait_for_follower():
@@ -92,9 +92,11 @@ def main():
         print("---------[%s]---------" % test_name)
         # remove the contents of /etc/joule/module_configs and replace with this test's configs
         shutil.rmtree("/etc/joule/module_configs")
-        shutil.rmtree("/etc/joule/stream_configs")
+        shutil.rmtree("/etc/joule/data_stream_configs")
+        shutil.rmtree("/etc/joule/event_stream_configs")
         shutil.copytree(os.path.join(test_path, "module_configs"), "/etc/joule/module_configs")
-        shutil.copytree(os.path.join(test_path, "stream_configs"), "/etc/joule/stream_configs")
+        shutil.copytree(os.path.join(test_path, "data_stream_configs"), "/etc/joule/data_stream_configs")
+        shutil.copytree(os.path.join(test_path, "event_stream_configs"), "/etc/joule/event_stream_configs")
 
         # clear the existing database (keeping master/follower tables)
         with open(os.devnull, 'w') as devnull:

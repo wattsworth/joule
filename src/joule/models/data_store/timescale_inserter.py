@@ -11,6 +11,7 @@ from joule.errors import EmptyPipeError
 from joule.models.data_store import psql_helpers
 from joule.models.data_store.errors import DataError
 import joule.utilities
+from joule.utilities.validators import validate_no_nan_values, validate_monotonic_timestamps
 
 Loop = asyncio.AbstractEventLoop
 log = logging.getLogger('joule')
@@ -79,9 +80,9 @@ class Inserter:
                                 #else:
                                 #    print(f"merging new data with pervious interval: {data['timestamp'][0] - closest_ts} <= {self.merge_gap}")
                                 #    print(f"TODO: remove any previous intervals")
-                            if not joule.utilities.misc.timestamps_are_monotonic(data, last_ts, self.stream.name):
+                            if not validate_monotonic_timestamps(data, last_ts, self.stream.name):
                                 raise DataError("Non-monotonic timestamps in new data")
-                            if not joule.utilities.misc.validate_values(data):
+                            if not validate_no_nan_values(data):
                                 raise DataError("Invalid values (NaN) in new data")
                             last_ts = data['timestamp'][-1]
                             # lazy initialization of decimator

@@ -6,17 +6,28 @@ import yarl
 import ssl
 import aiohttp
 import asyncio
-
+import logging
 from joule.models import config, Proxy
 from joule.errors import ConfigurationError
 
+log = logging.getLogger('joule')
 """
 # Example configuration (including optional lines)
 
 [Main]
   Name = joule_node
   ModuleDirectory = /etc/joule/module_configs
-  StreamDirectory = /etc/joule/stream_configs
+  DataStreamDirectory = /etc/joule/stream_configs
+  EventStreamDirectory = /etc/joule/event_configs
+  SocketDirectory = /tmp/joule
+  ImporterConfigsDirectory = /etc/joule/importer_configs
+  ImporterDataDirectory = /var/joule/importer_data
+  # ImporterInboxDirectory = /opt/joule/importer_inbox
+  ImporterKey = XXXX
+
+  ExporterConfigsDirectory = /etc/joule/exporter_configs
+  ExporterDataDirectory = /var/joule/exporter_data
+    
   UsersFile = /etc/joule/users.conf
 
   IPAddress = 127.0.0.1
@@ -47,17 +58,17 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
     # Node name
     node_name = main_config['Name']
 
-    # ModuleDirectory
-    module_directory = main_config['ModuleDirectory']
-    if not os.path.isdir(module_directory) and verify:
-        raise ConfigurationError(
-            "ModuleDirectory [%s] does not exist" % module_directory)
-    # StreamDirectory
-    stream_directory = main_config['StreamDirectory']
-    if not os.path.isdir(stream_directory) and verify:
-        raise ConfigurationError(
-            "StreamDirectory [%s] does not exist" % stream_directory)
-
+    # Make sure mandatory directories exist
+    if verify:
+        for config_name in ['ModuleDirectory', 'DataStreamDirectory', 'EventStreamDirectory',
+                       'ImporterConfigsDirectory','ImporterDataDirectory',
+                       'ExporterConfigsDirectory','ExporterDataDirectory']:
+            directory = main_config.get(config_name, None)
+            if directory is None:
+                raise ConfigurationError("Missing [%s] configuration" % config_name)
+            if not os.path.isdir(directory):
+                raise ConfigurationError("Invalid [%s] configuration" % config_name)
+    
     # Specify IPAddress and Port to listen on network interface
     # IPAddress
     if 'IPAddress' in main_config:
@@ -140,6 +151,18 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
             raise ConfigurationError(
                 "UsersFile [%s] does not exist" % users_file)
 
+    # Importer Inbox Directory (accept local archive files)
+    importer_inbox_directory = None
+    if 'ImporterInboxDirectory' in main_config:
+        importer_inbox_directory = main_config['ImporterInboxDirectory']
+        if not os.path.isdir(importer_inbox_directory) and verify:
+            raise ConfigurationError("ImporterInboxDirectory [%s] does not exist" % importer_inbox_directory)
+    
+    # Importer Key
+    importer_api_key = main_config.get('ImporterKey', None)
+    if importer_api_key is None:
+        log.warning("No ImporterKey specified, API access for data import will be disabled")
+
     # Security configuration
     if 'Security' in my_configs:
         security = config.SecurityConfig(my_configs['Security']['Certificate'],
@@ -164,8 +187,15 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
 
     return config.JouleConfig(
         name=node_name,
-        module_directory=module_directory,
-        stream_directory=stream_directory,
+        module_directory=main_config['ModuleDirectory'],
+        stream_directory=main_config['DataStreamDirectory'],
+        event_directory = main_config['EventStreamDirectory'],
+        importer_configs_directory=main_config['ImporterConfigsDirectory'],
+        importer_data_directory=main_config['ImporterDataDirectory'],
+        exporter_configs_directory=main_config['ExporterConfigsDirectory'],
+        exporter_data_directory=main_config['ExporterDataDirectory'],
+        importer_inbox_directory=importer_inbox_directory,
+        importer_api_key = importer_api_key,
         ip_address=ip_address,
         port=port,
         socket_directory=socket_directory,

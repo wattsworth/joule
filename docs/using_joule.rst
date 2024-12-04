@@ -104,7 +104,7 @@ of inputs and outputs.
 Pipe Configuration
 ------------------
 
-:ref:`pipes` connect modules to streams and are configured in the **[Inputs]** and **[Outputs]** section of the :ref:`sec-modules`
+:ref:`pipes` connect modules to data streams and are configured in the **[Inputs]** and **[Outputs]** section of the :ref:`sec-modules`
 file. At a minimum the configuration specifies a pipe name and a stream path shown in Example 1 below.
 
 .. raw:: html
@@ -124,7 +124,7 @@ file. At a minimum the configuration specifies a pipe name and a stream path sho
 
     </div>
 
-The pipe configuration can also include an inline stream configuration. This can be used in place of a :ref:`sec-streams`
+The pipe configuration can also include an inline stream configuration. This can be used in place of a :ref:`sec-data-streams`
 file or in addition to it. Using both enables static type checking for the pipeline. The inline configuration is
 separated from the stream path by a colon ``:``. The stream datatype is followed by a list of comma separated element names
 enclosed with brackets ``[ ]``. If
@@ -142,7 +142,7 @@ elements, Joule will not start the module.
 Streams can be connected to multiple input pipes but may only be connected to a single output pipe. If a module
 attempts to connect an output pipe to a stream that already has a producer, Joule will not start the module.
 
-.. _sec-streams:
+.. _sec-data-streams:
 
 DataStream Configuration
 ------------------------
@@ -195,7 +195,7 @@ The configuration format is shown below:
   </div>
 
 DataStream configuration files must end with the **.conf** suffix and should be placed in
-**/etc/joule/stream_configs**. Both **[Main]** and **[Element1]** are required.
+**/etc/joule/data_stream_configs**. Both **[Main]** and **[Element1]** are required.
 For streams with more than one element include additional sections **[Element2]**, **[Element3]**, etc.
 See the list below for information on each setting.
 
@@ -210,15 +210,6 @@ See the list below for information on each setting.
       float32, int16
       float64, int32
       ,        int64
-
-    Valid types for NilmDB backend:
-
-    .. csv-table::
-
-      float32, int8, uint8
-      float64, int16, uint16
-      ,        int32, uint32
-      ,        int64, uint64
 
 
   * ``keep`` -- how long to store stream data. Format is a value and unit.
@@ -239,7 +230,63 @@ See the list below for information on each setting.
   * ``default_min``-- control axis scaling, set to None for auto scale
 
 Streams may also be configured using an abbreviated inline syntax in a module's :ref:`sec-pipes`.
-  
+
+.. _sec-event-streams:
+
+EventStream Configuration
+-------------------------
+
+Event streams represent asynchronous data with discrete start and end timestamps. Events
+may have one or more fields of data, it is recommended but not required to type these fields. Typed fields
+facilitate data visualization in Lumen and allow viewing event data with CLI tools.
+
+The configuration format is shown below:
+
+.. raw:: html
+
+  <div class="config-file">
+
+  : EventStream Configuration File
+
+  [Main]
+  #required settings
+  name = stream name
+  path = /stream/path
+  keep = 1w
+
+  #optional settings
+  description = more info about the stream
+
+  # Field list is optional but if specified cannot be modified by the API
+
+  [Field1]
+  name = field name
+  type = string | numeric | category:["cat1","cat2",...]
+
+  #additional fields...
+
+  </div>
+
+EventStream configuration files must end with the **.conf** suffix and should be placed in
+**/etc/joule/event_stream_configs**. Only the **[Main]** section is required. Including **[Field#]** sections
+locks the stream configuration and may not be modified by the API. See the list below for information on each setting.
+
+**[Main]**
+  * ``name`` -- stream identifier, white space is permitted
+  * ``path`` -- unique identifier which follows the Unix file naming convention. The web UI
+    visualizes the path as a folder hierarchy.
+  * ``keep`` -- how long to store stream data. Format is a value and unit.
+    Units are **h**: hours, **d**: days, **w**: weeks, **m**: months, **y**: years.
+    For example **6d** will keep the last six days of data. Specify **None**
+    to keep no data or **all** to keep all data.
+  * ``description`` -- optional stream description
+
+**[Field#]**
+  * ``name`` -- field identifier, may contain whitespace
+  * ``type`` -- field type. Valid types are **string**, **numeric**, and **category**. The category type
+    requires a list of categories in JSON syntax. Items are quoted with ``" "`` and separated with ``,`` and the list should be enclosed with ``[ ]``. 
+    For example ``category:["cat1","cat2"]``.
+
 .. _sec-system-configuration:
 
 System Configuration
@@ -264,9 +311,33 @@ full set of options and their default settings:
     #   files must end with *.conf
     ModuleDirectory = /etc/joule/module_configs
 
+    ### Only files in the configuration directories ending with .conf
+    ### are considered, any others are ignored
+    
     # DataStream configuration files
-    #   files must end with *.conf
-    StreamDirectory = /etc/joule/stream_configs
+    DataStreamDirectory = /etc/joule/stream_configs
+
+    # EventStream configuration files
+    EventStreamDirectory = /etc/joule/event_stream_configs
+
+    # Importer configuration files
+    ImporterConfigDirectory = /etc/joule/importer_configs
+
+    # Exporter configuration files
+    ExporterConfigDirectory = /etc/joule/exporter_configs
+
+    ### These directories must be writable by the joule user
+    ### and are only necessary if using importers and/or exporters
+
+    # Importer data directory
+    ImporterDataDirectory = /var/run/joule/importer_data
+
+    # Exporter data directory
+    ExporterDataDirectory = /var/run/joule/exporter_data
+
+    ### Set an inbox directory to process file uploads,
+    ### omit to disable this feature (API uploads only)
+    # ImporterInboxDirectory = /opt/joule/import
 
     # Listen on address
     # set to 0.0.0.0 to listen on all interfaces
@@ -278,7 +349,7 @@ full set of options and their default settings:
     # Port = 8088
 
     # UNIX Socket directory (must be writable by joule user)
-    SocketDirectory = /tmp/joule
+    SocketDirectory = /var/run/joule/sockets
 
 
     # PostgreSQL database connection
@@ -328,8 +399,17 @@ See the list below for information on each setting.
   * ``Name`` Node name, a random value is generated by the ``joule admin initialize`` command
   * ``ModuleDirectory`` Absolute path to module configuration files.
     Only files ending with **.conf** will be loaded
-  * ``StreamDirectory`` Absolute path to stream configuration files.
+  * ``DataStreamDirectory`` Absolute path to data stream configuration files.
     Only files ending with **.conf** will be loaded
+  * ``EventStreamDirectory`` Absolute path to event stream configuration files.
+    Only files ending with **.conf** will be loaded
+  * ``ImporterConfigDirectory`` Absolute path to importer configuration files.
+    Only files ending with **.conf** will be loaded
+  * ``ExporterConfigDirectory`` Absolute path to exporter configuration files.
+    Only files ending with **.conf** will be loaded
+  * ``ImporterDataDirectory`` Absolute path to a directory used when processing data imports. Must be *writeable* by joule user.
+  * ``ExporterDataDirectory`` Absolute path to a directory used when processing data exports. Must be *writeable* by joule user.
+  * ``ImporterInboxDirectory`` Absolute path to a directory used to process file uploads. Must be *writeable* by joule user. Omit to disable this feature.
   * ``IPAddress`` IP address of interface to listen on. Use **0.0.0.0** to listen on all interfaces.
   * ``Port`` TCP port to listen on
   * ``Database`` PostgreSQL connection information as DSN string.

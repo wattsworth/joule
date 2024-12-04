@@ -274,7 +274,7 @@ class MockWorker:
         self.description = "description for %s" % name
         self.is_app = is_app
         self.uuid = uuid
-        self.interface_socket = socket
+        self.app_socket = socket
         self.input_connections = []
         self.workers = []
         self.proxies = []

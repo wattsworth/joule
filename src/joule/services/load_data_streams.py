@@ -1,7 +1,6 @@
 from sqlalchemy.orm import Session
 from typing import Dict, List
 import logging
-import re
 
 from joule.models import DataStream
 from joule.errors import ConfigurationError
@@ -9,7 +8,7 @@ from joule.models.folder import find as find_folder
 from joule.models.data_stream import from_config as stream_from_config
 from joule.services.helpers import (Configurations,
                                     load_configs)
-
+from joule.utilities.validators import validate_stream_path
 logger = logging.getLogger('joule')
 
 # types
@@ -31,27 +30,20 @@ def _parse_configs(configs: Configurations) -> Streams:
         try:
             s = stream_from_config(data)
             s.is_configured = True
-            stream_path = _validate_path(data['Main']['path'])
+            stream_path = validate_stream_path(data['Main']['path'])
             if stream_path in streams:
                 streams[stream_path].append(s)
             else:
                 streams[stream_path] = [s]
         except KeyError as e:
-            logger.error("Invalid stream [%s]: [Main] missing %s" %
+            logger.error("Invalid data stream [%s]: [Main] missing %s" %
                          (file_path, e.args[0]))
-        except ConfigurationError as e:
-            logger.error("Invalid stream [%s]: %s" % (file_path, e))
+        except (ConfigurationError, ValueError) as e:
+            logger.error("Invalid data stream [%s]: %s" % (file_path, e))
     return streams
 
 
-def _validate_path(path: str) -> str:
-    #
-    if path != '/' and re.fullmatch(r'^(/[\w -]+)+$', path) is None:
-        raise ConfigurationError(
-            "invalid path, use format: /dir/subdir/../file. "
-            "valid characters: [0-9,A-Z,a-z,_,-, ]")
 
-    return path
 
 
 def _save_stream(new_stream: DataStream, path: str, db: Session) -> None:
@@ -68,11 +60,6 @@ def _save_stream(new_stream: DataStream, path: str, db: Session) -> None:
             if settings_changed:
                 cur_stream.touch()
             db.add(cur_stream)
-            ### This check seems out of date and is not covered by tests,
-            ### should be removed after verification on production systems
-            # if new_stream in db:
-            #    print("Expunging new_stream from database... check this out")
-            #    db.expunge(new_stream)
     else:
         my_folder.data_streams.append(new_stream)
         my_folder.touch()

@@ -1,0 +1,36 @@
+[Main]
+# name must be unique
+name = DataExporter
+
+[Target]
+# export to a node
+url = http://...
+# must match the target node's API key (see main.conf documentation)
+importer_api_key = XXXX
+# export to a directory (can be done in combination with a node)
+path = /file/path
+# duration of data to retain in /file/path
+retain = 5m|all
+# how often to package data for export
+frequency = 1h
+# how much to retain when export fails (offline node or missing path)
+backlog = 3h|all|none
+
+[DataStream.1]
+# match source_label with importer config
+source_label = data_label
+# location of the data on this node
+path = /path/to/stream
+# resolution of data to export (higher decimation => lower quality)
+decimation_factor = 4
+
+[EventStream.1]
+# match source_label with importer config
+source_label = event_label
+path = /path/to/stream
+filter = <filter syntax>
+
+[Module.1]
+source_label = module_label
+module = <module_name>
+parameters = ... <custom string passed to module>

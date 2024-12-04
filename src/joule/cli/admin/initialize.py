@@ -67,6 +67,7 @@ def admin_initialize(dsn, bind, port, name, generate_user_file):
                                         bind=bind,
                                         port=port,
                                         dsn=dsn,
+                                        importer_key = secrets.token_hex(16),
                                         generate_user_file=generate_user_file)
         with open(constants.ConfigFiles.main_config, 'w') as conf:
             conf.write(file_contents)
@@ -76,24 +77,26 @@ def admin_initialize(dsn, bind, port, name, generate_user_file):
     # only root can write, and only joule members can read
     os.chmod(constants.ConfigFiles.main_config, 0o640)
 
-    # setup stream config directory
-    _make_joule_directory("/etc/joule/stream_configs")
-    example_file = pkg_resources.resource_filename(
-        "joule", "resources/templates/stream.example")
-    shutil.copy(example_file, "/etc/joule/stream_configs")
-    # set ownership to joule user
-    shutil.chown("/etc/joule/stream_configs/stream.example",
-                 user="joule", group="joule")
+    # create the configuration subfolders and populate with example configs
+    items = [('module_configs', 'module.example'),
+             ('data_stream_configs', 'data_stream.example'),
+             ('event_stream_configs', 'event_stream.example'),
+             ('importer_configs', 'importer.example'),
+             ('exporter_configs', 'exporter.example')]
+    for path, example in items:
+        _make_joule_directory(f"/etc/joule/{path}")
+        example_file = pkg_resources.resource_filename(
+            "joule", f"resources/templates/{example}")
+        shutil.copy(example_file, f"/etc/joule/{path}")
+        # set ownership to joule user
+        shutil.chown(f"/etc/joule/{path}/{example}", user="joule", group="joule")
 
-    # setup module config directory
-    _make_joule_directory("/etc/joule/module_configs")
-    example_file = pkg_resources.resource_filename(
-        "joule", "resources/templates/module.example")
-    shutil.copy(example_file, "/etc/joule/module_configs")
-    # set ownership to joule user
-    shutil.chown("/etc/joule/module_configs/module.example",
-                 user="joule", group="joule")
-
+    # create the data directories for importer and exporter
+    _make_joule_directory("/var/joule/importer_data")
+    _make_joule_directory("/var/joule/exporter_data")
+    shutil.chown("/var/joule/importer_data", user="joule", group="joule")
+    shutil.chown("/var/joule/exporter_data", user="joule", group="joule")
+    
     # setup user file if configured
     if generate_user_file and not os.path.isfile("/etc/joule/users.conf"):
         user_file = pkg_resources.resource_filename(

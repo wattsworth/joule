@@ -13,7 +13,7 @@ from joule.models.meta import Base
 from joule.errors import ConfigurationError
 from joule.models.data_store.data_store import StreamInfo
 from joule.models import element, annotation
-
+from joule.utilities import parse_time_interval
 if TYPE_CHECKING:
     from joule.models import (Folder)  
 
@@ -23,7 +23,7 @@ class DataStream(Base):
     Attributes:
         name (str): stream name
         description (str): stream description
-        datatype (DataStream.DATATYPE): data representation on disk see :ref:`sec-streams`
+        datatype (DataStream.DATATYPE): data representation on disk see :ref:`sec-data-streams`
         decimate (bool): whether to store decimated data for stream visualization
         folder (joule.Folder): parent Folder
         elements (List[joule.Element]): array of stream elements
@@ -286,6 +286,31 @@ def from_config(config: configparser.ConfigParser) -> DataStream:
 
     Raises: ConfigurationError
 
+    Example Config:
+
+        [Main]
+        #required settings
+        name = stream name
+        path = /stream/path
+        datatype = float32
+        keep = 1w
+
+        #optional settings (defaults)
+        decimate = yes
+
+        [Element1]
+        #required settings
+        name = element name
+
+        #optional settings (defaults)
+        plottable = yes
+        display_type = continuous
+        offset = 0.0
+        scale_factor = 1.0
+        default_max = None
+        default_min = None
+
+        #additional elements...
     """
     try:
         main_configs: configparser.ConfigParser = config["Main"]
@@ -339,25 +364,8 @@ def validate_datatype(datatype: str) -> DataStream.DATATYPE:
 
 
 def validate_keep(keep: str) -> int:
-    if keep.lower() == "none":
-        return DataStream.KEEP_NONE
-    if keep.lower() == "all":
-        return DataStream.KEEP_ALL
-    match = re.fullmatch(r'^(\d+)([hdwmy])$', keep)
-    if match is None:
-        raise ConfigurationError("invalid [DataStream] keep"
-                                 "use format #unit (eg 1w), none or all")
-
-    units = {
-        'h': 60 * 60 * 1e6,  # hours
-        'd': 24 * 60 * 60 * 1e6,  # days
-        'w': 7 * 24 * 60 * 60 * 1e6,  # weeks
-        'm': 4 * 7 * 24 * 60 * 60 * 1e6,  # months
-        'y': 365 * 24 * 60 * 60 * 1e6  # years
-    }
-    unit = match.group(2)
-    time = int(match.group(1))
-    if time <= 0:
-        raise ConfigurationError("invalid [DataStream] keep"
-                                 "use format #unit (eg 1w), none or all")
-    return int(time * units[unit])
+    try:
+        return parse_time_interval(keep)
+    except ValueError as e:
+        raise ConfigurationError("Invalid Data Stream [keep] value: %s" % (e)) from e
+    

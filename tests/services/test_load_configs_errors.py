@@ -20,22 +20,34 @@ class TestLoadConfigErrors(unittest.TestCase):
                     parser.read_string("""
                                 [Main]
                                 ModuleDirectory=%s
-                                StreamDirectory=%s
+                                DataStreamDirectory=%s
                             """ % setup)
                     with self.assertRaises(ConfigurationError):
                         load_config.run(custom_values=parser)
 
     def test_error_if_missing_database_configuration(self):
-        with tempfile.TemporaryDirectory() as module_dir:
-            with tempfile.TemporaryDirectory() as stream_dir:
-                with tempfile.TemporaryDirectory() as sock_dir:
+        with(tempfile.TemporaryDirectory() as module_dir,
+             tempfile.TemporaryDirectory() as stream_dir,
+             tempfile.TemporaryDirectory() as socket_dir,
+             tempfile.TemporaryDirectory() as event_dir,
+             tempfile.TemporaryDirectory() as importer_dir,
+             tempfile.TemporaryDirectory() as exporter_dir,
+             tempfile.TemporaryDirectory() as importer_data_dir,
+             tempfile.TemporaryDirectory() as exporter_data_dir):
                     parser = configparser.ConfigParser()
                     parser.read_string("""
                                 [Main]
                                 ModuleDirectory=%s
-                                StreamDirectory=%s
+                                DataStreamDirectory=%s
                                 SocketDirectory=%s
-                            """ % (module_dir, stream_dir, sock_dir))
+                                EventStreamDirectory=%s
+                                ImporterConfigsDirectory=%s
+                                ExporterConfigsDirectory=%s
+                                ImporterDataDirectory=%s
+                                ExporterDataDirectory=%s
+                            """ % (module_dir, stream_dir, socket_dir, event_dir,
+                                   importer_dir, exporter_dir,
+                                   importer_data_dir, exporter_data_dir))
                     with self.assertRaisesRegex(ConfigurationError, "Database"):
                         load_config.run(custom_values=parser)
 

@@ -12,9 +12,13 @@ DEFAULT_CONFIG = {
         {
             "Name": "joule_node",
             "ModuleDirectory": "/etc/joule/module_configs",
-            "StreamDirectory": "/etc/joule/stream_configs",
+            "DataStreamDirectory": "/etc/joule/data_stream_configs",
+            "EventStreamDirectory": "/etc/joule/event_stream_configs",
+            "ImporterConfigsDirectory": "/etc/joule/importer_configs",
+            "ImporterDataDirectory": "/var/joule/importer_data",
+            "ExporterConfigsDirectory": "/etc/joule/exporter_configs",
+            "ExporterDataDirectory": "/var/joule/exporter_data",
             "SocketDirectory": "/tmp/joule",
-            #"Database": "joule@localhost:5432/joule",
             "InsertPeriod": 5,
             "CleanupPeriod": 60,
             "MaxLogLines": 100,
@@ -37,6 +41,13 @@ class JouleConfig:
     name: str
     module_directory: str
     stream_directory: str
+    event_directory: str
+    importer_configs_directory: str
+    importer_data_directory: str
+    importer_inbox_directory: str
+    importer_api_key: str
+    exporter_configs_directory: str
+    exporter_data_directory: str
     ip_address: Optional[str]
     port: Optional[int]
     socket_directory: str

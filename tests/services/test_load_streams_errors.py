@@ -7,13 +7,13 @@ from unittest import mock
 
 from tests.helpers import DbTestCase
 from joule.models import Base
-from joule.services import load_streams
+from joule.services import load_data_streams
 
 logger = logging.getLogger('joule')
 
 class TestLoadStreamErrors(DbTestCase):
 
-    @mock.patch('joule.services.load_streams.load_configs')
+    @mock.patch('joule.services.load_data_streams.load_configs')
     def test_validates_path(self, load_configs: mock.Mock):
         bad_paths = ["", "/slash/at/end/", "bad name", "/double/end//",
                      "//double/start", "/*bad&symb()ls"]
@@ -29,7 +29,7 @@ class TestLoadStreamErrors(DbTestCase):
                                 """ % path)
             load_configs.return_value = {'stream.conf': parser}
             with self.assertLogs(level="ERROR"):
-                load_streams.run('', self.db)
+                load_data_streams.run('', self.db)
 
         good_paths = ["/", "/short", "/meters-4/prep-a",
                       "/meter_4/prep-b", "/path  with/ spaces"]
@@ -44,10 +44,10 @@ class TestLoadStreamErrors(DbTestCase):
                                 name=x
                                """ % path)
             load_configs.return_value = {'stream.conf': parser}
-            new_streams = load_streams.run('', self.db)
+            new_streams = load_data_streams.run('', self.db)
             self.assertEqual(len(new_streams), 1)
 
-    @mock.patch('joule.services.load_streams.load_configs')
+    @mock.patch('joule.services.load_data_streams.load_configs')
     def test_logs_invalid_streams(self, load_configs):
             parser = configparser.ConfigParser()
             parser.read_string("""
@@ -58,10 +58,10 @@ class TestLoadStreamErrors(DbTestCase):
                         """)
             load_configs.return_value = {'stream.conf': parser}
             with self.assertLogs(level="ERROR"):
-                new_streams = load_streams.run('', self.db)
+                new_streams = load_data_streams.run('', self.db)
                 self.assertEqual(len(new_streams), 0)
 
-    @mock.patch('joule.services.load_streams.load_configs')
+    @mock.patch('joule.services.load_data_streams.load_configs')
     def test_checks_path_is_present(self, load_configs):
         parser = configparser.ConfigParser()
         parser.read_string("""
@@ -73,5 +73,5 @@ class TestLoadStreamErrors(DbTestCase):
                             """)
         load_configs.return_value = {'stream.conf': parser}
         with self.assertLogs(level="ERROR"):
-            new_streams = load_streams.run('', self.db)
+            new_streams = load_data_streams.run('', self.db)
             self.assertEqual(len(new_streams), 0)

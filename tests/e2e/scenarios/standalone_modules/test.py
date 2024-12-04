@@ -62,7 +62,9 @@ async def start_standalone_procs2(node: api.BaseNode):
                         stderr=subprocess.PIPE,
                         universal_newlines=True,
                         timeout=3)
-    assert p3.stderr.find("layout") != -1
+    if p3.stderr.find("layout") == -1:
+        print(p3.stderr)
+        raise RuntimeError("proc3 log error, missing 'layout'")
 
     #  proc1 reads /counting/base and writes to /counting/plus3
     p1 = subprocess.Popen(build_standalone_args("proc1"))
@@ -94,7 +96,7 @@ def build_standalone_args(proc_dir):
             "/joule/tests/e2e/module_scripts/adder.py",
             "3", "--live",
             "--module_config", base_dir + "module.conf",
-            "--stream_configs", base_dir + "stream_configs"]
+            "--data_stream_configs", base_dir + "data_stream_configs"]
 
 
 def stop_standalone_procs(procs):

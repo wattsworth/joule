@@ -222,7 +222,7 @@ class BaseModule:
                          default="unset",
                          help='specify *.conf file for isolated execution')
         # --stream_configs: set to run module standalone
-        grp.add_argument("--stream_configs",
+        grp.add_argument("--data_stream_configs",
                          default="unset",
                          help="specify directory of stream configs " +
                               "for isolated execution")
@@ -276,8 +276,8 @@ class BaseModule:
             if parsed_args.module_config == "unset":
                 raise ConfigurationError("module_config parameter missing")
             module_config = helpers.read_module_config(parsed_args.module_config)
-            if parsed_args.stream_configs != "unset":
-                configured_streams = helpers.read_stream_configs(parsed_args.stream_configs)
+            if parsed_args.data_stream_configs != "unset":
+                configured_streams = helpers.read_stream_configs(parsed_args.data_stream_configs)
             else:
                 configured_streams = {}
             if 'Inputs' in module_config:

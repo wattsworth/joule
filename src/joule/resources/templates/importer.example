@@ -1,0 +1,31 @@
+[Main]
+# name must be unique
+name = DataImporter
+
+[DataStream.1]
+# match source_label with exporter config
+source_label = data_label
+# destination path for this data
+path = /path/to/stream
+# combine intervals less than gap distance apart
+merge_gap = 5s
+
+[EventStream.1]
+# match source_label with exporter config
+source_label = event_label
+# destination path for these events
+path = /path/to/stream
+# choose action when events already exist at path
+# keep_source: delete existing events at /path/to/stream, replace with imported events
+# keep_destination: keep existing events at /path/to/stream, ignore import
+# keep_both: always add imported events, may create duplicate copies of the data
+# merge: only import events that are not at /path/to/stream **resource intensive!**
+on_conflict = keep_source | keep_destination | keep_both | merge
+
+[Module.1]
+# match source_label with exporter config
+source_label = module_label
+# target module that will import this data
+module = <module_name>
+# optional additional parameters provided to module
+parameters = ... <custom string passed to module>

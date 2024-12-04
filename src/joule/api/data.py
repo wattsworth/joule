@@ -3,7 +3,8 @@ import asyncio
 import aiohttp
 from joule.models.pipes import compute_dtype
 from joule.utilities.time import time_now
-from joule.utilities.misc import timestamps_are_monotonic, validate_values
+from joule.utilities.validators import validate_monotonic_timestamps
+from joule.utilities.validators import validate_no_nan_values
 from joule.constants import EndPoints
 from .session import BaseSession
 from .data_stream import (DataStream,
@@ -305,9 +306,9 @@ async def _send_data(session: BaseSession,
         last_ts = None
         while await pipe.not_empty():
             data = await pipe.read()
-            if not timestamps_are_monotonic(data,last_ts,stream.name):
+            if not validate_monotonic_timestamps(data,last_ts,stream.name):
                 raise errors.ApiError("timestamps are not monotonic")
-            if not validate_values(data):
+            if not validate_no_nan_values(data):
                 raise errors.ApiError("invalid values (NaN or Inf)")
             if len(data) > 0:
                 yield data.tobytes()

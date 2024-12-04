@@ -25,7 +25,7 @@ from joule.errors import ConfigurationError, SubscriptionError
 from joule.models import TimescaleStore, Follower, Node
 from joule.models.data_store.errors import DataError
 from joule.api import TcpNode
-from joule.services import (load_modules, load_streams, load_config)
+from joule.services import (load_data_streams, load_event_streams, load_modules, load_config)
 import joule.middleware
 import joule.controllers
 from joule import constants
@@ -133,16 +133,21 @@ class Daemon(object):
             conn.execute(text("REVOKE ALL PRIVILEGES ON TABLE metadata.node FROM joule_module"))
         self.db = Session(bind=engine)
 
-        # reset flags on streams, these will be set by load_modules and load_streams
+        # reset flags on streams, these will be set by load_modules and load_data_streams
         for stream in self.db.query(DataStream).all():
             stream.is_configured = False
             stream.is_destination = False
             stream.is_source = False
 
         # load modules, streams, and proxies, from configs
-        load_streams.run(self.config.stream_directory, self.db)
+        load_data_streams.run(self.config.stream_directory, self.db)
+        load_event_streams.run(self.config.event_directory, self.db)
         modules = load_modules.run(self.config.module_directory, self.db)
 
+        # TODO: create cleanup workers based on keep settings for both 
+        # data and event streams, rather than relying on modules to do this
+        # since data can come in by API requests as well
+        
         # create any schemas requested by the modules
         for module in modules:
             if module.db_schema != "":
@@ -171,7 +176,7 @@ class Daemon(object):
                 os.environ["JOULE_CA_FILE"] = self.config.security.cafile
                 self.cafile = self.config.security.cafile
         # configure workers
-        workers = [Worker(m) for m in modules]
+        workers = [Worker(m, socket_dir=self.config.socket_directory) for m in modules]
 
         def get_node(name: str):
             follower = self.db.query(Follower) \

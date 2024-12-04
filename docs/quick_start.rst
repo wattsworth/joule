@@ -106,7 +106,7 @@ to connect its output. To do this create the following file:
 
 This connects the module to the stream **/demo/random**. The stream is configured
 inline after the colon (:). This specifies a **float32** datatype and two elements named
-**x** and **y**. To control other stream options create a :ref:`sec-streams` file
+**x** and **y**. To control other stream options create a :ref:`sec-data-streams` file
 in **/etc/joule/stream_configs**. Now the pipeline is ready to execute. Restart joule and check that the
 new module is running:
 

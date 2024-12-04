@@ -9,7 +9,7 @@ import datetime
 
 from tests.helpers import DbTestCase
 from joule.models import (Base, DataStream, Folder, Element)
-from joule.services import load_streams
+from joule.services import load_data_streams
 
 logger = logging.getLogger('joule')
 
@@ -117,7 +117,7 @@ class TestConfigureStreams(DbTestCase):
                     f.write(conf)
                 i += 1
             with self.assertLogs(logger=logger, level=logging.ERROR) as logs:
-                load_streams.run(conf_dir, self.db)
+                load_data_streams.run(conf_dir, self.db)
                 # log the bad path error
                 self.assertRegex(logs.output[0], 'path')
                 # log the incompatible layout error
