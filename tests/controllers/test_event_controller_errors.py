@@ -17,7 +17,7 @@ from joule.constants import EndPoints, ApiErrorMessages
 import testing.postgresql
 psql_key = web.AppKey("psql", testing.postgresql.Postgresql)
 
-class TestEventController(AioHTTPTestCase):
+class TestEventControllerErrors(AioHTTPTestCase):
 
     async def tearDownAsync(self):
         self.app[app_keys.db].close()
@@ -119,6 +119,14 @@ class TestEventController(AioHTTPTestCase):
         updated_at = self.app[app_keys.db].query(Folder).filter_by(name="events").one().updated_at
         self.assertEqual(updated_at, prev_update)
     
+        # cannot delete streams with a fixed configuration
+        # make stream1 configured (locked)
+        stream1 = self.app[app_keys.db].query(EventStream).filter_by(id=self.test_stream_id).one()
+        stream1.is_configured = True
+        resp = await self.client.delete(EndPoints.event, params={"path": "/events/test"})
+        self.assertEqual(resp.status, 400)
+        self.assertIn('locked', await resp.text())
+
     async def test_get_event_stream_info_errors(self):
         ### must send id
         resp: aiohttp.ClientResponse = await \
@@ -175,6 +183,15 @@ class TestEventController(AioHTTPTestCase):
         actual_parent_id = self.app[app_keys.db].query(EventStream).filter_by(id=self.test_stream_id).one().folder_id
         self.assertEqual(actual_parent_id, find_folder("/events", self.app[app_keys.db]).id)
 
+        # cannot move streams with a fixed configuration
+        # make stream1 configured (locked)
+        stream1 = self.app[app_keys.db].query(EventStream).filter_by(id=self.test_stream_id).one()
+        stream1.is_configured = True
+        resp = await self.client.put(EndPoints.event_move, json={"src_path": "/events/test",
+                                                                "dest_path": "/other_folder"})
+        self.assertEqual(resp.status, 400)
+        self.assertIn('locked', await resp.text())
+
     async def test_event_stream_update_errors(self):
         db = self.app[app_keys.db]
         stream = db.query(EventStream).filter_by(id=self.test_stream_id).one()
@@ -227,6 +244,14 @@ class TestEventController(AioHTTPTestCase):
         self.assertEqual(resp.status, 400)
         msg = await resp.text()
         self.assertIn('same name', msg)
+
+        # cannot update streams with a fixed configuration
+        # make stream1 configured (locked)
+        stream1 = self.app[app_keys.db].query(EventStream).filter_by(id=self.test_stream_id).one()
+        stream1.is_configured = True
+        resp = await self.client.put(EndPoints.event, json={"id":self.test_stream_id, "stream": self.test_stream.to_json()})
+        self.assertEqual(resp.status, 400)
+        self.assertIn('locked', await resp.text())
 
     async def test_event_stream_write_errors(self):
         event_store = self.app[app_keys.event_store]

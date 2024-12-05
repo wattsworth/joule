@@ -60,6 +60,7 @@ class ApiErrorMessages:
     invalid_filter_parameter = 'invalid filter parameter'
     id_not_found = 'id not found'
     folder_is_locked = 'folder is locked'
+    stream_is_locked = 'stream is locked'
     # Error messages that require formatting
     f_parameter_must_be_an_int = "parameter {parameter} must be an int"
 

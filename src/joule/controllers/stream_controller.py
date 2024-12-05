@@ -10,6 +10,7 @@ from joule.models import (
 from joule.models import folder, Folder
 from joule.controllers.helpers import read_json, get_stream_from_request_params
 from joule.errors import ConfigurationError
+from joule.constants import ApiErrorMessages
 from joule import app_keys
 
 async def info(request: web.Request):
@@ -36,7 +37,7 @@ async def move(request: web.Request):
     if my_stream is None:
         raise web.HTTPNotFound(reason="stream does not exist")
     if my_stream.locked:
-        raise web.HTTPBadRequest(reason="locked streams cannot be moved")
+        raise web.HTTPBadRequest(reason=ApiErrorMessages.stream_is_locked)
     # find or create the destination folder
     if 'dest_path' in body:
         try:
@@ -124,7 +125,7 @@ async def update(request: web.Request):
     if my_stream is None:
         raise web.HTTPNotFound(reason="stream does not exist")
     if my_stream.locked:
-        raise web.HTTPBadRequest(reason="stream is locked")
+        raise web.HTTPBadRequest(reason=ApiErrorMessages.stream_is_locked)
     if 'stream' not in body:
         raise web.HTTPBadRequest(reason="Invalid request: specify stream as JSON")
     try:
@@ -152,7 +153,7 @@ async def delete(request):
     # find the requested stream
     my_stream = get_stream_from_request_params(request, db)
     if my_stream.locked or my_stream.active:
-        raise web.HTTPBadRequest(reason="locked streams cannot be deleted")
+        raise web.HTTPBadRequest(reason=ApiErrorMessages.stream_is_locked)
     await data_store.destroy(my_stream)
     my_stream.folder.touch()
     db.delete(my_stream)

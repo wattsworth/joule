@@ -26,6 +26,10 @@ def apply_database_migrations(engine):
         # Apply migrations for version 0.11
         log.info("Applying migration for version 0.11")
         make_timestamps_timezone_aware(engine)
+    if current_version < packaging.version.parse("0.12"):
+        # Apply migrations for version 0.12
+        log.info("Applying migration for version 0.12")
+        apply_0_12_migrations(engine)
     else:
         log.info("No migrations to apply")
 
@@ -40,6 +44,11 @@ def make_timestamps_timezone_aware(engine):
                                 ("eventstream","updated_at"),]:
                 conn.execute(text(f"""ALTER TABLE metadata.{table} ALTER COLUMN "{column}" SET DATA TYPE TIMESTAMPTZ  USING "{column}" at time zone 'UTC'"""))
 
+def apply_0_12_migrations(engine):
+    with engine.connect() as conn:
+        with conn.begin():
+            conn.execute(text("ALTER TABLE metadata.eventstream ADD COLUMN IF NOT EXISTS is_configured BOOLEAN DEFAULT FALSE"))
+            
 def get_db_version(engine):
     with engine.connect() as conn:
         try:

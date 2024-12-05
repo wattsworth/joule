@@ -38,6 +38,8 @@ async def move(request: web.Request):
         raise web.HTTPBadRequest(reason=ApiErrorMessages.specify_id_or_path)
     if my_stream is None:
         raise web.HTTPNotFound(reason=ApiErrorMessages.stream_does_not_exist)
+    if my_stream.locked:
+        raise web.HTTPBadRequest(reason=ApiErrorMessages.stream_is_locked)
     # find or create the destination folder
     if 'dest_path' in body:
         try:
@@ -112,6 +114,8 @@ async def update(request: web.Request):
     my_stream: EventStream = db.get(EventStream, body['id'])
     if my_stream is None:
         raise web.HTTPNotFound(reason=ApiErrorMessages.stream_does_not_exist)
+    if my_stream.locked:
+        raise web.HTTPBadRequest(reason=ApiErrorMessages.stream_is_locked)
     if 'stream' not in body:
         raise web.HTTPBadRequest(reason="Invalid request: specify stream as JSON")
     try:
@@ -146,6 +150,8 @@ async def delete(request):
         raise web.HTTPBadRequest(reason=ApiErrorMessages.specify_id_or_path)
     if my_stream is None:
         raise web.HTTPNotFound(reason=ApiErrorMessages.stream_does_not_exist)
+    if my_stream.locked:
+        raise web.HTTPBadRequest(reason=ApiErrorMessages.stream_is_locked)
     await data_store.destroy(my_stream)
     my_stream.folder.touch()
     db.delete(my_stream)

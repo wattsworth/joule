@@ -60,6 +60,11 @@ def _save_stream(new_stream: DataStream, path: str, db: Session) -> None:
             if settings_changed:
                 cur_stream.touch()
             db.add(cur_stream)
-    else:
-        my_folder.data_streams.append(new_stream)
-        my_folder.touch()
+        return
+    # make sure name is unique in this destination
+    event_stream_names = [s.name for s in my_folder.event_streams]
+    if new_stream.name in event_stream_names:
+        logger.error(f"cannot create data stream [{new_stream.name}], conflicts with existing event stream")
+        return
+    my_folder.data_streams.append(new_stream)
+    new_stream.touch()

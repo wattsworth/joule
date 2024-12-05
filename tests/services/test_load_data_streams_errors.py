@@ -11,7 +11,7 @@ from joule.services import load_data_streams
 
 logger = logging.getLogger('joule')
 
-class TestLoadStreamErrors(DbTestCase):
+class TestLoadDataStreamErrors(DbTestCase):
 
     @mock.patch('joule.services.load_data_streams.load_configs')
     def test_validates_path(self, load_configs: mock.Mock):

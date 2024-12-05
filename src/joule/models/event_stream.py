@@ -1,5 +1,5 @@
 from sqlalchemy.orm import relationship, Mapped
-from sqlalchemy import (Column, Integer, String, DateTime, ForeignKey)
+from sqlalchemy import (Column, Boolean, Integer, String, DateTime, ForeignKey)
 from sqlalchemy.dialects.postgresql import BIGINT, JSONB
 from typing import TYPE_CHECKING, Dict, Optional
 from datetime import datetime, timezone
@@ -23,7 +23,7 @@ class EventStream(Base):
     Attributes:
         name (str): stream name
         description (str): stream description
-        decimate (bool): whether to store decimated data for event visualization
+        event_fields (dict): field name -> type mapping
         folder (joule.Folder): parent Folder
         chunk_duration_us (int): chunk duration in microseconds, 0 for normal table
         keep_us (int): microseconds of data to keep (KEEP_NONE=0, KEEP_ALL=-1).
@@ -34,6 +34,8 @@ class EventStream(Base):
     id: int = Column(Integer, primary_key=True)
     name: str = Column(String, nullable=False)
     event_fields: Dict[str, str] = Column(JSONB)
+    is_configured: bool = Column(Boolean, default=False)
+
     chunk_duration_us: int = Column(BIGINT, default=0)
 
     KEEP_ALL = -1
@@ -45,6 +47,24 @@ class EventStream(Base):
     folder: Mapped["Folder"] = relationship("Folder", back_populates="event_streams")
     updated_at: datetime = Column(DateTime(timezone=True), nullable=False)
 
+    def merge_configs(self, other: 'EventStream') -> bool:
+        # merge always works, return True if settings changed
+        # just check for equality before setting the fields
+        same_settings = (self.name == other.name and
+                self.description == other.description and
+                self.event_fields == other.event_fields and
+                self.chunk_duration_us == other.chunk_duration_us and
+                self.keep_us == other.keep_us)
+        if same_settings:
+            return False # no merge needed
+        # update all of the fields
+        self.name = other.name
+        self.description = other.description
+        self.event_fields = other.event_fields
+        self.chunk_duration_us = other.chunk_duration_us
+        self.keep_us = other.keep_us
+        return True
+        
     def update_attributes(self, attrs: Dict) -> None:
         updated = False
         if 'name' in attrs:
@@ -101,7 +121,14 @@ class EventStream(Base):
 
     def __repr__(self):
         return "<EventStream(id=%r, name='%s')>" % (self.id, self.name)
-
+        
+    @property
+    def locked(self):
+        """
+        bool: true if the stream has a configuration file.
+        Attributes of locked streams cannot be changed.
+        """
+        return self.is_configured
 
 def from_json(data: Dict) -> EventStream:
     """
@@ -143,6 +170,7 @@ def from_json(data: Dict) -> EventStream:
 
 
 
+
 def from_config(config: configparser.ConfigParser) -> EventStream:
     """
     Construct an EventStream from a configuration file
@@ -169,10 +197,10 @@ def from_config(config: configparser.ConfigParser) -> EventStream:
     except KeyError as e:
         raise ConfigurationError("[Main] missing %s" % e.args[0]) from e
     # now try to load the fields
-    field_configs = filter(lambda sec: re.match(r"Field\d", sec),
-                             config.sections())
-    stream.event_fields = validate_event_fields({config['name']:config['type'] 
-                                                 for config in field_configs})
+    field_configs = [config[section] for section in filter(lambda sec: re.match(r"Field\d", sec),
+                             config.sections())]
+    stream.event_fields = validate_event_fields({field_config['name']:field_config['type'] 
+                                                 for field_config in field_configs})
     return stream
 
 def validate_chunk_duration(duration):

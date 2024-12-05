@@ -13,11 +13,12 @@ logger = logging.getLogger('joule')
 
 Streams = Dict[str, List[EventStream]]
 
-def run(path: str, db: Session):
+def run(path: str, db: Session) -> List[EventStream]:
     configs = load_configs(path)
     configured_streams = _parse_configs(configs)
     for path, streams in configured_streams.items():
         for stream in streams:
+            stream.is_configured = True
             _save_stream(stream, path, db)
     return [stream for _, stream in configured_streams.items()]
 
@@ -38,13 +39,22 @@ def _parse_configs(configs: Configurations) -> Streams:
             logger.error("Invalid event stream [%s]: %s" % (file_path, e))
     return streams
 
-def _save_stream(stream: EventStream, path: str, db):
-    destination = find_folder(path, db, create=True)
-
+def _save_stream(new_stream: EventStream, path: str, db):
+    my_folder = find_folder(path, db, create=True)
+    cur_stream: EventStream = db.query(EventStream) \
+        .filter_by(folder=my_folder, name=new_stream.name) \
+        .one_or_none()
+    if cur_stream is not None:
+        cur_stream.is_configured = True
+        settings_changed = cur_stream.merge_configs(new_stream)
+        if settings_changed:
+            cur_stream.touch()
+        db.add(cur_stream)
+        return
     # make sure name is unique in this destination
-    existing_names = [s.name for s in destination.data_streams + destination.event_streams]
-    if stream.name in existing_names:
-        raise ConfigurationError("stream with the same name exists in the folder")
-    destination.event_streams.append(stream)
-    stream.touch()
-    db.commit()
+    data_stream_names = [s.name for s in my_folder.data_streams]
+    if new_stream.name in data_stream_names:
+        logger.error(f"cannot create event stream [{new_stream.name}], conflicts with existing data stream")
+        return
+    my_folder.event_streams.append(new_stream)
+    new_stream.touch()

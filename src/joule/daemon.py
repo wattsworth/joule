@@ -19,7 +19,7 @@ import ssl
 
 from joule.version import version
 from joule.models import (Base, Worker, config, EventStore,
-                          DataStore, DataStream, pipes)
+                          DataStore, DataStream, EventStream, pipes)
 from joule.models.supervisor import Supervisor
 from joule.errors import ConfigurationError, SubscriptionError
 from joule.models import TimescaleStore, Follower, Node
@@ -138,6 +138,9 @@ class Daemon(object):
             stream.is_configured = False
             stream.is_destination = False
             stream.is_source = False
+
+        for stream in self.db.query(EventStream).all():
+            stream.is_configured = False
 
         # load modules, streams, and proxies, from configs
         load_data_streams.run(self.config.stream_directory, self.db)
