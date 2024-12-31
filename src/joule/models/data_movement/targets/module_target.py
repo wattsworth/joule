@@ -15,3 +15,8 @@ class ModuleTarget:
     async def run_import(self,
                          source_directory: str) -> bool:
         return True
+    
+def module_target_from_config(config: dict) -> ModuleTarget:
+    return ModuleTarget(config['source_label'],
+                        config['module'],
+                        config.get('parameters', ''))

@@ -331,7 +331,7 @@ class TestEventControllerErrors(AioHTTPTestCase):
         self.assertEqual(resp.status, 400)
         self.assertFalse(event_store.count_called)
         msg = await resp.text()
-        self.assertIn(ApiErrorMessages.invalid_filter_parameter, msg)
+        self.assertIn(ApiErrorMessages.invalid_filter_json_syntax, msg)
 
     async def test_event_stream_read_errors(self):
         event_store = self.app[app_keys.event_store]

@@ -21,11 +21,17 @@ from joule.version import version
 from joule.models import (Base, Worker, config, EventStore,
                           DataStore, DataStream, EventStream, pipes)
 from joule.models.supervisor import Supervisor
+from joule.models.exporter_manager import ExporterManager
+from joule.models.importer_manager import ImporterManager
 from joule.errors import ConfigurationError, SubscriptionError
 from joule.models import TimescaleStore, Follower, Node
 from joule.models.data_store.errors import DataError
 from joule.api import TcpNode
-from joule.services import (load_data_streams, load_event_streams, load_modules, load_config)
+from joule.services import (load_data_streams, 
+                            load_event_streams,
+                            load_exporters, 
+                            load_modules, 
+                            load_config)
 import joule.middleware
 import joule.controllers
 from joule import constants
@@ -194,6 +200,10 @@ class Daemon(object):
 
         self.supervisor = Supervisor(workers, self.config.proxies, get_node)
 
+        # configure exporters
+        exporters = load_exporters.run(self.config.exporter_configs_directory,
+                                       self.config.exporter_data_directory)
+        self.exporter_manager = ExporterManager(exporters, self.db)
         # save the metadata
         self.db.commit()
         return True # successfully initialized the system
@@ -208,6 +218,8 @@ class Daemon(object):
             exit(1)
         # start the supervisor (runs the workers)
         await self.supervisor.start()
+        # start the I/O managers
+        await self.exporter_manager.start()
 
         # start inserters by subscribing to the streams
         inserter_tasks = []
@@ -277,6 +289,7 @@ class Daemon(object):
 
         # clean everything up
         await self.supervisor.stop()
+        await self.exporter_manager.stop()
         inserter_task_grp.cancel()
         try:
             await inserter_task_grp

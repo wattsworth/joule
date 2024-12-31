@@ -3,7 +3,8 @@ from typing import Dict
 import json
 from joule.errors import ConfigurationError
 import re
-from typing import Optional
+from typing import Optional, List
+from joule.constants import ApiErrorMessages
 
 def validate_event_fields(fields: Dict[str, str]) -> Dict[str, str]:
     """ 
@@ -35,6 +36,38 @@ def validate_event_fields(fields: Dict[str, str]) -> Dict[str, str]:
                 raise ConfigurationError("invalid value in event_fields, category type must a have JSON list of categories after a ':'")
     return fields
 
+def validate_event_filter(filter_string: str) -> List:
+    """
+    make sure the filter string syntax is valid
+    boolean expression syntax: [[A,op,B]] where op is an operation in [is,not,like,unlike,gt,lt,gte,lte,eq,neq]
+    AND clause is a list of boolean expressions
+    OR clause is a list of AND clauses
+    """
+    try:
+        filter_list = json.loads(filter_string)
+    except json.JSONDecodeError:
+        raise ConfigurationError(ApiErrorMessages.invalid_filter_json_syntax)
+    if not isinstance(filter_list, list):
+        raise ConfigurationError()
+    for and_clause in filter_list:
+        if not isinstance(and_clause, list):
+            raise ConfigurationError(ApiErrorMessages.invalid_filter_parameter)
+        for expr in and_clause:
+            if not isinstance(expr, list):
+                raise ConfigurationError(ApiErrorMessages.invalid_filter_parameter)
+            if len(expr) != 3:
+                raise ConfigurationError("invalid filter string, boolean expression must have 3 elements")
+            if expr[1] not in ['is','not','like','unlike','gt','lt','gte','lte','eq','neq']:
+                raise ConfigurationError("invalid filter string, boolean expression must have a valid operation")
+            # if operation is like or unlike, make sure the value is a string
+            if expr[1] in ['like','unlike','is','not']:
+                if not isinstance(expr[2], str):
+                    raise ConfigurationError("invalid filter string, is/not/like/unlike operation must have a string value")
+            # first field must be a string label
+            if not isinstance(expr[0], str):
+                raise ConfigurationError("invalid filter string, first element of boolean expression must be a string label")
+    return filter_list
+    
 
 def validate_monotonic_timestamps(data, last_ts: Optional[int], name: str):
     import numpy as np

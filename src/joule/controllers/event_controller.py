@@ -1,10 +1,9 @@
 from aiohttp import web
-import json
 from sqlalchemy.orm import Session
-import datetime
 from joule.models import EventStream, EventStore, event_stream
 from joule.constants import ApiErrorMessages
 from joule.controllers.helpers import read_json, validate_query_parameters
+from joule.utilities.validators import validate_event_filter
 from joule.models import folder, Folder
 from joule.errors import ConfigurationError
 from joule import app_keys
@@ -288,8 +287,7 @@ def _parse_json_filter(query):
     json_filter = None
     if 'filter' in query and query['filter'] is not None and len(query['filter']) > 0:
         try:
-            json_filter = json.loads(query['filter'])
-            # TODO verify syntax
-        except (json.decoder.JSONDecodeError, ValueError):
-            raise web.HTTPBadRequest(reason=ApiErrorMessages.invalid_filter_parameter)
+            json_filter = validate_event_filter(query['filter'])
+        except ConfigurationError as e:
+            raise web.HTTPBadRequest(reason=e)
     return json_filter

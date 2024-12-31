@@ -1,6 +1,6 @@
 import enum
-from typing import TYPE_CHECKING
-
+from typing import TYPE_CHECKING, List
+from joule.utilities.validators import validate_stream_path, validate_event_filter
 if TYPE_CHECKING:
     from joule.models.data_store.event_store import EventStore
 
@@ -17,11 +17,11 @@ class EventTarget:
                  source_label: str,
                  path: str,
                  on_conflict: ON_EVENT_CONFLICT,
-                 filter: str):
+                 filter: List):
         self.source_label = source_label
         self.path = path
         self.on_conflict = on_conflict
-        self.filter = filter
+        self.filter:List = filter
 
     async def run_export(self,
                          store: 'EventStore', 
@@ -34,3 +34,20 @@ class EventTarget:
                          metadata: dict,
                          source_directory: str) -> bool:
         return True
+    
+def event_target_from_config(config: dict) -> EventTarget:
+    return EventTarget(config['source_label'],
+                       validate_stream_path(config['path']),
+                       _validate_on_conflict(config['on_conflict']),
+                       validate_event_filter(config['filter']))
+
+def _validate_on_conflict(value: str) -> ON_EVENT_CONFLICT:
+    if value == "keep_source":
+        return ON_EVENT_CONFLICT.KEEP_SOURCE
+    if value == "keep_destination":
+        return ON_EVENT_CONFLICT.KEEP_DESTINATION
+    if value == "keep_both":
+        return ON_EVENT_CONFLICT.KEEP_BOTH
+    if value == "merge":
+        return ON_EVENT_CONFLICT.MERGE
+    raise ValueError(f"invalid on_conflict value: {value}")

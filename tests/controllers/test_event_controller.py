@@ -221,7 +221,7 @@ class TestEventController(AioHTTPTestCase):
         event_store.reset()
 
         ### Can specify optional parameters
-        json_filter = '[[["id","=","3"]]]'
+        json_filter = [[["id","eq","3"]]]
         start = 0
         end = 100
         include_on_going_events = True
@@ -286,7 +286,7 @@ class TestEventController(AioHTTPTestCase):
         start = 0
         end = 100
         limit = 5
-        json_filter = [[["id","=","3"]]]
+        json_filter = [[["id","eq","3"]]]
         resp = await self.client.get(EndPoints.event_data, 
                                      params={"path": "/events/test",
                                              "start": start,
@@ -324,7 +324,7 @@ class TestEventController(AioHTTPTestCase):
         ### Can specify path instead of id and optional parameters
         start = 0
         end = 100
-        json_filter = [[["id","=","3"]]]
+        json_filter = [[["id","eq","3"]]]
         resp = await self.client.delete(EndPoints.event_data, 
                                         params={"path": "/events/test",
                                                 "start": start,
