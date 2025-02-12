@@ -1,8 +1,8 @@
 from typing import List
 import asyncio
 from sqlalchemy.orm import Session
-from joule.models.data_movement.export.exporter import Exporter
-from joule.models.data_movement.export.exporter_state import ExporterStateService
+from joule.models.data_movement.exporting.exporter import Exporter
+from joule.models.data_movement.exporting.exporter_state import ExporterStateService
 from joule.utilities import time_now
 
 class ExporterManager:

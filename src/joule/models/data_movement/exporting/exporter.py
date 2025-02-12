@@ -2,10 +2,10 @@
 from typing import List
 from dataclasses import dataclass
 from sqlalchemy.orm import Session
-from joule.utilities import parse_time_interval
+from joule.utilities import parse_time_interval, time_now
 from joule.models.data_store.data_store import DataStore
 from joule.models.data_store.event_store import EventStore
-from joule.models.data_movement.export.exporter_state import ExporterStateService
+from joule.models.data_movement.exporting.exporter_state import ExporterStateService
 from joule.models.data_movement.targets import (DataTarget, EventTarget, ModuleTarget,
                                                 event_target_from_config,
                                                 data_target_from_config,
@@ -51,19 +51,6 @@ module = <module_name>
 parameters = ... <custom string passed to module>
 """
 
-@dataclass
-class NodeExport:
-    url: str
-    importer_api_key: str
-    backlog: int
-    backlog_path: str
-
-@dataclass
-class FolderExport:
-    path: str
-    retain: int
-    backlog: int
-    backlog_path: str
 
 class Exporter:
 
@@ -73,8 +60,9 @@ class Exporter:
             module_targets: List['ModuleTarget'],
             data_targets: List['DataTarget'],
             
-            destination_node: NodeExport,
-            destination_folder: FolderExport,
+            destination_url: str,
+            destination_url_key: str,
+            destination_folder: str,
             
             frequency_us: int,
             backlog_us: int,
@@ -83,11 +71,12 @@ class Exporter:
             work_path: str,
             next_run_timestamp: int):
 
+        self.name = name
         self.event_targets = event_targets
         self.module_targets = module_targets
         self.data_targets = data_targets
-        self.name = name
-        self.destination_node = destination_node
+        self.destination_url = destination_url
+        self.destination_url_key = destination_url_key
         self.destination_folder = destination_folder
         self.frequency_us = frequency_us
         self.backlog_us = backlog_us
@@ -117,6 +106,7 @@ class Exporter:
         # create the staging and output directories
         self._staging_path = os.path.join(self.work_path, "staging")
         self._output_path = os.path.join(self.work_path, "output")
+        self._module_workspace_path = os.path.join(self._output_path, "module_workspace")
         self._output_datasets_path = os.path.join(self._output_path, "datasets")
         self._output_node_backlog_path = os.path.join(self._output_path, "node_backlog")
         self._output_folder_backlog_path = os.path.join(self._output_path, "folder_backlog")
@@ -124,6 +114,15 @@ class Exporter:
         os.makedirs(self._output_datasets_path)
         os.makedirs(self._output_node_backlog_path)
         os.makedirs(self._output_folder_backlog_path)
+        os.makedirs(self._module_workspace_path)
+        # create subdirectories for each module workspace
+        idx=0
+        for module_target in self.module_targets:
+            workspace_path = os.path.join(self._module_workspace_path, str(idx))
+            os.makedirs(workspace_path)
+            module_target.workspace_directory = workspace_path
+            idx+=1
+
         self._initialized = True
 
     async def run(self,
@@ -132,6 +131,7 @@ class Exporter:
                   data_store: DataStore,
                   state_service: ExporterStateService) -> bool:
         self._initialize()
+        self._process_backlog()
         self._clean_directories()
 
         idx = 0
@@ -176,10 +176,12 @@ class Exporter:
         if not self._export_to_node(archive_file_path):
             # create a symlink in the node backlog
             os.symlink(archive_file_path, os.path.join(self._output_node_backlog_path,archive_name))
+            logging.error(f"failed to transmit {archive_name} to {self.destination_url}")
             success=False
         if not self._export_to_folder(archive_file_path):
             # create a symlink in the folder backlog
             os.symlink(archive_file_path, os.path.join(self._output_folder_backlog_path,archive_name))
+            logging.error(f"failed to copy {archive_name} to {self.destination_folder}")
             success=False
         if success:
             # remove the archive_file since it was exported successfully
@@ -192,77 +194,93 @@ class Exporter:
         try:
             shutil.copy(archive_file, self.destination_folder)
             return True
-        except Exception as e:
-            logging.error(f"failed to copy {archive_file} to {self.destination_folder}: {e}")
+        except Exception:
             return False
     
     def _export_to_node(self, archive_file: str) -> bool:
-        if self.destination_node is None:
+        if self.destination_url is None:
             return True # data is not exported to a node
         print("TODO!")
         return True
+
+    def _process_backlog(self):
+        # for every file in the node backlog, attempt to export it
+        for entry in os.scandir(self._output_node_backlog_path):
+            if self._export_to_node(entry.path):
+                logger.debug(f"exported {entry.path} from node backlog")
+                os.remove(entry.path)
+        # for every file in the folder backlog, attempt to export it
+        for entry in os.scandir(self._output_folder_backlog_path):
+            if self._export_to_folder(entry.path):
+                logger.debug(f"exported {entry.path} from folder backlog")
+                os.remove(entry.path)
 
     def _clean_directories(self):
         # clear the entire staging directory
         shutil.rmtree(self._staging_path, ignore_errors=True)
         # remove any symlinks that are older than the retain time in the backlog directories
         referenced_datasets = []
-        now = datetime.now()
+        now = time_now()
         with(os.scandir(self._output_node_backlog_path) as node_backlog, 
              os.scandir(self._output_folder_backlog_path) as folder_backlog):
             for entry in itertools.chain(node_backlog, folder_backlog):
                 if entry.is_symlink():
-                    if os.path.getmtime(entry.path) < now - self.backlog_us/1e6:
-                        logger.warning(f"dropping {entry.name} from backlog, older than retain time")
+                    try: 
+                        # make sure the symlink points to a file in the datasets directory
+                        if not os.path.realpath(entry.path).startswith(self._output_datasets_path):
+                            logger.warning(f"unexpected symlink {entry.path}, not in datasets directory")
+                            os.remove(entry.path)
+                        # make sure it's not too old 
+                        elif now - os.path.getmtime(entry.path)*1e6 > self.backlog_us:
+                            age = now - os.path.getmtime(entry.path)*1e6
+                            logger.warning(f"dropping {entry.name} from backlog, older than retain time: age {age/1e6} seconds")
+                            os.remove(entry.path)
+                        else:
+                            # valid symlink 
+                            st = entry.stat(follow_symlinks=True)
+                            referenced_datasets.append((st.st_dev, st.st_ino))
+                    except FileNotFoundError:  # catches symlinks to non-existent files
+                        logger.warning(f"symlink {entry.path} points to non-existent file")
                         os.remove(entry.path)
-                    else:
-                        st = entry.stat(follow_symlinks=True)
-                        referenced_datasets.append((st.st_dev, st.st_ino))
                 else:
                     logger.warning(f"unexpected file {entry.path}, not a symlink")
-            
+                    os.remove(entry.path)
+        
         # remove any datasets that are not referenced by symlinks in the backlog directories
         with os.scandir(self._output_datasets_path) as datasets:
             for entry in datasets:
                 st = entry.stat(follow_symlinks=True)
                 if (st.st_dev, st.st_ino) not in referenced_datasets:
-                    logger.warning(f"removing unreferenced dataset {entry.path}")
+                    logger.debug(f"removing unreferenced dataset {entry.path}")
                     os.remove(entry.path)
         
 def exporter_from_config(config: dict, work_path: str) -> Exporter:
     try:
         name = config['Main']['name']
         target_config = config['Target']
-        destination_node = None
-        backlog_us = parse_time_interval(target_config,'backlog')
-        retain_us = parse_time_interval(target_config,'retain')
+        backlog_us = parse_time_interval(target_config['backlog'])
+        retain_us = parse_time_interval(target_config['retain'])
         frequency_us = parse_time_interval(target_config['frequency'])
-        if 'url' in target_config:
-            destination_node = NodeExport(
-                url=target_config['url'],
-                importer_api_key=target_config['importer_api_key'])
-        destination_folder = None
-        if 'path' in target_config:
-            destination_folder = FolderExport(
-                path=target_config['path'],
-                retain=parse_time_interval(target_config['retain'])
-            )
-    except KeyError:
-        raise ValueError("missing 'name' in [Main] section")
+        destination_url = target_config.get('destination_url', None)
+        destination_url_key = target_config.get('destination_url_key', None)
+        destination_folder = target_config.get('path', None)
+        
+    except KeyError as e:
+        raise ValueError(f"missing {e} in exporter configuration")
     
    
     event_target_configs = [config[section] for section in 
-                            filter(lambda sec: re.match(r"EventStream\d", sec),
+                            filter(lambda sec: re.match(r"EventStream\.\d+", sec),
                             config.sections())]
-    event_targets = [event_target_from_config(etc) for etc in event_target_configs]
+    event_targets = [event_target_from_config(etc,type="exporter") for etc in event_target_configs]
 
     module_target_configs = [config[section] for section in 
-                             filter(lambda sec: re.match(r"Module\d", sec),
+                             filter(lambda sec: re.match(r"Module\.\d+", sec),
                              config.sections())]
     module_targets = [module_target_from_config(mtc) for mtc in module_target_configs]
 
     data_target_configs = [config[section] for section in 
-                             filter(lambda sec: re.match(r"DataStream\d", sec),
+                             filter(lambda sec: re.match(r"DataStream\.\d+", sec),
                              config.sections())]
     data_targets = [data_target_from_config(dtc) for dtc in data_target_configs]
 
@@ -270,7 +288,8 @@ def exporter_from_config(config: dict, work_path: str) -> Exporter:
                     event_targets=event_targets,
                     module_targets=module_targets,
                     data_targets=data_targets,
-                    destination_node=destination_node,
+                    destination_url=destination_url,
+                    destination_url_key=destination_url_key,
                     destination_folder=destination_folder,
                     frequency_us=frequency_us,
                     backlog_us=backlog_us,

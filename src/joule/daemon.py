@@ -21,8 +21,8 @@ from joule.version import version
 from joule.models import (Base, Worker, config, EventStore,
                           DataStore, DataStream, EventStream, pipes)
 from joule.models.supervisor import Supervisor
-from joule.models.exporter_manager import ExporterManager
-from joule.models.importer_manager import ImporterManager
+from joule.models.data_movement.exporting.exporter_manager import ExporterManager
+from joule.models.data_movement.importing.importer_manager import ImporterManager
 from joule.errors import ConfigurationError, SubscriptionError
 from joule.models import TimescaleStore, Follower, Node
 from joule.models.data_store.errors import DataError

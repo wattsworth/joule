@@ -1,4 +1,5 @@
 import enum
+import json
 from typing import TYPE_CHECKING, List
 from joule.utilities.validators import validate_stream_path, validate_event_filter
 if TYPE_CHECKING:
@@ -11,6 +12,7 @@ class ON_EVENT_CONFLICT(enum.Enum):
     KEEP_DESTINATION = enum.auto()
     KEEP_BOTH = enum.auto()
     MERGE = enum.auto()
+    NA = enum.auto() # used for exporters (not applicable)
 
 class EventTarget:
     def __init__(self, 
@@ -35,13 +37,21 @@ class EventTarget:
                          source_directory: str) -> bool:
         return True
     
-def event_target_from_config(config: dict) -> EventTarget:
+def event_target_from_config(config: dict, type) -> EventTarget:
+    if type=="exporter":
+        on_conflict =ON_EVENT_CONFLICT.NA
+        event_filter = validate_event_filter(config.get('filter', ""))
+    elif type=="importer":
+        on_conflict = _validate_on_conflict(config['on_conflict'])
+        event_filter = None
+
     return EventTarget(config['source_label'],
                        validate_stream_path(config['path']),
-                       _validate_on_conflict(config['on_conflict']),
-                       validate_event_filter(config['filter']))
+                       on_conflict, event_filter)
 
 def _validate_on_conflict(value: str) -> ON_EVENT_CONFLICT:
+    if value == "na":
+        return ON_EVENT_CONFLICT.NA
     if value == "keep_source":
         return ON_EVENT_CONFLICT.KEEP_SOURCE
     if value == "keep_destination":

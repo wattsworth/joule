@@ -10,8 +10,8 @@ DataStreamDirectory = /etc/joule/data_stream_configs
 EventStreamDirectory = /etc/joule/event_stream_configs
 
 # Workspace for handling data import and export
-ImporterDataDirectory = /var/joule/importer_data
-ExporterDataDirectory = /var/joule/exporter_data
+ImporterDataDirectory = /var/run/joule/importer_data
+ExporterDataDirectory = /var/run/joule/exporter_data
 
 # Share with exporter nodes to allow them to send data here
 ImporterKey = {{ importer_key }}

@@ -21,12 +21,12 @@ log = logging.getLogger('joule')
   EventStreamDirectory = /etc/joule/event_configs
   SocketDirectory = /tmp/joule
   ImporterConfigsDirectory = /etc/joule/importer_configs
-  ImporterDataDirectory = /var/joule/importer_data
+  ImporterDataDirectory = /var/run/joule/importer_data
   # ImporterInboxDirectory = /opt/joule/importer_inbox
   ImporterKey = XXXX
 
   ExporterConfigsDirectory = /etc/joule/exporter_configs
-  ExporterDataDirectory = /var/joule/exporter_data
+  ExporterDataDirectory = /var/run/joule/exporter_data
     
   UsersFile = /etc/joule/users.conf
 
