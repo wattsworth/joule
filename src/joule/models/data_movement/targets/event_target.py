@@ -1,10 +1,17 @@
 import enum
 import json
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Dict
+from joule.models.data_movement.exporting.exporter_state import ExporterState
+from joule.models.data_store.event_store import EventStore
+from joule.models.event_stream import EventStream
+from joule.models.folder import find_stream_by_path
 from joule.utilities.validators import validate_stream_path, validate_event_filter
-if TYPE_CHECKING:
-    from joule.models.data_store.event_store import EventStore
+import os
+import json
+from sqlalchemy.orm import Session
 
+
+BLOCK_SIZE=1000
 # Perform import and export operations for a module
 
 class ON_EVENT_CONFLICT(enum.Enum):
@@ -26,10 +33,33 @@ class EventTarget:
         self.filter:List = filter
 
     async def run_export(self,
-                         store: 'EventStore', 
-                         target_directory: str, 
-                         last_ts: int) -> tuple[int, dict]:
-        return 0,{}
+                         db: Session,
+                         store: EventStore, 
+                         work_path: str, 
+                         state: ExporterState) -> ExporterState:
+        stream_model = find_stream_by_path(self.path, db, EventStream)
+        # save the stream metadata
+        with open(os.path.join(work_path, 'metadata.json'), 'w') as f:
+            f.write(json.dumps({
+                    "source_label": self.source_label,
+                    "stream_path": self.path,
+                    "stream_model": stream_model.to_json()
+                }, indent=2))
+        # make a subdirectory for the data
+        data_path = os.path.join(work_path, "data")
+        os.makedirs(data_path, exist_ok=True)
+        last_ts = state.last_timestamp
+        while True:
+            events = await store.extract(stream_model, 
+                                         start=last_ts,
+                                         json_filter=self.filter,
+                                         limit=BLOCK_SIZE,
+                                         include_on_going_events=False)
+            if len(events)==0:
+                break
+            _write_data(events, data_path)
+            last_ts = events[-1]['start_time']+1
+        return ExporterState(last_timestamp=last_ts)
     
     async def run_import(self,
                          store: 'EventStore',
@@ -37,7 +67,11 @@ class EventTarget:
                          source_directory: str) -> bool:
         return True
     
-def event_target_from_config(config: dict, type) -> EventTarget:
+def _write_data(events: List[Dict], data_dir):
+    with open(os.path.join(data_dir, str(events[-1]['start_time']))+".json", 'w') as f:
+        json.dump(events, f, indent=2)
+    
+def event_target_from_config(config: dict, type:str) -> EventTarget:
     if type=="exporter":
         on_conflict =ON_EVENT_CONFLICT.NA
         event_filter = validate_event_filter(config.get('filter', ""))

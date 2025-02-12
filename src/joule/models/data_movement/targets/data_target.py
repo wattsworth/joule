@@ -4,6 +4,7 @@ from joule.utilities.misc import parse_time_interval
 from joule.models.data_movement.exporting.exporter_state import ExporterState
 from joule.models.folder import find_stream_by_path
 from joule.models.data_stream import DataStream
+from joule.models.pipes import interval_token as compute_interval_token
 from joule.utilities import timestamp_to_human as ts2h
 import os
 import json
@@ -30,7 +31,6 @@ class DataTarget:
                          work_path: str, 
                          state: ExporterState) -> ExporterState:
         stream_model = find_stream_by_path(self.path, db, DataStream)
-        pipe = await store.data_read(start=state.last_timestamp)
         # save the stream metadata
         with open(os.path.join(work_path, 'metadata.json'), 'w') as f:
             f.write(json.dumps({
@@ -39,27 +39,35 @@ class DataTarget:
                     "stream_model": stream_model.to_json()
                 }, indent=2))
 
-        empty_interval = False
         # make a subdirectory for the data
         data_path = os.path.join(work_path, "data")
         os.makedirs(data_path, exist_ok=True)
-        while await pipe.not_empty():
-            data = await pipe.read()
-            pipe.consume(len(data))
+        interval_token = compute_interval_token(stream_model.layout)
+        last_ts = state.last_timestamp
+        async def _write_data(data: np.array, layout, decimation_level):
+            nonlocal last_ts
+            # data is a numpy array that may end with a pipe interval token (all 0's)
+            # if there is data write it out to a .dat file
+            # if there is an interval boundary write it out as a interval file
+
             if len(data)==0:
-                if not pipe.end_of_interval: 
-                    print("WARNING: empty pipe read!")
-                # this is just closing the interval, it's ok that it's empty
-            else:
-                #print(f"read {len(data)} samples from {stream}: {ts2h(data['timestamp'][0])}-{ts2h(data['timestamp'][-1])}")
-                _write_data(data, data_path)
-                last_ts = data['timestamp'][-1]+1 # so we don't re-read the same data next time
-                empty_interval = False
-            if pipe.end_of_interval:
-                _write_interval_break(last_ts, data_path)
-                if empty_interval:
-                    print(f"WARNING: empty interval(s) detected in {self.path} starting at {ts2h(last_ts)}")
-                empty_interval=True
+                return # nothing to save
+            close_interval = False
+            if data[-1]==interval_token:
+                close_interval = True
+                data = data[:-1]
+            if len(data)>1:
+                with open(os.path.join(data_path, str(data['timestamp'][-1]))+".dat", 'wb') as f:
+                    np.save(f, data)
+                last_ts = data['timestamp'][-1] +1
+
+            if close_interval:
+                with open(os.path.join(data_path, str(last_ts))+"_interval_break.dat", 'w') as f:
+                    f.write(" ")
+            
+        await store.extract(stream=stream_model, start=state.last_timestamp, end=None,
+                            callback=_write_data, max_rows=None, decimation_level=1)
+
         return ExporterState(last_timestamp=last_ts)
         
     
@@ -70,25 +78,17 @@ class DataTarget:
         return True
     
     
-def data_target_from_config(config: dict) -> DataTarget:
-    if 'merge_gap' in config:
-        merge_gap = parse_time_interval(config['merge_gap'])
-    else:
+def data_target_from_config(config: dict, type: str) -> DataTarget:
+    if type == "exporter":
         merge_gap = 0
+    elif type == "importer":
+        if 'merge_gap' in config:
+            merge_gap = parse_time_interval(config['merge_gap'])
+        else:
+            merge_gap = 0
+   
     return DataTarget(config['source_label'],
                       validate_stream_path(config['path']),
                       merge_gap, # only used for import
                       int(config.get('decimation_factor', 1)) # only used for export
                       ) 
-
-
-def _write_data(data: np.array, stream_dir):
-    # save the numpy array as a binary file
-    if len(data)==0:
-        return # nothing to save
-    with open(os.path.join(stream_dir, str(data['timestamp'][-1]))+".dat", 'wb') as f:
-        np.save(f, data)
-
-def _write_interval_break(ts, stream_dir):
-    with open(os.path.join(stream_dir, str(ts))+"_interval_break.dat", 'w') as f:
-        f.write(" ")
