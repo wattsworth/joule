@@ -67,7 +67,7 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
             if directory is None:
                 raise ConfigurationError("Missing [%s] configuration" % config_name)
             if not os.path.isdir(directory):
-                raise ConfigurationError("Invalid [%s] configuration" % config_name)
+                raise ConfigurationError(f"[{config_name}]={directory}, directory does not exist")
     
     # Specify IPAddress and Port to listen on network interface
     # IPAddress

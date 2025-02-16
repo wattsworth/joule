@@ -1,9 +1,10 @@
 import unittest
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch, MagicMock, AsyncMock, create_autospec
 import tempfile
 from joule.models.data_movement.targets.event_target import EventTarget, ON_EVENT_CONFLICT, event_target_from_config
 from joule.models.data_movement.exporting.exporter_state import ExporterState
 from joule.models import EventStream
+from joule.models.data_store.event_store import EventStore
 from tests import helpers
 import json
 import os
@@ -22,7 +23,7 @@ class TestEventTarget(unittest.IsolatedAsyncioTestCase):
                             on_conflict=ON_EVENT_CONFLICT.NA,
                             filter = [[["name","eq","test"]]])
         find_stream_by_path = MagicMock(return_value=event_stream)
-        store = MagicMock()
+        store = create_autospec(spec=EventStore, spec_set=True, instance=True)
         event_records = [{"id": i,
                          "start_time":i*10+1000,
                          "end_time":i*10+2+1000,
@@ -67,7 +68,11 @@ class TestEventTarget(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(new_state.last_timestamp, block2[-1]['start_time']+1)
 
             # check the parameters to the data read call
-            store.extract.assert_called_with(start=1191,limit=1000,filter= [[["name","eq","test"]]])
+            store.extract.assert_called_with(event_stream, 
+                                             start=1191, end=None,
+                                             json_filter= [[["name","eq","test"]]],
+                                             limit=1000,
+                                             include_on_going_events=False)
 
     async def test_event_target_from_config(self):
         export_target = event_target_from_config({
@@ -78,6 +83,3 @@ class TestEventTarget(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(export_target.source_label,"test")
         self.assertEqual(export_target.path,"/some/path/to/data")
         self.assertEqual(export_target.filter, [[["device","like","test%%"]]])
-
-    async def test_event_target(self):
-        pass

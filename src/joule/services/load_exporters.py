@@ -13,7 +13,14 @@ def run(configs_path: str, exporters_work_path: str) -> List[Exporter]:
     configs = load_configs(configs_path)
     exporters = []
     # flush the work_path directory, remove all files and folders
-    shutil.rmtree(exporter_work_path, ignore_errors=True)
+    # Delete the contents of the directory
+    for item in os.listdir(exporters_work_path):
+        item_path = os.path.join(exporters_work_path, item)
+        if os.path.isfile(item_path) or os.path.islink(item_path):
+            os.unlink(item_path)  # Remove file or symbolic link
+        elif os.path.isdir(item_path):
+            shutil.rmtree(item_path)  # Remove directory and its contents
+
     idx = 0
     # create a subfolder for each exporter and initialize the Exporter object
     for config in configs:

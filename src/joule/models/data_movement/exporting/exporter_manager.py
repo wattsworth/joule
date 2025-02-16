@@ -31,7 +31,7 @@ class ExporterManager:
                                        source_type='exporter', 
                                        source_label="", state=state)
                     exporter.next_run_timestamp = now + exporter.interval
-            asyncio.sleep(1)
+            await asyncio.sleep(1)
 
     async def start(self):
         self._task = asyncio.create_task(self._run())

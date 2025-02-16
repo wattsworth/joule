@@ -139,7 +139,13 @@ class Exporter:
         for event_target in self.event_targets:
             target_data_path = os.path.join(self._staging_path, "events", str(idx))
             os.makedirs(target_data_path)
-            await event_target.run_export(target_data_path)
+            last_state = state_service.get(self.name, 'event', event_target.source_label)
+            new_state = await event_target.run_export(
+                db=db,
+                store=event_store,
+                work_path=target_data_path,
+                state = last_state)
+            state_service.save(self.name, 'event', event_target.source_label, new_state)
             idx += 1
         idx = 0
         # create a path for each module target and run the export task
@@ -156,7 +162,7 @@ class Exporter:
             last_state = state_service.get(self.name, 'data', data_target.source_label)
             new_state=await data_target.run_export(
                 db=db, 
-                data_store=data_store,
+                store=data_store,
                 work_path=target_data_path,
                 state=last_state)
             state_service.save(self.name, 'data', data_target.source_label, new_state)
@@ -282,7 +288,7 @@ def exporter_from_config(config: dict, work_path: str) -> Exporter:
     data_target_configs = [config[section] for section in 
                              filter(lambda sec: re.match(r"DataStream\.\d+", sec),
                              config.sections())]
-    data_targets = [data_target_from_config(dtc) for dtc in data_target_configs]
+    data_targets = [data_target_from_config(dtc, type="exporter") for dtc in data_target_configs]
 
     return Exporter(name=name, 
                     event_targets=event_targets,

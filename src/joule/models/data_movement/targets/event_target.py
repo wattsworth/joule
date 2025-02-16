@@ -52,6 +52,7 @@ class EventTarget:
         while True:
             events = await store.extract(stream_model, 
                                          start=last_ts,
+                                         end=None,
                                          json_filter=self.filter,
                                          limit=BLOCK_SIZE,
                                          include_on_going_events=False)
