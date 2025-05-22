@@ -149,6 +149,13 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
     else:
         security = None
 
+    # Echo Module Logs
+    if main_config['EchoModuleLogs'].lower() in ["true","yes"]:
+        echo_module_logs = True
+    elif main_config['EchoModuleLogs'].lower() in ["false","no"]:
+        echo_module_logs = False
+    else:
+        raise ConfigurationError(f"EchoModuleLogs must be true|false or yes|no, setting {main_config['EchoModuleLogs']} is not valid")
     # Proxies
     uuid = 0
     proxies = []
@@ -175,5 +182,6 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
         max_log_lines=max_log_lines,
         proxies=proxies,
         security=security,
-        users_file=users_file
+        users_file=users_file,
+        echo_module_logs=echo_module_logs
     )

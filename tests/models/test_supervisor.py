@@ -17,7 +17,7 @@ class TestSupervisor(AsyncTestCase):
         self.workers: List[Worker] = []
         for x in range(TestSupervisor.NUM_WORKERS):
             module = Module(name="m%d" % x, exec_cmd="", uuid=x)
-            self.workers.append(Worker(module))
+            self.workers.append(Worker(module, socket_dir="/tmp", echo_module_logs=False))
         self.supervisor = Supervisor(self.workers, [], None)
 
     def test_returns_workers(self):
@@ -50,8 +50,11 @@ class TestSupervisor(AsyncTestCase):
     def test_returns_sockets(self):
         for worker in self.workers:
             uuid = worker.module.uuid
-            self.assertEqual(worker.interface_socket,
-                             self.supervisor.get_module_socket(uuid))
+            if worker.is_app:
+                self.assertEqual(worker.app_socket,
+                                self.supervisor.get_module_socket(uuid))
+            else:
+                self.assertIsNone(self.supervisor.get_module_socket(uuid))
         # returns None if the uuid doesn't exist
         bad_uuid = 68
         self.assertIsNone(self.supervisor.get_module_socket(bad_uuid))
@@ -125,7 +128,7 @@ class TestSupervisor(AsyncTestCase):
         remote_stream.set_remote('remote:3000', '/path/to/stream')
         module = Module(name="remote_output", exec_cmd="", uuid=0)
         module.outputs = {'output': remote_stream}
-        worker = Worker(module)
+        worker = Worker(module, socket_dir="/tmp", echo_module_logs=False)
 
         async def mock_run(subscribe):
             await asyncio.sleep(0.1)

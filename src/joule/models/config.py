@@ -18,6 +18,7 @@ DEFAULT_CONFIG = {
             "InsertPeriod": 5,
             "CleanupPeriod": 60,
             "MaxLogLines": 100,
+            "EchoModuleLogs": "false"
         },
     "Proxies": {}
 }
@@ -47,3 +48,4 @@ class JouleConfig:
     users_file: Optional[str]
     proxies: List['Proxy']
     security: Optional['SecurityConfig']
+    echo_module_logs: bool

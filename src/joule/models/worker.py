@@ -23,9 +23,6 @@ Subscribers = Dict[DataStream, List[pipes.Pipe]]
 popen_lock = None
 log = logging.getLogger('joule')
 
-SOCKET_BASE = "/tmp/joule/module%d"
-API_SOCKET = "/tmp/joule/api"
-
 
 def _initialize_popen_lock():
     global popen_lock
@@ -71,7 +68,7 @@ class Statistics:
 
 class Worker:
 
-    def __init__(self, my_module: Module):
+    def __init__(self, my_module: Module, socket_dir: str, echo_module_logs: bool):
 
         self.module: Module = my_module
         # map of subscribers (1-many) that consume module outputs
@@ -99,7 +96,10 @@ class Worker:
         # how long to try restarting if worker is currently missing inputs
         self.RESTART_AFTER_MISSING_INPUTS = 5
         # repeat constant here to facilitate testing mocks
-        self.API_SOCKET = API_SOCKET
+        self.api_socket = socket_dir +"/api"
+        self.app_socket = socket_dir + f"/module{my_module.uuid}"
+        # re-print module logs so they are captured by journald
+        self.echo_module_logs = echo_module_logs
 
     async def statistics(self) -> Statistics:
         # gather process statistics
@@ -137,18 +137,6 @@ class Worker:
     @property
     def is_app(self):
         return self.module.is_app
-
-    @property
-    def interface_socket(self):
-        if self.module.is_app:
-            return SOCKET_BASE % self.module.uuid
-        return None
-
-    @property
-    def interface_name(self):
-        if self.module.is_app:
-            return SOCKET_BASE % self.module.uuid
-        return "none"
 
     def produces(self, stream: DataStream) -> bool:
         # returns True if this worker produces [stream]
@@ -215,7 +203,8 @@ class Worker:
     def log(self, msg):
         timestamp = datetime.datetime.now().isoformat()
         self._logs.append("[%s]: %s" % (timestamp, msg))
-        # print("[%s: %s] " % (self.module.name, pid) + msg)
+        if self.echo_module_logs:
+            print(f"{self.module.name}: {msg}")
 
     @property
     def logs(self) -> List[str]:
@@ -405,14 +394,14 @@ class Worker:
             {'outputs': output_args, 'inputs': input_args}))]
         # add a socket if the module has a web interface
         if self.module.is_app:
-            cmd += ["--socket", self.interface_name]
+            cmd += ["--socket", self.app_socket]
             # remove the socket file if it exists
-            if os.path.exists(self.interface_name):
-                log.warning("forcibly removing app socket [%s]" % self.interface_name)
-                os.unlink(self.interface_name)
+            if os.path.exists(self.app_socket):
+                log.warning("forcibly removing app socket [%s]" % self.app_socket)
+                os.unlink(self.app_socket)
 
         # API access
-        cmd += ["--api-socket", self.API_SOCKET]
+        cmd += ["--api-socket", self.api_socket]
         for (arg, value) in self.module.arguments.items():
             cmd += ["--" + arg, value]
         return cmd
@@ -426,9 +415,9 @@ class Worker:
             await c.disconnect()
         self.output_connections = []
         self.input_connections = []
-        # remove the socket file if it exists
-        if self.interface_socket is not None and os.path.exists(self.interface_socket):
-            os.unlink(self.interface_socket)
+        # remove the app socket file if it exists
+        if self.app_socket is not None and os.path.exists(self.app_socket):
+            os.unlink(self.app_socket)
 
     def _verify_monotonic_timestamps(self, data, last_ts: int, name: str):
         if len(data) == 0:

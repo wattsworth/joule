@@ -171,7 +171,9 @@ class Daemon(object):
                 os.environ["JOULE_CA_FILE"] = self.config.security.cafile
                 self.cafile = self.config.security.cafile
         # configure workers
-        workers = [Worker(m) for m in modules]
+        workers = [Worker(m, 
+                          socket_dir=self.config.socket_directory,
+                          echo_module_logs=self.config.echo_module_logs) for m in modules]
 
         def get_node(name: str):
             follower = self.db.query(Follower) \
