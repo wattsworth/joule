@@ -4,6 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "joule"
+license = "LicenseRef-Custom-License"
+license-files = ["LICENSE"]
 dynamic = ["version"]
 authors = [
   { name="John Donnal", email="donnal@usna.edu" },
