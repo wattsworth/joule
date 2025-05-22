@@ -247,7 +247,7 @@ def event_to_record(event: Dict) -> Tuple:
     if event['end_time'] is not None:
         if event['start_time'] >= event['end_time']:
             raise ValueError("Event end [%d] cannot be before start [%d]" % (
-                event['start_time'], event['end_time']
+                event['end_time'], event['start_time']
             ))
         end = joule.utilities.timestamp_to_datetime(event['end_time'])
     else:
