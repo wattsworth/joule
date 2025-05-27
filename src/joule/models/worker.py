@@ -8,6 +8,7 @@ import collections
 import datetime
 import psutil
 import numpy as np
+import sys
 
 from joule.models.module import Module
 from joule.models.data_stream import DataStream
@@ -204,7 +205,7 @@ class Worker:
         timestamp = datetime.datetime.now().isoformat()
         self._logs.append("[%s]: %s" % (timestamp, msg))
         if self.echo_module_logs:
-            print(f"{self.module.name}: {msg}")
+            sys.stderr.write(f"{self.module.name}: {msg}\n")
 
     @property
     def logs(self) -> List[str]:
