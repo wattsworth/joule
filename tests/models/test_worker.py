@@ -68,17 +68,17 @@ class TestWorker(unittest.TestCase):
         self.module.inputs = {"input1": streams[0], "input2": streams[1]}
         self.module.outputs = {"output1": streams[2], "output2": streams[3]}
         self.module.log_size = LOG_SIZE
-        self.worker = Worker(self.module,socket_dir="/tmp")
+        self.worker = Worker(self.module, socket_dir="/tmp", echo_module_logs=False)
         m_producers = [Module(name="producer1", exec_cmd="/bin/runit.sh"),
                        Module(name="producer2", exec_cmd="/bin/runit.sh")]
         m_producers[0].outputs = {"output": streams[0]}
         m_producers[1].outputs = {"output": streams[1]}
-        self.producers: List[Worker] = [Worker(m, socket_dir="/tmp") for m in m_producers]
+        self.producers: List[Worker] = [Worker(m, socket_dir="/tmp", echo_module_logs=False) for m in m_producers]
         m_consumers = [Module(name="consumer1", exec_cmd="/bin/runit.sh"),
                        Module(name="consumer2", exec_cmd="/bin/runit.sh")]
         m_consumers[0].inputs = {"input1": streams[0], "input2": streams[2]}
         m_consumers[1].inputs = {"input1": streams[2], "input2": streams[3]}
-        self.consumers: List[Worker] = [Worker(m, socket_dir="/tmp") for m in m_consumers]
+        self.consumers: List[Worker] = [Worker(m, socket_dir="/tmp", echo_module_logs=False) for m in m_consumers]
         self.supervisor = Supervisor(self.producers + self.consumers, [], None)
 
     def tearDown(self):

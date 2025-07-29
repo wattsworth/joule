@@ -13,6 +13,7 @@ class TestLoadConfigs(unittest.TestCase):
     def test_loads_default_config(self):
         my_config = load_config.run(verify=False)
         self.assertEqual(my_config.socket_directory, config.DEFAULT_CONFIG['Main']['SocketDirectory'])
+        self.assertFalse(my_config.echo_module_logs)
 
     def test_customizes_config(self):
         parser = configparser.ConfigParser()
@@ -22,10 +23,12 @@ class TestLoadConfigs(unittest.TestCase):
             Port = 8080
             Database = new_db
             InsertPeriod = 20
+            EchoModuleLogs = yes
         """)
         my_config = load_config.run(custom_values=parser, verify=False)
         self.assertEqual(my_config.ip_address, "8.8.8.8")
         self.assertEqual(my_config.insert_period, 20)
+        self.assertTrue(my_config.echo_module_logs)
 
     def test_verifies_directories_exist(self):
         postgresql = testing.postgresql.Postgresql()

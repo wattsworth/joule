@@ -4,6 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "joule"
+license = "LicenseRef-Custom-License"
+license-files = ["LICENSE"]
 dynamic = ["version"]
 authors = [
   { name="John Donnal", email="donnal@usna.edu" },
@@ -13,8 +15,9 @@ readme = "README.rst"
 requires-python = ">=3.9"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: Public Domain",
-    "Operating System :: POSIX :: Linux"
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS :: MacOS X"
 ]
 dependencies = [
     'click',

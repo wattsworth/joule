@@ -8,6 +8,7 @@ import collections
 import datetime
 import psutil
 import numpy as np
+import sys
 
 from joule.models.module import Module
 from joule.models.data_stream import DataStream
@@ -22,8 +23,6 @@ Subscribers = Dict[DataStream, List[pipes.Pipe]]
 
 popen_lock = None
 log = logging.getLogger('joule')
-
-SOCKET_BASE = "/tmp/joule/module%d"
 
 
 def _initialize_popen_lock():
@@ -70,7 +69,7 @@ class Statistics:
 
 class Worker:
 
-    def __init__(self, my_module: Module, socket_dir: str):
+    def __init__(self, my_module: Module, socket_dir: str, echo_module_logs: bool):
 
         self.module: Module = my_module
         # map of subscribers (1-many) that consume module outputs
@@ -100,7 +99,9 @@ class Worker:
         # repeat constant here to facilitate testing mocks
         self.api_socket = socket_dir +"/api"
         self.app_socket = socket_dir + f"/module{my_module.uuid}"
-        
+        # re-print module logs so they are captured by journald
+        self.echo_module_logs = echo_module_logs
+
     async def statistics(self) -> Statistics:
         # gather process statistics
         try:
@@ -203,7 +204,8 @@ class Worker:
     def log(self, msg):
         timestamp = datetime.datetime.now().isoformat()
         self._logs.append("[%s]: %s" % (timestamp, msg))
-        # print("[%s: %s] " % (self.module.name, pid) + msg)
+        if self.echo_module_logs:
+            sys.stderr.write(f"{self.module.name}: {msg}\n")
 
     @property
     def logs(self) -> List[str]:
