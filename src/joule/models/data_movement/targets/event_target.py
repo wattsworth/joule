@@ -75,7 +75,11 @@ def _write_data(events: List[Dict], data_dir):
 def event_target_from_config(config: dict, type:str) -> EventTarget:
     if type=="exporter":
         on_conflict =ON_EVENT_CONFLICT.NA
-        event_filter = validate_event_filter(config.get('filter', ""))
+        event_filter_str = config.get('filter')
+        if event_filter_str is not None:
+            event_filter = validate_event_filter(event_filter_str)
+        else:
+            event_filter = None
     elif type=="importer":
         on_conflict = _validate_on_conflict(config['on_conflict'])
         event_filter = None

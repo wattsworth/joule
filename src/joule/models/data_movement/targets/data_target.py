@@ -6,6 +6,7 @@ from joule.models.folder import find_stream_by_path
 from joule.models.data_stream import DataStream
 from joule.models.pipes import interval_token as compute_interval_token
 from joule.utilities import timestamp_to_human as ts2h
+from joule.errors import ConfigurationError
 import os
 import json
 import numpy as np
@@ -77,6 +78,9 @@ class DataTarget:
                          source_directory: str) -> bool:
         return True
     
+    def validate(self, db:Session):
+        if not find_stream_by_path(self.path, db, DataStream):
+            raise ConfigurationError(f"the data stream [{self.path}] does not exist ")
     
 def data_target_from_config(config: dict, type: str) -> DataTarget:
     if type == "exporter":

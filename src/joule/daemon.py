@@ -22,6 +22,7 @@ from joule.models import (Base, Worker, config, EventStore,
                           DataStore, DataStream, EventStream, pipes)
 from joule.models.supervisor import Supervisor
 from joule.models.data_movement.exporting.exporter_manager import ExporterManager
+from joule.models.data_movement.exporting.exporter_state import ExporterStateService
 from joule.models.data_movement.importing.importer_manager import ImporterManager
 from joule.errors import ConfigurationError, SubscriptionError
 from joule.models import TimescaleStore, Follower, Node
@@ -29,7 +30,8 @@ from joule.models.data_store.errors import DataError
 from joule.api import TcpNode
 from joule.services import (load_data_streams, 
                             load_event_streams,
-                            load_exporters, 
+                            load_exporters,
+                            load_importers, 
                             load_modules, 
                             load_config)
 import joule.middleware
@@ -203,9 +205,17 @@ class Daemon(object):
         self.supervisor = Supervisor(workers, self.config.proxies, get_node)
 
         # configure exporters
-        exporters = load_exporters.run(self.config.exporter_configs_directory,
-                                       self.config.exporter_data_directory)
-        self.exporter_manager = ExporterManager(exporters, self.db)
+        exporters = load_exporters.run(configs_path=self.config.exporter_configs_directory,
+                                       exporters_work_path=self.config.exporter_data_directory,
+                                       node_name = self.config.name)
+
+        self.exporter_manager = ExporterManager(exporters=exporters, 
+                                                state_service=ExporterStateService(self.db),
+                                                event_store = self.event_store,
+                                                data_store=self.data_store,
+                                                db=self.db)
+        # configure importers
+        #importers = load_importers.run()
         # save the metadata
         self.db.commit()
         return True # successfully initialized the system
@@ -390,7 +400,9 @@ def main(argv=None):
         postgres=# GRANT pg_read_all_settings TO joule;
         """)
         raise e
-        
+    except ConfigurationError as e:
+        print(f"ERROR Invalid Configuration: {str(e)}")
+        exit(1)
 
     loop.add_signal_handler(signal.SIGINT, daemon.stop)
     loop.add_signal_handler(signal.SIGTERM, daemon.stop)

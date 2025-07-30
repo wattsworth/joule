@@ -11,10 +11,10 @@ class ImporterManager:
         self._stop_requested = False
 
     async def _run(self):
-        # iterate through the exporters, running them as needed
+        # iterate through the importers, running them as needed
         while not self._stop_requested:
             for importer in self.importers:
-                pass
+                await self.importer.run()
             await asyncio.sleep(1)
 
     async def start(self):

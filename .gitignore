@@ -5,27 +5,33 @@ __pycache__
 build/*
 dist/*
 *.egg-info
-#*
+.pytest_cache
+.eggs
+
+# test artifacts
 .coverage
 .coverage.*
-test/e2e/archive/nilm*
+coverage.xml
 htmlcov/*
-asynctests.py
-joule/daemon/test.py
-test/e2e/nilmdb
+tests/e2e/pki/*.crt
+tests/e2e/pki/*.srl
+postgres-data
+
+# test infrastructure
+.env
+sonar.apikey
+jouled_test_env
+
+# documentation artifacts
 docs/_build
+
+# IDE artifacts
 .DS_Store
 .vscode
 .idea
-.pytest_cache
-joule/scratch.py
-.eggs
-tests/e2e/pki/*.crt
-tests/e2e/pki/*.srl
-.env
-postgres-data
+
+# Jupyter notebook artifacts
 *checkpoint.ipynb
+
+# automatically generated version info
 version.py
-linux_venv
-coverage.xml
-sonar.apikey

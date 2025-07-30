@@ -26,18 +26,30 @@ class ExporterStateService:
     def __init__(self, db:Session):
         self.db = db
 
-    def get(self, exporter_name:str, source_type:str, source_label:str) -> ExporterState:
-        state_data = self.db.query(ExporterStateRecord)\
+    def get(self, exporter_name:str, source_type:str, source_label:str="") -> ExporterState:
+        if source_type!='exporter' and source_label=="":
+            raise Exception(f"Invalid request for exporter state, source_type [{source_type}] requires a {source_label} paramter]")
+        record = self.db.query(ExporterStateRecord)\
                             .filter_by(name=exporter_name,
                                        source_type=source_type,
                                        source_label=source_label)\
-                            .first().state
-        return ExporterState(**state_data)
+                            .first()
+        if record is None:
+            return ExporterState(last_timestamp=None)
+        return ExporterState(**record.state)
 
     def save(self, exporter_name:str, source_type:str, source_label:str, state: ExporterState) -> None:
-        state = ExporterStateRecord(name=exporter_name,
-                                    source_type=source_type,
-                                    source_label=source_label,
-                                    state=state.to_record(),
-                                    updated_at=datetime.now(tz=timezone.utc))
-        self.db.add(state)
+        if source_type!='exporter' and source_label == "":
+            raise Exception(f"Invalid save exporter state, source_type [{source_type}]  a source_label paramter]")
+        state_record = self.db.query(ExporterStateRecord)\
+                            .filter_by(name=exporter_name,
+                                       source_type=source_type,
+                                       source_label=source_label)\
+                            .first()
+        if state_record is None:
+            state_record = ExporterStateRecord(name=exporter_name,
+                                source_type=source_type,
+                                source_label=source_label)
+        state_record.state = state.to_record()
+        state_record.updated_at=datetime.now(tz=timezone.utc)
+        self.db.add(state_record)

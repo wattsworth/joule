@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from joule.utilities import parse_time_interval, time_now
 from joule.models.data_store.data_store import DataStore
 from joule.models.data_store.event_store import EventStore
+from joule.errors import ConfigurationError
 from joule.models.data_movement.exporting.exporter_state import ExporterStateService
 from joule.models.data_movement.targets import (DataTarget, EventTarget, ModuleTarget,
                                                 event_target_from_config,
@@ -16,6 +17,7 @@ import tarfile
 import os
 import shutil
 import itertools
+import json
 from datetime import datetime
 
 logger = logging.getLogger('joule')
@@ -55,7 +57,7 @@ parameters = ... <custom string passed to module>
 class Exporter:
 
     def __init__(
-            self, name, 
+            self, name, node_name, 
             event_targets: List['EventTarget'],
             module_targets: List['ModuleTarget'],
             data_targets: List['DataTarget'],
@@ -72,6 +74,7 @@ class Exporter:
             next_run_timestamp: int):
 
         self.name = name
+        self.node_name = node_name
         self.event_targets = event_targets
         self.module_targets = module_targets
         self.data_targets = data_targets
@@ -125,6 +128,17 @@ class Exporter:
 
         self._initialized = True
 
+    def validate(self, db:Session):
+        try:
+            # 1. Make sure the requested data streams exist
+            for data_target in self.data_targets:
+                data_target.validate(db)
+            # 2. If the export target is a folder, make sure it exists
+            if self.destination_folder is not None and not os.path.isdir(self.destination_folder):
+                raise ConfigurationError(f"destination folder [{self.destination_folder}] does not exist")
+        except ConfigurationError as e:
+            raise ConfigurationError(f"Exporter [{self.name}]: {str(e)}")
+
     async def run(self,
                   db: Session,
                   event_store: EventStore,
@@ -168,6 +182,13 @@ class Exporter:
             state_service.save(self.name, 'data', data_target.source_label, new_state)
             idx += 1
 
+        # write the top level metadata
+        with open(os.path.join(self._staging_path, "metadata.json"),'w') as f:
+            f.write(json.dumps({
+                "name": self.name,
+                "node": self.node_name,
+                "created_at": time_now() 
+            }, indent=2))
         # bundle _staging_path directory into a compressed tarball and store in /backlog/datasets
         timestamp = datetime.now().strftime("%Y_%m_%d-%H-%M-%S")
         archive_name = f"ww-data_{timestamp}.tgz"
@@ -260,7 +281,7 @@ class Exporter:
                     logger.debug(f"removing unreferenced dataset {entry.path}")
                     os.remove(entry.path)
         
-def exporter_from_config(config: dict, work_path: str) -> Exporter:
+def exporter_from_config(config: dict, work_path: str, node_name: str) -> Exporter:
     try:
         name = config['Main']['name']
         target_config = config['Target']
@@ -301,4 +322,5 @@ def exporter_from_config(config: dict, work_path: str) -> Exporter:
                     backlog_us=backlog_us,
                     retain_us=retain_us,
                     next_run_timestamp=0,
-                    work_path=work_path)
+                    work_path=work_path,
+                    node_name=node_name)

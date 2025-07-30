@@ -2,6 +2,7 @@ import click
 
 from joule.cli.config import Config, pass_config
 from joule.cli.lazy_group import LazyGroup
+from joule.version import version as joule_version
 
 @click.group(
     cls=LazyGroup,
@@ -19,7 +20,7 @@ from joule.cli.lazy_group import LazyGroup
         }
 )
 @click.option('-n', '--node', default="", help="Joule Node name")
-@click.version_option()
+@click.version_option(version=joule_version)
 @pass_config
 def main(config, node):
     # create a Node structure for the name

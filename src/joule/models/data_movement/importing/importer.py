@@ -38,3 +38,6 @@ class Importer:
 
     async def run(self) -> bool:
         return True
+    
+def importer_from_config(config: dict, work_path: str) -> Importer:
+    pass

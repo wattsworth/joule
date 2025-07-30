@@ -46,16 +46,16 @@ def parse_time_interval(time_interval: str) -> int:
         return -1
     elif time_interval.lower() == "none":
         return 0
-    match = re.fullmatch(r'^(\d+)([shdwmy])$', time_interval)
+    match = re.fullmatch(r'^(\d+)([smhdwy])$', time_interval)
     if match is None:
         raise ValueError(f"use format #unit (eg 1w), none or all, {time_interval} not recognized")
 
     units = {
-        's': 60 * 1e6, # seconds
+        's': 1e6, # seconds
+        'm': 60 * 1e6, # minutes
         'h': 60 * 60 * 1e6,  # hours
         'd': 24 * 60 * 60 * 1e6,  # days
         'w': 7 * 24 * 60 * 60 * 1e6,  # weeks
-        'm': 4 * 7 * 24 * 60 * 60 * 1e6,  # months
         'y': 365 * 24 * 60 * 60 * 1e6  # years
     }
     unit = match.group(2)
