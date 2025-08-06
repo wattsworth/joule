@@ -32,7 +32,7 @@ class TestDataTarget(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(import_target.source_label, "test")
         self.assertEqual(import_target.path, "/some/path/to/data")
-        self.assertEqual(import_target.merge_gap, 1e6*60*10)
+        self.assertEqual(import_target.merge_gap, 1e6*10)
 
     async def test_data_target(self):
         

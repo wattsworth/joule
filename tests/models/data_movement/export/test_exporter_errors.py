@@ -26,6 +26,7 @@ class TestExporter(unittest.IsolatedAsyncioTestCase):
         self.mock_state_service.set = MagicMock()
         
         self.exporter = Exporter(name="test",
+                                 node_name="test_node",
                                  event_targets=[self.event_target],
                                  module_targets=[self.module_target],
                                  data_targets=[self.data_target],
@@ -130,5 +131,5 @@ class TestExporter(unittest.IsolatedAsyncioTestCase):
         config.read(EXPORTER_CONFIG)
         del config['Main']['name'] # remove the name to make the exporter invalid
         with self.assertRaises(ValueError) as e:
-            exporter_from_config(config=config, work_path="/workpath")
+            exporter_from_config(config=config, work_path="/workpath", node_name="test_node")
         self.assertIn("missing 'name'", str(e.exception))

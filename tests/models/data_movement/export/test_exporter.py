@@ -30,6 +30,7 @@ class TestExporter(unittest.IsolatedAsyncioTestCase):
         self.mock_state_service.set = MagicMock()
         
         self.exporter = Exporter(name="test",
+                                 node_name="test_node",
                                  event_targets=[self.event_target],
                                  module_targets=[self.module_target],
                                  data_targets=[self.data_target],
@@ -208,11 +209,11 @@ class TestExporter(unittest.IsolatedAsyncioTestCase):
         config = configparser.ConfigParser()
         config.read(EXPORTER_CONFIG)
         
-        exporter = exporter_from_config(config=config, work_path="/workpath")
+        exporter = exporter_from_config(config=config, work_path="/workpath", node_name="test_node")
         self.assertEqual(exporter.name, "Sample Exporter")
         self.assertEqual(exporter.frequency_us, 60*60*1e6)
         self.assertEqual(exporter.backlog_us, -1)
-        self.assertEqual(exporter.retain_us, int(5*4*7*24*60*60*1e6))
+        self.assertEqual(exporter.retain_us, int(5*7*24*60*60*1e6))
         self.assertEqual(len(exporter.data_targets), 1)
 
         data_target = exporter.data_targets[0]
