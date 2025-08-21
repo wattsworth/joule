@@ -289,5 +289,5 @@ def _parse_json_filter(query):
         try:
             json_filter = validate_event_filter(query['filter'])
         except ConfigurationError as e:
-            raise web.HTTPBadRequest(reason=e)
+            raise web.HTTPBadRequest(reason=str(e).replace('\n',' '))
     return json_filter

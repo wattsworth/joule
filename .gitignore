@@ -35,3 +35,7 @@ docs/_build
 
 # automatically generated version info
 version.py
+
+# scratch directory when working on incremental test coverage
+incremental_coverages
+current_coverages

@@ -37,7 +37,7 @@ RUN chmod +x runner.sh
 COPY docker/nginx_scripts .
 
 # install dependencies (should be cached)
-RUN python3 -m venv venv
+RUN python3.11 -m venv venv
 COPY ./requirements.txt .
 RUN /venv/bin/pip3 install -r requirements.txt
 RUN /venv/bin/pip3 install coverage

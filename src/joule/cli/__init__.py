@@ -16,7 +16,8 @@ from joule.version import version as joule_version
         "master": "joule.cli.master.master",
         "follower": "joule.cli.follower.follower",
         "event": "joule.cli.event.events",
-        "node": "joule.cli.node.node"
+        "node": "joule.cli.node.node",
+        "archive": "joule.cli.archive.archive"
         }
 )
 @click.option('-n', '--node', default="", help="Joule Node name")

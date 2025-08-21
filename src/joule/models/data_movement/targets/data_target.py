@@ -10,6 +10,7 @@ from joule.errors import ConfigurationError
 import os
 import json
 import numpy as np
+from dataclasses import dataclass
 from sqlalchemy.orm import Session
 
 if TYPE_CHECKING:
@@ -24,7 +25,8 @@ class DataTarget:
         self.source_label = source_label
         self.path = path
         self.merge_gap = merge_gap 
-        self.decimation_factor = decimation_factor 
+        self.decimation_factor = decimation_factor
+        self.export_summary = None
 
     async def run_export(self,
                          db: Session,
@@ -45,6 +47,7 @@ class DataTarget:
         os.makedirs(data_path, exist_ok=True)
         interval_token = compute_interval_token(stream_model.layout)
         last_ts = state.last_timestamp
+        self.export_summary = DataExportSummary(stream_layout=stream_model.layout)
         async def _write_data(data: np.array, layout, decimation_level):
             nonlocal last_ts
             # data is a numpy array that may end with a pipe interval token (all 0's)
@@ -61,17 +64,32 @@ class DataTarget:
                 with open(os.path.join(data_path, str(data['timestamp'][-1]))+".dat", 'wb') as f:
                     np.save(f, data)
                 last_ts = data['timestamp'][-1] +1
-
+                self.export_summary.end_ts = data['timestamp'][-1]
+                if self.export_summary.start_ts is None:
+                    self.export_summary.start_ts = data['timestamp'][0]
+                self.export_summary.row_count += len(data)
             if close_interval:
                 with open(os.path.join(data_path, str(last_ts))+"_interval_break.dat", 'w') as f:
                     f.write(" ")
+                self.export_summary.interval_count+=1
             
         await store.extract(stream=stream_model, start=state.last_timestamp, end=None,
                             callback=_write_data, max_rows=None, decimation_level=1)
 
         return ExporterState(last_timestamp=last_ts)
         
-    
+    def summarize_export(self):
+        if self.export_summary is None:
+            return {} # nothing has been exported yet
+        return {
+            "source_label": self.source_label,
+            "stream_path": self.path,
+            "stream_layout": self.export_summary.stream_layout,
+            "start_ts": int(self.export_summary.start_ts),
+            "end_ts": int(self.export_summary.end_ts),
+            "row_count": self.export_summary.row_count,
+            "interval_count": self.export_summary.interval_count
+        }
     async def run_import(self,
                          store: 'DataStore',
                          metadata: dict,
@@ -96,3 +114,10 @@ def data_target_from_config(config: dict, type: str) -> DataTarget:
                       merge_gap, # only used for import
                       int(config.get('decimation_factor', 1)) # only used for export
                       ) 
+@dataclass
+class DataExportSummary:
+    row_count: int = 0
+    interval_count: int = 1
+    start_ts: int = None
+    end_ts: int = None
+    stream_layout: str = ''

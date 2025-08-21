@@ -10,6 +10,10 @@ cd tests/e2e
 ./runner.sh
 cd -
 
+# archive the partial coverages
+rm -f current_coverages/*
+cp .coverage.* current_coverages
+
 # consolidate the code coverage
 coverage combine
 coverage xml

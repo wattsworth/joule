@@ -184,20 +184,24 @@ class Exporter:
 
         # write the top level metadata
         with open(os.path.join(self._staging_path, "metadata.json"),'w') as f:
-            f.write(json.dumps({
+            metadata = {
                 "name": self.name,
                 "node": self.node_name,
-                "created_at": time_now() 
-            }, indent=2))
+                "created_at": time_now(),
+                "version": "1.0.0", # compatibilty with future code versions
+                "magic": 'joule-data-archive-bundle' # used to confirm a .tgz is a joule data archive
+            }
+            metadata['data_streams'] = [target.summarize_export() for target in self.data_targets]
+            metadata['event_streams'] = [target.summarize_export() for target in self.event_targets]
+            f.write(json.dumps(metadata, indent=2))
         # bundle _staging_path directory into a compressed tarball and store in /backlog/datasets
         timestamp = datetime.now().strftime("%Y_%m_%d-%H-%M-%S")
         archive_name = f"ww-data_{timestamp}.tgz"
         archive_file_path = os.path.join(self._output_datasets_path,archive_name)
         with tarfile.open(archive_file_path, "w:gz") as tar:
             # Add the source directory to the tarball.
-            # arcname ensures that the directory structure inside the tarball
-            # starts with the directory name rather than the full source path.
-            tar.add(self._staging_path, arcname=os.path.basename('ww-data'))
+            # arcname ensures that the directory structure is flattened.
+            tar.add(self._staging_path, arcname=os.path.basename(''))
 
         success = True
         if not self._export_to_node(archive_file_path):

@@ -9,7 +9,7 @@ from joule.utilities.validators import validate_stream_path, validate_event_filt
 import os
 import json
 from sqlalchemy.orm import Session
-
+from dataclasses import dataclass
 
 BLOCK_SIZE=1000
 # Perform import and export operations for a module
@@ -31,6 +31,7 @@ class EventTarget:
         self.path = path
         self.on_conflict = on_conflict
         self.filter:List = filter
+        self.export_summary = None
 
     async def run_export(self,
                          db: Session,
@@ -49,6 +50,7 @@ class EventTarget:
         data_path = os.path.join(work_path, "data")
         os.makedirs(data_path, exist_ok=True)
         last_ts = state.last_timestamp
+        self.export_summary = EventExportSummary(event_fields=stream_model.event_fields)
         while True:
             events = await store.extract(stream_model, 
                                          start=last_ts,
@@ -59,8 +61,24 @@ class EventTarget:
             if len(events)==0:
                 break
             _write_data(events, data_path)
+            self.export_summary.end_ts = events[-1]['end_time']
+            if self.export_summary.start_ts is None:
+                self.export_summary.start_ts = events[0]['start_time']
+            self.export_summary.event_count += len(events)
             last_ts = events[-1]['start_time']+1
         return ExporterState(last_timestamp=last_ts)
+    
+    def summarize_export(self):
+        if self.export_summary is None:
+            return {} # nothing has been exported yet
+        return {
+            "source_label": self.source_label,
+            "stream_path": self.path,
+            "event_fields": self.export_summary.event_fields,
+            "start_ts": int(self.export_summary.start_ts),
+            "end_ts": int(self.export_summary.end_ts),
+            "event_count": self.export_summary.event_count
+        }
     
     async def run_import(self,
                          store: 'EventStore',
@@ -100,3 +118,10 @@ def _validate_on_conflict(value: str) -> ON_EVENT_CONFLICT:
     if value == "merge":
         return ON_EVENT_CONFLICT.MERGE
     raise ValueError(f"invalid on_conflict value: {value}")
+
+@dataclass
+class EventExportSummary:
+    event_count: int = 0
+    start_ts: int = None
+    end_ts: int = None
+    event_fields: str = ''

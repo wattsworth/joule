@@ -19,7 +19,7 @@ class TestFileReader(helpers.AsyncTestCase):
         (data_file, path) = tempfile.mkstemp()
         with open(data_file, 'w') as f:
             for row in data:
-                f.write("%d %s\n" % (row['timestamp'], ' '.join(repr(x) for x in row['data'])))
+                f.write("%d %s\n" % (row['timestamp'], ' '.join(str(float(x)) for x in row['data'])))
         my_reader = FileReader()
         ''
         pipe = LocalPipe("float32_8", name="output")
@@ -37,7 +37,7 @@ class TestFileReader(helpers.AsyncTestCase):
         (data_file, path) = tempfile.mkstemp()
         with open(data_file, 'w') as f:
             for row in data:
-                f.write("%s\n" % ' '.join(repr(x) for x in row['data']))
+                f.write("%s\n" % ' '.join(str(float(x)) for x in row['data']))
         my_reader = FileReader()
         ''
         pipe = LocalPipe("float32_8", name="output")
@@ -59,7 +59,7 @@ class TestFileReader(helpers.AsyncTestCase):
         (data_file, path) = tempfile.mkstemp()
         with open(data_file, 'w') as f:
             for row in data:
-                f.write("%d %s\n" % (row['timestamp'], ' '.join(repr(x) for x in row['data'])))
+                f.write("%d %s\n" % (row['timestamp'], ' '.join(str(float(x)) for x in row['data'])))
         my_reader = FileReader()
         ''
         pipe = LocalPipe("float32_8", name="output")

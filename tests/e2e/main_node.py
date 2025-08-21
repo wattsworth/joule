@@ -82,6 +82,7 @@ def main():
     wait_for_joule_host('node1.joule')
     asyncio.run(wait_for_follower())
     jouled.send_signal(signal.SIGINT)
+    jouled.communicate() # wait for process to terminate
 
     ## Add a user through the management file interface
     ## this is verified by the API users test

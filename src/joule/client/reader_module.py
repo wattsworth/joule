@@ -81,7 +81,7 @@ class StdoutPipe:
         for row in data:
             ts = row[0]
             vals = row[1:]
-            print("%d %s" % (ts, " ".join([repr(x) for x in vals])))
+            print("%d %s" % (ts, " ".join([str(float(x)) for x in vals])))
 
     async def close_interval(self):
         print("--- interval gap ---", file=sys.stderr)

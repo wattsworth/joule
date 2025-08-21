@@ -163,6 +163,9 @@ async def write(request: web.Request):
     db: Session = request.app[app_keys.db]
     data_store: DataStore = request.app[app_keys.data_store]
     stream = get_stream_from_request_params(request, db)
+    # if the stream is already being written to, this is an error
+    if stream.is_destination:
+        raise web.HTTPBadRequest(reason="DataStream [%s] is already being produced" % stream.name)
     # spawn in inserter task
     stream.is_destination = True
     db.commit()
@@ -185,7 +188,8 @@ async def write(request: web.Request):
     except (DataError, ConnectionError) as e:
         stream.is_destination = False
         db.commit()
-        raise web.HTTPBadRequest(reason=str(e))
+        print(f"ERROR: DataController DataStream[{stream.name}] {str(e)}")
+        raise web.HTTPBadRequest(reason=str(e).replace('\n',' '))
     finally:
         stream.is_destination = False
         db.commit()
