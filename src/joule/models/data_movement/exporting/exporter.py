@@ -13,7 +13,6 @@ from joule.models.data_movement.targets import (DataTarget, EventTarget, ModuleT
                                                 module_target_from_config)
 import logging
 import re
-import tarfile
 import os
 import shutil
 import itertools
@@ -196,22 +195,20 @@ class Exporter:
             f.write(json.dumps(metadata, indent=2))
         # bundle _staging_path directory into a compressed tarball and store in /backlog/datasets
         timestamp = datetime.now().strftime("%Y_%m_%d-%H-%M-%S")
-        archive_name = f"ww-data_{timestamp}.tgz"
+        archive_name = f"ww-data_{timestamp}"
         archive_file_path = os.path.join(self._output_datasets_path,archive_name)
-        with tarfile.open(archive_file_path, "w:gz") as tar:
-            # Add the source directory to the tarball.
-            # arcname ensures that the directory structure is flattened.
-            tar.add(self._staging_path, arcname=os.path.basename(''))
-
+        shutil.make_archive(archive_file_path,format='zip',root_dir=self._staging_path)
+        # add .zip extension because make_archive does this internally
+        archive_file_path += ".zip"
         success = True
         if not self._export_to_node(archive_file_path):
             # create a symlink in the node backlog
-            os.symlink(archive_file_path, os.path.join(self._output_node_backlog_path,archive_name))
+            os.symlink(archive_file_path, os.path.join(self._output_node_backlog_path,archive_name+".zip"))
             logging.error(f"failed to transmit {archive_name} to {self.destination_url}")
             success=False
         if not self._export_to_folder(archive_file_path):
             # create a symlink in the folder backlog
-            os.symlink(archive_file_path, os.path.join(self._output_folder_backlog_path,archive_name))
+            os.symlink(archive_file_path, os.path.join(self._output_folder_backlog_path,archive_name+".zip"))
             logging.error(f"failed to copy {archive_name} to {self.destination_folder}")
             success=False
         if success:

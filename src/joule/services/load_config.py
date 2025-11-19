@@ -22,7 +22,6 @@ log = logging.getLogger('joule')
   SocketDirectory = /tmp/joule
   ImporterConfigsDirectory = /etc/joule/importer_configs
   ImporterDataDirectory = /var/run/joule/importer_data
-  # ImporterInboxDirectory = /opt/joule/importer_inbox
   ImporterKey = XXXX
 
   ExporterConfigsDirectory = /etc/joule/exporter_configs
@@ -61,7 +60,7 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
     # Make sure mandatory directories exist
     if verify:
         for config_name in ['ModuleDirectory', 'DataStreamDirectory', 'EventStreamDirectory',
-                       'ImporterConfigsDirectory','ImporterDataDirectory',
+                       'ImporterConfigsDirectory','ImporterDataDirectory','ImporterInboxDirectory',
                        'ExporterConfigsDirectory','ExporterDataDirectory']:
             directory = main_config.get(config_name, None)
             if directory is None:
@@ -151,13 +150,6 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
             raise ConfigurationError(
                 "UsersFile [%s] does not exist" % users_file)
 
-    # Importer Inbox Directory (accept local archive files)
-    importer_inbox_directory = None
-    if 'ImporterInboxDirectory' in main_config:
-        importer_inbox_directory = main_config['ImporterInboxDirectory']
-        if not os.path.isdir(importer_inbox_directory) and verify:
-            raise ConfigurationError("ImporterInboxDirectory [%s] does not exist" % importer_inbox_directory)
-    
     # Importer Key
     importer_api_key = main_config.get('ImporterKey', None)
     if importer_api_key is None:
@@ -201,7 +193,6 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
         exporter_configs_directory=main_config['ExporterConfigsDirectory'],
         importer_data_directory=main_config.get('ImporterDataDirectory',"/var/run/joule/importer_data"),
         exporter_data_directory=main_config.get('ExporterDataDirectory',"/var/run/joule/exporter_data"),
-        importer_inbox_directory=importer_inbox_directory,
         importer_api_key = importer_api_key,
         ip_address=ip_address,
         port=port,

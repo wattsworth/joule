@@ -1,15 +1,20 @@
 import enum
 import json
-from typing import TYPE_CHECKING, List, Dict
+from typing import TYPE_CHECKING, List, Dict, Tuple
 from joule.models.data_movement.exporting.exporter_state import ExporterState
 from joule.models.data_store.event_store import EventStore
-from joule.models.event_stream import EventStream
-from joule.models.folder import find_stream_by_path
+from joule.models import event_stream 
+from joule.models.folder import find_stream_by_path, parse_stream_path
+from joule.services.load_event_streams import save_event_stream
 from joule.utilities.validators import validate_stream_path, validate_event_filter
+from joule.utilities.archive_tools import ImportLogger
 import os
 import json
 from sqlalchemy.orm import Session
 from dataclasses import dataclass
+import logging
+
+logger = logging.getLogger('joule')
 
 BLOCK_SIZE=1000
 # Perform import and export operations for a module
@@ -38,7 +43,7 @@ class EventTarget:
                          store: EventStore, 
                          work_path: str, 
                          state: ExporterState) -> ExporterState:
-        stream_model = find_stream_by_path(self.path, db, EventStream)
+        stream_model = find_stream_by_path(self.path, db, event_stream.EventStream)
         # save the stream metadata
         with open(os.path.join(work_path, 'metadata.json'), 'w') as f:
             f.write(json.dumps({
@@ -71,20 +76,52 @@ class EventTarget:
     def summarize_export(self):
         if self.export_summary is None:
             return {} # nothing has been exported yet
+        if self.export_summary.start_ts is not None:
+            start_ts = int(self.export_summary.start_ts)
+        else:
+            start_ts = None
+        if self.export_summary.end_ts is not None:
+            end_ts = int(self.export_summary.end_ts)
+        else:
+            end_ts = None
         return {
             "source_label": self.source_label,
             "stream_path": self.path,
             "event_fields": self.export_summary.event_fields,
-            "start_ts": int(self.export_summary.start_ts),
-            "end_ts": int(self.export_summary.end_ts),
+            "start_ts": start_ts,
+            "end_ts": end_ts,
             "event_count": self.export_summary.event_count
         }
     
     async def run_import(self,
+                         db: Session,
                          store: 'EventStore',
                          metadata: dict,
-                         source_directory: str) -> bool:
-        return True
+                         source_directory: str,
+                         logger: ImportLogger):
+        
+        logger.set_metadata(self.source_label,self.path,'event_stream')
+        # retrieve the stream or create it based on the metadata
+        stream = find_stream_by_path(self.path, db, stream_type=event_stream.EventStream)
+        if stream is None:
+            stream = event_stream.from_json(metadata['stream_model'], reset_parameters=True)
+            dest_folder, name = parse_stream_path(self.path)
+            stream.name = name # the model is based of the received metadata so reset the name
+            save_event_stream(stream, dest_folder, db)
+            db.commit() 
+            await store.create(stream)
+            logger.info(f"creating event stream {self.path}")
+
+
+        data_files = os.listdir(source_directory)
+        nevents = 0
+        for file in sorted(data_files):
+            with open(os.path.join(source_directory,file),'r') as f:
+                events = json.load(f)
+            nevents+=len(events)
+            await store.upsert(stream, events)
+        logger.info(f"imported {nevents} events into {self.path}")
+
     
 def _write_data(events: List[Dict], data_dir):
     with open(os.path.join(data_dir, str(events[-1]['start_time']))+".json", 'w') as f:

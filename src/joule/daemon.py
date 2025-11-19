@@ -215,7 +215,12 @@ class Daemon(object):
                                                 data_store=self.data_store,
                                                 db=self.db)
         # configure importers
-        #importers = load_importers.run()
+        importers = load_importers.run(configs_path=self.config.importer_configs_directory)
+        self.importer_manager = ImporterManager(importers=importers,
+                                                importer_data_directory=self.config.importer_data_directory,
+                                                event_store = self.event_store,
+                                                data_store = self.data_store,
+                                                db=self.db)
         # save the metadata
         self.db.commit()
         return True # successfully initialized the system
@@ -232,7 +237,6 @@ class Daemon(object):
         await self.supervisor.start()
         # start the I/O managers
         await self.exporter_manager.start()
-
         # start inserters by subscribing to the streams
         inserter_tasks = []
         for stream in self.db.query(DataStream).filter(DataStream.keep_us != DataStream.KEEP_NONE):
@@ -249,7 +253,10 @@ class Daemon(object):
         middlewares = [
             joule.middleware.sql_rollback,
             joule.middleware.authorize(
-                exemptions=joule.controllers.insecure_routes),
+                exemptions=joule.controllers.insecure_routes,
+                route_specific_auth={('POST',joule.constants.EndPoints.archive): 
+                                      self.config.importer_api_key}
+            )
         ]
         app = web.Application(middlewares=middlewares)
 
@@ -257,6 +264,8 @@ class Daemon(object):
         app[app_keys.supervisor] = self.supervisor
         app[app_keys.data_store] = self.data_store
         app[app_keys.event_store] = self.event_store
+        # TODO: load unprocessed archives into the queue (anything that hasn't been processed because the server was stopped)
+        app[app_keys.importer_manager] = self.importer_manager
         app[app_keys.db] = self.db
         # used to tell master's this node's info
         app[app_keys.uuid] = self.db.query(Node).one().uuid
@@ -410,6 +419,7 @@ def main(argv=None):
     async def debugger():
         task_list = []
         while True:
+            await asyncio.sleep(2)
             for t in asyncio.all_tasks():
                 name = t.get_name()
 
@@ -424,7 +434,6 @@ def main(argv=None):
                 if t not in task_list:
                     task_list.append(t)
                     # print(f"New Task[{id(t)}]: {t.get_name()}")
-
             for t in task_list:
                 if t.done():
                     # print(f"DONE: {t.get_name()}: ", end="")
@@ -434,15 +443,14 @@ def main(argv=None):
                         exception = t.exception()
                         if exception is not None:
                             print(f"Got exception: [{exception}], type:{type(exception)}")
-                            # print("----Cancelling Daemon----")
-                            # daemon_task.cancel()
+                            #print("----Cancelling Daemon----")
+                            #daemon_task.cancel()
                         # else:
                         #    print("completed")
-                    task_list.remove(t)
+                    #task_list.remove(t)
                 # else:
                 #    print(f"RUNNING: {t.get_name()}")
 
-            await asyncio.sleep(2)
 
     debug = loop.create_task(debugger())
     debug.set_name("debugger")

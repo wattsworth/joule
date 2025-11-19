@@ -37,10 +37,18 @@ async def add(request: web.Request):
         if master_type == 'user':
             return _add_user(db, body, local_name, grantor_id)
         elif master_type == 'joule' or master_type == 'lumen':
+            # populate with config defaults
             local_port: int = request.app[app_keys.port]
             local_scheme: str = request.app[app_keys.scheme]
             local_uri: str = request.app[app_keys.base_uri]
             cafile = request.app[app_keys.cafile]
+            # webserver can override these with specific headers
+            if app_keys.port in request:
+                local_port = request[app_keys.port]
+            if app_keys.scheme in request:
+                local_scheme = request[app_keys.scheme]
+            if app_keys.base_uri in request:
+                local_uri = request[app_keys.base_uri]
             return await _add_device(db, master_type, body, local_name, local_port, local_scheme, local_uri, cafile, grantor_id)
         
     except (KeyError, ValueError) as e:

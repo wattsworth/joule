@@ -69,12 +69,12 @@ class TestExporter(unittest.IsolatedAsyncioTestCase):
             # the dataset should be saved
             self.assertEqual(len(os.listdir(work_path+"/output/datasets")), 1)
             backlogged_dataset = work_path+"/output/folder_backlog/"+os.listdir(work_path+"/output/folder_backlog")[0]
-            self.assertTrue(backlogged_dataset.endswith(".tgz"))
+            self.assertTrue(backlogged_dataset.endswith(".zip"))
 
             # a symlink should be created in the folder backlog
             self.assertEqual(len(os.listdir(work_path+"/output/folder_backlog")), 1)
             dataset_symlink =work_path+"/output/folder_backlog/"+os.listdir(work_path+"/output/folder_backlog")[0]
-            self.assertTrue(dataset_symlink.endswith(".tgz"))
+            self.assertTrue(dataset_symlink.endswith(".zip"))
 
             # make sure this file is a symlink and points to the dataset
             self.assertTrue(os.path.islink(dataset_symlink))
@@ -111,12 +111,12 @@ class TestExporter(unittest.IsolatedAsyncioTestCase):
             # the dataset should be saved
             self.assertEqual(len(os.listdir(work_path+"/output/datasets")), 1)
             backlogged_dataset = work_path+"/output/node_backlog/"+os.listdir(work_path+"/output/node_backlog")[0]
-            self.assertTrue(backlogged_dataset.endswith(".tgz"))
+            self.assertTrue(backlogged_dataset.endswith(".zip"))
 
             # a symlink should be created in the node backlog
             self.assertEqual(len(os.listdir(work_path+"/output/node_backlog")), 1)
             dataset_symlink =work_path+"/output/node_backlog/"+os.listdir(work_path+"/output/node_backlog")[0]
-            self.assertTrue(dataset_symlink.endswith(".tgz"))
+            self.assertTrue(dataset_symlink.endswith(".zip"))
 
             # make sure this file is a symlink and points to the dataset
             self.assertTrue(os.path.islink(dataset_symlink))

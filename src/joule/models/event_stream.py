@@ -130,7 +130,7 @@ class EventStream(Base):
         """
         return self.is_configured
 
-def from_json(data: Dict) -> EventStream:
+def from_json(data: Dict, reset_parameters=False) -> EventStream:
     """
     Construct an EventStream from a dictionary of attributes produced by
     :meth:`EventStream.to_json`
@@ -160,14 +160,18 @@ def from_json(data: Dict) -> EventStream:
         #additional fields
     """
 
-    return EventStream(id=data["id"],
+    new_stream = EventStream(id=data["id"],
                        name=validate_name(data["name"]),
                        description=data["description"],
                        event_fields=validate_event_fields(data["event_fields"]),
                        chunk_duration_us=validate_chunk_duration(data["chunk_duration_us"]),
                        keep_us=validate_keep_us(data["keep_us"]),
                        updated_at=datetime.now(timezone.utc))
-
+    if not reset_parameters:
+        return new_stream
+    # clear out the id
+    new_stream.id = None
+    return new_stream
 
 
 

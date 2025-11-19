@@ -182,3 +182,8 @@ def validate_name(name: str) -> str:
         raise ConfigurationError("invalid name, '\\' not allowed")
     return name
 
+def parse_stream_path(path:str):
+    """Return the folder and stream name from a full path"""
+    stream_name = path.split('/')[-1]
+    folder = '/'.join(path.split('/')[:-1])
+    return folder, stream_name

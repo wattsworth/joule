@@ -37,6 +37,7 @@ dependencies = [
     'asyncpg',
     'psycopg2-binary',
     'aiodns',
+    'aiofiles',
     'pyopenssl',
     'dsnparse',
     'h5py',

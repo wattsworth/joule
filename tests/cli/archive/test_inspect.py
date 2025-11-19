@@ -10,7 +10,6 @@ from joule.errors import ApiError
 from unittest.mock import patch
 from joule.api import helpers, TcpNode
 
-VALID_ARCHIVE_NAME = "ww-data_2025_08_21-14-19-17"
 ARCHIVES_PATH = os.path.join(os.path.dirname(__file__), 'archives')
 
 
@@ -19,7 +18,7 @@ class TestArchiveInspect(unittest.TestCase):
     def tests_inspects_archive_files(self):
         runner = CliRunner()
         result = runner.invoke(main, ['archive', 'inspect',
-                                      os.path.join(ARCHIVES_PATH,"ww-data_2025_08_21-14-19-17.tgz")])
+                                      os.path.join(ARCHIVES_PATH,"ww-data_2025_09_03-10-03-59.zip")])
         print_result_on_error(result)
         self.assertEqual(result.exit_code, 0)
         # expect the node name and exporter label
@@ -36,7 +35,7 @@ class TestArchiveInspect(unittest.TestCase):
     def tests_inspect_archive_files_verbose(self):
         runner = CliRunner()
         result = runner.invoke(main, ['archive', 'inspect','-v',
-                                      os.path.join(ARCHIVES_PATH,"ww-data_2025_08_21-14-19-17.tgz")])
+                                      os.path.join(ARCHIVES_PATH,"ww-data_2025_09_03-10-03-59.zip")])
         print_result_on_error(result)
         self.assertEqual(result.exit_code, 0)
         # expect the node name and exporter label
@@ -53,7 +52,7 @@ class TestArchiveInspect(unittest.TestCase):
     def tests_inspect_empty_archive_file(self):
         runner = CliRunner()
         result = runner.invoke(main, ['archive', 'inspect','-v',
-                                      os.path.join(ARCHIVES_PATH,"ww-data_empty.tgz")])
+                                      os.path.join(ARCHIVES_PATH,"ww-data_empty.zip")])
         print_result_on_error(result)
         self.assertEqual(result.exit_code, 0)
         # expect the node name and exporter label
@@ -65,7 +64,7 @@ class TestArchiveInspect(unittest.TestCase):
     def tests_inspect_invalid_archive_file(self):
         runner = CliRunner()
         result = runner.invoke(main, ['archive', 'inspect','-v',
-                                      os.path.join(ARCHIVES_PATH,"ww-data_corrupt.tgz")])
+                                      os.path.join(ARCHIVES_PATH,"ww-data_corrupt.zip")])
         self.assertEqual(result.exit_code, 1)
         # expect an error message
         self.assertIn("not a valid joule archive", result.output)

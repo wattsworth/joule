@@ -357,3 +357,9 @@ class BaseNode:
     async def db_connection_info(self) -> 'ConnectionInfo':
         from joule.api.db import db_connection_info
         return await db_connection_info(self.session)
+
+    # Archive actions
+    async def archive_upload(self, path: str):
+        from joule.api.archive import archive_upload
+        return await archive_upload(self.session, path)
+    

@@ -7,7 +7,7 @@ import numpy as np
 from typing import Dict, Optional, List
 from aiohttp.test_utils import unused_port
 import time
-import signal
+import hashlib
 import asyncio
 import json
 import psutil
@@ -16,6 +16,7 @@ import tempfile
 
 from tests import helpers
 from joule.models import DataStream, StreamInfo, pipes, data_stream, master
+from joule.utilities.archive_tools import ImportLogger
 from joule.api import annotation
 from joule.constants import EndPoints, ConfigFiles
 from joule.errors import EmptyPipeError
@@ -110,9 +111,8 @@ class FakeJoule:
                 web.post(EndPoints.annotation, self.create_annotation),
                 web.delete(EndPoints.annotation, self.delete_annotation),
                 web.delete(EndPoints.stream_annotations, self.delete_all_annotations),
-
-                
-                # --- event stream data routes ---
+                # --- archive routes ---
+                web.post(EndPoints.archive, self.upload_archive)
 
             ])
         self.stub_stream_info = False
@@ -132,6 +132,7 @@ class FakeJoule:
         self.stub_master = False
         self.stub_stream_update = False
         self.stub_annotation = False
+        self.stub_archive_upload = False
         self.first_lumen_user = True
         self.response = ""
         # need this because node info cmd makes two requests
@@ -453,6 +454,15 @@ class FakeJoule:
 
         self.msgs.put(dict(request.query))
         return web.Response(text="ok")
+
+    async def upload_archive(self, request: web.Request):
+        if self.stub_archive_upload:
+            return web.Response(text=self.response, status=self.http_code)
+        hash_digest = hashlib.md5(await request.read()).hexdigest()
+        self.msgs.put(hash_digest)
+        logger = ImportLogger()
+        logger.info("stubbed logs")
+        return web.json_response(logger.to_json())
 
 
     def _find_entry(self, params):

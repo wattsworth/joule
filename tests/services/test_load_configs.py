@@ -40,7 +40,8 @@ class TestLoadConfigs(unittest.TestCase):
              tempfile.TemporaryDirectory() as importer_dir,
              tempfile.TemporaryDirectory() as exporter_dir,
              tempfile.TemporaryDirectory() as importer_data_dir,
-             tempfile.TemporaryDirectory() as exporter_data_dir):
+             tempfile.TemporaryDirectory() as exporter_data_dir,
+             tempfile.TemporaryDirectory() as importer_inbox_dir):
 
             parser = configparser.ConfigParser()
             parser.read_string("""
@@ -52,10 +53,11 @@ class TestLoadConfigs(unittest.TestCase):
                         ImporterConfigsDirectory=%s
                         ExporterConfigsDirectory=%s
                         ImporterDataDirectory=%s
+                        ImporterInboxDirectory=%s
                         ExporterDataDirectory=%s
                         Database=%s
                     """ % (module_dir, stream_dir, socket_dir, event_dir,
-                           importer_dir, exporter_dir,
+                           importer_dir, importer_inbox_dir, exporter_dir,
                            importer_data_dir, exporter_data_dir, db_url[13:]))
             my_config = load_config.run(custom_values=parser)
             self.assertEqual(my_config.stream_directory, stream_dir)

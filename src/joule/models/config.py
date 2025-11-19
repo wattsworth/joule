@@ -45,7 +45,6 @@ class JouleConfig:
     event_directory: str
     importer_configs_directory: str
     importer_data_directory: str
-    importer_inbox_directory: str
     importer_api_key: str
     exporter_configs_directory: str
     exporter_data_directory: str

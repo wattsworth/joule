@@ -20,7 +20,7 @@ def run(path: str, db: Session):
     configured_streams = _parse_configs(configs)
     for path, streams in configured_streams.items():
         for stream in streams:
-            _save_stream(stream, path, db)
+            save_data_stream(stream, path, db)
     return [stream for _, stream in configured_streams.items()]
 
 
@@ -46,7 +46,7 @@ def _parse_configs(configs: Configurations) -> Streams:
 
 
 
-def _save_stream(new_stream: DataStream, path: str, db: Session) -> None:
+def save_data_stream(new_stream: DataStream, path: str, db: Session) -> None:
     my_folder = find_folder(path, db, create=True)
     cur_stream: DataStream = db.query(DataStream) \
         .filter_by(folder=my_folder, name=new_stream.name) \

@@ -12,6 +12,7 @@ cd -
 
 # archive the partial coverages
 rm -f current_coverages/*
+rm -f incremental_coverages/*
 cp .coverage.* current_coverages
 
 # consolidate the code coverage

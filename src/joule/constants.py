@@ -50,6 +50,9 @@ class EndPoints:
     annotations = '/annotations.json'
     annotations_info = '/annotations/info.json'
 
+    archive = '/archive.json'
+    archives = '/archives.json'
+
 @dataclass
 class ApiErrorMessages:
     stream_does_not_exist = 'stream does not exist'

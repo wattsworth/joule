@@ -243,13 +243,14 @@ class DataStream(Base):
         return resp
 
 
-def from_json(data: Dict) -> DataStream:
+def from_json(data: Dict, reset_parameters=False) -> DataStream:
     """
     Construct a DataStream from a dictionary of attributes produced by
     :meth:`DataStream.to_json`
 
     Args:
         data: attribute dictionary
+        reset_parameters: if set, clear the ID fields and all status flags (helpful when creating a new stream off an existing model)
 
     Returns: DataStream
 
@@ -261,7 +262,7 @@ def from_json(data: Dict) -> DataStream:
         elements.append(element.from_json(item))
         index += 1
 
-    return DataStream(id=data["id"],
+    new_stream = DataStream(id=data["id"],
                       name=validate_name(data["name"]),
                       description=data["description"],
                       datatype=validate_datatype(data["datatype"].upper()),
@@ -272,7 +273,27 @@ def from_json(data: Dict) -> DataStream:
                       is_destination=data["is_destination"],
                       elements=elements,
                       updated_at=datetime.now(timezone.utc))
-
+    
+    # make sure stream has at least 1 element
+    if len(new_stream.elements) == 0:
+        raise ConfigurationError("stream must have at least one element")
+    # make sure element names are unique
+    element_names = [e.name for e in new_stream.elements]
+    if len(set(element_names)) != len(element_names):
+        raise ConfigurationError("element names must be unique")
+    
+    if not reset_parameters:
+        return new_stream
+    # clear out the status flags
+    new_stream.is_configured = False
+    new_stream.is_destination = False
+    new_stream.is_source = False
+    
+    # clear out the id's
+    new_stream.id = None
+    for elem in new_stream.elements:
+        elem.id = None
+    return new_stream
 
 
 def from_config(config: configparser.ConfigParser) -> DataStream:

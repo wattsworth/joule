@@ -94,6 +94,7 @@ def admin_initialize(dsn, bind, port, name, generate_user_file):
     # create the data directories for importer and exporter
     _make_joule_directory("/var/run/joule/importer_data")
     _make_joule_directory("/var/run/joule/exporter_data")
+    _make_joule_directory("/var/run/joule/importer_inbox")
     shutil.chown("/var/run/joule/importer_data", user="joule", group="joule")
     shutil.chown("/var/run/joule/exporter_data", user="joule", group="joule")
     

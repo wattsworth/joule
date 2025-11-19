@@ -79,23 +79,8 @@ async def create(request):
         raise web.HTTPBadRequest(reason="specify a destination")
 
     try:
-        new_stream = data_stream.from_json(body['stream'])
-        # make sure stream has at least 1 element
-        if len(new_stream.elements) == 0:
-            raise ConfigurationError("stream must have at least one element")
-
-        # clear out the status flags
-        new_stream.is_configured = False
-        new_stream.is_destination = False
-        new_stream.is_source = False
-        # make sure element names are unique
-        element_names = [e.name for e in new_stream.elements]
-        if len(set(element_names)) != len(element_names):
-            raise ConfigurationError("element names must be unique")
-        # clear out the id's
-        new_stream.id = None
-        for elem in new_stream.elements:
-            elem.id = None
+        new_stream = data_stream.from_json(body['stream'], reset_parameters=True)
+        
         # make sure name is unique in this destination
         existing_names = [s.name for s in destination.data_streams + destination.event_streams]
         if new_stream.name in existing_names:

@@ -1,11 +1,7 @@
 import click
-import tarfile
-import json
-
-from joule import errors
 from joule.cli.config import Config, pass_config
 from joule.utilities import timestamp_to_human as ts2h
-
+from joule.utilities import archive_tools
 
 @click.command(name="inspect")
 @click.option('-v', "--verbose", is_flag=True, help="display more information")
@@ -14,12 +10,8 @@ from joule.utilities import timestamp_to_human as ts2h
 def archive_inspect(config: Config, archive: str, verbose):
     """Display the contents of an archive"""
     try:
-        with(tarfile.open(archive, 'r:gz') as tar,
-             tar.extractfile(tar.getmember("metadata.json")) as f):
-            metadata = json.load(f)
-            if 'magic' not in metadata or metadata['magic']!='joule-data-archive-bundle':
-                raise ValueError()
-            print_info(metadata, verbose)
+        metadata = archive_tools.read_metadata(archive)
+        print_info(metadata, verbose)
     except ValueError:
         raise click.ClickException(f"{archive} is not a valid joule archive")
 
@@ -30,8 +22,8 @@ def print_info(metadata, verbose):
     click.echo(f'Date:\t{ts2h(metadata["created_at"])}')
     click.echo('')
     click.echo('========= Contents ========')
-    start_times = [summary['end_ts'] for summary in metadata['data_streams']+metadata['event_streams']]
-    end_times = [summary['end_ts'] for summary in metadata['data_streams']+metadata['event_streams']]
+    start_times = [summary['start_ts'] for summary in metadata['data_streams']+metadata['event_streams'] if summary['end_ts'] is not None]
+    end_times = [summary['end_ts'] for summary in metadata['data_streams']+metadata['event_streams'] if summary['end_ts'] is not None]
     if len(start_times)>0:
         click.echo(f'Start:\t{ts2h(min(start_times))}')
         click.echo(f'End:\t{ts2h(max(end_times))}')

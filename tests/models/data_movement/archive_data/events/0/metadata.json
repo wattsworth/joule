@@ -1,0 +1,13 @@
+{
+  "source_label": "simple_events",
+  "stream_path": "/demo/events",
+  "stream_model": {
+    "id": 1,
+    "name": "events",
+    "description": "",
+    "event_fields": {},
+    "chunk_duration_us": 0,
+    "keep_us": -1,
+    "updated_at": "2025-07-30T20:05:06.958171+00:00"
+  }
+}

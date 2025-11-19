@@ -1,16 +1,21 @@
 import unittest
 from unittest.mock import patch, MagicMock, AsyncMock, create_autospec
 import tempfile
+from joule.models.pipes import Pipe
 from joule.models.data_store.data_store import DataStore
 from joule.models.data_movement.targets.data_target import DataTarget, data_target_from_config
 from joule.models.data_movement.exporting.exporter_state import ExporterState
 from joule.models import DataStream, Element
 from joule.models.pipes import interval_token as compute_interval_token
+from joule.utilities.archive_tools import ImportLogger
 from tests import helpers
 import json
 import os
 from joule.models.pipes.local_pipe import LocalPipe
 import numpy as np
+import asyncio
+
+ARCHIVE_PATH = os.path.join(os.path.dirname(__file__), '..','archive_data','data','0')
 
 class TestDataTarget(unittest.IsolatedAsyncioTestCase):       
 
@@ -34,7 +39,42 @@ class TestDataTarget(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(import_target.path, "/some/path/to/data")
         self.assertEqual(import_target.merge_gap, 1e6*10)
 
-    async def test_data_target(self):
+    async def test_run_import(self):
+        store = create_autospec(spec=DataStore, spec_set=True, instance=True)
+        target = DataTarget(source_label="test",
+                            path="/some/path/to/data")
+        my_stream = DataStream(
+            name="test",
+            description="test_description",
+            datatype=DataStream.DATATYPE.FLOAT32,
+            elements=[Element(name="0",index=0), Element(name="1", index=1)])
+        find_stream_by_path = MagicMock(return_value=my_stream)
+
+        with open(os.path.join(ARCHIVE_PATH,'metadata.json'),'r') as f:
+            metadata = json.load(f)['stream_model']
+        importer_pipe = None
+        async def mock_spawn_inserter(stream: 'DataStream', pipe:Pipe):
+            nonlocal importer_pipe
+            importer_pipe = pipe
+            return asyncio.sleep(0) # a stub co-routine since spawn_inserter returns the insertion task
+             
+        store.spawn_inserter = mock_spawn_inserter
+        logger = ImportLogger()
+        with(patch("joule.models.data_movement.targets.data_target.find_stream_by_path",
+             find_stream_by_path)):
+            await target.run_import(db="db_object", #not used, mocked by find_stream_by_path
+                                    store=store,
+                                    metadata=metadata,
+                                    source_directory=os.path.join(ARCHIVE_PATH,'data'),
+                                    logger=logger)
+
+        data = importer_pipe.read_nowait()
+        self.assertEqual(len(data),70) # make sure the pipe received all the data
+        self.assertTrue(logger.success)
+        # TODO use an archive with interval breaks
+            
+
+    async def test_run_export(self):
         
         LENGTH = 500
         

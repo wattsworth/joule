@@ -19,7 +19,7 @@ def run(path: str, db: Session) -> List[EventStream]:
     for path, streams in configured_streams.items():
         for stream in streams:
             stream.is_configured = True
-            _save_stream(stream, path, db)
+            save_event_stream(stream, path, db)
     return [stream for _, stream in configured_streams.items()]
 
 def _parse_configs(configs: Configurations) -> Streams:
@@ -39,7 +39,7 @@ def _parse_configs(configs: Configurations) -> Streams:
             logger.error("Invalid event stream [%s]: %s" % (file_path, e))
     return streams
 
-def _save_stream(new_stream: EventStream, path: str, db):
+def save_event_stream(new_stream: EventStream, path: str, db):
     my_folder = find_folder(path, db, create=True)
     cur_stream: EventStream = db.query(EventStream) \
         .filter_by(folder=my_folder, name=new_stream.name) \

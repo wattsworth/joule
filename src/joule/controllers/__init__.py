@@ -12,7 +12,8 @@ from joule.controllers import (
     proxy_controller,
     master_controller,
     follower_controller,
-    annotation_controller)
+    annotation_controller,
+    archive_controller)
 
 routes = [
     web.get(EndPoints.root, root_controller.index),
@@ -77,7 +78,9 @@ routes = [
     web.put(EndPoints.annotation, annotation_controller.update),
     web.post(EndPoints.annotation, annotation_controller.create),
     web.delete(EndPoints.annotation, annotation_controller.delete),
-    web.delete(EndPoints.stream_annotations, annotation_controller.delete_all)
+    web.delete(EndPoints.stream_annotations, annotation_controller.delete_all),
+    # -- archive routes --
+    web.post(EndPoints.archive, archive_controller.add)
 ]
 
 insecure_routes = [

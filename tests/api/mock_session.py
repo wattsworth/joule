@@ -36,12 +36,17 @@ class MockSession:
         self.methods.append(self.method)
         return self._response_data()
 
-    async def post(self, path, json):
+    async def post(self, path, json=None, data=None):
         self.path = path
         self.paths.append(path)
-        self._save_request_data(json)
+        if json is not None:
+            self._save_request_data(json)
+        elif data is not None:
+            # buffered reader object (used by achive API)
+            self._save_request_data(data.read())
         self.method = 'POST'
         self.methods.append(self.method)
+        
         return self._response_data()
 
     def _save_request_data(self, data):

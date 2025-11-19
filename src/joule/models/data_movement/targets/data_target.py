@@ -1,17 +1,27 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Tuple, List
 from joule.utilities.validators import validate_stream_path
 from joule.utilities.misc import parse_time_interval
 from joule.models.data_movement.exporting.exporter_state import ExporterState
+from joule.models.data_store.errors import DataError
 from joule.models.folder import find_stream_by_path
-from joule.models.data_stream import DataStream
+from joule.models import data_stream
 from joule.models.pipes import interval_token as compute_interval_token
+from joule.models.pipes import LocalPipe
+from joule.services.load_data_streams import save_data_stream
 from joule.utilities import timestamp_to_human as ts2h
-from joule.errors import ConfigurationError
+from joule.utilities.archive_tools import ImportLogger
+from joule.errors import ConfigurationError, PipeError
+from joule.models import DataStream, folder
+
 import os
 import json
+import asyncio
 import numpy as np
 from dataclasses import dataclass
 from sqlalchemy.orm import Session
+import logging
+
+logger = logging.getLogger('joule')
 
 if TYPE_CHECKING:
     from joule.models.data_store.data_store import DataStore
@@ -53,7 +63,6 @@ class DataTarget:
             # data is a numpy array that may end with a pipe interval token (all 0's)
             # if there is data write it out to a .dat file
             # if there is an interval boundary write it out as a interval file
-
             if len(data)==0:
                 return # nothing to save
             close_interval = False
@@ -81,20 +90,64 @@ class DataTarget:
     def summarize_export(self):
         if self.export_summary is None:
             return {} # nothing has been exported yet
+        if self.export_summary.start_ts is not None:
+            start_ts = int(self.export_summary.start_ts)
+        else:
+            start_ts = None
+        if self.export_summary.end_ts is not None:
+            end_ts = int(self.export_summary.end_ts)
+        else:
+            end_ts = None
         return {
             "source_label": self.source_label,
             "stream_path": self.path,
             "stream_layout": self.export_summary.stream_layout,
-            "start_ts": int(self.export_summary.start_ts),
-            "end_ts": int(self.export_summary.end_ts),
+            "start_ts": start_ts,
+            "end_ts": end_ts,
             "row_count": self.export_summary.row_count,
             "interval_count": self.export_summary.interval_count
         }
     async def run_import(self,
+                         db: Session,
                          store: 'DataStore',
                          metadata: dict,
-                         source_directory: str) -> bool:
-        return True
+                         source_directory: str,
+                         logger: ImportLogger):
+        nrows = 0
+        logger.set_metadata(self.source_label,self.path,'data_stream')
+        # retrieve the stream or create it based on the metadata
+        stream = find_stream_by_path(self.path, db, stream_type=DataStream)
+        if stream is None:
+            stream = data_stream.from_json(metadata['stream_model'], reset_parameters=True)
+            dest_folder, name = folder.parse_stream_path(self.path)
+            stream.name = name # the model is based of the received metadata so reset the name
+            save_data_stream(stream, dest_folder, db)
+            db.commit()
+            logger.info(f"creating data stream {self.path}")
+        
+        data_files = os.listdir(source_directory)
+        pipe = LocalPipe(layout=stream.layout)
+        inserter_task = await store.spawn_inserter(stream,pipe)
+        try:
+            for file in sorted(data_files):
+                if file.endswith("_interval_break.dat"):
+                    #print("closing interval")
+                    await pipe.close_interval()
+                    continue
+                with open(os.path.join(source_directory,file),'rb') as f:
+                    data = np.load(f)
+                    await pipe.write(data)        
+                    nrows+=len(data)
+                    await asyncio.sleep(0.1) # allow errors in other coroutines to bubble up
+            logger.info(f"imported {nrows} rows of data into {self.path}")
+        except PipeError as e:
+            logger.error(f"cannot import data over range {ts2h(data[0][0])}-- {ts2h(data[-1][0])}: {str(e)}")
+        finally:
+            await pipe.close()
+        try:
+            await inserter_task
+        except Exception as e:
+            logger.error(f"cannot import data into {self.path}: {e}")
     
     def validate(self, db:Session):
         if not find_stream_by_path(self.path, db, DataStream):

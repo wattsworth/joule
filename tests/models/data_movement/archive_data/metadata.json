@@ -1,0 +1,37 @@
+{
+  "name": "all_data",
+  "node": "joule-dev",
+  "created_at": 1756908209479737,
+  "version": "1.0.0",
+  "magic": "joule-data-archive-bundle",
+  "data_streams": [
+    {
+      "source_label": "random",
+      "stream_path": "/demo/random",
+      "stream_layout": "float32_2",
+      "start_ts": 1756907580898429,
+      "end_ts": 1756907587798429,
+      "row_count": 70,
+      "interval_count": 1
+    },
+    {
+      "source_label": "filtered",
+      "stream_path": "/demo/smoothed",
+      "stream_layout": "float32_2",
+      "start_ts": 1756907581398429,
+      "end_ts": 1756907587298429,
+      "row_count": 60,
+      "interval_count": 1
+    }
+  ],
+  "event_streams": [
+    {
+      "source_label": "simple_events",
+      "stream_path": "/demo/events",
+      "event_fields": {},
+      "start_ts": 1756907580537793,
+      "end_ts": 1756907586610195,
+      "event_count": 3
+    }
+  ]
+}

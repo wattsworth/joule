@@ -54,17 +54,17 @@ class TestExporter(unittest.IsolatedAsyncioTestCase):
             # 2: only folder
             # 3: both node and folder
             
-            with open(work_path+"/output/datasets/stub1.tgz", "w") as f:
+            with open(work_path+"/output/datasets/stub1.zip", "w") as f:
                 f.write("dataset_1")
-            with open(work_path+"/output/datasets/stub2.tgz", "w") as f:
+            with open(work_path+"/output/datasets/stub2.zip", "w") as f:
                 f.write("dataset_2")
-            with open(work_path+"/output/datasets/stub3.tgz", "w") as f:
+            with open(work_path+"/output/datasets/stub3.zip", "w") as f:
                 f.write("dataset_3")
             # create symlinks to mock failed exports
-            os.symlink(work_path+"/output/datasets/stub1.tgz", work_path+"/output/node_backlog/stub1.tgz")
-            os.symlink(work_path+"/output/datasets/stub2.tgz", work_path+"/output/folder_backlog/stub2.tgz")
-            os.symlink(work_path+"/output/datasets/stub3.tgz", work_path+"/output/folder_backlog/stub3.tgz")
-            os.symlink(work_path+"/output/datasets/stub3.tgz", work_path+"/output/node_backlog/stub3.tgz")
+            os.symlink(work_path+"/output/datasets/stub1.zip", work_path+"/output/node_backlog/stub1.zip")
+            os.symlink(work_path+"/output/datasets/stub2.zip", work_path+"/output/folder_backlog/stub2.zip")
+            os.symlink(work_path+"/output/datasets/stub3.zip", work_path+"/output/folder_backlog/stub3.zip")
+            os.symlink(work_path+"/output/datasets/stub3.zip", work_path+"/output/node_backlog/stub3.zip")
 
             await self.exporter.run(db="db_object", 
                                     event_store="event_store_object", 
@@ -87,12 +87,12 @@ class TestExporter(unittest.IsolatedAsyncioTestCase):
             output_files = os.listdir(destination_folder)
             self.assertEqual(len(output_files), 3)
             filenames = [os.path.basename(f) for f in output_files]
-            self.assertIn("stub2.tgz", filenames)
-            self.assertIn("stub3.tgz", filenames)
+            self.assertIn("stub2.zip", filenames)
+            self.assertIn("stub3.zip", filenames)
             # make sure the last file is the new data with a name like:
-            # ww-data_YYYY_MM_DD-HH-MM-SS.tgz
+            # ww-data_YYYY_MM_DD-HH-MM-SS.zip
             ww_data_file = [f for f in filenames if f.startswith("ww-data")][0]
-            self.assertTrue(ww_data_file.endswith(".tgz"))
+            self.assertTrue(ww_data_file.endswith(".zip"))
 
     async def test_runs_export_targets(self):
         with(tempfile.TemporaryDirectory() as work_path,
@@ -119,7 +119,7 @@ class TestExporter(unittest.IsolatedAsyncioTestCase):
             # check that the export bundle is in the destination folder
             output_files = os.listdir(destination_folder)
             self.assertEqual(len(output_files), 1)
-            self.assertTrue(output_files[0].endswith(".tgz"))
+            self.assertTrue(output_files[0].endswith(".zip"))
 
     async def test_cleans_directory(self):
         # expires datasets when the retain period is exceeded
@@ -140,26 +140,26 @@ class TestExporter(unittest.IsolatedAsyncioTestCase):
 
             self.exporter._initialize() # create folder structure
             # 1. place an old backlog file that will be expired
-            with open(work_path+"/output/datasets/old_stub.tgz", "w") as f:
+            with open(work_path+"/output/datasets/old_stub.zip", "w") as f:
                 f.write("old_stub")
-            os.symlink(work_path+"/output/datasets/old_stub.tgz", work_path+"/output/node_backlog/old_stub.tgz")
-            os.symlink(work_path+"/output/datasets/old_stub.tgz", work_path+"/output/folder_backlog/old_stub.tgz")
-            # set the retain time to be short enough to expire old_stub.tgz
+            os.symlink(work_path+"/output/datasets/old_stub.zip", work_path+"/output/node_backlog/old_stub.zip")
+            os.symlink(work_path+"/output/datasets/old_stub.zip", work_path+"/output/folder_backlog/old_stub.zip")
+            # set the retain time to be short enough to expire old_stub.zip
             self.exporter.backlog_us = 1e6
             await asyncio.sleep(1.1) # wait for the backlog time to expire
 
             # 2. place a dangling dataset file that will be removed
-            with open(work_path+"/output/datasets/dangling_stub.tgz", "w") as f:
+            with open(work_path+"/output/datasets/dangling_stub.zip", "w") as f:
                 f.write("dangling_stub")
             # 3. place an invalid file in the backlog (not a symlink)
-            with open(work_path+"/output/node_backlog/not_a_symlink.tgz", "w") as f:
+            with open(work_path+"/output/node_backlog/not_a_symlink.zip", "w") as f:
                 f.write("not_a_symlink")
             # 4. place a symlink to an invalid location
-            os.symlink("/etc/passwd", work_path+"/output/folder_backlog/external_symlink_location.tgz")
+            os.symlink("/etc/passwd", work_path+"/output/folder_backlog/external_symlink_location.zip")
             os.symlink(work_path+"/output/datasets/invalid.err",
-                       work_path+"/output/folder_backlog/invalid_symlink_location.tgz")
+                       work_path+"/output/folder_backlog/invalid_symlink_location.zip")
             # 5. place a symlink to a file outside of /datasets
-            os.symlink("/etc/passwd", work_path+"/output/folder_backlog/invalid_symlink.tgz")
+            os.symlink("/etc/passwd", work_path+"/output/folder_backlog/invalid_symlink.zip")
             logger.setLevel(logging.DEBUG)
 
             with self.assertLogs() as log:
@@ -173,7 +173,7 @@ class TestExporter(unittest.IsolatedAsyncioTestCase):
             all_output = ''.join(log.output)
             self.assertIn("failed to copy", all_output)
             self.assertIn("failed to transmit", all_output)
-            self.assertIn("dropping old_stub.tgz", all_output)
+            self.assertIn("dropping old_stub.zip", all_output)
             self.assertIn("unexpected symlink", all_output) 
             self.assertIn("unexpected file", all_output)
 
