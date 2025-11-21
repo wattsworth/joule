@@ -166,11 +166,7 @@ async def write(request: web.Request):
     # if the stream is already being written to, this is an error
     if stream.is_destination:
         raise web.HTTPBadRequest(reason="DataStream [%s] is already being produced" % stream.name)
-    # spawn in inserter task
-    stream.is_destination = True
-    db.commit()
-
-    pipe = pipes.InputPipe(name="inbound", stream=stream, reader=request.content)
+    # validate the merge gap parameter
     if 'merge-gap' in request.query:
         try:
             merge_gap = int(request.query['merge-gap'])
@@ -181,6 +177,12 @@ async def write(request: web.Request):
             raise web.HTTPBadRequest(reason="merge-gap must be >= 0")
     else:
         merge_gap = 0
+    # spawn in inserter task
+    stream.is_destination = True
+    db.commit()
+
+    pipe = pipes.InputPipe(name="inbound", stream=stream, reader=request.content)
+    
     try:
         task = await data_store.spawn_inserter(stream, pipe, insert_period=0, merge_gap=merge_gap)
         await task
@@ -188,7 +190,7 @@ async def write(request: web.Request):
     except (DataError, ConnectionError) as e:
         stream.is_destination = False
         db.commit()
-        print(f"ERROR: DataController DataStream[{stream.name}] {str(e)}")
+        log.error(f"ERROR: DataController DataStream[{stream.name}] {str(e)}")
         raise web.HTTPBadRequest(reason=str(e).replace('\n',' '))
     finally:
         stream.is_destination = False

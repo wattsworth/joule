@@ -10,9 +10,9 @@ cd tests/e2e
 ./runner.sh
 cd -
 
-# archive the partial coverages
-rm -f current_coverages/*
-rm -f incremental_coverages/*
+# flush all of the coverage information
+rm -f current_coverages/.coverage*
+rm -f incremental_coverages/.coverage*
 cp .coverage.* current_coverages
 
 # consolidate the code coverage

@@ -37,6 +37,7 @@ class TestStreamMethods(unittest.IsolatedAsyncioTestCase):
 
     async def asyncTearDown(self):
         await self.node.folder_delete("/original", recursive=True)
+        #await asyncio.sleep(0.1) # seems to be a race condition where folder_delete has already been called
         await self.node.close()
 
     async def test_stream_move(self):

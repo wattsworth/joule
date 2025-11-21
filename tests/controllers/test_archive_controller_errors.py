@@ -3,7 +3,6 @@ from aiohttp import web
 import aiohttp
 import os
 import tempfile
-import hashlib
 import shutil
 import joule.app_keys
 import joule.controllers
@@ -14,8 +13,12 @@ import testing.postgresql
 from joule.models import Master
 from joule.constants import EndPoints
 from tests.controllers.helpers import create_db
-
+from joule.models.data_movement.importing.importer_manager import ImporterManager
+from joule.utilities.archive_tools import ImportLogger
+from unittest import mock
 TEST_ARCHIVE = os.path.join(os.path.dirname(__file__), '../cli/archive/archives/ww-data_2025_09_03-10-03-59.zip')
+INVALID_ARCHIVE = os.path.join(os.path.dirname(__file__), '../cli/archive/archives/ww-data_corrupt.zip')
+
 IMPORTER_API_KEY = 'test-importer-api-key'
 psql_key = web.AppKey("psql", testing.postgresql.Postgresql)
 
@@ -40,6 +43,10 @@ class TestArchiveControllerErrors(AioHTTPTestCase):
         self.user = Master(name="grantor", key="test-user-api-key", type=Master.TYPE.USER)
         app[joule.app_keys.db].add(self.user)
         app[joule.app_keys.db].commit()
+        # stub the importer manager (not used in these tests)
+        self.mock_manager = mock.MagicMock(spec=ImporterManager)
+        self.mock_manager.process_archive = mock.AsyncMock(return_value=ImportLogger()) # mock the results message list
+        app[joule.app_keys.importer_manager] = self.mock_manager
 
         self.archive_directory = tempfile.mkdtemp()
         self.archive_list = []
@@ -60,5 +67,20 @@ class TestArchiveControllerErrors(AioHTTPTestCase):
         # check that the file is not in the queue
         self.assertEqual(len(self.archive_list),0)
         # check that the file did not get uploaded
+        self.assertEqual(len(os.listdir(self.archive_directory)),0)
+       
+    async def test_removes_archive_file_on_error(self):
+        self.assertEqual(len(self.archive_list),0)
+        with open(INVALID_ARCHIVE,'rb') as f:
+            resp: aiohttp.ClientResponse = await \
+                self.client.post(EndPoints.archive, data=f,
+                                 headers={'X-API-KEY':'test-user-api-key'})
+        # print the response text if the test fails
+        if resp.status != 400:
+            print(await resp.text())
+        self.assertEqual(resp.status, 400)
+        # check that the file is not in the queue
+        self.assertEqual(len(self.archive_list),0)
+        # check that the file is removed
         self.assertEqual(len(os.listdir(self.archive_directory)),0)
        

@@ -248,9 +248,10 @@ class TestDataController(AioHTTPTestCase):
         store.raise_data_error = True
         stream: DataStream = db.query(DataStream).filter_by(name="stream1").one()
         data = helpers.create_data(stream.layout)
-        resp: aiohttp.ClientResponse = await \
-            self.client.post(EndPoints.data, params={"path": "/folder1/stream1"},
-                             data=data.tobytes())
+        with self.assertLogs():
+            resp: aiohttp.ClientResponse = await \
+                self.client.post(EndPoints.data, params={"path": "/folder1/stream1"},
+                                data=data.tobytes())
         self.assertEqual(resp.status, 400)
         self.assertIn('test error', await resp.text())
 

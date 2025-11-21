@@ -41,7 +41,9 @@ async def add(request: web.Request):
         elif request.remote: # direct connection to built-in HTTP server
             remote_host = request.remote
         else:
-            raise web.HTTPBadRequest(reason="could not determine remote host, specify with X-Forwarded-For if using a reverse proxy")
+            # only triggered when connection is over unix socket with no forwarding info
+            # this would happen if nginx was misconfigured
+            raise web.HTTPBadRequest(reason="could not determine remote host, specify with X-Forwarded-For if using a reverse proxy") # pragma: no cover
         location = scheme+"://" + remote_host + ":" + str(port) + base_uri
         
         node = TcpNode("new_follower", location, key, cafile)
