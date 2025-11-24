@@ -11,7 +11,7 @@ class BaseSession:
         self.cafile = ""
 
     async def get_session(self):
-        return self._session
+        raise errors.ApiError("Implement in child class") # pragma: no cover
 
     async def get(self, path, params=None):
         return await self._request("GET", path, params=params)
@@ -27,7 +27,7 @@ class BaseSession:
         return await self._request("DELETE", path, params=params)
 
     async def _request(self, method, path, data=None, json=None, params=None, chunked=None):
-        raise errors.ApiError("Implement in child class")
+        raise errors.ApiError("Implement in child class") # pragma: no cover
 
     async def close(self):
         if self._session is not None:

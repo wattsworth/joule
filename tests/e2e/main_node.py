@@ -68,8 +68,8 @@ def main():
     # get API permissions
     os.environ["LOGNAME"] = "e2e"
     os.environ["JOULE_USER_CONFIG_DIR"] = "/tmp/joule_user"
+    # remove the IPAddress setting from main.conf to force all connections through NGinx, follower node uses built-in HTTP server
 
-    # wait for the follower to connect
     ### NOTE: To debug problems with jouled initializing, comment out the stdout and stderr redirects below
     jouled = subprocess.Popen(JOULED_CMD,
                                     stdout=subprocess.PIPE,
@@ -78,7 +78,7 @@ def main():
     time.sleep(2) # wait for jouled to start
 
     ## The main node tests out the NGinx proxy functionality (follower uses built-in HTTP server)
-    subprocess.run(JOULE_CMD+"admin authorize --url=http://localhost/joule".split(" "))
+    subprocess.run(JOULE_CMD+"admin authorize".split(" "))# --url=http://localhost/joule".split(" "))
     wait_for_joule_host('node1.joule')
     asyncio.run(wait_for_follower())
     jouled.send_signal(signal.SIGINT)

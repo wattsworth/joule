@@ -3,7 +3,7 @@ from unittest.mock import patch, MagicMock, AsyncMock, create_autospec
 import tempfile
 from joule.models.pipes import Pipe
 from joule.models.data_store.data_store import DataStore
-from joule.models.data_movement.targets.data_target import DataTarget, data_target_from_config
+from joule.models.data_movement.targets.data_target import DataTarget, data_target_from_config, DataExportSummary
 from joule.models.data_movement.exporting.exporter_state import ExporterState
 from joule.models import DataStream, Element
 from joule.models.pipes import interval_token as compute_interval_token
@@ -138,3 +138,29 @@ class TestDataTarget(unittest.IsolatedAsyncioTestCase):
             
             # check the return value
             self.assertEqual(new_state.last_timestamp, data_chunk2['timestamp'][-1]+1)
+
+    async def test_summarizes_export(self):
+        target = DataTarget(source_label="test",
+                             path="/some/path/to/events") 
+        my_stream = DataStream(
+            name="test",
+            description="test_description",
+            datatype=DataStream.DATATYPE.INT64,
+            elements=[Element(name="0",index=0), Element(name="1", index=1)])
+        # null response when there is no export summary
+        summary = target.summarize_export()
+        self.assertEqual({}, summary)
+        # this is created by the run function, manually create it for testing
+        target.export_summary = DataExportSummary(row_count=100,interval_count=1)
+        # when the start or end ts are blank this does not create an error
+        summary = target.summarize_export()
+        self.assertEqual(summary['source_label'],target.source_label)
+        self.assertIsNone(summary['start_ts'])
+        self.assertIsNone(summary['end_ts'])
+        # uses start_ts and end_ts if available
+        target.export_summary.start_ts=0
+        target.export_summary.end_ts=100
+        summary = target.summarize_export()
+        self.assertEqual(summary['source_label'],target.source_label)
+        self.assertEqual(summary['start_ts'],0)
+        self.assertEqual(summary['end_ts'],100)

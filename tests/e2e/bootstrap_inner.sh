@@ -27,7 +27,12 @@ pip install -e . > /dev/null
 cp /joule/tests/e2e/stub_systemctl.sh /usr/local/bin/systemctl
 chmod +x /usr/local/bin/systemctl
 
-coverage run --rcfile=/joule/.coveragerc -m joule.cli admin initialize --dsn postgres:password@$host:5432/postgres --name $nodename --bind=0.0.0.0 --port=8080 --generate-user-file
+# use built-in HTTP server for follower node (timescale_follower) and NGinx reverse proxy for main node (timescale)
+if [ "$host" = "timescale" ]; then
+  coverage run --rcfile=/joule/.coveragerc -m joule.cli admin initialize --dsn postgres:password@$host:5432/postgres --name $nodename  --generate-user-file
+else
+  coverage run --rcfile=/joule/.coveragerc -m joule.cli admin initialize --dsn postgres:password@$host:5432/postgres --bind=0.0.0.0 --port=8080 --name $nodename  --generate-user-file
+fi
 cat /tmp/systemctl.log
 
 #TODO is this needed?

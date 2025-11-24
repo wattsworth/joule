@@ -44,7 +44,7 @@ class BaseModule:
         self.parsed_args = None
 
     async def run_as_task(self, parsed_args, app: web.Application) -> asyncio.Task:
-        assert False, "implement in child class"  
+        assert False, "implement in child class"  # pragma: no cover
 
     def custom_args(self, parser: argparse.ArgumentParser):
         """
@@ -75,7 +75,7 @@ class BaseModule:
 
         """
         # parser.add_argument("--custom_flag")
-        pass  
+        pass  # pragma: no cover
 
     def stop(self):
         """
@@ -88,7 +88,9 @@ class BaseModule:
 
     # Alternative start code for running under aiohttp-devtools (https://github.com/aio-libs/aiohttp-devtools)
     # Must be supported from the actual module with a method called create_app() (see visualizer for an example)
-    def create_dev_app(self) -> web.Application:
+    # NOTE: code coverage does not work correctly with adev so this function is excepted from coverage stats
+    # tested in e2e/scenarios/standalone_modules
+    def create_dev_app(self) -> web.Application: # pragma: no cover
         parser = argparse.ArgumentParser()
         self._build_args(parser)
         # must specify module config in JOULE_MODULE_CONFIG environment variable
@@ -99,6 +101,8 @@ class BaseModule:
             raise ConfigurationError("JOULE_MODULE_CONFIG is not a module config file")
 
         module_args = helpers.load_args_from_file(module_config_file)
+        # add --live so the module runs on new data
+        module_args.append("--live")
         parsed_args = parser.parse_args(module_args)
         self.parsed_args = parsed_args
         self.node = api.get_node(parsed_args.node)

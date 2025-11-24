@@ -273,7 +273,7 @@ class Pipe:
 
         """
         # close the pipe, optionally implemented by the child
-        pass  
+        pass  # pragma: no cover
 
     def change_layout(self, layout: str):
         raise PipeError("layout cannot be changed")

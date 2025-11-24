@@ -51,4 +51,31 @@ class TestImporter(unittest.IsolatedAsyncioTestCase):
         warning = logger.warning_messages[0]
         self.assertIn("data stream with label [filtered]", warning.message)
 
+    def test_creates_importer_from_config(self):
+        # load the configuration file importer.conf
+        # check that the importer is created with the correct parameters
+        # check that the importer can be run
+        config = configparser.ConfigParser()
+        config.read(IMPORTER_CONFIG)
+        
+        importer = importer_from_config(config=config)
+        self.assertEqual(importer.name, "Sample Importer")
+        self.assertEqual(len(importer.data_targets), 1)
+
+        data_target = importer.data_targets['data source']
+        self.assertEqual(data_target.source_label, "data source")
+        self.assertEqual(data_target.path, "/path/to/data_stream")
+        
+        self.assertEqual(len(importer.event_targets), 1)
+        event_target = importer.event_targets['event source']
+        self.assertEqual(event_target.source_label, "event source")
+        self.assertEqual(event_target.path, "/path/to/event_stream")
+        self.assertEqual(event_target.on_conflict, ON_EVENT_CONFLICT.KEEP_SOURCE)
+
+        self.assertEqual(len(importer.module_targets), 1)
+        module_target = importer.module_targets['module name']
+        self.assertEqual(module_target.source_label, "module name")
+        self.assertIsNone(module_target.workspace_directory)
+        self.assertEqual(module_target.module_name, "test_module")
+        self.assertEqual(module_target.config_parameters,"custom parameters")
         

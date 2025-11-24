@@ -129,20 +129,3 @@ def _make_joule_directory(path):
 def _run_as_root():  
     click.echo("[" + click.style("ERROR", fg="red") + "]\n run as [sudo joule initialize]")
     exit(1)
-
-
-def _self_signed_cert(cn: str) -> Tuple[crypto.X509, crypto.PKey]:
-    # generate a key
-    k = crypto.PKey()
-    k.generate_key(crypto.TYPE_RSA, 2048)
-    # generate a self signed certificate
-
-    cert = crypto.X509()
-    cert.get_subject().CN = cn
-    cert.set_serial_number(secrets.randbits(128))
-    cert.gmtime_adj_notBefore(0)
-    cert.gmtime_adj_notAfter(5 * 365 * 24 * 60 * 60)  # 5 years
-    cert.set_issuer(cert.get_subject())
-    cert.set_pubkey(k)
-    cert.sign(k, 'sha256')
-    return cert, k

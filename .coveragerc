@@ -7,6 +7,7 @@ source =
 [run]
 source_pkgs = joule
 parallel = True
+#concurrency = multiprocessing
 # Note: the docker containers do not seem to respect this setting 
 # it works fine putting everything in the root directory even if it
 # does look messy while the test runs

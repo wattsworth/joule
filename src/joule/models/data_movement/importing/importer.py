@@ -106,7 +106,7 @@ def importer_from_config(config: dict) -> Importer:
     event_target_configs = [config[section] for section in 
                             filter(lambda sec: re.match(r"EventStream\.\d+", sec),
                             config.sections())]
-    event_targets = [event_target_from_config(etc,type="exporter") for etc in event_target_configs]
+    event_targets = [event_target_from_config(etc,type="importer") for etc in event_target_configs]
 
     module_target_configs = [config[section] for section in 
                              filter(lambda sec: re.match(r"Module\.\d+", sec),
@@ -116,7 +116,7 @@ def importer_from_config(config: dict) -> Importer:
     data_target_configs = [config[section] for section in 
                              filter(lambda sec: re.match(r"DataStream\.\d+", sec),
                              config.sections())]
-    data_targets = [data_target_from_config(dtc, type="exporter") for dtc in data_target_configs]
+    data_targets = [data_target_from_config(dtc, type="importer") for dtc in data_target_configs]
 
     return Importer(name=name,
                     node_name=node_name, 

@@ -5,7 +5,6 @@
 #bash update_certs.sh
 #cd -
 
-
 docker compose --file docker-compose.yml up \
   --build --abort-on-container-exit --attach node1.joule --attach node2.joule
 

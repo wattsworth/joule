@@ -4,20 +4,36 @@ import re
 import subprocess
 import numpy as np
 import asyncio
-
+import os
 from joule import api
 from joule.api.data_stream import DataStream, Element
-
+import aiohttp
 def main():
     time.sleep(1)  # wait for jouled to boot
     asyncio.run(_run())
 
 
 async def _run():
+    # install aiodevtools to test standalone visualizer
+    subprocess.run(["python3","-m","pip","install","aiohttp-devtools"],
+                    universal_newlines=True)
     node = api.get_node()
     procs = start_standalone_procs1()
-
+    
     time.sleep(4)  # let procs run
+    # check the visualizer web app
+    async with aiohttp.ClientSession('http://localhost:8000') as session:
+        async with session.get('/data.json') as resp:
+            data = await resp.json()
+            assert data[0]['min']<=data[0]['value']<=data[0]['max']
+        await session.post('/reset.json')
+        async with session.get('/data.json') as resp:
+            data = await resp.json()
+            assert data[0]['min']=='&mdash;'
+            assert data[0]['max']=='&mdash;'
+
+        
+
     stop_standalone_procs(procs)
 
     time.sleep(8)  # close sockets
@@ -36,28 +52,32 @@ async def _run():
 
 def start_standalone_procs1():
     # proc1 reads /counting/base and writes to /counting/plus3
-    p1 = subprocess.Popen(build_standalone_args("proc1"))
+    p1 = subprocess.Popen(build_adder_args("proc1"))
     time.sleep(1)
 
     # proc1a reads /counting/base and writes to /counting/plus3
     #   fails because proc1 is already writing to path
-    p1a = subprocess.run(build_standalone_args("proc1"),
+    p1a = subprocess.run(build_adder_args("proc1"),
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE,
                          universal_newlines=True)
     assert p1a.stderr.find("plus3") != -1
     # proc2 tries to read from /bad/path but fails
-    p2 = subprocess.run(build_standalone_args("proc2"),
+    p2 = subprocess.run(build_adder_args("proc2"),
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,
                         universal_newlines=True)
     assert p2.stderr.find("not being produced") != -1
-    return [p1]
+
+    # proc5 runs the visualizer module using aiohttp devtools
+    # 
+    p5 = subprocess.Popen(build_visualizer_args("proc5"))
+    return [p1,p5]
 
 
 async def start_standalone_procs2(node: api.BaseNode):
     # proc3 tries to write to /counting/plus3 with wrong dtype
-    p3 = subprocess.run(build_standalone_args("proc3"),
+    p3 = subprocess.run(build_adder_args("proc3"),
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,
                         universal_newlines=True,
@@ -67,7 +87,7 @@ async def start_standalone_procs2(node: api.BaseNode):
         raise RuntimeError("proc3 log error, missing 'layout'")
 
     #  proc1 reads /counting/base and writes to /counting/plus3
-    p1 = subprocess.Popen(build_standalone_args("proc1"))
+    p1 = subprocess.Popen(build_adder_args("proc1"))
 
     stream = DataStream()
     stream.name = "int16"
@@ -79,17 +99,18 @@ async def start_standalone_procs2(node: api.BaseNode):
         stream.elements.append(e)
     await node.data_stream_create(stream, "/exists")
 
-    # proc5 tries to write to /exists/int16 with wrong element count
-    p4 = subprocess.run(build_standalone_args("proc4"),
+    # proc4 tries to write to /exists/int16 with wrong element count
+    p4 = subprocess.run(build_adder_args("proc4"),
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,
                         universal_newlines=True)
     assert p4.stderr.find("layout") != -1
 
+    
     return [p1]
 
 
-def build_standalone_args(proc_dir):
+def build_adder_args(proc_dir):
     scenario_dir = "/joule/tests/e2e/scenarios/standalone_modules/"
     base_dir = scenario_dir + "standalone_modules/" + proc_dir + "/"
     return ["coverage","run","--rcfile=/joule/.coveragerc",
@@ -97,6 +118,17 @@ def build_standalone_args(proc_dir):
             "3", "--live",
             "--module_config", base_dir + "module.conf",
             "--data_stream_configs", base_dir + "data_stream_configs"]
+
+def build_visualizer_args(proc_dir):
+    scenario_dir = "/joule/tests/e2e/scenarios/standalone_modules/"
+    base_dir = scenario_dir + "standalone_modules/" + proc_dir + "/"
+    # adev does not support argument passing
+    # NOTE: this does not seem to update the coverage info, the base_module.py 
+    # code is excepted from coverage manually
+    os.environ['JOULE_MODULE_CONFIG']=base_dir+"module.conf"
+    return ["coverage","run","--rcfile=/joule/.coveragerc", "--concurrency=multiprocessing",
+            "/venv/bin/adev","runserver",
+            "/joule/src/joule/client/builtins/visualizer.py"]
 
 
 def stop_standalone_procs(procs):
