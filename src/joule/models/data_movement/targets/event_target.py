@@ -144,8 +144,6 @@ def event_target_from_config(config: dict, type:str) -> EventTarget:
                        on_conflict, event_filter)
 
 def _validate_on_conflict(value: str) -> ON_EVENT_CONFLICT:
-    if value == "na":
-        return ON_EVENT_CONFLICT.NA
     if value == "keep_source":
         return ON_EVENT_CONFLICT.KEEP_SOURCE
     if value == "keep_destination":

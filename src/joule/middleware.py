@@ -76,4 +76,4 @@ async def sql_rollback(request, handler):
     except SQLAlchemyError as e:
         log.warning("Invalid HTTP request: %s", e)
         db.rollback()
-        raise HTTPBadRequest
+        raise e

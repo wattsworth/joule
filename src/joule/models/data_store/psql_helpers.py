@@ -260,24 +260,6 @@ async def get_row_count(conn: asyncpg.Connection, stream: DataStream,
     except asyncpg.UndefinedTableError:
         return 0  # no data tables for this stream
     return nrows
-
-
-async def get_closest_ts(conn: asyncpg.Connection, stream: DataStream, ts: int) -> Optional[datetime.datetime]:
-    base_table = "data.stream%d" % stream.id
-    dt = datetime.datetime.fromtimestamp(int(ts) / 1e6, tz=datetime.timezone.utc)
-    query = f"SELECT time FROM {base_table} WHERE time < '{dt}' ORDER BY time DESC LIMIT 1"
-    #print(f"stream: {stream.id} ts: {ts}: query: {query}")
-
-    try:
-        last_dt = await conn.fetchval(query)
-    except asyncpg.UndefinedTableError:
-        # no data tables so no previous timestamp
-        return None
-    if last_dt is None:
-        # no data exists before ts so no previous timestamp
-        return None
-    # convert the datetime.datetime to a timestamp
-    return dt2ts(last_dt)
     
 async def remove_interval_breaks(conn: asyncpg.Connection, stream: DataStream, start: int, end: int):
     # remove interval breaks that are no longer needed

@@ -159,9 +159,9 @@ async def delete(request):
         await event_store.destroy(stream)
         db.delete(stream)
 
-    db.delete(my_folder)
     # update the parent timestamps
     my_folder.parent.touch()
+    db.delete(my_folder)
     db.commit()
     return web.Response(text="ok")
 

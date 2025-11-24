@@ -71,15 +71,6 @@ class Inserter:
                                     await psql_helpers.remove_interval_breaks(conn, self.stream, 
                                                                               start=data['timestamp'][0]-self.merge_gap,
                                                                               end=data['timestamp'][0])
-                                #closest_ts = await psql_helpers.get_closest_ts(conn, self.stream, data['timestamp'][0])
-                                #if closest_ts is not None and data['timestamp'][0] - closest_ts > self.merge_gap:
-                                #    await psql_helpers.close_interval(conn, self.stream, data['timestamp'][0] - 1)
-                                #    print("closing interval with previous data")
-                                #elif closest_ts is None:
-                                #    print("no earlier ts in data")
-                                #else:
-                                #    print(f"merging new data with pervious interval: {data['timestamp'][0] - closest_ts} <= {self.merge_gap}")
-                                #    print(f"TODO: remove any previous intervals")
                             if not validate_monotonic_timestamps(data, last_ts, self.stream.name):
                                 raise DataError("Non-monotonic timestamps in new data")
                             if not validate_no_nan_values(data):
