@@ -7,6 +7,7 @@ from OpenSSL import crypto
 from jinja2 import Environment, FileSystemLoader
 from joule import constants
 import secrets
+import importlib.resources
 
 
 @click.command(name="initialize")
@@ -17,7 +18,6 @@ import secrets
 @click.option("--generate-user-file", help="Create file for dynamically managing users", is_flag=True)
 def admin_initialize(dsn, bind, port, name, generate_user_file):
     """Run initial system configuration."""
-    import pkg_resources
 
     # check arguments
     if bind is None and port is not None:
@@ -38,12 +38,12 @@ def admin_initialize(dsn, bind, port, name, generate_user_file):
         click.echo("[" + click.style("ERROR", fg='red') + "]\n unknown error [%d] see [man useradd]" % proc.returncode)
         exit(1)
     click.echo("2. registering system service ", nl=False)
-    service_file = pkg_resources.resource_filename(
-        "joule", "resources/joule.service")
     try:
         # don't overwrite existing service file
         if not os.path.exists("/etc/systemd/system/joule.service"):
-            shutil.copy(service_file, "/etc/systemd/system")
+            source = importlib.resources.files("joule").joinpath("resources/joule.service")
+            with importlib.resources.as_file(source) as file_path:
+                shutil.copy(file_path, "/etc/systemd/system")
         subprocess.run("systemctl enable joule.service".split(" "), stderr=subprocess.PIPE)
         subprocess.run("systemctl start joule.service".split(" "), stderr=subprocess.PIPE)
     except PermissionError:
@@ -55,54 +55,50 @@ def admin_initialize(dsn, bind, port, name, generate_user_file):
     _make_joule_directory("/etc/joule")
     # check if main.conf exists
     if not os.path.isfile(constants.ConfigFiles.main_config):
-        template_path = pkg_resources.resource_filename(
-            "joule", "resources/templates")
-        # From https://stackoverflow.com/questions/11857530
-        env = Environment(loader=FileSystemLoader(template_path), autoescape=True)
-        env.trim_blocks = True
-        env.lstrip_blocks = True
-        env.keep_trailing_newline = True
-        template = env.get_template('main.conf.jinja2')
-        file_contents = template.render(name=name,
-                                        bind=bind,
-                                        port=port,
-                                        dsn=dsn,
-                                        generate_user_file=generate_user_file)
-        with open(constants.ConfigFiles.main_config, 'w') as conf:
-            conf.write(file_contents)
+        source = importlib.resources.files("joule").joinpath("resources/templates")
+        with importlib.resources.as_file(source) as template_path:
+            # From https://stackoverflow.com/questions/11857530
+            env = Environment(loader=FileSystemLoader(template_path), autoescape=True)
+            env.trim_blocks = True
+            env.lstrip_blocks = True
+            env.keep_trailing_newline = True
+            template = env.get_template('main.conf.jinja2')
+            file_contents = template.render(name=name,
+                                            bind=bind,
+                                            port=port,
+                                            dsn=dsn,
+                                            generate_user_file=generate_user_file)
+            with open(constants.ConfigFiles.main_config, 'w') as conf:
+                conf.write(file_contents)
     
     # set ownership to root and joule group
     shutil.chown(constants.ConfigFiles.main_config, user="root", group="joule")
     # only root can write, and only joule members can read
     os.chmod(constants.ConfigFiles.main_config, 0o640)
 
-    # setup stream config directory
-    _make_joule_directory("/etc/joule/stream_configs")
-    example_file = pkg_resources.resource_filename(
-        "joule", "resources/templates/stream.example")
-    shutil.copy(example_file, "/etc/joule/stream_configs")
-    # set ownership to joule user
-    shutil.chown("/etc/joule/stream_configs/stream.example",
-                 user="joule", group="joule")
+    source = importlib.resources.files("joule").joinpath("resources/templates")
+    with importlib.resources.as_file(source) as template_path:
+        # setup stream config directory
+        _make_joule_directory("/etc/joule/stream_configs")
+        shutil.copy(template_path / "stream.example", "/etc/joule/stream_configs")
+        # set ownership to joule user
+        shutil.chown("/etc/joule/stream_configs/stream.example",
+                    user="joule", group="joule")
 
-    # setup module config directory
-    _make_joule_directory("/etc/joule/module_configs")
-    example_file = pkg_resources.resource_filename(
-        "joule", "resources/templates/module.example")
-    shutil.copy(example_file, "/etc/joule/module_configs")
-    # set ownership to joule user
-    shutil.chown("/etc/joule/module_configs/module.example",
-                 user="joule", group="joule")
+        # setup module config directory
+        _make_joule_directory("/etc/joule/module_configs")
+        shutil.copy(template_path / "module.example", "/etc/joule/module_configs")
+        # set ownership to joule user
+        shutil.chown("/etc/joule/module_configs/module.example",
+                    user="joule", group="joule")
 
-    # setup user file if configured
-    if generate_user_file and not os.path.isfile("/etc/joule/users.conf"):
-        user_file = pkg_resources.resource_filename(
-            "joule", "resources/templates/users.conf")
-        shutil.copy(user_file, "/etc/joule/users.conf")
-        # set ownership to root and joule group
-        shutil.chown(constants.ConfigFiles.main_config, user="root", group="joule")
-        # only root can write, and only joule members can read
-        os.chmod(constants.ConfigFiles.main_config, 0o640)
+        # setup user file if configured
+        if generate_user_file and not os.path.isfile("/etc/joule/users.conf"):
+            shutil.copy(template_path / "users.conf", "/etc/joule/users.conf")
+            # set ownership to root and joule group
+            shutil.chown(constants.ConfigFiles.main_config, user="root", group="joule")
+            # only root can write, and only joule members can read
+            os.chmod(constants.ConfigFiles.main_config, 0o640)
 
     click.echo("[" + click.style("OK", fg="green") + "]")
 
