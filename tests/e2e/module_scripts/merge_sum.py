@@ -31,15 +31,15 @@ class MergeSum(joule.client.FilterModule):
             # find the max starting time
             sarray1 = await in1.read()
             sarray2 = await in2.read()
-            max_ts = max(sarray1['time'][0],
-                         sarray2['time'][0])
+            max_ts = max(sarray1['timestamp'][0],
+                         sarray2['timestamp'][0])
             
-            idx1 = np.argwhere(sarray1['time'] == max_ts)
+            idx1 = np.argwhere(sarray1['timestamp'] == max_ts)
             if(len(idx1) == 0):
                 in1.consume(len(sarray1))
                 continue
 
-            idx2 = np.argwhere(sarray2['time'] == max_ts)
+            idx2 = np.argwhere(sarray2['timestamp'] == max_ts)
             if(len(idx2) == 0):
                 in2.consume(len(sarray2))
                 continue

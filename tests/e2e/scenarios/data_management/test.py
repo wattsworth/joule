@@ -6,6 +6,8 @@ from joule import api
 from joule import errors
 from joule.utilities import human_to_timestamp as h2ts
 from joule.utilities import timestamp_to_human as ts2h
+import tempfile
+import subprocess
 from click.testing import CliRunner
 from joule.constants import ApiErrorMessages
 import unittest
@@ -65,6 +67,10 @@ async def setup():
     await pipe.write(_create_data(tD, tE))
     await pipe.close()
 
+    # empty stream to hold filter output
+    stream_sum = api.DataStream("stream_sum", elements=[api.Element(name=f"sum_{i}") for i in range(5)])
+    stream_sum = await node.data_stream_create(stream_sum,"/original")
+
     # add annotations to the streams
     await node.annotation_create(api.Annotation(title="note",start=t1,end=t3,content="api annotation"), "/original/stream1")
     await node.annotation_create(api.Annotation(title="note2",start=t9,end=tA,content="api annotation"), "/original/stream2")
@@ -121,19 +127,45 @@ def test_process_data():
     tA_2 = tA+2*60*60e6 # 2 hours after tA
     result = runner.invoke(main, f"data filter median -w 3 --start {t4} --end {tA_2} /original/stream2 /filtered/median2b".split(" "), input="Y\n")
     _assert_success(result)
-  
-    async def _validate():
-        node = api.get_node()
-        #await print_intervals(node,"/original/stream1")
-        #await print_intervals(node,"/original/stream2")
-        #await print_intervals(node,"/filtered/median2b")
-        #await print_intervals(node,"/filtered/merge1_2")
-        # should be within 10 seconds of the time bounds (depends on the sample generation by create_data)
-        await assert_has_intervals(node, "/filtered/median2b", [(t4,t5),(t6,t9),(tA,tA_2)])
-        await assert_has_intervals(node, "/filtered/merge1_2", [(t2,t3),(t4,t5),(t6,t7),(t8,t9),(tA,tB)])
-        await node.close()
     
-    asyncio.run(_validate())
+    # run a filter module with stream1 and stream2 as inputs, should have the same intervals as merge1_2
+    with tempfile.NamedTemporaryFile() as module_conf:
+        with open(module_conf.name,'w') as f:
+            f.write("""
+                    [Main]
+                    name = sum
+                    exec_cmd = /module_scripts/adder.py
+
+                    [Inputs]
+                    input = /original/stream1
+                    # other_input is not used by adder but tests whether the filter
+                    # calculates the overlapping intervals correctly
+                    other_input = /original/stream2
+
+                    [Outputs]
+                    output = /original/stream_sum
+                    """)
+        result = subprocess.run(f"/module_scripts/adder.py 1 --module_config={module_conf.name}".split(" "))
+        
+        async def _validate():
+            node = api.get_node()
+            #await print_intervals(node,"/original/stream1")
+            #await print_intervals(node,"/original/stream2")
+            #await print_intervals(node,"/filtered/median2b")
+            #await print_intervals(node,"/filtered/merge1_2")
+            # should be within 10 seconds of the time bounds (depends on the sample generation by create_data)
+            await assert_has_intervals(node, "/filtered/median2b", [(t4,t5),(t6,t9),(tA,tA_2)])
+            await assert_has_intervals(node, "/filtered/merge1_2", [(t2,t3),(t4,t5),(t6,t7),(t8,t9),(tA,tB)])
+            await assert_has_intervals(node, "/original/stream_sum", [(t2,t3),(t4,t5),(t6,t7),(t8,t9),(tA,tB)])
+            # remove two intervals of data from the filtered result
+            await node.data_delete("/original/stream_sum",start=t6,end=t9)
+            print("HERE!")
+            await node.close()
+        asyncio.run(_validate())
+        # now run the filter again and it should put the missing interval back
+        result = subprocess.run(f"/module_scripts/adder.py 1 --module_config={module_conf}".split(" "))
+        # the other streams should still be the same, /original/stream_sum should have all the intervals again
+        asyncio.run(_validate())
 
 def test_copy_all_data():
     print("copying all data...", end="")

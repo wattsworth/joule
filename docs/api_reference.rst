@@ -11,7 +11,7 @@ API Reference
     .. code-block:: bash
 
         $> python3 -m asyncio
-        asyncio REPL 3.8.10
+        asyncio REPL 3.X.X
         ...
         >>> import asyncio
         >>>
