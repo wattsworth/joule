@@ -3,6 +3,7 @@ from joule.models import DataStore
 from joule.version import version as joule_version
 
 from joule import app_keys
+
 async def index(request: web.Request):
     return web.Response(text="Joule server")
 
