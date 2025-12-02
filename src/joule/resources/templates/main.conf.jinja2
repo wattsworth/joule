@@ -12,13 +12,9 @@ EventStreamDirectory = /etc/joule/event_stream_configs
 # Workspace for handling data import and export
 ImporterDataDirectory = /var/run/joule/importer_data
 ExporterDataDirectory = /var/run/joule/exporter_data
-# Staging directory for uploaded archive files
-ImporterInboxDirectory = /var/run/joule/importer_inbox
 
 # Share with exporter nodes to allow them to send data here
 ImporterKey = {{ importer_key }}
-
-# Optional: use an inbox for data import
 
 {% if generate_user_file %}
 # User management file

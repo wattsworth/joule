@@ -57,17 +57,22 @@ def run(custom_values=None, verify=True) -> config.JouleConfig:
     # Node name
     node_name = main_config['Name']
 
-    # Make sure mandatory directories exist
+    # Make sure mandatory configuration directories exist
     if verify:
-        for config_name in ['ModuleDirectory', 'DataStreamDirectory', 'EventStreamDirectory',
-                       'ImporterConfigsDirectory','ImporterDataDirectory','ImporterInboxDirectory',
-                       'ExporterConfigsDirectory','ExporterDataDirectory']:
+        for config_name in ['ModuleDirectory', 
+                            'DataStreamDirectory', 
+                            'EventStreamDirectory',
+                            'ImporterConfigsDirectory',
+                            'ExporterConfigsDirectory']:
             directory = main_config.get(config_name, None)
             if directory is None:
                 raise ConfigurationError("Missing [%s] configuration" % config_name)
             if not os.path.isdir(directory):
                 raise ConfigurationError(f"[{config_name}]={directory}, directory does not exist")
-    
+    # Create data directories
+    if verify:
+        os.makedirs(main_config['ImporterDataDirectory'], exist_ok=True)
+        os.makedirs(main_config['ExporterDataDirectory'], exist_ok=True)
     # Specify IPAddress and Port to listen on network interface
     # IPAddress
     if 'IPAddress' in main_config:

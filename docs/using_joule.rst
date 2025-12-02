@@ -335,10 +335,6 @@ full set of options and their default settings:
     # Exporter data directory
     ExporterDataDirectory = /var/run/joule/exporter_data
 
-    ### Set an inbox directory to process file uploads,
-    ### omit to disable this feature (API uploads only)
-    # ImporterInboxDirectory = /opt/joule/import
-
     # Listen on address
     # set to 0.0.0.0 to listen on all interfaces
     # omit to only listen on UNIX socket
@@ -409,7 +405,6 @@ See the list below for information on each setting.
     Only files ending with **.conf** will be loaded
   * ``ImporterDataDirectory`` Absolute path to a directory used when processing data imports. Must be *writeable* by joule user.
   * ``ExporterDataDirectory`` Absolute path to a directory used when processing data exports. Must be *writeable* by joule user.
-  * ``ImporterInboxDirectory`` Absolute path to a directory used to process file uploads. Must be *writeable* by joule user. Omit to disable this feature.
   * ``IPAddress`` IP address of interface to listen on. Use **0.0.0.0** to listen on all interfaces.
   * ``Port`` TCP port to listen on
   * ``Database`` PostgreSQL connection information as DSN string.

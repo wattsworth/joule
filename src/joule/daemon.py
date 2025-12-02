@@ -78,6 +78,10 @@ class Daemon(object):
         for file_name in os.listdir(self.config.socket_directory):
             path = os.path.join(self.config.socket_directory, file_name)
             os.unlink(path)
+        # create the runtime directories for importer and exporter data
+        os.makedirs(self.config.importer_data_directory, exist_ok=True)
+        os.makedirs(self.config.exporter_data_directory, exist_ok=True)
+
         # write our pid
         with open(pid_file, 'w') as f:
             f.write('%d\n' % os.getpid())

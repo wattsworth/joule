@@ -3,6 +3,7 @@ import configparser
 import tempfile
 import yarl
 import testing.postgresql
+import os
 
 from joule.services import load_config
 from joule.models import config
@@ -39,29 +40,27 @@ class TestLoadConfigs(unittest.TestCase):
              tempfile.TemporaryDirectory() as event_dir,
              tempfile.TemporaryDirectory() as importer_dir,
              tempfile.TemporaryDirectory() as exporter_dir,
-             tempfile.TemporaryDirectory() as importer_data_dir,
-             tempfile.TemporaryDirectory() as exporter_data_dir,
-             tempfile.TemporaryDirectory() as importer_inbox_dir):
+             tempfile.TemporaryDirectory() as data_dir):
 
             parser = configparser.ConfigParser()
-            parser.read_string("""
+            parser.read_string(f"""
                         [Main]
-                        ModuleDirectory=%s
-                        DataStreamDirectory=%s
-                        SocketDirectory=%s
-                        EventStreamDirectory=%s
-                        ImporterConfigsDirectory=%s
-                        ExporterConfigsDirectory=%s
-                        ImporterDataDirectory=%s
-                        ImporterInboxDirectory=%s
-                        ExporterDataDirectory=%s
-                        Database=%s
-                    """ % (module_dir, stream_dir, socket_dir, event_dir,
-                           importer_dir, importer_inbox_dir, exporter_dir,
-                           importer_data_dir, exporter_data_dir, db_url[13:]))
+                        ModuleDirectory={module_dir}
+                        DataStreamDirectory={stream_dir}
+                        SocketDirectory={socket_dir}
+                        EventStreamDirectory={event_dir}
+                        ImporterConfigsDirectory={importer_dir}
+                        ExporterConfigsDirectory={exporter_dir}
+                        ImporterDataDirectory={data_dir+"/importer"}
+                        ExporterDataDirectory={data_dir+"/exporter"}
+                        Database={db_url[13:]}
+                    """)
             my_config = load_config.run(custom_values=parser)
             self.assertEqual(my_config.stream_directory, stream_dir)
             self.assertEqual(my_config.module_directory, module_dir)
+            # creates importer and exporter data directories
+            self.assertTrue(os.path.isdir(data_dir+"/importer"))
+            self.assertTrue(os.path.isdir(data_dir+"/exporter"))
         postgresql.stop()
 
     def test_loads_proxies(self):

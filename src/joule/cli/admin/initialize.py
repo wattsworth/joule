@@ -91,13 +91,6 @@ def admin_initialize(dsn, bind, port, name, generate_user_file):
             shutil.copy(template_path / example, f"/etc/joule/{path}")
             # set ownership to joule user
             shutil.chown(f"/etc/joule/{path}/{example}", user="joule", group="joule")
-
-        # create the data directories for importer and exporter
-        _make_joule_directory("/var/run/joule/importer_data")
-        _make_joule_directory("/var/run/joule/exporter_data")
-        _make_joule_directory("/var/run/joule/importer_inbox")
-        shutil.chown("/var/run/joule/importer_data", user="joule", group="joule")
-        shutil.chown("/var/run/joule/exporter_data", user="joule", group="joule")
         
         # setup user file if configured
         if generate_user_file and not os.path.isfile("/etc/joule/users.conf"):

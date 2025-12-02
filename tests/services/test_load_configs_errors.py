@@ -33,23 +33,19 @@ class TestLoadConfigErrors(unittest.TestCase):
              tempfile.TemporaryDirectory() as importer_dir,
              tempfile.TemporaryDirectory() as exporter_dir,
              tempfile.TemporaryDirectory() as importer_data_dir,
-             tempfile.TemporaryDirectory() as importer_inbox_dir,
              tempfile.TemporaryDirectory() as exporter_data_dir):
                     parser = configparser.ConfigParser()
-                    parser.read_string("""
+                    parser.read_string(f"""
                                 [Main]
-                                ModuleDirectory=%s
-                                DataStreamDirectory=%s
-                                SocketDirectory=%s
-                                EventStreamDirectory=%s
-                                ImporterConfigsDirectory=%s
-                                ExporterConfigsDirectory=%s
-                                ImporterDataDirectory=%s
-                                ImporterInboxDirectory=%s
-                                ExporterDataDirectory=%s
-                            """ % (module_dir, stream_dir, socket_dir, event_dir,
-                                   importer_dir, importer_inbox_dir, exporter_dir,
-                                   importer_data_dir, exporter_data_dir))
+                                ModuleDirectory={module_dir}
+                                DataStreamDirectory={stream_dir}
+                                SocketDirectory={socket_dir}
+                                EventStreamDirectory={event_dir}
+                                ImporterConfigsDirectory={importer_dir}
+                                ExporterConfigsDirectory={exporter_dir}
+                                ImporterDataDirectory={importer_data_dir}
+                                ExporterDataDirectory={exporter_data_dir}
+                            """)
                     with self.assertRaisesRegex(ConfigurationError, "Database"):
                         load_config.run(custom_values=parser)
 
