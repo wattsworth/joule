@@ -447,12 +447,12 @@ def main(argv=None):
                     if not t.cancelled():
                         exception = t.exception()
                         if exception is not None:
-                            print(f"Got exception: [{exception}], type:{type(exception)}")
+                            log.error(f"{type(exception)} in task [{t.get_name()}]: {exception}")
                             #print("----Cancelling Daemon----")
                             #daemon_task.cancel()
                         # else:
                         #    print("completed")
-                    #task_list.remove(t)
+                    task_list.remove(t)
                 # else:
                 #    print(f"RUNNING: {t.get_name()}")
 

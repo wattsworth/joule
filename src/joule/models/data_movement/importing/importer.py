@@ -76,7 +76,6 @@ class Importer:
                                     store=data_store,
                                     source_directory=os.path.join(path,"data",item,"data"),
                                     logger=logger)
-
         # go through the events directory to look for event streams
         for item in os.listdir(os.path.join(path,"events")):
             folder = os.path.join(path,"events",item)

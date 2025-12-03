@@ -13,6 +13,7 @@ from joule.utilities.archive_tools import ImportLogger
 from joule.errors import ConfigurationError, PipeError
 from joule.models import DataStream, folder
 
+import time
 import os
 import json
 import asyncio
@@ -127,7 +128,8 @@ class DataTarget:
         
         data_files = os.listdir(source_directory)
         pipe = LocalPipe(layout=stream.layout)
-        inserter_task = await store.spawn_inserter(stream,pipe)
+        # run faster than the default insert period
+        inserter_task = await store.spawn_inserter(stream,pipe, insert_period=0.1)
         try:
             for file in sorted(data_files):
                 if file.endswith("_interval_break.dat"):
@@ -136,18 +138,28 @@ class DataTarget:
                     continue
                 with open(os.path.join(source_directory,file),'rb') as f:
                     data = np.load(f)
-                    await pipe.write(data)        
+                    await pipe.write(data)
                     nrows+=len(data)
                     await asyncio.sleep(0.1) # allow errors in other coroutines to bubble up
-            logger.info(f"imported {nrows} rows of data into {self.path}")
+            logger.info(f"importing {nrows} rows of data into {self.path}")
         except PipeError as e:
             logger.error(f"cannot import data over range {ts2h(data[0][0])}-- {ts2h(data[-1][0])}: {str(e)}")
         finally:
             await pipe.close()
         try:
             await inserter_task
+        except DataError as e:
+            msg = str(e)
+            if 'Key ("time")' in msg and "already exists" in msg:
+                try:
+                    timestamp = msg.split('=')[1].split(')')[0][1:]
+                    logger.error(f"data at {timestamp} already exists in target")
+                except Exception as e:
+                    logger.error(msg) # can't process the message, log the full exception
         except Exception as e:
             logger.error(f"cannot import data into {self.path}: {e}")
+            raise e
+
     
     def validate(self, db:Session):
         if not find_stream_by_path(self.path, db, DataStream):

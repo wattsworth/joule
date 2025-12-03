@@ -39,16 +39,18 @@ def _find_joule_archives(path: str)->List[str]:
             archives.append(file_path)
         except ValueError:
             pass # not a Joule archive
+    archives.sort()
     return archives
 
 async def _upload_archives(archives, node, flush, quit_on_error, verbose):
     print("\nUploading...")
     logs = {}
     if len(archives)==1:
-        logger = await node.archive_upload(archives[0])
-        _print_messages(logger)        
-        if flush:
-            os.remove(archives[0])
+        archive = archives[0] # only one archive, do not show progress bar
+        logger = await node.archive_upload(archive)
+        logs[archive] = logger
+        if logger.success and flush:
+            os.remove(archive)
         print("OK")
     else:
         with click.progressbar(archives) as bar:

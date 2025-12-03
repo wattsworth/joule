@@ -30,7 +30,7 @@ class ExporterManager:
         for exporter in self.exporters:
             state = self.state_service.get(exporter_name=exporter.name, 
                                             source_type='exporter')
-            # if the exporter has never run, schedule it for imediate execution
+            # if the exporter has never run, schedule it for immediate execution
             if state.last_timestamp is None:
                 exporter.next_run_timestamp = time_now()
             else:
