@@ -117,9 +117,9 @@ class TestImporterManager(unittest.IsolatedAsyncioTestCase):
         # just process the first archive
         archive_path = self.uploaded_archives[0]
         metadata = archive_tools.read_metadata(archive_path)
-        with self.assertLogs() as logs:
-            await importer_manager.process_archive(metadata, archive_path)
-        self.assertIn("No importer defined for archive", ''.join(logs.output))
+        logger = await importer_manager.process_archive(metadata, archive_path)
+        self.assertTrue(logger.has_errors)
+        self.assertIn("No importer defined for archive", ''.join([str(msg) for msg in logger.error_messages]))
 
 
     def tearDown(self):
