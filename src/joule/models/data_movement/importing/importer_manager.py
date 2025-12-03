@@ -9,6 +9,8 @@ from joule.models.data_store.event_store import EventStore
 from joule.models.data_movement.importing.importer import Importer
 import shutil
 import logging
+from joule.utilities import archive_tools
+
 log = logging.getLogger('joule')
 
 # time to wait when uploaded_archives was empty after last check
@@ -32,7 +34,7 @@ class ImporterManager:
         
 
 
-    async def process_archive(self, metadata, archive_path)->List[Tuple[str,str]]:
+    async def process_archive(self, metadata, archive_path)->archive_tools.ImportLogger:
         """Process an archive file and return the list of messages produced by the importer
            This will be a list like [('error','bad error message'),('info','just an info message'),...]
         """
@@ -46,9 +48,9 @@ class ImporterManager:
                 importer = self.importers.get((None,metadata['name']), None)
             # if no matches, this archive cannot be processed
             if importer is None:
-                msg = f"No importer defined for archive [{metadata['name']}] from node [{metadata['node']}]"
-                log.warning(msg)
-                return [('error',msg)]
+                logger = archive_tools.ImportLogger()
+                logger.error(f"No importer defined for archive [{metadata['name']}] from node [{metadata['node']}]")
+                return logger
             # unpack the archive and run the importer
             shutil.unpack_archive(archive_path,tmpdirname)
             return await importer.run(tmpdirname,

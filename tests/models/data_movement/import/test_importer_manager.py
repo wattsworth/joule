@@ -19,10 +19,8 @@ ARCHIVES = ["ww-data_2025_09_03-10-03-29.zip",
             "ww-data_2025_09_03-10-03-59.zip"]
 class TestImporterManager(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
-        self.importer_inbox_directory = os.path.join(tempfile.mkdtemp(prefix="inbox"),"archives")
         self.importer_data_directory = tempfile.mkdtemp(prefix="datadir")
         self.uploaded_archives = [os.path.join(ARCHIVES_PATH,name) for name in ARCHIVES]
-        shutil.copytree(ARCHIVES_PATH, self.importer_inbox_directory)
 
 
     async def test_unpacks_archives(self):
@@ -125,6 +123,5 @@ class TestImporterManager(unittest.IsolatedAsyncioTestCase):
 
 
     def tearDown(self):
-        shutil.rmtree(self.importer_inbox_directory)
         shutil.rmtree(self.importer_data_directory)
         return super().tearDown()

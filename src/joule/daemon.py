@@ -265,6 +265,7 @@ class Daemon(object):
         app = web.Application(middlewares=middlewares)
 
         app[app_keys.module_connection_info] = self.module_connection_info
+        app[app_keys.uploaded_archives_dir] = self.config.importer_data_directory
         app[app_keys.supervisor] = self.supervisor
         app[app_keys.data_store] = self.data_store
         app[app_keys.event_store] = self.event_store

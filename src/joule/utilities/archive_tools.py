@@ -59,6 +59,19 @@ class ImportLogger:
             return False
         else:
             return True
+    
+    @property
+    def has_warnings(self):
+        return len(self._warnings)>0
+
+    @property
+    def has_errors(self):
+        return len(self._errors)>0
+
+    @property
+    def has_info(self):
+        return len(self._info)>0
+
     @property
     def warning_messages(self):
         return self._warnings
@@ -77,3 +90,10 @@ class LogMessage:
     destination: str
     message: str
     target_type: str
+
+    def __str__(self):
+        if self.source_label is not None and self.destination is not None:
+            prefix = f"{self.source_label}=>{self.destination}: "
+        else:
+            prefix = ""
+        return prefix+self.message

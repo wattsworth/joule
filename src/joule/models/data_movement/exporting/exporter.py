@@ -148,6 +148,9 @@ class Exporter:
         self._clean_directories()
 
         idx = 0
+        # create the top level folders
+        for folder in ["events", "modules", "data"]:
+            os.makedirs(os.path.join(self._staging_path,folder))
         # create a path for each event target and run the export task
         for event_target in self.event_targets:
             target_data_path = os.path.join(self._staging_path, "events", str(idx))

@@ -9,9 +9,11 @@ from joule.utilities import archive_tools
 
 @click.command(name="upload")
 @click.option('-f', "--flush", help="remove archives after successful upload", is_flag=True)
+@click.option('-e', "--quit-on-error", help="quit upload on error", is_flag=True)
+@click.option('-v', "--verbose", help="display info messages", is_flag=True)
 @click.argument("path",type=click.Path(exists=True, dir_okay=True))
 @pass_config
-def archive_upload(config: Config, flush:bool, path: str):
+def archive_upload(config: Config, flush:bool, quit_on_error:bool, verbose:bool, path: str):
     """Upload archive(s) to a Joule node"""
     if os.path.isdir(path):
         archives = _find_joule_archives(path)
@@ -23,7 +25,7 @@ def archive_upload(config: Config, flush:bool, path: str):
         except ValueError:
             raise click.ClickException("this file does not look like a Joule archive")
         archives = [path]
-    asyncio.run(_upload_archives(archives, config.node, flush))
+    asyncio.run(_upload_archives(archives, config.node, flush, quit_on_error, verbose))
     
 
 def _find_joule_archives(path: str)->List[str]:
@@ -39,8 +41,9 @@ def _find_joule_archives(path: str)->List[str]:
             pass # not a Joule archive
     return archives
 
-async def _upload_archives(archives, node, flush):
-    print("Uploading...")
+async def _upload_archives(archives, node, flush, quit_on_error, verbose):
+    print("\nUploading...")
+    logs = {}
     if len(archives)==1:
         logger = await node.archive_upload(archives[0])
         _print_messages(logger)        
@@ -51,13 +54,35 @@ async def _upload_archives(archives, node, flush):
         with click.progressbar(archives) as bar:
             for archive in bar:
                 logger = await node.archive_upload(archive)
-                _print_messages(logger)
-                if flush:
+                logs[archive] = logger
+                if not logger.success and quit_on_error:
+                    break
+                # only flush the file if the upload was succesful
+                if logger.success and flush:
                     os.remove(archive)
     await node.close()
-    print("Uploaded the following archive(s):")
-    for archive in archives:
-        print("\t"+archive)
+    print("\nUploaded the following archive(s):\n")
+    for archive, logger in logs.items():
+        if logger.success:
+            if verbose and logger.has_info:
+                for msg in logger.info_messages:
+                    click.echo(f"\t{msg}")
+            else:
+                click.echo(f"{archive}\t[OK]")
+        else:
+            click.echo(f"{archive}:")
+            if logger.has_info and verbose:
+                click.echo("\t=== INFO ===")
+                for msg in logger.info:
+                    click.echo(f"\t{msg}")
+            if logger.has_errors:
+                click.echo("\t=== ERRORS ===")
+                for msg in logger.error_messages:
+                    click.echo(f"\t{msg}")
+            if logger.has_warnings:
+                click.echo("\t=== WARNINGS ===")
+                for msg in logger.warning_messages:
+                    click.echo(f"\t{msg}")
 
 def _print_messages(logger:archive_tools.ImportLogger):
     # TODO: make this look nicer
