@@ -31,7 +31,6 @@ class EventStore:
     async def upsert(self, stream: 'EventStream', events: List) -> List:
         updated_event_candidates = list(filter(lambda event: "id" in event and event["id"] is not None, events))
         new_events = list(filter(lambda event: "id" not in event or event["id"] is None, events))
-        
         async with self.pool.acquire() as conn:
             # make sure the events with ID's are actually in this table (not copied from somewhere else)
             # If their ID is not found put them in the new_events list instead
@@ -39,7 +38,7 @@ class EventStore:
             for event in updated_event_candidates:
                 query = f"SELECT COUNT(*) FROM data.event{stream.id} WHERE id=$1"
                 exists = (await conn.fetch(query, event["id"]))[0]
-                if exists:
+                if exists['count']:
                     updated_events.append(event)
                 else:
                     new_events.append(event)

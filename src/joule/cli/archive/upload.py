@@ -75,7 +75,7 @@ async def _upload_archives(archives, node, flush, quit_on_error, verbose):
             click.echo(f"{archive}:")
             if logger.has_info and verbose:
                 click.echo("\t=== INFO ===")
-                for msg in logger.info:
+                for msg in logger.info_messages:
                     click.echo(f"\t{msg}")
             if logger.has_errors:
                 click.echo("\t=== ERRORS ===")
