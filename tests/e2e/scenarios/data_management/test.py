@@ -6,7 +6,7 @@ from joule import api
 from joule import errors
 from joule.utilities import human_to_timestamp as h2ts
 from joule.utilities import timestamp_to_human as ts2h
-import tempfile
+import os
 import subprocess
 from click.testing import CliRunner
 from joule.constants import ApiErrorMessages
@@ -100,8 +100,6 @@ def test_backup_data():
         # just check to make sure the original stream has the expected data
         test_case.assertAlmostEqual(orig_info.start, t1, delta=10e6)
         test_case.assertAlmostEqual(orig_info.end, tC, delta=10e6)
-        print(await node.data_intervals("/original/stream1"))
-        print(await node.data_intervals("/ingested/stream1"))
         await node.close()
     asyncio.run(_validate())
     assert result.exit_code == 0
@@ -129,43 +127,42 @@ def test_process_data():
     _assert_success(result)
     
     # run a filter module with stream1 and stream2 as inputs, should have the same intervals as merge1_2
-    with tempfile.NamedTemporaryFile() as module_conf:
-        with open(module_conf.name,'w') as f:
-            f.write("""
-                    [Main]
-                    name = sum
-                    exec_cmd = /module_scripts/adder.py
+    with open("/tmp/module.conf",'w') as f:
+        f.write("""
+                [Main]
+                name = sum
+                exec_cmd = /module_scripts/adder.py
 
-                    [Inputs]
-                    input = /original/stream1
-                    # other_input is not used by adder but tests whether the filter
-                    # calculates the overlapping intervals correctly
-                    other_input = /original/stream2
+                [Inputs]
+                input = /original/stream1
+                # other_input is not used by adder but tests whether the filter
+                # calculates the overlapping intervals correctly
+                other_input = /original/stream2
 
-                    [Outputs]
-                    output = /original/stream_sum
-                    """)
-        result = subprocess.run(f"/module_scripts/adder.py 1 --module_config={module_conf.name}".split(" "))
-        
-        async def _validate():
-            node = api.get_node()
-            #await print_intervals(node,"/original/stream1")
-            #await print_intervals(node,"/original/stream2")
-            #await print_intervals(node,"/filtered/median2b")
-            #await print_intervals(node,"/filtered/merge1_2")
-            # should be within 10 seconds of the time bounds (depends on the sample generation by create_data)
-            await assert_has_intervals(node, "/filtered/median2b", [(t4,t5),(t6,t9),(tA,tA_2)])
-            await assert_has_intervals(node, "/filtered/merge1_2", [(t2,t3),(t4,t5),(t6,t7),(t8,t9),(tA,tB)])
-            await assert_has_intervals(node, "/original/stream_sum", [(t2,t3),(t4,t5),(t6,t7),(t8,t9),(tA,tB)])
-            # remove two intervals of data from the filtered result
-            await node.data_delete("/original/stream_sum",start=t6,end=t9)
-            print("HERE!")
-            await node.close()
-        asyncio.run(_validate())
-        # now run the filter again and it should put the missing interval back
-        result = subprocess.run(f"/module_scripts/adder.py 1 --module_config={module_conf}".split(" "))
-        # the other streams should still be the same, /original/stream_sum should have all the intervals again
-        asyncio.run(_validate())
+                [Outputs]
+                output = /original/stream_sum
+                """)
+    result = subprocess.run(f"coverage run --rcfile=/joule/.coveragerc /module_scripts/adder.py 1 --module_config=/tmp/module.conf".split(" "))
+    async def _validate():
+        node = api.get_node()
+        #await print_intervals(node,"/original/stream1")
+        #await print_intervals(node,"/original/stream2")
+        #await print_intervals(node,"/filtered/median2b")
+        #await print_intervals(node,"/filtered/merge1_2")
+        # should be within 10 seconds of the time bounds (depends on the sample generation by create_data)
+        await assert_has_intervals(node, "/filtered/median2b", [(t4,t5),(t6,t9),(tA,tA_2)])
+        await assert_has_intervals(node, "/filtered/merge1_2", [(t2,t3),(t4,t5),(t6,t7),(t8,t9),(tA,tB)])
+        await assert_has_intervals(node, "/original/stream_sum", [(t2,t3),(t4,t5),(t6,t7),(t8,t9),(tA,tB)])
+        # remove two intervals of data from the filtered result
+        await node.data_delete("/original/stream_sum",start=t6,end=t9)
+        await node.close()
+    asyncio.run(_validate())
+    # now run the filter again and it should put the missing interval back
+    result = subprocess.run(f"coverage run --rcfile=/joule/.coveragerc /module_scripts/adder.py 1 --module_config=/tmp/module.conf".split(" "))
+    # the other streams should still be the same, /original/stream_sum should have all the intervals again
+    asyncio.run(_validate())
+    os.remove("/tmp/module.conf")
+    print("OK")
 
 def test_copy_all_data():
     print("copying all data...", end="")

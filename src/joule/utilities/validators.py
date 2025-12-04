@@ -63,6 +63,12 @@ def validate_event_filter(filter_string: str) -> List:
             if expr[1] in ['like','unlike','is','not']:
                 if not isinstance(expr[2], str):
                     raise ConfigurationError("invalid filter string, is/not/like/unlike operation must have a string value")
+            # if operation is numeric make sure the operand can be converted to a float
+            else:
+                try:
+                    float(expr[2])
+                except ValueError:
+                    raise ConfigurationError(f"invalid filter value, {expr[2]} be numeric in filter clause {and_clause}")
             # first field must be a string label
             if not isinstance(expr[0], str):
                 raise ConfigurationError("invalid filter string, first element of boolean expression must be a string label")
