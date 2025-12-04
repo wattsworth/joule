@@ -79,5 +79,5 @@ class FilterModule(base_module.BaseModule):
                 await self.run(parsed_args, pipes_in, pipes_out)
             except asyncio.CancelledError:
                 pass
-            for pipe in pipes_out.values():
+            for pipe in list(pipes_out.values())+list(pipes_in.values()):
                 await pipe.close()

@@ -169,10 +169,11 @@ async def data_read(session: BaseSession,
     # replace the stub stream (from config file) with actual stream
     pipe = LocalPipe(stream.layout, name=stream.name, stream=stream, write_limit=5)
     pipe.TIMEOUT_INTERVAL = 0.01 # read as fast as possible, any lower than this seems to cause race conditions in the pipes
-    task = asyncio.create_task(_historic_reader(session,
-                                                stream,
-                                                pipe,
-                                                start, end, max_rows))
+    reader = _historic_reader(session,
+                              stream,
+                              pipe,
+                              start, end, max_rows)
+    task = asyncio.create_task(reader, name=f"reading {stream.name} [coro={reader}]")
 
     async def close():
         task.cancel()
