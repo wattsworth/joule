@@ -4,9 +4,9 @@ name = DataExporter
 
 [Target]
 # export to a node
-url = http://...
+destination_url = http://...
 # must match the target node's API key (see main.conf documentation)
-importer_api_key = XXXX
+destination_url_key = XXXX
 # export to a directory (can be done in combination with a node)
 path = /file/path
 # duration of data to retain in /file/path

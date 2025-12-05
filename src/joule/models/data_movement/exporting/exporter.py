@@ -17,7 +17,9 @@ import os
 import shutil
 import itertools
 import json
+import aiohttp
 from datetime import datetime
+from joule.utilities.archive_tools import ImportLogger
 
 logger = logging.getLogger('joule')
 """
@@ -71,7 +73,6 @@ class Exporter:
 
             work_path: str,
             next_run_timestamp: int):
-
         self.name = name
         self.node_name = node_name
         self.event_targets = event_targets
@@ -204,7 +205,7 @@ class Exporter:
         # add .zip extension because make_archive does this internally
         archive_file_path += ".zip"
         success = True
-        if not self._export_to_node(archive_file_path):
+        if not await self._export_to_node(archive_file_path):
             # create a symlink in the node backlog
             os.symlink(archive_file_path, os.path.join(self._output_node_backlog_path,archive_name+".zip"))
             logging.error(f"failed to transmit {archive_name} to {self.destination_url}")
@@ -228,10 +229,29 @@ class Exporter:
         except Exception:
             return False
     
-    def _export_to_node(self, archive_file: str) -> bool:
+    async def _export_to_node(self, archive_file: str) -> bool:
         if self.destination_url is None:
             return True # data is not exported to a node
-        print("TODO!")
+        try:
+            async with aiohttp.ClientSession(headers={"X-API-KEY": self.destination_url_key}) as session:
+                with open(archive_file, 'rb') as f:
+                    async with session.post(self.destination_url+'/archive.json',data=f) as resp:
+                        logger.info(f"sending data to {self.destination_url}")
+                        if resp.status!=200:
+                            logger.error(await resp.text())
+                        else:
+                            json_data = await resp.json()
+                            result_logs = ImportLogger()
+                            result_logs.from_json(json_data)
+                            if result_logs.success:
+                                for msg in result_logs.info_messages:
+                                    logger.info(msg.message)
+                            else:
+                                logger.error(f"{self.destination_url} reports problem processing exported data:")
+                                logger.error(result_logs)
+        except Exception as e:
+            logger.error(f"cannot export data to {self.destination_url}:{e}")
+            return False
         return True
 
     def _process_backlog(self):
