@@ -31,8 +31,8 @@ class TestExporter(unittest.IsolatedAsyncioTestCase):
                                  module_targets=[self.module_target],
                                  data_targets=[self.data_target],
                                  frequency_us=1,
-                                 backlog_us=1,
-                                 retain_us=1,
+                                 backlog_us=100e6,
+                                 retain_us=100e6,
                                  work_path=None,
                                  destination_url=None,
                                  destination_url_key=None,
@@ -87,7 +87,7 @@ class TestExporter(unittest.IsolatedAsyncioTestCase):
     async def test_saves_backlog_on_node_export_error(self):
         # only export to a node, not a folder
         self.exporter.destination_url = "http://nowhere"
-        self.exporter._export_to_node = MagicMock(return_value=False)
+        self.exporter._export_to_node = AsyncMock(return_value=False)
         with(tempfile.TemporaryDirectory() as work_path):
             self.exporter.work_path = work_path
             with self.assertLogs() as log:

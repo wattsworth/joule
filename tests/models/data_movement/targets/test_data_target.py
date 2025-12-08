@@ -53,7 +53,7 @@ class TestDataTarget(unittest.IsolatedAsyncioTestCase):
         with open(os.path.join(ARCHIVE_PATH,'metadata.json'),'r') as f:
             metadata = json.load(f)['stream_model']
         importer_pipe = None
-        async def mock_spawn_inserter(stream: 'DataStream', pipe:Pipe, insert_period=0):
+        async def mock_spawn_inserter(stream: 'DataStream', pipe:Pipe, insert_period=0, merge_gap=0):
             nonlocal importer_pipe
             importer_pipe = pipe
             return asyncio.sleep(0) # a stub co-routine since spawn_inserter returns the insertion task

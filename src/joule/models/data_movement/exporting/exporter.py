@@ -145,8 +145,9 @@ class Exporter:
                   data_store: DataStore,
                   state_service: ExporterStateService) -> bool:
         self._initialize()
-        self._process_backlog()
+        # run clean before any processing to sanitize directory from invalid file types
         self._clean_directories()
+        await self._process_backlog()
 
         idx = 0
         # create the top level folders
@@ -218,7 +219,10 @@ class Exporter:
         if success:
             # remove the archive_file since it was exported successfully
             os.remove(archive_file_path)
-        
+
+        # clean up any files that are no longer needed
+        self._clean_directories()
+
 
     def _export_to_folder(self, archive_file: str) -> bool:
         if self.destination_folder is None:
@@ -254,10 +258,10 @@ class Exporter:
             return False
         return True
 
-    def _process_backlog(self):
+    async def _process_backlog(self):
         # for every file in the node backlog, attempt to export it
         for entry in os.scandir(self._output_node_backlog_path):
-            if self._export_to_node(entry.path):
+            if await self._export_to_node(entry.path):
                 logger.debug(f"exported {entry.path} from node backlog")
                 os.remove(entry.path)
         # for every file in the folder backlog, attempt to export it

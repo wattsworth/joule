@@ -23,9 +23,6 @@ coverage html
 # remove test artifacts
 rm -f postgres-data
 
-echo "SKIPPING SONAR SCAN"
-exit 1
-
 # run sonar scan and upload results
 SONAR_TOKEN=$(cat sonar.apikey)
 

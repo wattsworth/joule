@@ -12,7 +12,7 @@ authors = [
 ]
 description = "Decentralized data processing for IoT platforms"
 readme = "README.rst"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: POSIX :: Linux",
@@ -53,7 +53,8 @@ dependencies = [
 tests = [
     'testing.postgresql',
     'requests',
-    'icecream'
+    'icecream',
+    'coverage'
 ]
 [project.scripts]
 joule = 'joule.cli:main'

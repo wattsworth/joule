@@ -136,7 +136,7 @@ class TestExporter(unittest.IsolatedAsyncioTestCase):
 
             # disable exports to both the destination folder and node
             self.exporter.destination_folder = "/does/not/exist"
-            self.exporter._export_to_node = MagicMock(return_value=False)
+            self.exporter._export_to_node = AsyncMock(return_value=False)
 
             self.exporter._initialize() # create folder structure
             # 1. place an old backlog file that will be expired
@@ -161,7 +161,6 @@ class TestExporter(unittest.IsolatedAsyncioTestCase):
             # 5. place a symlink to a file outside of /datasets
             os.symlink("/etc/passwd", work_path+"/output/folder_backlog/invalid_symlink.zip")
             logger.setLevel(logging.DEBUG)
-
             with self.assertLogs() as log:
                 await self.exporter.run(db="db_object", 
                                         event_store="event_store_object", 
