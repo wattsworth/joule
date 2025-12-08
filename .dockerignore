@@ -2,7 +2,6 @@ build
 dist
 docs
 .eggs
-docserver
 htmlcov
 venv
 tests
