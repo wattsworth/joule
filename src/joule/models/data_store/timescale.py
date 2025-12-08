@@ -8,7 +8,7 @@ import datetime
 import shutil
 import asyncio
 from joule.utilities import interval_tools, timestamp_to_datetime
-from joule.models.data_store.timescale_inserter import Inserter, Decimator
+from joule.models.data_store.timescale_inserter import Inserter, Decimator, DecimatorService
 from joule.models import DataStream, pipes
 from joule.models.data_store import psql_helpers
 from joule.models.data_store.data_store import DataStore, StreamInfo, DbInfo
@@ -25,6 +25,7 @@ class TimescaleStore(DataStore):
         self.insert_period = insert_period
         self.cleanup_period = cleanup_period
         self.pool = None
+        self.decimator_service = DecimatorService()
         # TimescaleDB supports decimation management
         self.supports_decimation_management = True 
         # tunable constants
@@ -48,7 +49,8 @@ class TimescaleStore(DataStore):
         inserter = Inserter(self.pool, stream,
                             insert_period=insert_period, 
                             cleanup_period=self.cleanup_period,
-                            merge_gap=merge_gap)
+                            merge_gap=merge_gap,
+                            decimator_service=self.decimator_service)
         t = asyncio.create_task(inserter.run(pipe))
         t.set_name("Timescale Inserter for [%s]" % stream.name)
         return t

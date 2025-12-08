@@ -28,7 +28,7 @@ class ExporterStateService:
 
     def get(self, exporter_name:str, source_type:str, source_label:str="") -> ExporterState:
         if source_type!='exporter' and source_label=="":
-            raise Exception(f"Invalid request for exporter state, source_type [{source_type}] requires a {source_label} paramter]")
+            raise Exception(f"Invalid request for exporter state, source_type [{source_type}] requires a {source_label} parameter]")
         record = self.db.query(ExporterStateRecord)\
                             .filter_by(name=exporter_name,
                                        source_type=source_type,

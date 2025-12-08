@@ -21,7 +21,7 @@ MAX_CHUNK_INTERVAL = 1000 * 1000 * 60 * 60 * 24 * 365 # 1 year in microseconds
 class Inserter:
 
     def __init__(self, pool: asyncpg.pool.Pool, stream: DataStream, insert_period: float,
-                 cleanup_period: float, merge_gap: int=0):
+                 cleanup_period: float, merge_gap: int=0, decimator_service:'DecimatorService' = None):
         self.pool = pool
         self.stream = stream
         self._data_rate_buffer = []
@@ -35,6 +35,7 @@ class Inserter:
         # add offsets to the period to distribute traffic
         self.insert_period = insert_period + insert_period * random.random() * 0.5
         self.decimator: Decimator = None
+        self.decimator_service = decimator_service
         # merge this insertion with the previous data if the timestamps are <= merge_gap us appart
         self.merge_gap = merge_gap
 
@@ -78,7 +79,10 @@ class Inserter:
                             last_ts = data['timestamp'][-1]
                             # lazy initialization of decimator
                             if self.stream.decimate and self.decimator is None:
-                                self.decimator = Decimator(self.stream, 1, 4, self._chunk_interval)
+                                self.decimator = self.decimator_service.get(self.stream, 
+                                                                            timestamp=data['timestamp'][0], 
+                                                                            merge_gap=self.merge_gap,
+                                                                            chunk_interval=self._chunk_interval)
                             psql_bytes = psql_helpers.data_to_bytes(data)
                             try:
                                 await conn.copy_to_table("stream%d" % self.stream.id,
@@ -180,6 +184,7 @@ class Decimator:
             print("creating decim level %d" % self.level)
         # hold off to rate limit traffic
         self.holdoff = 0  # random.random()
+        self.last_ts = None # last processed timestamp
 
     async def update_chunk_interval(self, conn: asyncpg.Connection, chunk_interval):
         self.chunk_interval = min(chunk_interval, MAX_CHUNK_INTERVAL)
@@ -196,6 +201,7 @@ class Decimator:
             self.path_created = True
 
         decim_data = self._process(data)
+        self.last_ts = data['timestamp'][-1]
         if self.debug:
             print("\t level %d: %d rows" % (self.level, len(decim_data)))
         if len(decim_data) == 0:
@@ -271,3 +277,24 @@ class Decimator:
         sout['data'] = out[:, 1:]
         # insert the data into the database
         return sout
+
+class DecimatorService:
+    """Return an existing decimator if the last processed timestamp is close enough to the current one
+       otherwise returns a new decimator"""
+    
+    def __init__(self):
+        self._decimators = {}
+
+    def get(self, stream:DataStream, timestamp, merge_gap, chunk_interval):
+        if stream in self._decimators:
+            decimator = self._decimators[stream]
+            if decimator.last_ts != None:
+                offset = timestamp - decimator.last_ts
+                if 0 < offset < merge_gap:
+                    return decimator
+        # no decimator in library or it is not close enough to the incoming data
+        decimator = Decimator(stream, 1, 4, chunk_interval)
+        self._decimators[stream]=decimator
+        return decimator
+        
+        
