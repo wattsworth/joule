@@ -13,7 +13,6 @@ from joule.utilities.archive_tools import ImportLogger
 from joule.errors import ConfigurationError, PipeError
 from joule.models import DataStream, folder
 
-import time
 import os
 import json
 import asyncio
@@ -129,7 +128,8 @@ class DataTarget:
         data_files = os.listdir(source_directory)
         pipe = LocalPipe(layout=stream.layout)
         # run faster than the default insert period
-        inserter_task = await store.spawn_inserter(stream,pipe, insert_period=0.1)
+        inserter_task = await store.spawn_inserter(stream,pipe, insert_period=0.1,
+                                                   merge_gap=self.merge_gap)
         try:
             for file in sorted(data_files):
                 if file.endswith("_interval_break.dat"):
