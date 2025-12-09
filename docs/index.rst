@@ -8,9 +8,10 @@ Joule: Decentralized Data Processing
 ====================================
 
 Joule is a framework for decentralized data processing. Joule
-distributes computation into independent executable :ref:`sec-modules` that are
-connected by :ref:`sec-pipes` which carry timestamped data flows called
-:ref:`sec-data-streams`.
+distributes computation into independent executable :ref:`modules` that are
+connected by :ref:`pipes` which carry timestamped data flows called
+:ref:`sec-data-streams`. Asynchronous information is handled by :ref:`sec-event-streams` which store timestamped
+JSON data.
 
 .. image:: /images/module_stream.png
    :width: 400px
