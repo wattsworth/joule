@@ -291,10 +291,12 @@ class DecimatorService:
             if decimator.last_ts != None:
                 offset = timestamp - decimator.last_ts
                 if 0 < offset < merge_gap:
+                    log.debug(f"using existing decimator for [{stream.name}]")
                     return decimator
         # no decimator in library or it is not close enough to the incoming data
         decimator = Decimator(stream, 1, 4, chunk_interval)
         self._decimators[stream]=decimator
+        log.debug(f"creating new decimator for [{stream.name}]")
         return decimator
         
         

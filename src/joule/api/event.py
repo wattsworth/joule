@@ -47,8 +47,8 @@ class Event:
         content_str = json.dumps(self.content)
         if len(content_str) > 20:
             content_str = content_str[:20] + " ...}"
-        return "<joule.api.Event start_time: %r, end_time: %r, content: %s>" % (
-            self.start_time, self.end_time, content_str)
+        return "<joule.api.Event id: %r start_time: %r, end_time: %r, content: %s>" % (
+            self.id, self.start_time, self.end_time, content_str)
 
     def __eq__(self, other):
         if self.start_time != other.start_time:
