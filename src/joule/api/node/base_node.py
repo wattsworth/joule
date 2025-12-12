@@ -1,4 +1,4 @@
-from typing import Union, List, Optional, Dict, TYPE_CHECKING, Type
+from typing import Union, List, Optional, Dict, TYPE_CHECKING, Type, AsyncGenerator
 from joule.constants import EndPoints
 
 if TYPE_CHECKING:
@@ -159,12 +159,12 @@ class BaseNode:
         return await event_stream_write(self.session, stream, events)
 
     def event_stream_read(self,
-                                stream: 'EventStream | str | int',
-                                start: Optional[int]=None,
-                                end: Optional[int]=None,
-                                json_filter: Optional[Dict[str, str]]=None,
-                                include_on_going_events=True,
-                                block_size: Optional[int] = None) -> List['Event']:
+                        stream: 'EventStream | str | int',
+                        start: Optional[int]=None,
+                        end: Optional[int]=None,
+                        json_filter: Optional[Dict[str, str]]=None,
+                        include_on_going_events=True,
+                        block_size: Optional[int] = None) -> AsyncGenerator[Union['Event',List['Event']],None]:
         from joule.api.event_stream import event_stream_read
         return event_stream_read(self.session, stream=stream,
                                        start_time=start, end_time=end,
@@ -221,8 +221,10 @@ class BaseNode:
                               max_rows: int = 10000,
                               flatten: bool = False
                               ):
-        from joule.api.data import data_read_array
-        return await data_read_array(self.session, stream, start, end, max_rows, flatten)
+        from joule.api.data import data_read
+        pipe = await data_read(self.session, stream, start, end, max_rows)
+        data = await pipe.read_all(flatten=flatten)
+        return data
 
     async def data_subscribe(self,
                              stream: 'DataStream | str | int') -> 'Pipe':

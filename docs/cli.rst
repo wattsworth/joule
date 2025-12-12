@@ -45,14 +45,59 @@ Example
 list
 ''''
 
+list all of the available nodes
+
+Usage
+    joule node list ~ [--help]
+Arguments
+    none
+Example
+    $> joule node list
+    List of authorized nodes (●=default)
+    ╒════════════════╤═══════════════════════════════════╕
+    │ Node           │ URL                               │
+    ╞════════════════╪═══════════════════════════════════╡
+    │ ex_node_1      │ https://192.168.0.10/joule        │
+    ├────────────────┼───────────────────────────────────┤
+    │ ex_node_2      │ https://192.128.20.1/joule        │
+    ├────────────────┼───────────────────────────────────┤
+    │ ● local_node   │ http://localhost:8184/joule       │
+    ╘════════════════╧═══════════════════════════════════╛
+
 add
 '''
+
+add a new node (requires an API key)
+
+Usage
+    joule node add  [--help] NAME URL KEY
+Arguments
+    name: local name used to refer to this node
+    url:  HTTP(S) endpoint for this node (typically ends with `/joule`)
+    key:  API Key for authorizing access
 
 delete
 ''''''
 
+remove a node (does not affect the node itself)
+
+Usage
+    joule node delete [--help] NAME
+Arguments
+    name: name of the node to remove
+
+
 default
 '''''''
+
+change the default node
+
+Usage
+    joule node default [--help] NAME
+Arguments
+    name: name of the desired node default
+
+
 
 module
 ++++++
@@ -318,6 +363,33 @@ Arguments
     -s, --start:     timestamp or descriptive string, if omitted start at the beginning of STREAM
     -e, --end:       timestamp or descriptive string, if omitted run to the end of STREAM
     -m, --max-gap:   remove intervals shorter than this (in us). Default is 2 seconds
+
+master
+++++++
+add
+'''
+
+delete
+''''''
+
+list
+''''
+
+follower
+++++++++
+delete
+''''''
+
+list
+''''
+
+archive
++++++++
+inspect
+'''''''
+
+upload
+''''''
 
 admin
 +++++

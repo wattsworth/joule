@@ -36,8 +36,8 @@ Node
         :url: Joule node (default: http://localhost:8088)
         :loop: Event Loop (default: current event loop)
 
-A node represents a Joule instance and is the only means to access API methods. Joule modules have a node instance
-created automatically that refers to the node where it is running.
+A node represents a Joule instance and is the only means to access API methods. **Do not create manually create 
+a Node object.** Joule modules have a node instance created automatically that refers to the node where it is running.
 
 .. code-block:: python
 
@@ -270,7 +270,34 @@ Data Actions
               dtype=[('timestamp', '<i8'), ('data', '<i4')])
         >>> pipe.consume(len(data)) # flush the pipe
         >>> await pipe.close() # close the data connection
+.. function:: Node.data_read_array(stream: DataStream | str | int, start: Optional[int] = None, end: Optional[int] = None, max_rows: Optional[int] = None)->ndarray
 
+    Read historic data from a stream directly into a Numpy array. **For large streams this may consume a significant amount of memory**.
+    Consider using :meth":`Node.data_read` for a memory efficient way to read large amounts of stream data.
+
+
+    Parameters:
+        :stream: DataStream specification, may be a :class:`joule.api.DataStream` object, path, or numeric ID
+        :start: Timestamp in UNIX microseconds. Omit to read from beginning of the stream.
+        :end: Timestamp in UNIX microseconds. Omit to read until the end of the stream.
+        :max_rows: Return a decimated view of the data with at most this many rows, decimations are provided in powers of 4.
+        :flatten: If `true` flatten to a 2D array with timestamps in the first column
+
+    Example:
+        Returns a structured array of data. 
+
+        >>> data = await node.data_read_array("/parent/my_folder/stream")
+            array([(1551730769556442,      0), (1551730769657062,     10),
+                (1551730769757882,     20), ..., (1551751850688250, 661380),
+                (1551751850795677, 661390), (1551751850896756, 661400)],
+                dtype=[('timestamp', '<i8'), ('data', '<i4')])
+        
+        Set `flatten=True` to return a simpler 2D array
+        
+        >>> data = await node.data_read_array("/parent/my_folder/stream",flatten=True)
+            array([[1551730769556442,      0], [1551730769657062,     10],
+                [1551730769757882,     20], ..., [1551751850688250, 661380],
+                [1551751850795677, 661390], [1551751850896756, 661400]])
 .. function:: Node.data_subscribe(stream: DataStream | str | int) -> Pipe
 
     Read live data from a stream. The stream must be actively produced by a module. This method returns a pipe which
@@ -340,6 +367,27 @@ Data Actions
         >>> await node.data_intervals("/parent/my_folder/stream") # no stream data
         []
 
+.. function:: Node.data_consolidate(stream: DataStream | str | int, max_gap: int, start: Optional[int] = None, end: Optional[int] = None)
+
+    Remove interval breaks less than `max_gap` microseconds in a data stream. Useful for merging data streams with unintentional gaps due to
+    importing data at different times. NOTE: This operation does not recompute the higher level decimations needed to display the data stream in Lumen.
+    If data does not appear in Lumen after consolidating a large number of small intervals, run :meth:`Node.data_decimate`
+
+    Parameters:
+        :stream: DataStream specification, may be a :class:`joule.api.DataStream` object, path, or numeric ID
+        :max_gap: merge intervals of data that are less than this many microseconds apart.
+        :start: Timestamp in UNIX microseconds. Omit to read from beginning of the stream.
+        :end: Timestamp in UNIX microseconds. Omit to read until the end of the stream.
+
+.. function:: Node.data_drop_decimations(stream: DataStream | str | int)
+
+    Remove the decimated copies of this stream. This can be useful for reducing the size of the database if Lumen visualizations are not
+    needed for the data stream. 
+
+.. function:: Node.data_decimate(stream: DataStream | str | int)
+
+    Recompute the decimations for a data stream. **NOTE: This can take a long time for large streams**
+
 .. _sec-node-annotation-actions:
 
 Annotation Actions
@@ -395,12 +443,15 @@ Event Stream Actions
 .. function:: Node.event_stream_get(stream: Union[EventStream, str, int],
                                    create: bool = False,
                                    description: str = "",
+                                   chunk_duration: str = "",
+                                   chunk_duration_us: int = None
                                    event_fields=None) -> EventStream
 
     Retrieve the specified stream. EventStream may be specified by a :class:`joule.api.EventStream` object,
     a path, or a numeric ID. Raises :exc:`joule.errors.ApiError` if stream specification is invalid. If ``stream`` is a
-    path and ``create=True`` then the EventStream is created if it does not exist using the ``description`` and
-    ``event_fields`` parameters. See :meth:`Node.event_stream_create` for more information creating streams.
+    path and ``create=True`` then the EventStream is created if it does not exist using the ``description``, ``chunk_duration`` specification
+    and ``event_fields`` parameters. If the stream exists these parameters are ignored. See :meth:`Node.event_stream_update` for modifying
+    existing streams. See :meth:`Node.event_stream_create` for more information creating streams.
 
     Examples:
         >>> await node.event_stream_get("/folder/event_stream", create=True,
@@ -493,9 +544,34 @@ Event Stream Actions
         >>> e2 = Event(start_time=time_now()-1e6, end_time = time_now(), content={'name': 'event2'})
         >>> await node.event_stream_write("/plugs/events",[e1,e2])
 
-.. function:: Node.event_stream_read(stream: Union[EventStream, str, int], start: Optional[int] = None, end: Optional[int] = None, limit: 10000, json_filter: Optional[string]=None, include_on_going_events=True) -> List[Event]
+.. function:: Node.event_stream_read(stream: Union[EventStream, str, int], start: Optional[int] = None, end: Optional[int] = None, limit: 10_000, json_filter: Optional[string]=None, include_on_going_events=True, block_size:int=None) -> AsyncGenerator
+    
+    Read events from an existing stream using an asynchronous generator. Specify ``block_size`` to 
+    iterate over lists of events, otherwise iterates over each event individually.
+    Recommended for large streams where all events might not fit into memory.
+    
+    Parameters:
+        :stream: Event stream, path, numeric ID, or :class:`joule.api.EventStream` object
+        :start: UNIX timestamp (microseconds). Omit to read from start of stream.
+        :end: UNIX timestamp (microseconds). Omit to read to end of stream.
+        :limit: Limit query to first N result.
+        :json_filter: Select events based on content, see below.
+        :include_on_going_events: Set to `False` to only return events that begin within the specified interval. By default this function returns all events that are active within the specified interval.
+    
+    Example:
+        Iterate over each event in a stream, or iterate over blocks of events (more efficient)
+       
+        >>> async for event in node.event_stream_read(stream):
+        ...     print(f"processing {event}...")
+        >>> async for events in node.event_stream_read(stream, block_size=2):
+        ...     assert len(events)<=2 # maximum length is block_size
+        ...     print(f"processing {events}...")
+        
 
-    Read events from an existing stream. Returns a list of :class:`joule.api.Event` objects.
+.. function:: Node.event_stream_read_list(stream: Union[EventStream, str, int], start: Optional[int] = None, end: Optional[int] = None, limit: 10_000, json_filter: Optional[string]=None, include_on_going_events=True) -> List[Event]
+
+    Read events from an existing stream. Returns a list of :class:`joule.api.Event` objects. If the expected number 
+    of events is very large consider using the async generator form of this function above.
 
     Parameters:
         :stream: Event stream, path, numeric ID, or :class:`joule.api.EventStream` object
@@ -518,7 +594,7 @@ Event Stream Actions
 
         >>>  #       ((-------- test ----------)  OR (------test------ AND ------test-------))
         >>> filter = [[['name','like','sample']]   , [['value','gt',0],    ['value','lt',10]]]
-        >>> await node.event_stream_read(stream,limit=100,json_filter=json.dumps(filter))
+        >>> await node.event_stream_read_list(stream,limit=100,json_filter=json.dumps(filter))
 
 
 .. function:: Node.event_stream_remove(stream: Union[EventStream, str, int], start: Optional[int] = None, end: Optional[int] = None, json_filter: Optional[string]=None)
@@ -527,8 +603,11 @@ Event Stream Actions
     a path, or numeric ID. Specify start and/or end timestamps to remove over events over a specific time range. Use
     json_filter to remove events based on content.
 
+.. function:: Node.event_stream_count(stream: Union[EventStream, str, int], start: Optional[int] = None, end: Optional[int] = None, limit: 10_000, json_filter: Optional[string]=None, include_on_going_events=True) -> List[Event]
 
+    Returns the number of events that match the filter criteria. The parameters are the same as :meth:`Node.event_stream_read_list`.
 
+    
 .. _sec-node-module-actions:
 
 Module Actions
@@ -554,7 +633,7 @@ Module Actions
     name, or numeric ID.
 
     Example:
-        >>> my_module = await node.module_get("my module")
+        >>> my_module = await node.module_get("my module", statistics=True)
         <joule.api.Module id=0 name='my module' description='adds 1 to the input' is_app=False>
         >>> my_module.statistics
         <joule.api.ModuleStatistics pid=1460 create_time=1551805343.4 cpu_percent=5.60 memory_percent=6.23>
@@ -626,7 +705,7 @@ Master Actions
    Example:
        >>> todo
 
-.. function:: Node.master_removet(master: Union[Master, str])
+.. function:: Node.master_remove(master: Union[Master, str])
 
    Remove the specified master, revokes API access priveleges
 
@@ -659,6 +738,15 @@ Database Actions
     is useful if the IP address or domain name must be changed before connecting
     to the databse. Returns a :class:`joule.utilities.ConnectionInfo` object.
 
+
+Archive Actions
+'''''''''''''''
+
+.. function:: Node.archive_upload(path: str)->ImporterLog
+
+    Upload a data archive to a Joule node. NOTE: The CLI interface is the recommended
+    tool for managing data archives.
+
 Models
 ++++++
 .. autoclass:: joule.api.Folder
@@ -668,6 +756,12 @@ Models
     :members:
 
 .. autoclass:: joule.api.DataStreamInfo
+    :members:
+
+.. autoclass:: joule.api.EventStream
+    :members:
+
+.. autoclass:: joule.api.EventStreamInfo
     :members:
 
 .. autoclass:: joule.api.Element
@@ -703,7 +797,7 @@ Utilities
 +++++++++
 
 .. automodule:: joule.utilities
-    :members: ConnectionInfo, time_now, timestamp_to_human, human_to_timestamp, yesno
+    :members: time_now, timestamp_to_human, human_to_timestamp, yesno, ConnectionInfo, ImportLogger, LogMessage
 
 
 .. class:: joule.utilities.ConnectionInfo()

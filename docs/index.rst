@@ -50,5 +50,6 @@ Unittests can be run using unittest, see **joule/htmlcov** for code coverage.
     cli
     modules
     pipes
+    events
     api_reference
 
