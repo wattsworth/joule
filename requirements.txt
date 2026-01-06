@@ -1,7 +1,7 @@
 aiodns==3.6.0
 aiofiles==25.1.0
 aiohappyeyeballs==2.6.1
-aiohttp==3.13.2
+aiohttp==3.13.3
 aiohttp-jinja2==1.6
 aiosignal==1.4.0
 asyncpg==0.31.0
