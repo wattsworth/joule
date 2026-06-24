@@ -44,6 +44,7 @@ routes = [
     web.put(EndPoints.folder_move, folder_controller.move),
     web.put(EndPoints.folder, folder_controller.update),
     web.delete(EndPoints.folder, folder_controller.delete),
+    web.get(EndPoints.folder_map, folder_controller.map),
     # --- data routes ---
     web.get(EndPoints.data, data_controller.read),
     web.get(EndPoints.data_json, data_controller.read_json),

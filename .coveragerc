@@ -3,7 +3,8 @@ source =
   src/
   /joule/src
   /usr/local/lib/python3.11/dist-packages
-
+  /venv/lib/python3.11/site-packages
+  
 [run]
 source_pkgs = joule
 parallel = True

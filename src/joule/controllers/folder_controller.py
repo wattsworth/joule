@@ -1,10 +1,13 @@
 from aiohttp import web
 from sqlalchemy.exc import CircularDependencyError
 from sqlalchemy.orm import Session
+from sqlalchemy import select
+
 from typing import List
+import json
 
 from joule.constants import ApiErrorMessages
-from joule.models import folder, Folder, EventStore, DataStore, DataStream, EventStream
+from joule.models import folder, Folder, EventStore, DataStore, DataStream, EventStream, Element
 from joule.errors import ConfigurationError
 from joule import app_keys
 
@@ -42,6 +45,57 @@ async def info(request: web.Request):
     if my_folder is None:
         raise web.HTTPNotFound(reason=ApiErrorMessages.folder_does_not_exist)
     return web.json_response(my_folder.to_json())
+
+async def map(request: web.Request):
+    """Given a list of data_stream_elements and event_streams ids, return
+       a list of folder, data_stream, and event_stream ids that make up the 
+       hierarchy"""
+    db: Session = request.app[app_keys.db]
+    data_stream_ids = []
+    event_stream_ids = []
+    folder_ids = []
+    if 'data_stream_elements' in request.query:
+        element_ids = json.loads(request.query['data_stream_elements'])
+        result = db.execute(select(Element).where(Element.id.in_(element_ids)))
+        rows = result.fetchall()
+        elements = [r[0] for r in rows]
+        data_stream_ids = list(set([elem.stream_id for elem in elements]))
+        # required to associate elements with streams on the client
+        data_stream_element_map = {elem.id: elem.stream_id for elem in elements}
+        # collect a list of their folders
+        result = db.execute(select(DataStream.folder_id).where(DataStream.id.in_(data_stream_ids)))
+        rows = result.fetchall()
+        folder_ids += list(set([r[0] for r in rows]))
+    if 'event_streams' in request.query:
+        event_stream_ids = json.loads(request.query['event_streams'])
+        # collect a list of their folders
+        result = db.execute(select(EventStream.folder_id).where(EventStream.id.in_(event_stream_ids)))
+        rows = result.fetchall()
+        # TODO make sure this is the same length as the query arg (otherwise one of them was not a valid ID)
+        folder_ids += list(set([r[0] for r in rows]))
+    # TODO recursively walk through the folders until all the parents are included in the list
+    pending_folder_ids = folder_ids
+    while True:
+        result = db.execute(select(Folder.parent_id).where(Folder.id.in_(pending_folder_ids)))
+        rows = result.fetchall()
+        parent_ids = set([r[0] for r in rows])
+        # filter out None (this indicates the folder is the root, no parent)
+        parent_ids = [x for x in parent_ids if x is not None]
+        if len(parent_ids) == 0:
+            break
+        folder_ids += list(parent_ids)
+        pending_folder_ids = parent_ids # look up the parents of these folders on the next iteration
+    folder_ids = list(set(folder_ids)) # remove any duplicates
+    # these ID's need to be mapped to the Lumen ID's by the Lumen API (/data_views/map_joule_objects.json)
+    return web.json_response({
+        "node_uuid": str(request.app[app_keys.uuid]),
+        "event_stream_ids":event_stream_ids,
+        "data_stream_ids": data_stream_ids,
+        "data_element_ids": element_ids,
+        "folder_ids": folder_ids,
+        "data_stream_element_map": data_stream_element_map
+    })
+
 
 
 async def move(request):

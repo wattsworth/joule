@@ -23,6 +23,7 @@ class EndPoints:
     folder = '/folder.json'
     folders = '/folders.json'
     folder_move = '/folder/move.json'
+    folder_map = '/folder/map.json'
     
     data = '/data'
     data_json = '/data.json'

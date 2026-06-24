@@ -1,5 +1,6 @@
 from typing import Union, List, Optional, Dict, TYPE_CHECKING, Type, AsyncGenerator
 from joule.constants import EndPoints
+from joule.errors import ApiError
 
 if TYPE_CHECKING:
     import sqlalchemy
@@ -15,6 +16,7 @@ if TYPE_CHECKING:
     from joule.models.pipes import Pipe
     from joule.utilities import ConnectionInfo
     from joule.api.session import BaseSession
+    from joule.api.lumen_link import DisplayedDataStreamElement, DisplayedEventStream, IRange
     from .node_info import NodeInfo
 
 
@@ -364,4 +366,25 @@ class BaseNode:
     async def archive_upload(self, path: str):
         from joule.api.archive import archive_upload
         return await archive_upload(self.session, path)
+    
+    # Utility to create Lumen links
+    async def create_lumen_link(self, lumen_url,
+                                data_stream_elements: Optional[List['DisplayedDataStreamElement']]=None,
+                                event_streams: Optional[List['DisplayedEventStream']]=None,
+                                nav_time_bounds: Optional['IRange']=None,
+                                main_time_bounds: Optional['IRange']=None,
+                                left_y_bounds: Optional['IRange']=None,
+                                right_y_bounds: Optional['IRange']=None):
+        if data_stream_elements is None and event_streams is None:
+            raise ApiError("Must specify either data_stream_elements or event_streams to display")
+        from joule.api.lumen_link import create_link
+        return await create_link(self.session,
+                                 lumen_url,
+                                data_stream_elements,
+                                event_streams,
+                                nav_time_bounds,
+                                main_time_bounds,
+                                left_y_bounds,
+                                right_y_bounds)
+
     

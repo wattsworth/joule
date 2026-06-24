@@ -23,7 +23,8 @@ until pg_isready -h "$host" -p 5432 -U "postgres" > /dev/null; do
 done
 source /venv/bin/activate
 cd /joule
-pip install -e . > /dev/null
+git config --global --add safe.directory /joule
+pip install . > /dev/null
 cp /joule/tests/e2e/stub_systemctl.sh /usr/local/bin/systemctl
 chmod +x /usr/local/bin/systemctl
 
