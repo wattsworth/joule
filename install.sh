@@ -14,6 +14,7 @@ NC='\033[0m' # No Color
 TARGET_DIR="/opt/joule"
 SYS_USER="joule"
 SERVICE_NAME="joule.service"
+DEFAULT_DSN="joule:joule@localhost:5432/joule"
 
 echo "${BOLD}====================================================${NC}"
 echo "${BOLD}${GREEN}          Joule Environment Installer${NC}"
@@ -29,7 +30,7 @@ echo "  6. Run ${BOLD}joule admin initialize${NC} to configure the system"
 echo "${BOLD}====================================================${NC}"
 echo
 
-# Prompt the user for confirmation (Pulling strictly from /dev/tty)
+# Prompt the user for confirmation
 printf "Do you want to proceed with the installation? (y/N): "
 read choice </dev/tty
 
@@ -44,16 +45,16 @@ case "$choice" in
     ;;
 esac
 
-# Prompt for the Database DSN (Pulling strictly from /dev/tty)
+# Prompt for the Database DSN with a default choice
 echo "${BOLD}Database Configuration:${NC}"
 echo "Format: ${YELLOW}username:password@hostname:port/database${NC}"
-printf "Enter your TimescaleDB DSN: "
-read DB_DSN </dev/tty
+printf "Enter your TimescaleDB DSN [%s]: " "$DEFAULT_DSN"
+read INPUT_DSN </dev/tty
 
-if [ -z "$DB_DSN" ]; then
-    echo "${RED}Error: DSN cannot be empty.${NC}" >&2
-    exit 1
-fi
+# If INPUT_DSN is empty, use DEFAULT_DSN
+DB_DSN="${INPUT_DSN:-$DEFAULT_DSN}"
+
+echo "Using DSN: ${YELLOW}$DB_DSN${NC}\n"
 
 # --- 1. Install APT Dependencies ---
 echo "Updating apt package listings and installing prerequisites..."
@@ -112,6 +113,10 @@ else
     echo "${RED}Error: 'joule admin initialize' failed. Verify your DSN and database availability.${NC}" >&2
     exit 1
 fi
+# replace ExecStart path with virtual environment
+SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}"
+sudo sed -i "s|ExecStart=/usr/local/bin/jouled|ExecStart=${TARGET_DIR}/bin/jouled|g" "$SERVICE_FILE"
+sudo systemctl daemon-reload
 
 # --- Final Instructions ---
 printf "\n"
