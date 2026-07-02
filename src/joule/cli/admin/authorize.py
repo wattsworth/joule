@@ -8,7 +8,9 @@ from joule import api, errors, constants
 @click.option("-c", "--config", help="main configuration file", default=constants.ConfigFiles.main_config)
 @click.option("-u", "--url", help="joule API URL (optional)")
 def admin_authorize(config, url):
-    """Grant a local user CLI access."""
+    """Grant a local user CLI access. Use ```sudo -E``` to store the credentials in the current user's 
+       environment. Otherwise this command will grant the root user CLI access (credentials will be stored in ```/root/.joule```).
+    """
     # expensive imports so only execute if the function is called
     from joule.services import load_config
     from joule.models import (Base, master)

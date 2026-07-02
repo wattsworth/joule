@@ -80,7 +80,22 @@ def delete(config, folder, recursive):
 @click.option("--id", "-i", is_flag=True, help="show ID's")
 @pass_config
 def list(config, path, layout, status, id):
-    """Display folder hierarchy (directory layout)."""
+    """Display folder hierarchy (directory layout).
+    ``` bash title="Example"
+    $> joule stream list
+
+        ├── demo
+        │   ├── f1
+        │   │   └── stream0(1)
+        │   ├── copied2(6)
+        │   ├── copy one(5)
+        │   └── stream1(4)
+        └── random
+            ├── 10hertz(3)
+            ├── output(2)
+            └── output2(7)
+    ```
+    """
 
     try:
         asyncio.run(

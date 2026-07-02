@@ -20,7 +20,7 @@ from joule.version import version as joule_version
         "archive": "joule.cli.archive.archive"
         }
 )
-@click.option('-n', '--node', default="", help="Joule Node name")
+@click.option('-n', '--node', default="", help="override the default node (see joule node list)")
 @click.version_option(version=joule_version)
 @pass_config
 def main(config, node):

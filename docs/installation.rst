@@ -8,6 +8,7 @@ This guide provides instructions for installing one or more components of the Wa
 components and their configuration depends on your use case. If you are unsure of which components you need simply follow
 this guide in order starting with the :ref:`sec-install-prereqs` section below.
 
+
 * **Standalone System**:  :ref:`sec-install-joule` and :ref:`sec-install-lumen` with :ref:`sec-install-nginx`:
 
 * **Data Acquisition Node**: :ref:`sec-install-joule` with :ref:`sec-install-nginx`

@@ -17,7 +17,13 @@ import importlib.resources
 @click.option("--name", help="Node name (default is random)")
 @click.option("--generate-user-file", help="Create file for dynamically managing users", is_flag=True)
 def admin_initialize(dsn, bind, port, name, generate_user_file):
-    """Run initial system configuration."""
+    """Run initial system configuration. This command will perform the following operations:
+       
+       * Create a set of default configuration files in ```/etc/joule```
+       * Enable and start a systemd service ```/etc/systemd/system/joule.service```
+       * Provision a system user account named ```joule``` to run the systemd service. 
+       
+       Use command line flags to override the system defaults. """
 
     # check arguments
     if bind is None and port is not None:

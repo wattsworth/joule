@@ -8,5 +8,5 @@ from joule.cli.lazy_group import LazyGroup
                                "erase": "joule.cli.admin.erase.admin_erase",
                                "authorize": "joule.cli.admin.authorize.admin_authorize"})
 def admin():
-    """Administer the local node."""
+    """Administer the local node. All commands requires superuser (sudo) privilege to run. """
     pass  

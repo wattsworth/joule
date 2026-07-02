@@ -19,10 +19,13 @@ def abort_if_false(ctx, param, value):
 @click.option("-c", "--config", help="main configuration file", default=constants.ConfigFiles.main_config)
 @click.option("-l", "--links", is_flag=True, help="delete masters and followers as well as data")
 @click.option('--yes', is_flag=True, callback=abort_if_false,
-              expose_value=False,
+              expose_value=False, help='automatically confirm operation',
               prompt='Are you sure you want to wipe the local node?')
 def admin_erase(config, links):
-    """Erase the local node."""
+    """Erase ALL data on the local node. May also delete authorization for masters (API users and Lumen connections) and follower nodes.
+    !!! danger 
+    
+        This command cannot be undone, use with caution!  """
     from joule.services import load_config
     from joule.errors import ConfigurationError
     # make sure joule is not running
